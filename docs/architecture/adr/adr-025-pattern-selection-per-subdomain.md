@@ -31,7 +31,7 @@ All eight contexts in this sample use the rich domain-model style — deliberate
 |---|---|---|
 | product, cart, checkout | Core | Domain model (full rule set) |
 | pricing, inventory, account | Supporting | Domain model here (didactic); transaction script legitimate in production |
-| portal, backoffice | Generic (UI/Ops) | Domain model here (didactic); thin modules in production — backoffice is not a business bounded context |
+| portal, backoffice | Generic (UI/Ops) | Domain model here (didactic); thin contexts in production — one would buy an operator console rather than build it |
 
 ## Rationale
 

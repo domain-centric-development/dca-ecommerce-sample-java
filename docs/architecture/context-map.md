@@ -18,6 +18,7 @@ modules and the shared kernel are intentionally not part of this map.
 | Module | Name | Description | Published interfaces |
 |---|---|---|---|
 | account | Account | User account management, authentication, and profile handling | — |
+| backoffice | Backoffice | Operating this application: event publication log, dashboards, operator views | — |
 | cart | Shopping Cart | Cart management, item additions/removals, and cart lifecycle | api, events |
 | checkout | Checkout | Checkout process, order placement, and payment orchestration | events |
 | inventory | Inventory | Stock level management and inventory tracking | api, events |
@@ -30,6 +31,7 @@ modules and the shared kernel are intentionally not part of this map.
 ```mermaid
 graph LR
   account["Account"]
+  backoffice["Backoffice"]
   cart["Shopping Cart<br/><i>api · events</i>"]
   checkout["Checkout<br/><i>events</i>"]
   inventory["Inventory<br/><i>api · events</i>"]

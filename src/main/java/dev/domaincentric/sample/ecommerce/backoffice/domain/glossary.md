@@ -1,17 +1,20 @@
 # Backoffice — Ubiquitous Language (Bootstrap)
 
 > **Bootstrap status:** This glossary was initially derived from the existing code
-> (`application/`, `adapter/`). Backoffice currently has no `domain/` model of its
-> own — according to `package-info.java` it is an **operational module**, not a
-> business Bounded Context. Terms are taken from the application and adapter
-> layers. Please review and extend from a business perspective.
+> (`application/`, `adapter/`). Backoffice is a **Bounded Context of a generic
+> subdomain** — operating this application — and has no `domain/` model of its own:
+> in transaction-script style the use case reads a Store and maps to a Result, which
+> the pattern-selection decision (ADR-025) allows for a generic subdomain. Terms are
+> therefore taken from the application and adapter layers.
 
-## Module Character
+## Context Character
 
-Backoffice is an **operational cross-cutting module** for administrative views
-(monitoring, event log, future dashboards/admin navigation). Context-specific
-admin pages (products, prices, inventory) live in their respective Bounded
-Contexts under `/backoffice/{context}/`, not here.
+Backoffice is the Bounded Context for **operating this application**: monitoring,
+the event publication log, future dashboards and operator navigation. Its language
+is its own — an *event publication* is a dispatched domain event with a completion
+status, a term no business context uses. Context-specific admin pages (products,
+prices, inventory) belong to their own Bounded Contexts under
+`/backoffice/{context}/`, not here.
 
 ## Concepts
 

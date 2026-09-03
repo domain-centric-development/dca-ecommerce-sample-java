@@ -15,7 +15,7 @@ and observed cross-context imports.
 | `checkout` | Checkout process, payment orchestration, order confirmation | Core |
 | `account` | User accounts, authentication, profile management | Supporting |
 | `portal` | Storefront UI / cross-context views (aggregated client-side) | Generic (UI) |
-| `backoffice` | Admin / operational views (e.g. event publication log) | Generic (Ops) — **not a business bounded context** |
+| `backoffice` | Operating this application — event publication log, operator views | Generic (Ops) |
 
 The subdomain classification drives pattern choice and ArchUnit rule-set
 strictness per context — see
@@ -113,9 +113,12 @@ dependency).
 3. **Interface Inversion** is the preferred pattern whenever the publisher sits
    architecturally *below* the consumer — it prevents a backwards dependency
    without introducing a shared schema module.
-4. **`backoffice` is explicitly not a bounded context**, but an operational
-   module. Context-specific admin UIs (product editor, pricing maintenance)
-   live inside their respective bounded contexts under `/backoffice/{context}/`.
+4. **`backoffice` is a bounded context of a generic subdomain.** Its language is
+   its own — an *event publication* is a dispatched domain event with a
+   completion status, a concept no business context uses. It reads what others
+   have published and negotiates no contract, hence Separate Ways. Context-specific
+   admin UIs (product editor, pricing maintenance) belong to their own bounded
+   contexts under `/backoffice/{context}/`, not here.
 5. **`portal` aggregates at the UI layer**, not in Java code. There is no
    backend aggregation service that joins multiple contexts.
 
