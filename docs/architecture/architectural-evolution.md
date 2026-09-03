@@ -245,14 +245,15 @@ dev.domaincentric.sample.ecommerce/
 │   │   ├── getproductbyid/               # ...
 │   │   ├── updateproductprice/           # ...
 │   │   └── shared/                        # ProductRepository, ProductDataPort
+│   ├── api/                               # ProductCatalogService (Open Host Service, published in-process)
+│   ├── events/                            # ProductCreatedEvent, ... (published integration events)
 │   └── adapter/
 │       ├── incoming/
 │       │   ├── api/                       # ProductResource (REST)
 │       │   ├── web/                       # ProductPageController
 │       │   └── mcp/                       # ProductCatalogMcpToolProvider
 │       └── outgoing/
-│           ├── persistence/               # InMemoryProductRepository
-│           └── openhost/                  # ProductCatalogService (Open Host Service)
+│           └── persistence/               # InMemoryProductRepository
 ├── cart/
 │   ├── domain/model/                      # ShoppingCart, CartItem, CartArticle (enriched)
 │   ├── application/

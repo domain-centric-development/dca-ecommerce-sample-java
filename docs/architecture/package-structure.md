@@ -71,6 +71,9 @@ dev.domaincentric.sample.ecommerce
 │   │       └── ProductStockDataPort
 │   ├── infrastructure/            # Per-context infrastructure
 │   │   └── ProductDomainConfiguration
+│   ├── api/                       # Published in-process interface (Open Host Service)
+│   │   └── ProductCatalogService
+│   ├── events/                    # Published integration events
 │   └── adapter/
 │       ├── incoming/               # Incoming Adapters (Primary)
 │       │   ├── api/
@@ -83,8 +86,6 @@ dev.domaincentric.sample.ecommerce
 │       │   │   ├── ProductPageController
 │       │   │   ├── ProductCatalogPageViewModel
 │       │   │   └── ProductDetailPageViewModel
-│       │   ├── openhost/
-│       │   │   └── ProductCatalogService
 │       │   └── event/
 │       │       └── ProductEventConsumer
 │       └── outgoing/               # Outgoing Adapters (Secondary)
@@ -452,12 +453,13 @@ Each bounded context follows the same internal structure:
 │   │   ├── *Query.java/*Command.java  # Input model
 │   │   └── *Result.java       # Output model
 │   └── shared/         # Shared output ports (repositories, data ports)
-└── adapter/            # Adapter layer (outermost)
+├── api/                # Published in-process interface: Open Host Service (@OpenHostService)
+├── events/             # Published integration events
+└── adapter/            # Adapter layer (outermost) — sub-packages are a convention, no rule checks them
     ├── incoming/       # Incoming adapters (primary/driving)
-    │   ├── api/        # REST API (DTOs, Resources)
+    │   ├── api/        # REST API (DTOs, Resources) — an Open Host Service over the network
     │   ├── web/        # Web MVC (Controllers, ViewModels)
     │   ├── mcp/        # MCP server (McpToolProviders)
-    │   ├── openhost/   # Open Host Services
     │   └── event/      # Domain event consumers
     └── outgoing/       # Outgoing adapters (secondary/driven)
         └── persistence/ # Repository implementations
@@ -554,7 +556,7 @@ def "Repository Implementations must reside in adapter.outgoing package"() {
 | REST controller | `{context}.adapter.incoming.api/` | `ProductResource.java` |
 | MVC controller | `{context}.adapter.incoming.web/` | `ProductPageController.java` |
 | MCP tool provider | `{context}.adapter.incoming.mcp/` | `ProductCatalogMcpToolProvider.java` |
-| Open Host Service | `{context}.adapter.incoming.openhost/` | `ProductCatalogService.java` |
+| Open Host Service (in-process) | `{context}.api/` | `ProductCatalogService.java` |
 | Event consumer | `{context}.adapter.incoming.event/` | `ProductEventConsumer.java` |
 | DTO | `{context}.adapter.incoming.api/` | `ProductDto.java` |
 | ViewModel | `{context}.adapter.incoming.web/` | `ProductCatalogPageViewModel.java` |

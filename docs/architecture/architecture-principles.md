@@ -2098,8 +2098,10 @@ Inside a context:
 │   │   ├── *Command.java / *Query.java
 │   │   └── *Result.java
 │   └── shared/              # Shared output ports (repositories, stores, data ports)
-└── adapter/
-    ├── incoming/            # api/, web/, mcp/, openhost/, event/
+├── api/                     # Published in-process interface (Open Host Service)
+├── events/                  # Published integration events
+└── adapter/                 # Sub-packages are a convention, no rule checks them
+    ├── incoming/            # api/ (REST), web/, mcp/, event/
     └── outgoing/            # persistence/, event/, client/
 ```
 

@@ -116,7 +116,7 @@ pricing/
 ├── domain/model/ProductPrice.java          # Aggregate
 ├── application/getpricesforproducts/       # Bulk price lookup
 ├── application/shared/ProductPriceRepository.java
-└── adapter/incoming/openhost/PricingService.java  # OHS
+└── api/PricingService.java                 # OHS (published in-process interface)
 ```
 
 ### Inventory Context
@@ -127,7 +127,7 @@ inventory/
 ├── application/getstockforproducts/        # Bulk stock lookup
 ├── application/reservestock/               # Checkout reservations
 ├── application/shared/StockLevelRepository.java
-└── adapter/incoming/openhost/InventoryService.java  # OHS
+└── api/InventoryService.java               # OHS (published in-process interface)
 ```
 
 ## Design Decisions
