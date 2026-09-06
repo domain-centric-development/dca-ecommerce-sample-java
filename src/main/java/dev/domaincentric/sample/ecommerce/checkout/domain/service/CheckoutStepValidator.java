@@ -2,8 +2,8 @@ package dev.domaincentric.sample.ecommerce.checkout.domain.service;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainService;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot;
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -19,28 +19,25 @@ import org.jspecify.annotations.Nullable;
  *   <li>Can only access CONFIRMATION step when session is confirmed or completed
  * </ul>
  *
- * <p>Returns redirect URLs when access is denied, allowing controllers to redirect users to the
- * appropriate step. It decides on the {@link CheckoutCartSnapshot} read model, which is what the
- * web adapters hold — the aggregate never leaves the application layer.
+ * <p>Answers with a {@link StepAccess}: granted, another step of the same checkout, or back to the
+ * cart. It decides on the {@link CheckoutCartSnapshot} read model — the aggregate never leaves the
+ * application layer — and knows nothing about routes; the web adapter maps the answer to a URL.
  */
 public final class CheckoutStepValidator implements DomainService {
 
-  private static final String CHECKOUT_BASE_PATH = "/checkout";
-  private static final String CART_PATH = "/cart";
-
   /**
-   * Validates if access to a specific checkout step is allowed.
+   * Decides whether a specific checkout step may be opened.
    *
    * @param session the checkout session snapshot (may be null for invalid sessions)
    * @param targetStep the step the user wants to access
-   * @return empty if access is allowed, or redirect URL if access is denied
+   * @return the access decision
    */
-  public Optional<String> validateStepAccess(
+  public StepAccess accessTo(
       @Nullable final CheckoutCartSnapshot session, final CheckoutStep targetStep) {
 
-    // Rule 1: Invalid session - redirect to cart
+    // Rule 1: Invalid session - back to the cart
     if (session == null) {
-      return Optional.of(CART_PATH);
+      return StepAccess.backToCart();
     }
 
     // Rule 2: Terminal states handling (COMPLETED, ABANDONED, EXPIRED)
@@ -60,61 +57,49 @@ public final class CheckoutStepValidator implements DomainService {
 
     // Rule 5: Cannot skip ahead - must complete prior steps
     if (isSkippingAhead(session, targetStep)) {
-      return Optional.of(getStepPath(session.step()));
+      return StepAccess.redirectTo(session.step());
     }
 
-    // Access allowed
-    return Optional.empty();
+    return StepAccess.grant();
   }
 
-  /**
-   * Determines the appropriate redirect URL for a session that needs to be redirected to its
-   * current valid step.
-   *
-   * @param session the checkout session snapshot
-   * @return the URL path for the session's current step
-   */
-  public String getCurrentStepPath(final CheckoutCartSnapshot session) {
-    return getStepPath(session.step());
-  }
-
-  private Optional<String> handleTerminalState(
+  private StepAccess handleTerminalState(
       final CheckoutCartSnapshot session, final CheckoutStep targetStep) {
 
     return switch (session.status()) {
       case COMPLETED -> {
         // Completed sessions can only access CONFIRMATION
         if (targetStep == CheckoutStep.CONFIRMATION) {
-          yield Optional.empty();
+          yield StepAccess.grant();
         }
-        yield Optional.of(getStepPath(CheckoutStep.CONFIRMATION));
+        yield StepAccess.redirectTo(CheckoutStep.CONFIRMATION);
       }
       case ABANDONED, EXPIRED -> {
-        // Abandoned/expired sessions redirect to cart to start fresh
-        yield Optional.of(CART_PATH);
+        // Abandoned/expired sessions send the customer back to the cart to start fresh
+        yield StepAccess.backToCart();
       }
       // CONFIRMED is not terminal - handled separately by handleConfirmedState
       // ACTIVE is not terminal - handled by normal flow
-      default -> Optional.empty();
+      default -> StepAccess.grant();
     };
   }
 
-  private Optional<String> handleConfirmedState(final CheckoutStep targetStep) {
+  private StepAccess handleConfirmedState(final CheckoutStep targetStep) {
     // CONFIRMED sessions can only access CONFIRMATION step
     if (targetStep == CheckoutStep.CONFIRMATION) {
-      return Optional.empty();
+      return StepAccess.grant();
     }
-    return Optional.of(getStepPath(CheckoutStep.CONFIRMATION));
+    return StepAccess.redirectTo(CheckoutStep.CONFIRMATION);
   }
 
-  private Optional<String> handleConfirmationAccess(final CheckoutCartSnapshot session) {
+  private StepAccess handleConfirmationAccess(final CheckoutCartSnapshot session) {
     // CONFIRMATION is only accessible when status is CONFIRMED or COMPLETED
     if (session.isConfirmed() || session.isCompleted()) {
-      return Optional.empty();
+      return StepAccess.grant();
     }
 
-    // Redirect to current step if trying to access CONFIRMATION prematurely
-    return Optional.of(getStepPath(session.step()));
+    // Back to the current step if trying to access CONFIRMATION prematurely
+    return StepAccess.redirectTo(session.step());
   }
 
   private boolean isSkippingAhead(
@@ -146,18 +131,5 @@ public final class CheckoutStepValidator implements DomainService {
               && session.isStepCompleted(CheckoutStep.PAYMENT);
       case CONFIRMATION -> session.isCompleted();
     };
-  }
-
-  /** The routes of the checkout pages — {@code BUYER_INFO} is served at {@code /checkout/buyer}. */
-  private String getStepPath(final CheckoutStep step) {
-    final String page =
-        switch (step) {
-          case BUYER_INFO -> "buyer";
-          case DELIVERY -> "delivery";
-          case PAYMENT -> "payment";
-          case REVIEW -> "review";
-          case CONFIRMATION -> "confirmation";
-        };
-    return CHECKOUT_BASE_PATH + "/" + page;
   }
 }

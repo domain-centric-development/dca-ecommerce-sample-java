@@ -248,10 +248,13 @@ an inactivity threshold). Final state.
 
 ### CartTotalCalculator
 
-**Definition:** Calculates cart totals including taxes (default 19% VAT),
-shipping costs, and combined gross total.
+**Definition:** Extracts the value-added tax contained in a cart's gross amounts (default
+19% VAT) and derives the net amount; the subtotal itself does not change.
 
 **Type:** Domain Service
+
+**Notes:** Invoked by the `GetCartById` use case, which puts the contained tax into its result; the cart page
+adapter only formats that value.
 
 ## Specifications
 

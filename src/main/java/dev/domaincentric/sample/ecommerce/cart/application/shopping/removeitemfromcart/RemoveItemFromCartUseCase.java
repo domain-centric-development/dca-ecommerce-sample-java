@@ -5,9 +5,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRe
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
-import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,26 +58,6 @@ public class RemoveItemFromCartUseCase implements RemoveItemFromCartInputPort {
     // Publish domain events
     eventPublisher.publishAndClearEvents(cart);
 
-    // Map to output
-    final List<RemoveItemFromCartResult.CartItemSummary> items =
-        cart.items().stream()
-            .map(
-                item ->
-                    new RemoveItemFromCartResult.CartItemSummary(
-                        item.id().value().toString(),
-                        item.productId().value().toString(),
-                        item.quantity().value(),
-                        item.priceAtAddition().value().amount(),
-                        item.priceAtAddition().value().currency().getCurrencyCode()))
-            .toList();
-
-    final Money total = cart.calculateTotal();
-
-    return new RemoveItemFromCartResult(
-        cart.id().value(),
-        cart.customerId().value(),
-        items,
-        total.amount(),
-        total.currency().getCurrencyCode());
+    return RemoveItemFromCartResult.from(cart);
   }
 }

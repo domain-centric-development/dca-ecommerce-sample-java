@@ -30,6 +30,8 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult;
+import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot;
+import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.LineItemSnapshot;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.inventory.api.InventoryService;
 import dev.domaincentric.sample.ecommerce.pricing.api.PricingService;
@@ -255,14 +257,18 @@ class ArticleDataFlowIntegrationTest {
       StartCheckoutResult result =
           startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
 
-      // Then: Checkout session should have line items with current prices
+      // Then: The command answers small; the session query carries the line items
       assertNotNull(result.sessionId(), "Session should be created");
-      assertFalse(result.lineItems().isEmpty(), "Should have line items");
+      CheckoutCartSnapshot session =
+          getCheckoutSessionInputPort
+              .execute(GetCheckoutSessionQuery.of(result.sessionId()))
+              .session();
+      assertFalse(session.lineItems().isEmpty(), "Should have line items");
 
       // Verify line item has pricing from CheckoutArticleDataPort
-      StartCheckoutResult.LineItemData lineItem = result.lineItems().get(0);
-      assertEquals(testProductIdString, lineItem.productId());
-      assertNotNull(lineItem.unitPrice(), "Unit price should be set from pricing service");
+      LineItemSnapshot lineItem = session.lineItems().get(0);
+      assertEquals(testProductIdString, lineItem.productId().value());
+      assertNotNull(lineItem.price(), "Unit price should be set from pricing service");
       assertEquals(2, lineItem.quantity());
     }
 
@@ -283,12 +289,17 @@ class ArticleDataFlowIntegrationTest {
           startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
 
       // Then: Line item should have product name
-      StartCheckoutResult.LineItemData lineItem = result.lineItems().get(0);
+      LineItemSnapshot lineItem =
+          getCheckoutSessionInputPort
+              .execute(GetCheckoutSessionQuery.of(result.sessionId()))
+              .session()
+              .lineItems()
+              .get(0);
       Optional<ProductInfo> productInfo = productCatalogService.getProductInfo(testProductId);
       assertTrue(productInfo.isPresent());
       assertEquals(
           productInfo.get().name(),
-          lineItem.productName(),
+          lineItem.name(),
           "Line item should have product name from ProductCatalogService");
     }
   }
@@ -322,7 +333,6 @@ class ArticleDataFlowIntegrationTest {
 
       // Then: Checkout should be confirmed successfully
       assertEquals("CONFIRMED", result.status(), "Checkout should be confirmed");
-      assertNotNull(result.totalAmount(), "Total should be calculated");
     }
 
     @Test
@@ -584,7 +594,12 @@ class ArticleDataFlowIntegrationTest {
       StartCheckoutResult startResult =
           startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
       assertNotNull(
-          startResult.lineItems().get(0).unitPrice(),
+          getCheckoutSessionInputPort
+              .execute(GetCheckoutSessionQuery.of(startResult.sessionId()))
+              .session()
+              .lineItems()
+              .get(0)
+              .price(),
           "Checkout should have pricing from CheckoutArticleDataPort");
 
       // Step 3: Complete checkout steps

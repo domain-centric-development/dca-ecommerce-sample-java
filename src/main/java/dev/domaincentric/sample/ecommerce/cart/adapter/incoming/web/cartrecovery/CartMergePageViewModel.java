@@ -45,8 +45,8 @@ public record CartMergePageViewModel(
           summary.cartId(),
           summary.itemCount(),
           summary.totalQuantity(),
-          summary.totalAmount(),
-          summary.totalCurrency(),
+          summary.total().amount(),
+          summary.total().currency().getCurrencyCode(),
           summary.items().stream().map(CartItemViewModel::fromItemSummary).toList());
     }
   }
@@ -65,8 +65,8 @@ public record CartMergePageViewModel(
           item.productName(),
           item.imageUrl(),
           item.quantity(),
-          item.unitPriceAmount(),
-          item.unitPriceCurrency());
+          item.unitPrice().amount(),
+          item.unitPrice().currency().getCurrencyCode());
     }
   }
 }

@@ -6,7 +6,6 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.CartArticle;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.Map;
 import java.util.Optional;
@@ -79,13 +78,11 @@ public class GetCartMergeOptionsUseCase implements GetCartMergeOptionsInputPort 
 
   private GetCartMergeOptionsResult.CartSummary toCartSummary(
       final ShoppingCart cart, final Map<ProductId, CartArticle> articleData) {
-    final Money total = cart.calculateTotal();
     return new GetCartMergeOptionsResult.CartSummary(
         cart.id().value(),
         cart.itemCount(),
         cart.totalQuantity(),
-        total.amount(),
-        total.currency().getCurrencyCode(),
+        cart.calculateTotal(),
         cart.items().stream().map(item -> toItemSummary(item, articleData)).toList());
   }
 
@@ -99,7 +96,6 @@ public class GetCartMergeOptionsUseCase implements GetCartMergeOptionsInputPort 
         name,
         imageUrl,
         item.quantity().value(),
-        item.priceAtAddition().value().amount(),
-        item.priceAtAddition().value().currency().getCurrencyCode());
+        item.priceAtAddition().value());
   }
 }

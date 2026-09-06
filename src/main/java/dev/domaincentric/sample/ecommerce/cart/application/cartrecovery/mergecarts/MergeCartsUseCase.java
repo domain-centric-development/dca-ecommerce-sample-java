@@ -6,8 +6,6 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -99,7 +97,7 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
       shoppingCartRepository.deleteById(anonymousCart.id());
     }
 
-    return buildResponse(accountCart, strategy, itemsFromAnonymous, itemsFromAccount, true);
+    return MergeCartsResult.from(accountCart, strategy, itemsFromAnonymous, itemsFromAccount, true);
   }
 
   private MergeCartsResult useAccountCartOnly(
@@ -113,7 +111,7 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
       shoppingCartRepository.deleteById(anonymousCartOpt.get().id());
     }
 
-    return buildResponse(accountCart, strategy, 0, originalAccountItems, true);
+    return MergeCartsResult.from(accountCart, strategy, 0, originalAccountItems, true);
   }
 
   private MergeCartsResult useAnonymousCartOnly(
@@ -147,39 +145,6 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
       shoppingCartRepository.deleteById(anonymousCart.id());
     }
 
-    return buildResponse(accountCart, strategy, itemsFromAnonymous, 0, true);
-  }
-
-  private MergeCartsResult buildResponse(
-      final ShoppingCart cart,
-      final CartMergeStrategy strategy,
-      final int itemsFromAnonymous,
-      final int itemsFromAccount,
-      final boolean anonymousCartDeleted) {
-
-    final List<MergeCartsResult.CartItemSummary> items =
-        cart.items().stream()
-            .map(
-                item ->
-                    new MergeCartsResult.CartItemSummary(
-                        item.id().value(),
-                        item.productId().value(),
-                        item.quantity().value(),
-                        item.priceAtAddition().value().amount(),
-                        item.priceAtAddition().value().currency().getCurrencyCode()))
-            .toList();
-
-    final Money total = cart.calculateTotal();
-
-    return new MergeCartsResult(
-        cart.id().value(),
-        cart.customerId().value(),
-        items,
-        total.amount(),
-        total.currency().getCurrencyCode(),
-        strategy,
-        itemsFromAnonymous,
-        itemsFromAccount,
-        anonymousCartDeleted);
+    return MergeCartsResult.from(accountCart, strategy, itemsFromAnonymous, 0, true);
   }
 }

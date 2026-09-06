@@ -16,7 +16,6 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -97,32 +96,8 @@ public class CheckoutCartUseCase implements CheckoutCartInputPort {
           cart.checkout();
           shoppingCartRepository.save(cart);
           eventPublisher.publishAndClearEvents(cart);
-          return toResult(cart, enrichedCart);
+          return CheckoutCartResult.from(cart, enrichedCart, Instant.now());
         });
-  }
-
-  private static CheckoutCartResult toResult(
-      final ShoppingCart cart, final EnrichedCart enrichedCart) {
-    final List<CheckoutCartResult.CartItemSummary> items =
-        enrichedCart.items().stream()
-            .map(
-                item ->
-                    new CheckoutCartResult.CartItemSummary(
-                        item.cartItemId().value().toString(),
-                        item.productId().value().toString(),
-                        item.quantity().value(),
-                        item.currentArticle().currentPrice().amount(),
-                        item.currentArticle().currentPrice().currency().getCurrencyCode()))
-            .toList();
-    final Money total = enrichedCart.calculateCurrentSubtotal();
-    return new CheckoutCartResult(
-        cart.id().value(),
-        enrichedCart.customerId().value(),
-        items,
-        total.amount(),
-        total.currency().getCurrencyCode(),
-        Instant.now() // Note: In production, this should come from the aggregate or an event
-        );
   }
 
   /**

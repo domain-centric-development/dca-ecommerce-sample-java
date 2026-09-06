@@ -6,8 +6,6 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,28 +87,6 @@ public class RecoverCartOnLoginUseCase implements RecoverCartOnLoginInputPort {
     // Delete the anonymous cart
     shoppingCartRepository.deleteById(anonCart.id());
 
-    // Map to output
-    final List<RecoverCartOnLoginResult.CartItemSummary> items =
-        registeredCart.items().stream()
-            .map(
-                item ->
-                    new RecoverCartOnLoginResult.CartItemSummary(
-                        item.id().value(),
-                        item.productId().value(),
-                        item.quantity().value(),
-                        item.priceAtAddition().value().amount(),
-                        item.priceAtAddition().value().currency().getCurrencyCode()))
-            .toList();
-
-    final Money total = registeredCart.calculateTotal();
-
-    return new RecoverCartOnLoginResult(
-        registeredCart.id().value(),
-        registeredCart.customerId().value(),
-        items,
-        total.amount(),
-        total.currency().getCurrencyCode(),
-        itemsMerged,
-        true);
+    return RecoverCartOnLoginResult.recovered(registeredCart, itemsMerged);
   }
 }

@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.cart.application.operations.getallcar
 
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,21 +28,6 @@ public class GetAllCartsUseCase implements GetAllCartsInputPort {
   public GetAllCartsResult execute(final GetAllCartsQuery input) {
     final List<ShoppingCart> carts = shoppingCartRepository.findAll();
 
-    final List<GetAllCartsResult.CartSummary> cartSummaries =
-        carts.stream()
-            .map(
-                cart -> {
-                  final Money total = cart.calculateTotal();
-                  return new GetAllCartsResult.CartSummary(
-                      cart.id().value(),
-                      cart.customerId().value(),
-                      cart.status().name(),
-                      cart.items().size(),
-                      total.amount(),
-                      total.currency().getCurrencyCode());
-                })
-            .toList();
-
-    return new GetAllCartsResult(cartSummaries);
+    return GetAllCartsResult.from(carts);
   }
 }

@@ -2,52 +2,24 @@ package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.api;
 
 import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.CartItemSummary;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.createcart.CreateCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartResult;
-import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
-import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
 /**
- * Converter for transforming between domain/use case models and Cart DTOs.
+ * Converter for transforming use case results and the enriched cart read model into Cart DTOs.
  *
- * <p>This converter supports both:
- *
- * <ul>
- *   <li>Domain entities (ShoppingCart) - for legacy code
- *   <li>Use case outputs - for Clean Architecture pattern
- * </ul>
+ * <p>Results deliver values ({@link Money}, {@link CartItemSummary}); this converter splits them
+ * into the amount and currency-code fields of the DTOs. It derives nothing itself.
  */
 @Component
 public final class ShoppingCartDtoConverter {
-
-  /**
-   * Converts domain ShoppingCart entity to DTO.
-   *
-   * @param cart the domain cart
-   * @return cart DTO
-   * @deprecated Use use case output converters instead
-   */
-  @Deprecated
-  public ShoppingCartDto toDto(final ShoppingCart cart) {
-    final List<CartItemDto> itemDtos = cart.items().stream().map(this::toItemDto).toList();
-
-    final Money total = cart.calculateTotal();
-
-    return new ShoppingCartDto(
-        cart.id().value(),
-        cart.customerId().value(),
-        itemDtos,
-        cart.status().name(),
-        total.amount(),
-        total.currency().getCurrencyCode(),
-        cart.itemCount());
-  }
 
   /** Converts CreateCartResult to DTO. */
   public ShoppingCartDto toDto(final CreateCartResult output) {
@@ -86,8 +58,8 @@ public final class ShoppingCartDtoConverter {
         output.customerId(),
         items,
         "ACTIVE", // Always active when adding items
-        output.totalAmount(),
-        output.totalCurrency(),
+        output.total().amount(),
+        output.total().currency().getCurrencyCode(),
         items.size());
   }
 
@@ -100,8 +72,8 @@ public final class ShoppingCartDtoConverter {
         output.customerId(),
         items,
         "ACTIVE", // Always active when removing items
-        output.totalAmount(),
-        output.totalCurrency(),
+        output.total().amount(),
+        output.total().currency().getCurrencyCode(),
         items.size());
   }
 
@@ -114,8 +86,8 @@ public final class ShoppingCartDtoConverter {
         output.customerId(),
         items,
         "CHECKED_OUT",
-        output.totalAmount(),
-        output.totalCurrency(),
+        output.total().amount(),
+        output.total().currency().getCurrencyCode(),
         items.size());
   }
 
@@ -130,20 +102,11 @@ public final class ShoppingCartDtoConverter {
                         cart.customerId(),
                         cart.status(),
                         cart.itemCount(),
-                        cart.totalAmount(),
-                        cart.totalCurrency()))
+                        cart.total().amount(),
+                        cart.total().currency().getCurrencyCode()))
             .toList();
 
     return new ShoppingCartListDto(summaries);
-  }
-
-  private CartItemDto toItemDto(final CartItem item) {
-    return new CartItemDto(
-        item.id().value(),
-        item.productId().value(),
-        item.quantity().value(),
-        item.priceAtAddition().value().amount(),
-        item.priceAtAddition().value().currency().getCurrencyCode());
   }
 
   private CartItemDto toItemDto(final EnrichedCartItem item) {
@@ -157,30 +120,12 @@ public final class ShoppingCartDtoConverter {
         currentPrice.currency().getCurrencyCode());
   }
 
-  private CartItemDto toItemDto(final AddItemToCartResult.CartItemSummary item) {
+  private CartItemDto toItemDto(final CartItemSummary item) {
     return new CartItemDto(
         item.itemId(),
         item.productId(),
         item.quantity(),
-        item.unitPriceAmount(),
-        item.unitPriceCurrency());
-  }
-
-  private CartItemDto toItemDto(final RemoveItemFromCartResult.CartItemSummary item) {
-    return new CartItemDto(
-        item.itemId(),
-        item.productId(),
-        item.quantity(),
-        item.unitPriceAmount(),
-        item.unitPriceCurrency());
-  }
-
-  private CartItemDto toItemDto(final CheckoutCartResult.CartItemSummary item) {
-    return new CartItemDto(
-        item.itemId(),
-        item.productId(),
-        item.quantity(),
-        item.unitPriceAmount(),
-        item.unitPriceCurrency());
+        item.unitPrice().amount(),
+        item.unitPrice().currency().getCurrencyCode());
   }
 }

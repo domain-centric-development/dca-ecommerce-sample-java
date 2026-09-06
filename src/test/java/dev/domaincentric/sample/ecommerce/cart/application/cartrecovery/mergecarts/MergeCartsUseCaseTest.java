@@ -119,7 +119,7 @@ class MergeCartsUseCaseTest {
       assertEquals(1, response.items().size());
       assertEquals(5, response.items().get(0).quantity()); // 2 + 3
       // Total should be 5 * 10 = 50
-      assertEquals(0, BigDecimal.valueOf(50).compareTo(response.totalAmount()));
+      assertEquals(0, BigDecimal.valueOf(50).compareTo(response.total().amount()));
     }
 
     @Test

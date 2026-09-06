@@ -1,6 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions;
 
-import java.math.BigDecimal;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -34,31 +34,21 @@ public record GetCartMergeOptionsResult(
    * @param cartId the cart ID
    * @param itemCount number of distinct items
    * @param totalQuantity total quantity of all items
-   * @param totalAmount total cart value
-   * @param totalCurrency currency of total
+   * @param total total cart value
    * @param items list of item summaries
    */
   public record CartSummary(
-      String cartId,
-      int itemCount,
-      int totalQuantity,
-      BigDecimal totalAmount,
-      String totalCurrency,
-      List<CartItemSummary> items) {}
+      String cartId, int itemCount, int totalQuantity, Money total, List<CartItemSummary> items) {}
 
   /**
    * Summary of a cart item for display.
    *
    * @param productId the product ID
+   * @param productName the product name
+   * @param imageUrl the product image URL
    * @param quantity the quantity
-   * @param unitPriceAmount the unit price amount
-   * @param unitPriceCurrency the unit price currency
+   * @param unitPrice the unit price
    */
   public record CartItemSummary(
-      String productId,
-      String productName,
-      String imageUrl,
-      int quantity,
-      BigDecimal unitPriceAmount,
-      String unitPriceCurrency) {}
+      String productId, String productName, String imageUrl, int quantity, Money unitPrice) {}
 }

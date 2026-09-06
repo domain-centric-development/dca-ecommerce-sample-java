@@ -134,31 +134,7 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
                   cart.cartId(), cart.customerId(), lineItems, total, taxCalculator);
           checkoutSessionRepository.save(session);
           domainEventPublisher.publishAndClearEvents(session);
-          return mapToResult(session);
+          return StartCheckoutResult.from(session);
         });
-  }
-
-  private StartCheckoutResult mapToResult(final CheckoutSession session) {
-    final List<StartCheckoutResult.LineItemData> lineItemData =
-        session.lineItems().stream()
-            .map(
-                item ->
-                    new StartCheckoutResult.LineItemData(
-                        item.id().value(),
-                        item.productId().value().toString(),
-                        item.productName(),
-                        item.unitPrice().toString(),
-                        item.quantity(),
-                        item.lineTotal().toString()))
-            .toList();
-
-    return new StartCheckoutResult(
-        session.id().value().toString(),
-        session.cartId().value(),
-        session.customerId().value(),
-        session.currentStep().name(),
-        session.status().name(),
-        lineItemData,
-        session.totals().subtotal().toString());
   }
 }

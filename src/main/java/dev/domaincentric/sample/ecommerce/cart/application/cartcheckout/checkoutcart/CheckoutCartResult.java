@@ -1,6 +1,9 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart;
 
-import java.math.BigDecimal;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.CartItemSummary;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.time.Instant;
 import java.util.List;
 
@@ -9,32 +12,28 @@ import java.util.List;
  *
  * @param cartId the cart ID
  * @param customerId the customer ID
- * @param items the cart items at checkout
- * @param totalAmount the total amount
- * @param totalCurrency the total currency
+ * @param items the cart items at checkout, at their current prices
+ * @param total the total amount at current prices
  * @param checkedOutAt the checkout timestamp
  */
 public record CheckoutCartResult(
     String cartId,
     String customerId,
     List<CartItemSummary> items,
-    BigDecimal totalAmount,
-    String totalCurrency,
+    Money total,
     Instant checkedOutAt) {
 
   /**
-   * Summary of a cart item.
-   *
-   * @param itemId the cart item ID
-   * @param productId the product ID
-   * @param quantity the quantity
-   * @param unitPriceAmount the unit price amount
-   * @param unitPriceCurrency the unit price currency
+   * Builds the result from the checked-out cart and its enriched view, which carries the current
+   * article prices the total was validated against.
    */
-  public record CartItemSummary(
-      String itemId,
-      String productId,
-      int quantity,
-      BigDecimal unitPriceAmount,
-      String unitPriceCurrency) {}
+  public static CheckoutCartResult from(
+      final ShoppingCart cart, final EnrichedCart enrichedCart, final Instant checkedOutAt) {
+    return new CheckoutCartResult(
+        cart.id().value(),
+        enrichedCart.customerId().value(),
+        enrichedCart.items().stream().map(CartItemSummary::from).toList(),
+        enrichedCart.calculateCurrentSubtotal(),
+        checkedOutAt);
+  }
 }

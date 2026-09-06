@@ -208,6 +208,19 @@ unavailable, insufficient stock).
 
 **Operations:** `isBefore`, `isAfter`, `isTerminal`, `next`, `previous`.
 
+### StepAccess
+
+**Definition:** The domain's answer to "may this checkout step be opened?": granted, redirect to
+another step, or back to the cart (no usable session).
+
+**Type:** Value Object
+
+**Related terms:** `CheckoutStep`, `CheckoutStepValidator`.
+
+**Operations:** `grant()`, `redirectTo(step)`, `backToCart()`, `granted()`, `isBackToCart()`.
+
+**Notes:** Carries a step, never a URL — the incoming adapter turns it into a route.
+
 ### CheckoutSessionStatus
 
 **Definition:** Lifecycle status of a checkout session: `ACTIVE`, `CONFIRMED`, `COMPLETED`,
@@ -353,18 +366,20 @@ purposes.
 
 ### CheckoutStepValidator
 
-**Definition:** Enforces navigation rules between the checkout steps and returns the correct
-redirect path when access is not permitted.
+**Definition:** Enforces navigation rules between the checkout steps: no session sends the customer
+back to the cart, terminal and confirmed sessions only reach the confirmation, and a step whose
+prerequisites are unfulfilled sends them to the step they are actually on. Going back to a completed
+step is allowed.
 
 **Type:** Domain Service
 
-**Related terms:** `CheckoutSession`, `CheckoutStep`, `CheckoutSessionStatus`.
+**Related terms:** `CheckoutSession`, `CheckoutCartSnapshot`, `CheckoutStep`, `StepAccess`.
 
-**Operations:** `validateStepAccess`, `getCurrentStepPath`.
+**Operations:** `accessTo(snapshot, targetStep)` — answers with a `StepAccess`.
 
-**Notes:** Returns paths (`/checkout/...`, `/cart`) — the boundary to the UI/adapter layer should
-be reviewed; the service may need to return abstract step targets instead of URLs.
-
+**Notes:** Decides on the `CheckoutCartSnapshot` read model and knows no routes. The `GetCheckoutSession` query
+use case invokes it when a step is requested and delivers the `StepAccess` in its result; the web
+adapter (`CheckoutRoutes`) maps the decision to a redirect path.
 ### CheckoutArticlePriceResolver
 
 **Definition:** Domain port for resolving current price and availability data for articles
@@ -438,5 +453,3 @@ snapshot naming scheme (`CartSnapshot` / `CartItemSnapshot`).
   Align with the naming convention.
 - **`CustomerId` polysemy** — the same name exists in `cart`, with semantic overlap to `UserId`/
   `AccountId` from `sharedkernel`/`account`. Clarify which identity is authoritative.
-- **`CheckoutStepValidator` returns URL paths** — possible boundary violation
-  domain → adapter; to be reviewed.

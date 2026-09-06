@@ -9,10 +9,8 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
-import java.util.List;
 import org.springframework.stereotype.Service;
 
 /**
@@ -85,28 +83,7 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
           cart.addItem(productId, quantity, priceAtAddition);
           shoppingCartRepository.save(cart);
           eventPublisher.publishAndClearEvents(cart);
-          return toResult(cart);
+          return AddItemToCartResult.from(cart);
         });
-  }
-
-  private static AddItemToCartResult toResult(final ShoppingCart cart) {
-    final List<AddItemToCartResult.CartItemSummary> items =
-        cart.items().stream()
-            .map(
-                item ->
-                    new AddItemToCartResult.CartItemSummary(
-                        item.id().value().toString(),
-                        item.productId().value().toString(),
-                        item.quantity().value(),
-                        item.priceAtAddition().value().amount(),
-                        item.priceAtAddition().value().currency().getCurrencyCode()))
-            .toList();
-    final Money total = cart.calculateTotal();
-    return new AddItemToCartResult(
-        cart.id().value(),
-        cart.customerId().value(),
-        items,
-        total.amount(),
-        total.currency().getCurrencyCode());
   }
 }

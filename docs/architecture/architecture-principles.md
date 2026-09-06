@@ -1434,9 +1434,10 @@ public record AddItemToCartInput(
 **Rules:**
 1. Immutable (Java records preferred)
 2. Contain only data needed by presentation layer
-3. Primitive types, Strings, and nested records
+3. Values, never identities: primitives, Strings, nested part records (named by content — `CartItemSummary`, `LineItemData`), value objects (`Money`, `ProductId`) and read models (`EnrichedCart`, `CheckoutCartSnapshot`); no aggregate root or entity, also not inside `List<T>`/`Optional<T>` (`DCA-USE-015`, checked transitively)
 4. Reside in `application` package
-5. Named with "Output" suffix
+5. Named with "Result" suffix at the top level only
+6. Command results are small — ids, status, what the caller needs next; the view comes from a query
 
 **Purpose:**
 - Prevent leaking domain entities to outer layers
@@ -1454,6 +1455,28 @@ public record CreateProductOutput(
     String priceCurrency
 ) {}
 ```
+
+#### Shaping the Result
+
+The Checkout wizard's commands (`SubmitBuyerInfo`, `SubmitDelivery`, `SubmitPayment`, `ConfirmCheckout`) answer
+`(sessionId, currentStep, status)`; the page controllers redirect and the next page asks `GetCheckoutSession`,
+whose result wraps the `CheckoutCartSnapshot` read model (a `Value` in `domain/readmodel`, built by
+`CheckoutCartSnapshot.from(session)`) — the snapshot is the result field, nothing is flattened a second time.
+Cart results carry `Money` instead of amount/currency pairs and are built by static `from(...)` factories on the
+result; the part record `CartItemSummary`, shared by several use cases, lives in `application/shared` and is
+named by content. `GetCartByIdResult` delivers the `EnrichedCart` read model together with a `CartTotals` part
+(current and original subtotal, their difference, the contained tax) that the use case assembles with the
+`CartTotalCalculator` domain service.
+
+Incoming adapters read and format what a result delivers and operate no domain object. Reading includes the own,
+parameterless queries of a delivered read model — `CartPageViewModel` calls `currentLineTotal()`,
+`priceDifference()`, `priceIncreased()` and `isValidForCheckout()` on the enriched cart, derivations of the value's
+own state; it never compares or combines two delivered values itself.
+Whether a checkout step may be opened is decided by the `GetCheckoutSession` query: the use case invokes the
+`CheckoutStepValidator` domain service and delivers a `StepAccess` value; the page controller maps it to a route.
+No web adapter injects a domain service (`DCA-HEX-012`), constructs an aggregate, entity or domain value, or
+combines values into a new business fact. Outgoing adapters are different: the repositories map and reconstitute aggregates while implementing
+their output ports.
 
 ### Benefits
 
@@ -2272,6 +2295,7 @@ class holds the forbidden type outright.
 7. HTTP Response models must end with "Response" and reside in incoming adapters
 8. Application layer must NOT depend on DTOs (presentation concern)
 9. Command/Query/Result models must contain only primitives, Strings, value types, or nested records (no domain entities)
+10. Results must not expose aggregate roots or entities — checked transitively through nested and part records and generic arguments (`DCA-USE-015`)
 
 #### Hexagonal Architecture Rules
 
@@ -2280,6 +2304,7 @@ class holds the forbidden type outright.
 3. Adapters must NOT communicate directly with each other
 4. Repository implementations must be in `adapter.outgoing`
 5. Controllers and Resources must never access repositories directly - they drive the application through input ports only
+6. Incoming adapters must not depend on domain services (`DCA-HEX-012`) - they read and format the result; the use case owns the domain collaboration. Outgoing adapters may construct and reconstitute domain objects
 
 #### Onion Architecture Rules
 

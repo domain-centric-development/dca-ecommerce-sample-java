@@ -96,19 +96,7 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
           session.submitPayment(paymentSelection);
           checkoutSessionRepository.save(session);
           eventPublisher.publishAndClearEvents(session);
-          return mapToResponse(session, provider);
+          return SubmitPaymentResult.from(session);
         });
-  }
-
-  private SubmitPaymentResult mapToResponse(
-      final CheckoutSession session, final PaymentProvider provider) {
-    final PaymentSelection payment = session.paymentSelection();
-    return new SubmitPaymentResult(
-        session.id().value().toString(),
-        session.currentStep().name(),
-        session.status().name(),
-        payment.providerId().value(),
-        provider.displayName(),
-        payment.providerReference());
   }
 }

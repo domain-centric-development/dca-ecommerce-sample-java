@@ -1,38 +1,27 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery;
 
-import java.math.BigDecimal;
-import org.jspecify.annotations.Nullable;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 
 /**
  * Output model for delivery submission.
  *
+ * <p>A command's result is small: the session, where the checkout stands now and what state it is
+ * in. The page that follows asks the session query for everything it displays.
+ *
  * @param sessionId the checkout session ID
- * @param currentStep the current step after submission
+ * @param currentStep the current step after the command
  * @param status the session status
- * @param street the submitted street address
- * @param streetLine2 optional second address line
- * @param city the submitted city
- * @param postalCode the submitted postal code
- * @param country the submitted country
- * @param state optional state/province
- * @param shippingOptionId the selected shipping option ID
- * @param shippingOptionName the shipping option display name
- * @param estimatedDelivery the estimated delivery time
- * @param shippingCost the shipping cost
- * @param currencyCode the currency code for shipping cost
  */
-public record SubmitDeliveryResult(
-    String sessionId,
-    String currentStep,
-    String status,
-    String street,
-    @Nullable String streetLine2,
-    String city,
-    String postalCode,
-    String country,
-    @Nullable String state,
-    String shippingOptionId,
-    String shippingOptionName,
-    String estimatedDelivery,
-    BigDecimal shippingCost,
-    String currencyCode) {}
+public record SubmitDeliveryResult(String sessionId, String currentStep, String status) {
+
+  /**
+   * Builds the result from the session as it stands after the command.
+   *
+   * @param session the updated checkout session
+   * @return the result
+   */
+  public static SubmitDeliveryResult from(final CheckoutSession session) {
+    return new SubmitDeliveryResult(
+        session.id().value(), session.currentStep().name(), session.status().name());
+  }
+}

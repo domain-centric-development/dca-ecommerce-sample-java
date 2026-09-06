@@ -9,8 +9,6 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
-import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
-import dev.domaincentric.sample.ecommerce.cart.domain.service.CartTotalCalculator;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -44,19 +42,16 @@ public class CartPageController {
   private final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase;
   private final AddItemToCartInputPort addItemToCartUseCase;
   private final IdentityProvider identityProvider;
-  private final CartTotalCalculator cartTotalCalculator;
 
   public CartPageController(
       final GetCartByIdInputPort getCartByIdUseCase,
       final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase,
       final AddItemToCartInputPort addItemToCartUseCase,
-      final IdentityProvider identityProvider,
-      final CartTotalCalculator cartTotalCalculator) {
+      final IdentityProvider identityProvider) {
     this.getCartByIdUseCase = getCartByIdUseCase;
     this.getOrCreateActiveCartUseCase = getOrCreateActiveCartUseCase;
     this.addItemToCartUseCase = addItemToCartUseCase;
     this.identityProvider = identityProvider;
-    this.cartTotalCalculator = cartTotalCalculator;
   }
 
   /**
@@ -71,15 +66,15 @@ public class CartPageController {
   @GetMapping
   public String showCart(final Model model) {
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
-    final CustomerId customerId = CustomerId.of(identity.userId().value());
+    final String customerId = identity.userId().value();
 
     // Get or create active cart for the current user
     final GetOrCreateActiveCartResult cartResponse =
-        getOrCreateActiveCartUseCase.execute(new GetOrCreateActiveCartCommand(customerId.value()));
+        getOrCreateActiveCartUseCase.execute(new GetOrCreateActiveCartCommand(customerId));
 
     // Fetch cart details
     final GetCartByIdResult result =
-        getCartByIdUseCase.execute(new GetCartByIdQuery(cartResponse.cartId(), customerId.value()));
+        getCartByIdUseCase.execute(new GetCartByIdQuery(cartResponse.cartId(), customerId));
 
     if (!result.found()) {
       return "error/404";
@@ -87,7 +82,7 @@ public class CartPageController {
 
     // Convert to page-specific ViewModel
     final CartPageViewModel viewModel =
-        CartPageViewModel.fromEnrichedCart(result.cart().orElseThrow(), cartTotalCalculator);
+        CartPageViewModel.fromEnrichedCart(result.cart().orElseThrow(), result.totals());
 
     model.addAttribute("shoppingCart", viewModel);
     model.addAttribute("title", "Shopping Cart");
@@ -119,15 +114,15 @@ public class CartPageController {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
-    final CustomerId customerId = CustomerId.of(identity.userId().value());
+    final String customerId = identity.userId().value();
 
     // Get or create active cart
     final GetOrCreateActiveCartResult cartResponse =
-        getOrCreateActiveCartUseCase.execute(new GetOrCreateActiveCartCommand(customerId.value()));
+        getOrCreateActiveCartUseCase.execute(new GetOrCreateActiveCartCommand(customerId));
 
     // Add product to cart
     final AddItemToCartCommand command =
-        new AddItemToCartCommand(cartResponse.cartId(), customerId.value(), productId, quantity);
+        new AddItemToCartCommand(cartResponse.cartId(), customerId, productId, quantity);
     final AddItemToCartResult addResponse = addItemToCartUseCase.execute(command);
 
     // Add success message

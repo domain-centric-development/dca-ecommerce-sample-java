@@ -1,42 +1,27 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout;
 
-import java.util.List;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 
 /**
  * Output model for checkout session creation.
  *
- * @param sessionId the generated checkout session ID
- * @param cartId the source cart ID
- * @param customerId the customer ID
- * @param currentStep the current checkout step
+ * <p>A command's result is small: the session, where the checkout stands now and what state it is
+ * in. The page that follows asks the session query for everything it displays.
+ *
+ * @param sessionId the checkout session ID
+ * @param currentStep the current step after the command
  * @param status the session status
- * @param lineItems the line items in the checkout
- * @param subtotal the subtotal amount as string
  */
-public record StartCheckoutResult(
-    String sessionId,
-    String cartId,
-    String customerId,
-    String currentStep,
-    String status,
-    List<LineItemData> lineItems,
-    String subtotal) {
+public record StartCheckoutResult(String sessionId, String currentStep, String status) {
 
   /**
-   * Line item details in the result.
+   * Builds the result from the session as it stands after the command.
    *
-   * @param lineItemId the line item ID
-   * @param productId the product ID
-   * @param productName the product name
-   * @param unitPrice the unit price as string
-   * @param quantity the quantity
-   * @param lineTotal the line total as string
+   * @param session the updated checkout session
+   * @return the result
    */
-  public record LineItemData(
-      String lineItemId,
-      String productId,
-      String productName,
-      String unitPrice,
-      int quantity,
-      String lineTotal) {}
+  public static StartCheckoutResult from(final CheckoutSession session) {
+    return new StartCheckoutResult(
+        session.id().value(), session.currentStep().name(), session.status().name());
+  }
 }

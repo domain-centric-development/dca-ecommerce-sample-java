@@ -1,6 +1,8 @@
 package dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart;
 
-import java.math.BigDecimal;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.CartItemSummary;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.List;
 
 /**
@@ -9,29 +11,17 @@ import java.util.List;
  * @param cartId the cart ID
  * @param customerId the customer ID
  * @param items the updated list of cart items
- * @param totalAmount the total cart amount
- * @param totalCurrency the total cart currency
+ * @param total the total cart amount
  */
 public record RemoveItemFromCartResult(
-    String cartId,
-    String customerId,
-    List<CartItemSummary> items,
-    BigDecimal totalAmount,
-    String totalCurrency) {
+    String cartId, String customerId, List<CartItemSummary> items, Money total) {
 
-  /**
-   * Summary of a cart item.
-   *
-   * @param itemId the cart item ID
-   * @param productId the product ID
-   * @param quantity the quantity
-   * @param unitPriceAmount the unit price amount
-   * @param unitPriceCurrency the unit price currency
-   */
-  public record CartItemSummary(
-      String itemId,
-      String productId,
-      int quantity,
-      BigDecimal unitPriceAmount,
-      String unitPriceCurrency) {}
+  /** Builds the result from the cart as it stands after the item was removed. */
+  public static RemoveItemFromCartResult from(final ShoppingCart cart) {
+    return new RemoveItemFromCartResult(
+        cart.id().value(),
+        cart.customerId().value(),
+        cart.items().stream().map(CartItemSummary::from).toList(),
+        cart.calculateTotal());
+  }
 }

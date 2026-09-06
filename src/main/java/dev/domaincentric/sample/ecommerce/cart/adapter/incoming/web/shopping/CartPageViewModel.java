@@ -1,8 +1,8 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.CartTotals;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
-import dev.domaincentric.sample.ecommerce.cart.domain.service.CartTotalCalculator;
 import java.math.BigDecimal;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -23,9 +23,9 @@ public record CartPageViewModel(
     boolean hasAnyPriceChanges,
     boolean canCheckout) {
 
-  /** Creates a CartPageViewModel from an EnrichedCart. */
+  /** Creates a CartPageViewModel from an EnrichedCart and the totals the use case assembled. */
   public static CartPageViewModel fromEnrichedCart(
-      final EnrichedCart cart, final CartTotalCalculator totalCalculator) {
+      final EnrichedCart cart, final CartTotals totals) {
     final var lineItems = cart.items().stream().map(LineItemViewModel::fromEnrichedItem).toList();
 
     final int totalQuantity = cart.items().stream().mapToInt(item -> item.quantity().value()).sum();
@@ -34,7 +34,7 @@ public record CartPageViewModel(
         cart.cartId().value(),
         cart.status().name(),
         lineItems,
-        TotalsViewModel.fromEnrichedCart(cart, totalCalculator),
+        TotalsViewModel.from(totals),
         cart.items().size(),
         totalQuantity,
         cart.hasAnyPriceChanges(),
@@ -89,15 +89,13 @@ public record CartPageViewModel(
       boolean increased,
       String currencyCode) {
     static PriceChangeViewModel fromEnrichedItem(final EnrichedCartItem item) {
-      final var original = item.priceAtAddition().value();
       final var current = item.currentArticle().currentPrice();
-      final var diff = item.priceDifference();
 
       return new PriceChangeViewModel(
-          original.amount(),
+          item.priceAtAddition().value().amount(),
           current.amount(),
-          diff.amount(),
-          current.isGreaterThan(original),
+          item.priceDifference().amount(),
+          item.priceIncreased(),
           current.currency().getCurrencyCode());
     }
   }
@@ -109,18 +107,13 @@ public record CartPageViewModel(
       BigDecimal totalDifference,
       BigDecimal containedTax,
       String currencyCode) {
-    static TotalsViewModel fromEnrichedCart(
-        final EnrichedCart cart, final CartTotalCalculator totalCalculator) {
-      final var current = cart.calculateCurrentSubtotal();
-      final var original = cart.calculateOriginalSubtotal();
-      final var diff = cart.totalPriceDifference();
-
+    static TotalsViewModel from(final CartTotals totals) {
       return new TotalsViewModel(
-          current.amount(),
-          original.amount(),
-          diff.amount(),
-          totalCalculator.containedTax(current).amount(),
-          current.currency().getCurrencyCode());
+          totals.currentSubtotal().amount(),
+          totals.originalSubtotal().amount(),
+          totals.difference().amount(),
+          totals.containedTax().amount(),
+          totals.currentSubtotal().currency().getCurrencyCode());
     }
   }
 }

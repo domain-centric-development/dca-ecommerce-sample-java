@@ -8,6 +8,7 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartFactory;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
+import dev.domaincentric.sample.ecommerce.cart.domain.service.CartTotalCalculator;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.Map;
 import java.util.Optional;
@@ -31,14 +32,17 @@ public class GetCartByIdUseCase implements GetCartByIdInputPort {
   private final ShoppingCartRepository shoppingCartRepository;
   private final ArticleDataPort articleDataPort;
   private final EnrichedCartFactory enrichedCartFactory;
+  private final CartTotalCalculator cartTotalCalculator;
 
   public GetCartByIdUseCase(
       final ShoppingCartRepository shoppingCartRepository,
       final ArticleDataPort articleDataPort,
-      final EnrichedCartFactory enrichedCartFactory) {
+      final EnrichedCartFactory enrichedCartFactory,
+      final CartTotalCalculator cartTotalCalculator) {
     this.shoppingCartRepository = shoppingCartRepository;
     this.articleDataPort = articleDataPort;
     this.enrichedCartFactory = enrichedCartFactory;
+    this.cartTotalCalculator = cartTotalCalculator;
   }
 
   @Override
@@ -65,6 +69,9 @@ public class GetCartByIdUseCase implements GetCartByIdInputPort {
     // The factory assembles the enriched read model from cart state and current article data
     final EnrichedCart enrichedCart = enrichedCartFactory.create(cart, articleData);
 
-    return GetCartByIdResult.found(enrichedCart);
+    // The page shows how much of the subtotal is VAT - a domain figure, computed here, not in
+    // the adapter
+    return GetCartByIdResult.found(
+        enrichedCart, CartTotals.from(enrichedCart, cartTotalCalculator));
   }
 }

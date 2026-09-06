@@ -88,6 +88,15 @@ public record EnrichedCartItem(
   }
 
   /**
+   * Checks whether the current price is above the price at addition.
+   *
+   * @return true if the price went up since the item was added
+   */
+  public boolean priceIncreased() {
+    return currentArticle.currentPrice().isGreaterThan(priceAtAddition.value());
+  }
+
+  /**
    * Returns the absolute price difference between current and original unit price.
    *
    * @return the absolute difference between current price and price at addition

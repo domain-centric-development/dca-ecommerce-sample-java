@@ -59,19 +59,6 @@ public class SubmitBuyerInfoUseCase implements SubmitBuyerInfoInputPort {
 
     eventPublisher.publishAndClearEvents(session);
 
-    // Map to response
-    return mapToResponse(session);
-  }
-
-  private SubmitBuyerInfoResult mapToResponse(final CheckoutSession session) {
-    final BuyerInfo buyerInfo = session.buyerInfo();
-    return new SubmitBuyerInfoResult(
-        session.id().value().toString(),
-        session.currentStep().name(),
-        session.status().name(),
-        buyerInfo.email(),
-        buyerInfo.firstName(),
-        buyerInfo.lastName(),
-        buyerInfo.phone());
+    return SubmitBuyerInfoResult.from(session);
   }
 }

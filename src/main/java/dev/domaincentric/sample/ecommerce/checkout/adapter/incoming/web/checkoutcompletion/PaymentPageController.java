@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersResult;
@@ -12,10 +13,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
-import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutStepValidator;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
-import java.util.Optional;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,21 +46,18 @@ public class PaymentPageController {
   private final GetPaymentProvidersInputPort getPaymentProvidersInputPort;
   private final SubmitPaymentInputPort submitPaymentInputPort;
   private final IdentityProvider identityProvider;
-  private final CheckoutStepValidator checkoutStepValidator;
 
   public PaymentPageController(
       final GetCheckoutSessionInputPort getCheckoutSessionInputPort,
       final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort,
       final GetPaymentProvidersInputPort getPaymentProvidersInputPort,
       final SubmitPaymentInputPort submitPaymentInputPort,
-      final IdentityProvider identityProvider,
-      final CheckoutStepValidator checkoutStepValidator) {
+      final IdentityProvider identityProvider) {
     this.getCheckoutSessionInputPort = getCheckoutSessionInputPort;
     this.getActiveCheckoutSessionInputPort = getActiveCheckoutSessionInputPort;
     this.getPaymentProvidersInputPort = getPaymentProvidersInputPort;
     this.submitPaymentInputPort = submitPaymentInputPort;
     this.identityProvider = identityProvider;
-    this.checkoutStepValidator = checkoutStepValidator;
   }
 
   /**
@@ -81,32 +76,28 @@ public class PaymentPageController {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
-    final CustomerId customerId = CustomerId.of(identity.userId().value());
+    final String customerId = identity.userId().value();
 
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
-        getActiveCheckoutSessionInputPort.execute(
-            GetActiveCheckoutSessionQuery.of(customerId.value()));
+        getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
       redirectAttributes.addFlashAttribute("error", "No active checkout session found");
       return "redirect:/cart";
     }
 
-    // Get full session details
+    // Full session details, plus the domain's decision whether this step may be opened
     final GetCheckoutSessionResult result =
-        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(activeSession.sessionId()));
+        getCheckoutSessionInputPort.execute(
+            GetCheckoutSessionQuery.forStep(activeSession.sessionId(), CheckoutStep.PAYMENT));
 
     if (!result.found()) {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
       return "redirect:/cart";
     }
-
-    // The domain decides whether this step may be opened at all
-    final Optional<String> redirect =
-        checkoutStepValidator.validateStepAccess(result.session(), CheckoutStep.PAYMENT);
-    if (redirect.isPresent()) {
-      return "redirect:" + redirect.get();
+    if (!result.stepAccess().granted()) {
+      return CheckoutRoutes.redirectFor(result.stepAccess());
     }
 
     // Convert to page-specific ViewModel
@@ -138,12 +129,11 @@ public class PaymentPageController {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
-    final CustomerId customerId = CustomerId.of(identity.userId().value());
+    final String customerId = identity.userId().value();
 
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
-        getActiveCheckoutSessionInputPort.execute(
-            GetActiveCheckoutSessionQuery.of(customerId.value()));
+        getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
       redirectAttributes.addFlashAttribute("error", "No active checkout session found");

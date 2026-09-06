@@ -82,27 +82,6 @@ public class SubmitDeliveryUseCase implements SubmitDeliveryInputPort {
 
     eventPublisher.publishAndClearEvents(session);
 
-    // Map to response
-    return mapToResponse(session);
-  }
-
-  private SubmitDeliveryResult mapToResponse(final CheckoutSession session) {
-    final DeliveryAddress address = session.deliveryAddress();
-    final ShippingOption shipping = session.shippingOption();
-    return new SubmitDeliveryResult(
-        session.id().value().toString(),
-        session.currentStep().name(),
-        session.status().name(),
-        address.street(),
-        address.streetLine2(),
-        address.city(),
-        address.postalCode(),
-        address.country(),
-        address.state(),
-        shipping.id(),
-        shipping.name(),
-        shipping.estimatedDelivery(),
-        shipping.cost().amount(),
-        shipping.cost().currency().getCurrencyCode());
+    return SubmitDeliveryResult.from(session);
   }
 }

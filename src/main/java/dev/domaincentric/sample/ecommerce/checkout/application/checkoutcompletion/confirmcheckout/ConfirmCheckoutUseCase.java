@@ -80,7 +80,7 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
           session.confirm(resolver);
           checkoutSessionRepository.save(session);
           domainEventPublisher.publishAndClearEvents(session);
-          return mapToResponse(session);
+          return ConfirmCheckoutResult.from(session);
         });
   }
 
@@ -90,17 +90,5 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
         .findById(sessionId)
         .orElseThrow(
             () -> new IllegalArgumentException("Session not found: " + command.sessionId()));
-  }
-
-  private ConfirmCheckoutResult mapToResponse(final CheckoutSession session) {
-    return new ConfirmCheckoutResult(
-        session.id().value().toString(),
-        session.currentStep().name(),
-        session.status().name(),
-        session.cartId().value().toString(),
-        session.customerId().value(),
-        session.totals().total().amount().toPlainString(),
-        session.totals().total().currency().getCurrencyCode(),
-        session.orderReference());
   }
 }

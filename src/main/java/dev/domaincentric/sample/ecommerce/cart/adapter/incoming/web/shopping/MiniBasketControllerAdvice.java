@@ -6,7 +6,6 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
-import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
@@ -67,10 +66,9 @@ public class MiniBasketControllerAdvice {
     model.addAttribute("identity", identity);
 
     try {
-      final CustomerId customerId = CustomerId.of(identity.userId().value());
       final GetOrCreateActiveCartResult cartRef =
           getOrCreateActiveCartUseCase.execute(
-              new GetOrCreateActiveCartCommand(customerId.value()));
+              new GetOrCreateActiveCartCommand(identity.userId().value()));
 
       final GetCartByIdResult result =
           getCartByIdUseCase.execute(new GetCartByIdQuery(cartRef.cartId(), cartRef.customerId()));

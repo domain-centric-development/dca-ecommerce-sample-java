@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts;
 
-import java.math.BigDecimal;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.List;
 
 /**
@@ -10,6 +11,11 @@ import java.util.List;
  */
 public record GetAllCartsResult(List<CartSummary> carts) {
 
+  /** Summarizes every cart of the list. */
+  public static GetAllCartsResult from(final List<ShoppingCart> carts) {
+    return new GetAllCartsResult(carts.stream().map(CartSummary::from).toList());
+  }
+
   /**
    * Summary of a shopping cart.
    *
@@ -17,14 +23,18 @@ public record GetAllCartsResult(List<CartSummary> carts) {
    * @param customerId the customer ID
    * @param status the cart status
    * @param itemCount the number of items in the cart
-   * @param totalAmount the total amount
-   * @param totalCurrency the total currency
+   * @param total the total amount
    */
   public record CartSummary(
-      String cartId,
-      String customerId,
-      String status,
-      int itemCount,
-      BigDecimal totalAmount,
-      String totalCurrency) {}
+      String cartId, String customerId, String status, int itemCount, Money total) {
+
+    static CartSummary from(final ShoppingCart cart) {
+      return new CartSummary(
+          cart.id().value(),
+          cart.customerId().value(),
+          cart.status().name(),
+          cart.items().size(),
+          cart.calculateTotal());
+    }
+  }
 }

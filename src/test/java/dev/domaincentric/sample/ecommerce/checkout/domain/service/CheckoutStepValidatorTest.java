@@ -13,13 +13,13 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.DeliveryAddress;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentSelection;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ShippingOption;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,19 +43,17 @@ class CheckoutStepValidatorTest {
     @Test
     @DisplayName("null session redirects to cart")
     void nullSessionRedirectsToCart() {
-      Optional<String> redirect = validator.validateStepAccess(null, CheckoutStep.BUYER_INFO);
+      StepAccess access = validator.accessTo(null, CheckoutStep.BUYER_INFO);
 
-      assertTrue(redirect.isPresent());
-      assertEquals("/cart", redirect.get());
+      assertTrue(access.isBackToCart());
     }
 
     @Test
     @DisplayName("null session redirects to cart for any step")
     void nullSessionRedirectsToCartForAnyStep() {
       for (CheckoutStep step : CheckoutStep.values()) {
-        Optional<String> redirect = validator.validateStepAccess(null, step);
-        assertTrue(redirect.isPresent(), "Should redirect for step: " + step);
-        assertEquals("/cart", redirect.get());
+        StepAccess access = validator.accessTo(null, step);
+        assertTrue(access.isBackToCart(), "Should redirect for step: " + step);
       }
     }
   }
@@ -69,11 +67,9 @@ class CheckoutStepValidatorTest {
     void cannotSkipToDeliveryFromBuyerInfo() {
       var session = createActiveSession();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.DELIVERY);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.DELIVERY);
 
-      assertTrue(redirect.isPresent());
-      assertEquals("/checkout/buyer", redirect.get());
+      assertEquals(StepAccess.redirectTo(CheckoutStep.BUYER_INFO), access);
     }
 
     @Test
@@ -81,11 +77,9 @@ class CheckoutStepValidatorTest {
     void cannotSkipToPaymentFromBuyerInfo() {
       var session = createActiveSession();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.PAYMENT);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.PAYMENT);
 
-      assertTrue(redirect.isPresent());
-      assertEquals("/checkout/buyer", redirect.get());
+      assertEquals(StepAccess.redirectTo(CheckoutStep.BUYER_INFO), access);
     }
 
     @Test
@@ -93,11 +87,9 @@ class CheckoutStepValidatorTest {
     void cannotSkipToReviewFromBuyerInfo() {
       var session = createActiveSession();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.REVIEW);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.REVIEW);
 
-      assertTrue(redirect.isPresent());
-      assertEquals("/checkout/buyer", redirect.get());
+      assertEquals(StepAccess.redirectTo(CheckoutStep.BUYER_INFO), access);
     }
 
     @Test
@@ -105,11 +97,9 @@ class CheckoutStepValidatorTest {
     void cannotSkipToConfirmationFromBuyerInfo() {
       var session = createActiveSession();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.CONFIRMATION);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.CONFIRMATION);
 
-      assertTrue(redirect.isPresent());
-      assertEquals("/checkout/buyer", redirect.get());
+      assertEquals(StepAccess.redirectTo(CheckoutStep.BUYER_INFO), access);
     }
 
     @Test
@@ -117,11 +107,9 @@ class CheckoutStepValidatorTest {
     void cannotSkipToPaymentFromDelivery() {
       var session = createSessionAtDelivery();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.PAYMENT);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.PAYMENT);
 
-      assertTrue(redirect.isPresent());
-      assertEquals("/checkout/delivery", redirect.get());
+      assertEquals(StepAccess.redirectTo(CheckoutStep.DELIVERY), access);
     }
 
     @Test
@@ -129,11 +117,9 @@ class CheckoutStepValidatorTest {
     void cannotSkipToReviewFromPayment() {
       var session = createSessionAtPayment();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.REVIEW);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.REVIEW);
 
-      assertTrue(redirect.isPresent());
-      assertEquals("/checkout/payment", redirect.get());
+      assertEquals(StepAccess.redirectTo(CheckoutStep.PAYMENT), access);
     }
   }
 
@@ -146,10 +132,9 @@ class CheckoutStepValidatorTest {
     void canGoBackToBuyerInfoFromDelivery() {
       var session = createSessionAtDelivery();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.BUYER_INFO);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.BUYER_INFO);
 
-      assertTrue(redirect.isEmpty(), "Should allow going back to BUYER_INFO");
+      assertTrue(access.granted(), "Should allow going back to BUYER_INFO");
     }
 
     @Test
@@ -157,10 +142,9 @@ class CheckoutStepValidatorTest {
     void canGoBackToBuyerInfoFromPayment() {
       var session = createSessionAtPayment();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.BUYER_INFO);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.BUYER_INFO);
 
-      assertTrue(redirect.isEmpty(), "Should allow going back to BUYER_INFO");
+      assertTrue(access.granted(), "Should allow going back to BUYER_INFO");
     }
 
     @Test
@@ -168,10 +152,9 @@ class CheckoutStepValidatorTest {
     void canGoBackToDeliveryFromPayment() {
       var session = createSessionAtPayment();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.DELIVERY);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.DELIVERY);
 
-      assertTrue(redirect.isEmpty(), "Should allow going back to DELIVERY");
+      assertTrue(access.granted(), "Should allow going back to DELIVERY");
     }
 
     @Test
@@ -179,10 +162,9 @@ class CheckoutStepValidatorTest {
     void canGoBackToBuyerInfoFromReview() {
       var session = createSessionAtReview();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.BUYER_INFO);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.BUYER_INFO);
 
-      assertTrue(redirect.isEmpty(), "Should allow going back to BUYER_INFO");
+      assertTrue(access.granted(), "Should allow going back to BUYER_INFO");
     }
 
     @Test
@@ -190,10 +172,9 @@ class CheckoutStepValidatorTest {
     void canGoBackToDeliveryFromReview() {
       var session = createSessionAtReview();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.DELIVERY);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.DELIVERY);
 
-      assertTrue(redirect.isEmpty(), "Should allow going back to DELIVERY");
+      assertTrue(access.granted(), "Should allow going back to DELIVERY");
     }
 
     @Test
@@ -201,10 +182,9 @@ class CheckoutStepValidatorTest {
     void canGoBackToPaymentFromReview() {
       var session = createSessionAtReview();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.PAYMENT);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.PAYMENT);
 
-      assertTrue(redirect.isEmpty(), "Should allow going back to PAYMENT");
+      assertTrue(access.granted(), "Should allow going back to PAYMENT");
     }
   }
 
@@ -217,10 +197,9 @@ class CheckoutStepValidatorTest {
     void completedSessionAllowsConfirmationAccess() {
       var session = createCompletedSession();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.CONFIRMATION);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.CONFIRMATION);
 
-      assertTrue(redirect.isEmpty(), "Should allow CONFIRMATION access for completed session");
+      assertTrue(access.granted(), "Should allow CONFIRMATION access for completed session");
     }
 
     @Test
@@ -232,9 +211,11 @@ class CheckoutStepValidatorTest {
           List.of(
               CheckoutStep.BUYER_INFO, CheckoutStep.DELIVERY,
               CheckoutStep.PAYMENT, CheckoutStep.REVIEW)) {
-        Optional<String> redirect = validator.validateStepAccess(snapshot(session), step);
-        assertTrue(redirect.isPresent(), "Should redirect for step: " + step);
-        assertEquals("/checkout/confirmation", redirect.get());
+        StepAccess access = validator.accessTo(snapshot(session), step);
+        assertEquals(
+            StepAccess.redirectTo(CheckoutStep.CONFIRMATION),
+            access,
+            "Should redirect for step: " + step);
       }
     }
 
@@ -244,9 +225,8 @@ class CheckoutStepValidatorTest {
       var session = createAbandonedSession();
 
       for (CheckoutStep step : CheckoutStep.values()) {
-        Optional<String> redirect = validator.validateStepAccess(snapshot(session), step);
-        assertTrue(redirect.isPresent(), "Should redirect for step: " + step);
-        assertEquals("/cart", redirect.get());
+        StepAccess access = validator.accessTo(snapshot(session), step);
+        assertTrue(access.isBackToCart(), "Should redirect for step: " + step);
       }
     }
 
@@ -256,9 +236,8 @@ class CheckoutStepValidatorTest {
       var session = createExpiredSession();
 
       for (CheckoutStep step : CheckoutStep.values()) {
-        Optional<String> redirect = validator.validateStepAccess(snapshot(session), step);
-        assertTrue(redirect.isPresent(), "Should redirect for step: " + step);
-        assertEquals("/cart", redirect.get());
+        StepAccess access = validator.accessTo(snapshot(session), step);
+        assertTrue(access.isBackToCart(), "Should redirect for step: " + step);
       }
     }
 
@@ -267,10 +246,9 @@ class CheckoutStepValidatorTest {
     void confirmedSessionAllowsConfirmationAccess() {
       var session = createConfirmedSession();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.CONFIRMATION);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.CONFIRMATION);
 
-      assertTrue(redirect.isEmpty(), "Should allow CONFIRMATION access for confirmed session");
+      assertTrue(access.granted(), "Should allow CONFIRMATION access for confirmed session");
     }
 
     @Test
@@ -282,9 +260,11 @@ class CheckoutStepValidatorTest {
           List.of(
               CheckoutStep.BUYER_INFO, CheckoutStep.DELIVERY,
               CheckoutStep.PAYMENT, CheckoutStep.REVIEW)) {
-        Optional<String> redirect = validator.validateStepAccess(snapshot(session), step);
-        assertTrue(redirect.isPresent(), "Should redirect for step: " + step);
-        assertEquals("/checkout/confirmation", redirect.get());
+        StepAccess access = validator.accessTo(snapshot(session), step);
+        assertEquals(
+            StepAccess.redirectTo(CheckoutStep.CONFIRMATION),
+            access,
+            "Should redirect for step: " + step);
       }
     }
   }
@@ -298,10 +278,9 @@ class CheckoutStepValidatorTest {
     void allowsAccessToCurrentStep() {
       var session = createActiveSession();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.BUYER_INFO);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.BUYER_INFO);
 
-      assertTrue(redirect.isEmpty(), "Should allow access to current step");
+      assertTrue(access.granted(), "Should allow access to current step");
     }
 
     @Test
@@ -309,10 +288,9 @@ class CheckoutStepValidatorTest {
     void allowsAccessToDeliveryWhenAtDeliveryStep() {
       var session = createSessionAtDelivery();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.DELIVERY);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.DELIVERY);
 
-      assertTrue(redirect.isEmpty(), "Should allow access to DELIVERY step");
+      assertTrue(access.granted(), "Should allow access to DELIVERY step");
     }
 
     @Test
@@ -320,10 +298,9 @@ class CheckoutStepValidatorTest {
     void allowsAccessToPaymentWhenAtPaymentStep() {
       var session = createSessionAtPayment();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.PAYMENT);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.PAYMENT);
 
-      assertTrue(redirect.isEmpty(), "Should allow access to PAYMENT step");
+      assertTrue(access.granted(), "Should allow access to PAYMENT step");
     }
 
     @Test
@@ -331,65 +308,9 @@ class CheckoutStepValidatorTest {
     void allowsAccessToReviewWhenAtReviewStep() {
       var session = createSessionAtReview();
 
-      Optional<String> redirect =
-          validator.validateStepAccess(snapshot(session), CheckoutStep.REVIEW);
+      StepAccess access = validator.accessTo(snapshot(session), CheckoutStep.REVIEW);
 
-      assertTrue(redirect.isEmpty(), "Should allow access to REVIEW step");
-    }
-  }
-
-  @Nested
-  @DisplayName("getCurrentStepPath Tests")
-  class GetCurrentStepPathTests {
-
-    @Test
-    @DisplayName("returns correct path for BUYER_INFO")
-    void returnsCorrectPathForBuyerInfo() {
-      var session = createActiveSession();
-
-      String path = validator.getCurrentStepPath(snapshot(session));
-
-      assertEquals("/checkout/buyer", path);
-    }
-
-    @Test
-    @DisplayName("returns correct path for DELIVERY")
-    void returnsCorrectPathForDelivery() {
-      var session = createSessionAtDelivery();
-
-      String path = validator.getCurrentStepPath(snapshot(session));
-
-      assertEquals("/checkout/delivery", path);
-    }
-
-    @Test
-    @DisplayName("returns correct path for PAYMENT")
-    void returnsCorrectPathForPayment() {
-      var session = createSessionAtPayment();
-
-      String path = validator.getCurrentStepPath(snapshot(session));
-
-      assertEquals("/checkout/payment", path);
-    }
-
-    @Test
-    @DisplayName("returns correct path for REVIEW")
-    void returnsCorrectPathForReview() {
-      var session = createSessionAtReview();
-
-      String path = validator.getCurrentStepPath(snapshot(session));
-
-      assertEquals("/checkout/review", path);
-    }
-
-    @Test
-    @DisplayName("returns correct path for CONFIRMATION")
-    void returnsCorrectPathForConfirmation() {
-      var session = createConfirmedSession();
-
-      String path = validator.getCurrentStepPath(snapshot(session));
-
-      assertEquals("/checkout/confirmation", path);
+      assertTrue(access.granted(), "Should allow access to REVIEW step");
     }
   }
 
