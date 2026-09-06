@@ -1,6 +1,6 @@
-package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.cartrecovery;
 
-import dev.domaincentric.sample.ecommerce.cart.application.getcartmergeoptions.GetCartMergeOptionsResult;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsResult;
 import java.math.BigDecimal;
 import java.util.List;
 import org.jspecify.annotations.Nullable;

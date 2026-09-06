@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.submitbuyerinfo;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 

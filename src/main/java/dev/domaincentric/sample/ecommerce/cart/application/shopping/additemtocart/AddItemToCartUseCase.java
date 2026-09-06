@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.additemtocart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart;
 
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;

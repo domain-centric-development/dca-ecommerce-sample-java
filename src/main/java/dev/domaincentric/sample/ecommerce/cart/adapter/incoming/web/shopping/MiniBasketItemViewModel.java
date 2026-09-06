@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
 /**
  * ViewModel for a single item in the mini basket dropdown.

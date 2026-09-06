@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.removeitemfromcart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart;
 
 import java.math.BigDecimal;
 import java.util.List;

@@ -1,14 +1,14 @@
-package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.cartrecovery;
 
-import dev.domaincentric.sample.ecommerce.cart.application.getcartmergeoptions.GetCartMergeOptionsInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartmergeoptions.GetCartMergeOptionsQuery;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartmergeoptions.GetCartMergeOptionsResult;
-import dev.domaincentric.sample.ecommerce.cart.application.mergecarts.CartMergeStrategy;
-import dev.domaincentric.sample.ecommerce.cart.application.mergecarts.MergeCartsCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.mergecarts.MergeCartsInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.mergecarts.MergeCartsResult;
-import dev.domaincentric.sample.ecommerce.cart.application.recovercart.RecoverCartOnLoginCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.recovercart.RecoverCartOnLoginInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsResult;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts.CartMergeStrategy;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts.MergeCartsCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts.MergeCartsInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts.MergeCartsResult;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartOnLoginCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartOnLoginInputPort;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.checkoutcart;
+package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart;
 
 /**
  * Input model for checking out one customer's shopping cart.

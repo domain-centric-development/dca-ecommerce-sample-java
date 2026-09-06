@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.submitdelivery;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 

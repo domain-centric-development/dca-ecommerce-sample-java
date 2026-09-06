@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getshippingoptions;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions;
 
 import java.math.BigDecimal;
 import java.util.List;

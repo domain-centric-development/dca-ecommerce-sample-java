@@ -97,7 +97,7 @@ public class CheckoutCartBuilder implements CheckoutStateInterest {
 | Modify | `checkout/domain/model/CheckoutSession.java` | Add `provideStateTo(CheckoutStateInterest)` method, deprecate/remove getters |
 | Create | `checkout/domain/readmodel/CheckoutCartBuilder.java` | Builder implementing CheckoutStateInterest |
 | Modify | `checkout/domain/model/CheckoutCart.java` | Move to `checkout/domain/readmodel/` |
-| Modify | `checkout/application/getcheckoutsession/GetCheckoutSessionUseCase.java` | Use builder pattern with Interest interface |
+| Modify | `checkout/application/session/getcheckoutsession/GetCheckoutSessionUseCase.java` | Use builder pattern with Interest interface |
 
 ### 3.3 Cart Context Refactoring
 

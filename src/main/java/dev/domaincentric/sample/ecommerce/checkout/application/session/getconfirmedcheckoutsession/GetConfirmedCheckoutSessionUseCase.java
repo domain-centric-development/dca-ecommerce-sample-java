@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getconfirmedcheckoutsession;
+package dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession;
 
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;

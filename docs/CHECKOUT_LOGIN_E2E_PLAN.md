@@ -205,7 +205,7 @@ public abstract class BaseE2ETest {
 | `src/main/resources/templates/checkout/delivery.pug` | Fix URLs |
 | `src/main/resources/templates/checkout/payment.pug` | Fix URLs |
 | `src/main/resources/templates/checkout/review.pug` | Fix URLs (8 occurrences) |
-| `checkout/adapter/incoming/web/BuyerInfoPageController.java` | Add identity to model |
+| `checkout/adapter/incoming/web/checkoutcompletion/BuyerInfoPageController.java` | Add identity to model |
 | `build.gradle` | Apply test-e2e.gradle |
 | `gradle/test-e2e.gradle` | New - Playwright Java config |
 | `src/test-e2e/java/.../e2e/` | New - E2E test classes |

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.submitbuyerinfo;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo;
 
 /**
  * Input model for submitting buyer contact information during checkout.

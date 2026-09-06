@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.recovercart;
+package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart;
 
 /**
  * Command to recover cart on login by merging anonymous cart into registered user's cart.

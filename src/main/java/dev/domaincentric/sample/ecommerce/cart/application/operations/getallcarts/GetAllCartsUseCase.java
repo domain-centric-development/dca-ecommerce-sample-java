@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.getallcarts;
+package dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts;
 
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;

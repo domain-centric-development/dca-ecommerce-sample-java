@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.startcheckout;
+package dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout;
 
 import java.util.List;
 

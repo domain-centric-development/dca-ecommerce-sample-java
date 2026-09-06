@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getconfirmedcheckoutsession;
+package dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession;
 
 /**
  * Query to get a confirmed or completed checkout session for a customer.

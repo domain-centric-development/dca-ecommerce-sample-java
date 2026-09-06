@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getpaymentproviders;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 

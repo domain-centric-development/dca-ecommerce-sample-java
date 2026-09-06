@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.synccheckoutwithcart;
+package dev.domaincentric.sample.ecommerce.checkout.application.cartsync.synccheckoutwithcart;
 
 /**
  * Command for synchronizing a checkout session with current cart state.

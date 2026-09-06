@@ -735,7 +735,7 @@ public record CheckoutConfirmedEvent(...)
 **Consumer listens to its own interface:**
 
 ```java
-// cart/adapter/incoming/event/CartCompletionEventConsumer.java
+// cart/adapter/incoming/event/cartcheckout/CartCompletionEventConsumer.java
 @Component
 public class CartCompletionEventConsumer {
     @ApplicationModuleListener
@@ -767,7 +767,7 @@ Dependencies flow toward leaf modules. Checkout depends on consumer trigger inte
 - `dev.domaincentric.sample.ecommerce.cart.events.CartCompletionTrigger`
 - `dev.domaincentric.sample.ecommerce.inventory.events.StockReductionTrigger`
 - `dev.domaincentric.sample.ecommerce.checkout.events.CheckoutConfirmedEvent` (implements both)
-- `dev.domaincentric.sample.ecommerce.cart.adapter.incoming.event.CartCompletionEventConsumer`
+- `dev.domaincentric.sample.ecommerce.cart.adapter.incoming.event.cartcheckout.CartCompletionEventConsumer`
 - `dev.domaincentric.sample.ecommerce.inventory.adapter.incoming.event.StockReductionEventConsumer`
 
 #### Factory
@@ -1589,9 +1589,20 @@ application/
 7. The `shared` folder concept mirrors the `sharedkernel` pattern at the bounded context level
 
 **Location:**
-- Product Use Cases: `dev.domaincentric.sample.ecommerce.product.application.{usecasename}`
-- Cart Use Cases: `dev.domaincentric.sample.ecommerce.cart.application.{usecasename}`
-- Shared Output Ports: `dev.domaincentric.sample.ecommerce.{context}.application.shared`
+- Product Use Cases: `dev.domaincentric.sample.ecommerce.product.application.{usecasename}` (flat — few use cases)
+- Cart Use Cases: `dev.domaincentric.sample.ecommerce.cart.application.{feature}.{usecasename}` — grouped into the
+  features `shopping`, `cartrecovery`, `cartcheckout`, `operations`
+- Checkout Use Cases: `dev.domaincentric.sample.ecommerce.checkout.application.{feature}.{usecasename}` — grouped into
+  `session`, `checkoutcompletion`, `cartsync`
+- Shared Output Ports: `dev.domaincentric.sample.ecommerce.{context}.application.shared` (context-wide, never per feature)
+
+**Features.** A feature is an optional, domain-named group of related use cases inside one bounded context —
+a navigation boundary below the layer, not a layer, module or aggregate owner. A context uses either the flat
+form `application/{usecase}` or the grouped form `application/{feature}/{usecase}`, never both (`DCA-USE-014`);
+the feature (or, in a flat context, use-case) packages below `application` must be free of cycles
+(`DCA-CYC-005`). Incoming adapters may mirror features *below* their protocol (`adapter/incoming/web/{feature}`),
+the domain is organised by concept and never mirrored by feature. Cart and Checkout are grouped because their
+flat lists had grown past a dozen entries; the other contexts stay flat.
 
 ### Relationship to Hexagonal Architecture
 

@@ -21,7 +21,7 @@ The initial implementation had use cases directly importing from other bounded c
 
 ```java
 // ❌ BEFORE: Use case imported directly from Product context
-package dev.domaincentric.sample.ecommerce.cart.application.additemtocart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart;
 
 import dev.domaincentric.sample.ecommerce.product.application.shared.ProductRepository;  // ❌ Cross-context!
 

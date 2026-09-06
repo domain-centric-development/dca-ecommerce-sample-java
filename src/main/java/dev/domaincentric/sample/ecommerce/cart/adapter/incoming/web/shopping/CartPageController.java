@@ -1,14 +1,14 @@
-package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
-import dev.domaincentric.sample.ecommerce.cart.application.additemtocart.AddItemToCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.additemtocart.AddItemToCartInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.additemtocart.AddItemToCartResult;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdQuery;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdResult;
-import dev.domaincentric.sample.ecommerce.cart.application.getorcreateactivecart.GetOrCreateActiveCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.getorcreateactivecart.GetOrCreateActiveCartInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.getorcreateactivecart.GetOrCreateActiveCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.service.CartTotalCalculator;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;

@@ -29,7 +29,7 @@ Web MVC controllers need to pass data to Pug templates. Initially, use case Resu
 ### Implementation
 
 ```java
-// cart/adapter/incoming/web/CartPageViewModel.java
+// cart/adapter/incoming/web/shopping/CartPageViewModel.java
 public record CartPageViewModel(
     String cartId, String customerId,
     List<CartItemViewModel> items,

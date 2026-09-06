@@ -214,64 +214,68 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── CartCleared.java
 │   │       ├── CartCompleted.java
 │   │       └── CartAbandoned.java
-│   ├── application/                      # Application layer
-│   │   ├── createcart/                   # Use case: Create Cart
-│   │   │   ├── CreateCartInputPort.java
-│   │   │   ├── CreateCartUseCase.java
-│   │   │   ├── CreateCartCommand.java
-│   │   │   └── CreateCartResult.java
-│   │   ├── additemtocart/                # Use case: Add Item to Cart
-│   │   │   ├── AddItemToCartInputPort.java
-│   │   │   ├── AddItemToCartUseCase.java
-│   │   │   ├── AddItemToCartCommand.java
-│   │   │   └── AddItemToCartResult.java
-│   │   ├── checkoutcart/                 # Use case: Checkout Cart
-│   │   │   ├── CheckoutCartInputPort.java
-│   │   │   ├── CheckoutCartUseCase.java
-│   │   │   ├── CheckoutCartCommand.java
-│   │   │   └── CheckoutCartResult.java
-│   │   ├── getallcarts/                  # Use case: Get All Carts
-│   │   │   ├── GetAllCartsInputPort.java
-│   │   │   ├── GetAllCartsUseCase.java
-│   │   │   ├── GetAllCartsQuery.java
-│   │   │   └── GetAllCartsResult.java
-│   │   ├── getcartbyid/                  # Use case: Get Cart By ID
-│   │   │   ├── GetCartByIdInputPort.java
-│   │   │   ├── GetCartByIdUseCase.java
-│   │   │   ├── GetCartByIdQuery.java
-│   │   │   └── GetCartByIdResult.java
-│   │   ├── getorcreateactivecart/        # Use case: Get or Create Active Cart
-│   │   │   ├── GetOrCreateActiveCartInputPort.java
-│   │   │   ├── GetOrCreateActiveCartUseCase.java
-│   │   │   ├── GetOrCreateActiveCartCommand.java
-│   │   │   └── GetOrCreateActiveCartResult.java
-│   │   ├── removeitemfromcart/           # Use case: Remove Item from Cart
-│   │   │   ├── RemoveItemFromCartInputPort.java
-│   │   │   ├── RemoveItemFromCartUseCase.java
-│   │   │   ├── RemoveItemFromCartCommand.java
-│   │   │   └── RemoveItemFromCartResult.java
-│   │   ├── mergecarts/                   # Use case: Merge Carts
-│   │   │   ├── MergeCartsInputPort.java
-│   │   │   ├── MergeCartsUseCase.java
-│   │   │   ├── MergeCartsCommand.java
-│   │   │   ├── MergeCartsResult.java
-│   │   │   └── CartMergeStrategy.java
-│   │   ├── getcartmergeoptions/          # Use case: Get Cart Merge Options
-│   │   │   ├── GetCartMergeOptionsInputPort.java
-│   │   │   ├── GetCartMergeOptionsUseCase.java
-│   │   │   ├── GetCartMergeOptionsQuery.java
-│   │   │   └── GetCartMergeOptionsResult.java
-│   │   ├── completecart/                 # Use case: Complete Cart (after checkout)
-│   │   │   ├── CompleteCartInputPort.java
-│   │   │   ├── CompleteCartUseCase.java
-│   │   │   ├── CompleteCartCommand.java
-│   │   │   └── CompleteCartResult.java
-│   │   ├── recovercart/                  # Use case: Recover Cart on Login
-│   │   │   ├── RecoverCartOnLoginInputPort.java
-│   │   │   ├── RecoverCartOnLoginUseCase.java
-│   │   │   ├── RecoverCartOnLoginCommand.java
-│   │   │   └── RecoverCartOnLoginResult.java
-│   │   └── shared/                       # Shared output ports
+│   ├── application/                      # Application layer — use cases grouped by feature
+│   │   ├── shopping/                     # Feature: filling and reading the shopping cart
+│   │   │   ├── createcart/               # Use case: Create Cart
+│   │   │   │   ├── CreateCartInputPort.java
+│   │   │   │   ├── CreateCartUseCase.java
+│   │   │   │   ├── CreateCartCommand.java
+│   │   │   │   └── CreateCartResult.java
+│   │   │   ├── getorcreateactivecart/    # Use case: Get or Create Active Cart
+│   │   │   │   ├── GetOrCreateActiveCartInputPort.java
+│   │   │   │   ├── GetOrCreateActiveCartUseCase.java
+│   │   │   │   ├── GetOrCreateActiveCartCommand.java
+│   │   │   │   └── GetOrCreateActiveCartResult.java
+│   │   │   ├── getcartbyid/              # Use case: Get Cart By ID
+│   │   │   │   ├── GetCartByIdInputPort.java
+│   │   │   │   ├── GetCartByIdUseCase.java
+│   │   │   │   ├── GetCartByIdQuery.java
+│   │   │   │   └── GetCartByIdResult.java
+│   │   │   ├── additemtocart/            # Use case: Add Item to Cart
+│   │   │   │   ├── AddItemToCartInputPort.java
+│   │   │   │   ├── AddItemToCartUseCase.java
+│   │   │   │   ├── AddItemToCartCommand.java
+│   │   │   │   └── AddItemToCartResult.java
+│   │   │   └── removeitemfromcart/       # Use case: Remove Item from Cart
+│   │   │       ├── RemoveItemFromCartInputPort.java
+│   │   │       ├── RemoveItemFromCartUseCase.java
+│   │   │       ├── RemoveItemFromCartCommand.java
+│   │   │       └── RemoveItemFromCartResult.java
+│   │   ├── cartrecovery/                 # Feature: recovering a guest cart on login (merge)
+│   │   │   ├── recovercart/              # Use case: Recover Cart on Login
+│   │   │   │   ├── RecoverCartOnLoginInputPort.java
+│   │   │   │   ├── RecoverCartOnLoginUseCase.java
+│   │   │   │   ├── RecoverCartOnLoginCommand.java
+│   │   │   │   └── RecoverCartOnLoginResult.java
+│   │   │   ├── getcartmergeoptions/      # Use case: Get Cart Merge Options
+│   │   │   │   ├── GetCartMergeOptionsInputPort.java
+│   │   │   │   ├── GetCartMergeOptionsUseCase.java
+│   │   │   │   ├── GetCartMergeOptionsQuery.java
+│   │   │   │   └── GetCartMergeOptionsResult.java
+│   │   │   └── mergecarts/               # Use case: Merge Carts
+│   │   │       ├── MergeCartsInputPort.java
+│   │   │       ├── MergeCartsUseCase.java
+│   │   │       ├── MergeCartsCommand.java
+│   │   │       ├── MergeCartsResult.java
+│   │   │       └── CartMergeStrategy.java
+│   │   ├── cartcheckout/                 # Feature: handing the cart over to Checkout and closing it
+│   │   │   ├── checkoutcart/             # Use case: Checkout Cart
+│   │   │   │   ├── CheckoutCartInputPort.java
+│   │   │   │   ├── CheckoutCartUseCase.java
+│   │   │   │   ├── CheckoutCartCommand.java
+│   │   │   │   └── CheckoutCartResult.java
+│   │   │   └── completecart/             # Use case: Complete Cart (after checkout)
+│   │   │       ├── CompleteCartInputPort.java
+│   │   │       ├── CompleteCartUseCase.java
+│   │   │       ├── CompleteCartCommand.java
+│   │   │       └── CompleteCartResult.java
+│   │   ├── operations/                   # Feature: operating the shop (staff-only queries)
+│   │   │   └── getallcarts/              # Use case: Get All Carts
+│   │   │       ├── GetAllCartsInputPort.java
+│   │   │       ├── GetAllCartsUseCase.java
+│   │   │       ├── GetAllCartsQuery.java
+│   │   │       └── GetAllCartsResult.java
+│   │   └── shared/                       # Context-wide output ports (never per feature)
 │   │       ├── ShoppingCartRepository.java
 │   │       └── ArticleDataPort.java      # Port for article data (prices + stock)
 │   ├── infrastructure/                   # Per-context infrastructure
@@ -285,16 +289,19 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │   │   ├── ShoppingCartListDto.java
 │       │   │   ├── CartItemDto.java
 │       │   │   └── ShoppingCartDtoConverter.java
-│       │   ├── web/
-│       │   │   ├── CartPageController.java
-│       │   │   ├── CartPageViewModel.java
-│       │   │   ├── CartMergePageController.java
-│       │   │   ├── CartMergePageViewModel.java
-│       │   │   ├── MiniBasketControllerAdvice.java
-│       │   │   └── MiniBasketItemViewModel.java
+│       │   ├── web/                      # Protocol first, feature below it
+│       │   │   ├── shopping/
+│       │   │   │   ├── CartPageController.java
+│       │   │   │   ├── CartPageViewModel.java
+│       │   │   │   ├── MiniBasketControllerAdvice.java
+│       │   │   │   └── MiniBasketItemViewModel.java
+│       │   │   └── cartrecovery/
+│       │   │       ├── CartMergePageController.java
+│       │   │       └── CartMergePageViewModel.java
 │       │   └── event/
-│       │       ├── CartEventConsumer.java
-│       │       └── CartCompletionEventConsumer.java
+│       │       ├── CartEventConsumer.java  # Logs the context's own domain events (no feature)
+│       │       └── cartcheckout/
+│       │           └── CartCompletionEventConsumer.java
 │       └── outgoing/                     # Outgoing adapters
 │           ├── event/
 │           │   ├── CartCheckedOutEventPublisher.java
@@ -352,63 +359,66 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── CheckoutCompleted.java
 │   │       ├── CheckoutAbandoned.java
 │   │       └── CheckoutExpired.java
-│   ├── application/                      # Application layer
-│   │   ├── startcheckout/                # Use case: Start Checkout
-│   │   │   ├── StartCheckoutInputPort.java
-│   │   │   ├── StartCheckoutUseCase.java
-│   │   │   ├── StartCheckoutCommand.java
-│   │   │   └── StartCheckoutResult.java
-│   │   ├── submitbuyerinfo/              # Use case: Submit Buyer Info
-│   │   │   ├── SubmitBuyerInfoInputPort.java
-│   │   │   ├── SubmitBuyerInfoUseCase.java
-│   │   │   ├── SubmitBuyerInfoCommand.java
-│   │   │   └── SubmitBuyerInfoResult.java
-│   │   ├── submitdelivery/               # Use case: Submit Delivery
-│   │   │   ├── SubmitDeliveryInputPort.java
-│   │   │   ├── SubmitDeliveryUseCase.java
-│   │   │   ├── SubmitDeliveryCommand.java
-│   │   │   └── SubmitDeliveryResult.java
-│   │   ├── submitpayment/                # Use case: Submit Payment
-│   │   │   ├── SubmitPaymentInputPort.java
-│   │   │   ├── SubmitPaymentUseCase.java
-│   │   │   ├── SubmitPaymentCommand.java
-│   │   │   └── SubmitPaymentResult.java
-│   │   ├── confirmcheckout/              # Use case: Confirm Checkout
-│   │   │   ├── ConfirmCheckoutInputPort.java
-│   │   │   ├── ConfirmCheckoutUseCase.java
-│   │   │   ├── ConfirmCheckoutCommand.java
-│   │   │   └── ConfirmCheckoutResult.java
-│   │   ├── getcheckoutsession/           # Use case: Get Checkout Session
-│   │   │   ├── GetCheckoutSessionInputPort.java
-│   │   │   ├── GetCheckoutSessionUseCase.java
-│   │   │   ├── GetCheckoutSessionQuery.java
-│   │   │   └── GetCheckoutSessionResult.java
-│   │   ├── getactivecheckoutsession/     # Use case: Get Active Checkout Session
-│   │   │   ├── GetActiveCheckoutSessionInputPort.java
-│   │   │   ├── GetActiveCheckoutSessionUseCase.java
-│   │   │   ├── GetActiveCheckoutSessionQuery.java
-│   │   │   └── GetActiveCheckoutSessionResult.java
-│   │   ├── getconfirmedcheckoutsession/  # Use case: Get Confirmed Checkout Session
-│   │   │   ├── GetConfirmedCheckoutSessionInputPort.java
-│   │   │   ├── GetConfirmedCheckoutSessionUseCase.java
-│   │   │   ├── GetConfirmedCheckoutSessionQuery.java
-│   │   │   └── GetConfirmedCheckoutSessionResult.java
-│   │   ├── getshippingoptions/           # Use case: Get Shipping Options
-│   │   │   ├── GetShippingOptionsInputPort.java
-│   │   │   ├── GetShippingOptionsUseCase.java
-│   │   │   ├── GetShippingOptionsQuery.java
-│   │   │   └── GetShippingOptionsResult.java
-│   │   ├── getpaymentproviders/          # Use case: Get Payment Providers
-│   │   │   ├── GetPaymentProvidersInputPort.java
-│   │   │   ├── GetPaymentProvidersUseCase.java
-│   │   │   ├── GetPaymentProvidersQuery.java
-│   │   │   └── GetPaymentProvidersResult.java
-│   │   ├── synccheckoutwithcart/         # Use case: Sync Checkout with Cart
-│   │   │   ├── SyncCheckoutWithCartInputPort.java
-│   │   │   ├── SyncCheckoutWithCartUseCase.java
-│   │   │   ├── SyncCheckoutWithCartCommand.java
-│   │   │   └── SyncCheckoutWithCartResult.java
-│   │   └── shared/                       # Shared output ports
+│   ├── application/                      # Application layer — use cases grouped by feature
+│   │   ├── session/                      # Feature: starting and reading checkout sessions
+│   │   │   ├── startcheckout/            # Use case: Start Checkout
+│   │   │   │   ├── StartCheckoutInputPort.java
+│   │   │   │   ├── StartCheckoutUseCase.java
+│   │   │   │   ├── StartCheckoutCommand.java
+│   │   │   │   └── StartCheckoutResult.java
+│   │   │   ├── getactivecheckoutsession/ # Use case: Get Active Checkout Session
+│   │   │   │   ├── GetActiveCheckoutSessionInputPort.java
+│   │   │   │   ├── GetActiveCheckoutSessionUseCase.java
+│   │   │   │   ├── GetActiveCheckoutSessionQuery.java
+│   │   │   │   └── GetActiveCheckoutSessionResult.java
+│   │   │   ├── getcheckoutsession/       # Use case: Get Checkout Session
+│   │   │   │   ├── GetCheckoutSessionInputPort.java
+│   │   │   │   ├── GetCheckoutSessionUseCase.java
+│   │   │   │   ├── GetCheckoutSessionQuery.java
+│   │   │   │   └── GetCheckoutSessionResult.java
+│   │   │   └── getconfirmedcheckoutsession/# Use case: Get Confirmed Checkout Session
+│   │   │       ├── GetConfirmedCheckoutSessionInputPort.java
+│   │   │       ├── GetConfirmedCheckoutSessionUseCase.java
+│   │   │       ├── GetConfirmedCheckoutSessionQuery.java
+│   │   │       └── GetConfirmedCheckoutSessionResult.java
+│   │   ├── checkoutcompletion/           # Feature: the steps that complete a checkout
+│   │   │   ├── submitbuyerinfo/          # Use case: Submit Buyer Info
+│   │   │   │   ├── SubmitBuyerInfoInputPort.java
+│   │   │   │   ├── SubmitBuyerInfoUseCase.java
+│   │   │   │   ├── SubmitBuyerInfoCommand.java
+│   │   │   │   └── SubmitBuyerInfoResult.java
+│   │   │   ├── getshippingoptions/       # Use case: Get Shipping Options
+│   │   │   │   ├── GetShippingOptionsInputPort.java
+│   │   │   │   ├── GetShippingOptionsUseCase.java
+│   │   │   │   ├── GetShippingOptionsQuery.java
+│   │   │   │   └── GetShippingOptionsResult.java
+│   │   │   ├── submitdelivery/           # Use case: Submit Delivery
+│   │   │   │   ├── SubmitDeliveryInputPort.java
+│   │   │   │   ├── SubmitDeliveryUseCase.java
+│   │   │   │   ├── SubmitDeliveryCommand.java
+│   │   │   │   └── SubmitDeliveryResult.java
+│   │   │   ├── getpaymentproviders/      # Use case: Get Payment Providers
+│   │   │   │   ├── GetPaymentProvidersInputPort.java
+│   │   │   │   ├── GetPaymentProvidersUseCase.java
+│   │   │   │   ├── GetPaymentProvidersQuery.java
+│   │   │   │   └── GetPaymentProvidersResult.java
+│   │   │   ├── submitpayment/            # Use case: Submit Payment
+│   │   │   │   ├── SubmitPaymentInputPort.java
+│   │   │   │   ├── SubmitPaymentUseCase.java
+│   │   │   │   ├── SubmitPaymentCommand.java
+│   │   │   │   └── SubmitPaymentResult.java
+│   │   │   └── confirmcheckout/          # Use case: Confirm Checkout
+│   │   │       ├── ConfirmCheckoutInputPort.java
+│   │   │       ├── ConfirmCheckoutUseCase.java
+│   │   │       ├── ConfirmCheckoutCommand.java
+│   │   │       └── ConfirmCheckoutResult.java
+│   │   ├── cartsync/                     # Feature: following cart changes during checkout
+│   │   │   └── synccheckoutwithcart/     # Use case: Sync Checkout with Cart
+│   │   │       ├── SyncCheckoutWithCartInputPort.java
+│   │   │       ├── SyncCheckoutWithCartUseCase.java
+│   │   │       ├── SyncCheckoutWithCartCommand.java
+│   │   │       └── SyncCheckoutWithCartResult.java
+│   │   └── shared/                       # Context-wide output ports (never per feature)
 │   │       ├── CheckoutSessionRepository.java
 │   │       ├── CartDataPort.java
 │   │       ├── CartData.java
@@ -418,20 +428,23 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       └── PaymentProviderRegistry.java
 │   └── adapter/                          # Adapters
 │       ├── incoming/                     # Incoming adapters
-│       │   ├── web/
-│       │   │   ├── StartCheckoutPageController.java
-│       │   │   ├── BuyerInfoPageController.java
-│       │   │   ├── BuyerInfoPageViewModel.java
-│       │   │   ├── DeliveryPageController.java
-│       │   │   ├── DeliveryPageViewModel.java
-│       │   │   ├── PaymentPageController.java
-│       │   │   ├── PaymentPageViewModel.java
-│       │   │   ├── ReviewPageController.java
-│       │   │   ├── ReviewPageViewModel.java
-│       │   │   ├── ConfirmationPageController.java
-│       │   │   └── ConfirmationPageViewModel.java
+│       │   ├── web/                      # Protocol first, feature below it
+│       │   │   ├── session/
+│       │   │   │   └── StartCheckoutPageController.java
+│       │   │   └── checkoutcompletion/
+│       │   │       ├── BuyerInfoPageController.java
+│       │   │       ├── BuyerInfoPageViewModel.java
+│       │   │       ├── DeliveryPageController.java
+│       │   │       ├── DeliveryPageViewModel.java
+│       │   │       ├── PaymentPageController.java
+│       │   │       ├── PaymentPageViewModel.java
+│       │   │       ├── ReviewPageController.java
+│       │   │       ├── ReviewPageViewModel.java
+│       │   │       ├── ConfirmationPageController.java
+│       │   │       └── ConfirmationPageViewModel.java
 │       │   └── event/
-│       │       └── CartChangeEventConsumer.java
+│       │       └── cartsync/
+│       │           └── CartChangeEventConsumer.java
 │       └── outgoing/                     # Outgoing adapters
 │           ├── event/
 │           │   └── CheckoutConfirmedEventPublisher.java
@@ -675,6 +688,18 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 ```
 
 The application will start on `http://localhost:8080`
+
+### Running with Docker
+
+No local JDK needed — the `Dockerfile` builds the jar and runs it on a JRE:
+
+```bash
+docker compose up --build                 # http://localhost:8080
+docker compose run --rm test              # unit tests + architecture rules, dependencies cached in a volume
+docker compose run --rm gradle bootJar    # any other Gradle task
+```
+
+`docker build -t dca-shop-java .` builds the image alone. Podman works the same way (`podman compose`).
 
 ### Health Check
 

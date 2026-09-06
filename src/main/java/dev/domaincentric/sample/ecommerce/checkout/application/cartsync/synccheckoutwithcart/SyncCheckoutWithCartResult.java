@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.synccheckoutwithcart;
+package dev.domaincentric.sample.ecommerce.checkout.application.cartsync.synccheckoutwithcart;
 
 /**
  * Response from synchronizing a checkout session with cart.

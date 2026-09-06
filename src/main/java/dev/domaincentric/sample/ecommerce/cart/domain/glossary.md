@@ -10,6 +10,22 @@ items to triggering checkout. It references products from the Product context
 via `ProductId` and retrieves current prices/availability through an
 `ArticlePriceResolver` (anti-corruption layer to Pricing/Inventory).
 
+## Features (application layer)
+
+The Cart context groups its use cases into four features — domain-named navigation groups below
+`application/`, not model boundaries; every feature works on the one `ShoppingCart` aggregate.
+
+| Feature | Meaning | Use cases |
+|---------|---------|-----------|
+| `shopping` | Filling and reading the shopping cart while the customer shops | `createcart`, `getorcreateactivecart`, `getcartbyid`, `additemtocart`, `removeitemfromcart` |
+| `cartrecovery` | Recovering a guest cart on login — offering and applying a merge | `recovercart`, `getcartmergeoptions`, `mergecarts` |
+| `cartcheckout` | Handing the cart over to Checkout (`checkout`) and closing it once the order is confirmed (`complete`) | `checkoutcart`, `completecart` |
+| `operations` | Operating the shop — staff-only views across all carts | `getallcarts` |
+
+`application/shared/` stays context-wide (`ShoppingCartRepository`, `ArticleDataPort`). The web
+adapters mirror `shopping` and `cartrecovery`; the REST resource serves every feature and stays under
+`adapter/incoming/api/`.
+
 ## Aggregates
 
 ### ShoppingCart

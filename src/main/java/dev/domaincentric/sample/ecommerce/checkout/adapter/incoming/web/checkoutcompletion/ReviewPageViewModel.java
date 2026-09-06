@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.LineItemSnapshot;

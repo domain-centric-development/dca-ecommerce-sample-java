@@ -1,11 +1,11 @@
-package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdQuery;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdResult;
-import dev.domaincentric.sample.ecommerce.cart.application.getorcreateactivecart.GetOrCreateActiveCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.getorcreateactivecart.GetOrCreateActiveCartInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.getorcreateactivecart.GetOrCreateActiveCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;

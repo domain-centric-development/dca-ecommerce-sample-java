@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.recovercart;
+package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 

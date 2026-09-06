@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.checkoutcart;
+package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart;
 
 import java.math.BigDecimal;
 import java.time.Instant;

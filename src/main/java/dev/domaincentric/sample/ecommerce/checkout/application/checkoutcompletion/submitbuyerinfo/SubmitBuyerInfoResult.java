@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.submitbuyerinfo;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo;
 
 /**
  * Output model for buyer info submission.

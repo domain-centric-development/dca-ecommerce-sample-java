@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.submitdelivery;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery;
 
 import java.math.BigDecimal;
 import org.jspecify.annotations.Nullable;

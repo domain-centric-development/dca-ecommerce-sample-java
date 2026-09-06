@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getconfirmedcheckoutsession;
+package dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 

@@ -1,7 +1,7 @@
-package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.event;
+package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.event.cartcheckout;
 
-import dev.domaincentric.sample.ecommerce.cart.application.completecart.CompleteCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.completecart.CompleteCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.events.CartCompletionTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

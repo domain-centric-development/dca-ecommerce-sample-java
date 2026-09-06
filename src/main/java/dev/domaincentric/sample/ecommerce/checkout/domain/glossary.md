@@ -9,6 +9,22 @@ Sources: `dev.domaincentric.sample.ecommerce.checkout.domain.{model,event,servic
 
 ---
 
+## Features (application layer)
+
+The Checkout context groups its use cases into three features — domain-named navigation groups below
+`application/`, not model boundaries; every feature works on the one `CheckoutSession` aggregate.
+
+| Feature | Meaning | Use cases |
+|---------|---------|-----------|
+| `session` | Starting a checkout session from a cart and reading it back in its lifecycle states | `startcheckout`, `getactivecheckoutsession`, `getcheckoutsession`, `getconfirmedcheckoutsession` |
+| `checkoutcompletion` | The steps that complete a checkout: buyer information, delivery, payment, confirmation | `submitbuyerinfo`, `getshippingoptions`, `submitdelivery`, `getpaymentproviders`, `submitpayment`, `confirmcheckout` |
+| `cartsync` | Following changes of the underlying cart while the session is active | `synccheckoutwithcart` |
+
+`application/shared/` stays context-wide. The web adapters mirror `session` and `checkoutcompletion`
+(`adapter/incoming/web/{feature}`), the event consumer sits in `adapter/incoming/event/cartsync/`.
+
+---
+
 ## Aggregate Roots
 
 ### CheckoutSession

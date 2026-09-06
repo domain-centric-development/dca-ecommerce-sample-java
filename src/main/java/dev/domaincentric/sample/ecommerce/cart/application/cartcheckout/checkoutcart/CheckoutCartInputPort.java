@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.checkoutcart;
+package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 
@@ -10,7 +10,8 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
  *
  * <p><b>Hexagonal Architecture:</b> This is a driving/primary port for write operations.
  *
- * @see dev.domaincentric.sample.ecommerce.cart.application.checkoutcart.CheckoutCartUseCase
+ * @see
+ *     dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartUseCase
  */
 public interface CheckoutCartInputPort extends UseCase<CheckoutCartCommand, CheckoutCartResult> {
 

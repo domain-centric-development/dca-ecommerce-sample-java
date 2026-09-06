@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getactivecheckoutsession;
+package dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession;
 
 /**
  * Query to get an active checkout session for a customer.

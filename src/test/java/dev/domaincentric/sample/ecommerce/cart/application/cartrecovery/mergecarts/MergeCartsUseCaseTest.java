@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.mergecarts;
+package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts;
 
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.submitpayment;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment;
 
 /**
  * Input model for submitting payment information during checkout.

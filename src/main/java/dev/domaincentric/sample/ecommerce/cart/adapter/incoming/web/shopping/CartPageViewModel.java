@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;

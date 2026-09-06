@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getshippingoptions;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 

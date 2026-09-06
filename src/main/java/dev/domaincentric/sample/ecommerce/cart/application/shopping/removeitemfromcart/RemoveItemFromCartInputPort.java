@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.removeitemfromcart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 

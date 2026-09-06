@@ -1,7 +1,7 @@
-package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.session;
 
-import dev.domaincentric.sample.ecommerce.checkout.application.startcheckout.StartCheckoutCommand;
-import dev.domaincentric.sample.ecommerce.checkout.application.startcheckout.StartCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.removeitemfromcart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart;
 
 /**
  * Command to remove an item from one customer's shopping cart.

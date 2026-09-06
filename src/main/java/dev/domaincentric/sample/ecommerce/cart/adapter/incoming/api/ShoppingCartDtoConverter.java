@@ -1,10 +1,10 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.api;
 
-import dev.domaincentric.sample.ecommerce.cart.application.additemtocart.AddItemToCartResult;
-import dev.domaincentric.sample.ecommerce.cart.application.checkoutcart.CheckoutCartResult;
-import dev.domaincentric.sample.ecommerce.cart.application.createcart.CreateCartResult;
-import dev.domaincentric.sample.ecommerce.cart.application.getallcarts.GetAllCartsResult;
-import dev.domaincentric.sample.ecommerce.cart.application.removeitemfromcart.RemoveItemFromCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.createcart.CreateCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;

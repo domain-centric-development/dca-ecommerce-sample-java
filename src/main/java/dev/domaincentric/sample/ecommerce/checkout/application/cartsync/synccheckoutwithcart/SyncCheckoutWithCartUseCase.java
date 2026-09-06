@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.synccheckoutwithcart;
+package dev.domaincentric.sample.ecommerce.checkout.application.cartsync.synccheckoutwithcart;
 
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;

@@ -1,6 +1,6 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getshippingoptions;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions;
 
-import dev.domaincentric.sample.ecommerce.checkout.application.getshippingoptions.GetShippingOptionsResult.ShippingOptionData;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions.GetShippingOptionsResult.ShippingOptionData;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ShippingOption;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.math.BigDecimal;

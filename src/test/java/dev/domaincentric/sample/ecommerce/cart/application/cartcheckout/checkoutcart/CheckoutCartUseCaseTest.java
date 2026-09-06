@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.checkoutcart;
+package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.confirmcheckout;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout;
 
 import org.jspecify.annotations.Nullable;
 

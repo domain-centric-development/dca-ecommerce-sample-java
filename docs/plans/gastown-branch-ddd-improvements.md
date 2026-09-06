@@ -304,7 +304,7 @@ Document `CheckoutArticlePriceResolver` - functional interface for domain-level 
 | **Create** | `checkout/domain/model/CheckoutCartFactory.java` | Factory for assembling CheckoutCart |
 | **Modify** | `checkout/application/shared/CheckoutArticleDataPort.java` | Return CheckoutArticle instead of ArticleData |
 | **Modify** | `checkout/adapter/outgoing/product/CompositeCheckoutArticleDataAdapter.java` | Return domain objects |
-| **Modify** | `checkout/application/startcheckout/StartCheckoutUseCase.java` | Use factory and domain validation |
+| **Modify** | `checkout/application/session/startcheckout/StartCheckoutUseCase.java` | Use factory and domain validation |
 | **Keep** | `checkout/domain/model/CheckoutArticlePriceResolver.java` | Keep for `confirm()` backward compat |
 
 ### Cart Context

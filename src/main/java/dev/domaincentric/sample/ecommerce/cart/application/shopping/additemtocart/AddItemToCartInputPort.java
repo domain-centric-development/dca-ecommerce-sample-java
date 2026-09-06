@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.additemtocart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 
@@ -10,7 +10,8 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
  *
  * <p><b>Hexagonal Architecture:</b> This is a driving/primary port for write operations.
  *
- * @see dev.domaincentric.sample.ecommerce.cart.application.additemtocart.AddItemToCartUseCase
+ * @see
+ *     dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartUseCase
  */
 public interface AddItemToCartInputPort extends UseCase<AddItemToCartCommand, AddItemToCartResult> {
 

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.getcartbyid;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid;
 
 /**
  * Input model for retrieving one customer's cart by ID.

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.additemtocart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart;
 
 /**
  * Input model for adding an item to one customer's shopping cart.

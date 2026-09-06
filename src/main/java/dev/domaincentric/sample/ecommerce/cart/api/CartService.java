@@ -1,11 +1,11 @@
 package dev.domaincentric.sample.ecommerce.cart.api;
 
 import dev.domaincentric.dca.buildingblocks.ddd.strategic.relationships.OpenHostService;
-import dev.domaincentric.sample.ecommerce.cart.application.completecart.CompleteCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.completecart.CompleteCartInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdQuery;
-import dev.domaincentric.sample.ecommerce.cart.application.getcartbyid.GetCartByIdResult;
+import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;

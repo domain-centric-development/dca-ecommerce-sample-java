@@ -29,6 +29,8 @@ Conversational replies to the user may follow the user's language preference, bu
 
 # Run Application
 ./gradlew bootRun                            # Start app (JDWP debug on port 5005)
+docker compose up --build                    # Same shop in a container, http://localhost:8080
+docker compose run --rm test                 # Tests without a local JDK
 ./gradlew -Plog-debug bootRun                # Start with debug logging
 
 # Debugging tests
@@ -256,7 +258,7 @@ dev.domaincentric.sample.ecommerce
 │   └── adapter/outgoing/     # Shared adapters (e.g., SpringDomainEventPublisher)
 ├── {boundedcontext}/         # Each bounded context (product, cart, checkout, account, portal, inventory, pricing, backoffice)
 │   ├── domain/               # Domain model (aggregates, entities, events)
-│   ├── application/          # Use cases, ports, orchestration
+│   ├── application/          # Use cases, ports, orchestration — flat ({usecase}/) or grouped by feature ({feature}/{usecase}/)
 │   └── adapter/              # Incoming and outgoing adapters
 │       ├── incoming/         # Controllers, event consumers, MCP tools
 │       └── outgoing/         # Repository implementations
@@ -308,7 +310,7 @@ Catalog reads are public. Resources and MCP tool providers depend on `*InputPort
 
 Location: `src/test-architecture/java/dev/domaincentric/sample/ecommerce/`
 
-The rules themselves live in the library `dev.domaincentric:dca-archunit` (110 rules in 10 sets, ids
+The rules themselves live in the library `dev.domaincentric:dca-archunit` (112 rules in 10 sets, ids
 `DCA-<SET>-<NNN>`: LAY, ONI, HEX, TAC, STR, MAP, ADV, USE, NAM, CYC). This project only *runs* them:
 
 - `ArchitectureRulesTest` — extends `DcaArchitectureTest`, one dynamic test per rule, grouped into a

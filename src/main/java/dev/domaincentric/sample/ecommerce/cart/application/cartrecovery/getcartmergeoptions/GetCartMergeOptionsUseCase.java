@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.getcartmergeoptions;
+package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions;
 
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ArticleDataPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;

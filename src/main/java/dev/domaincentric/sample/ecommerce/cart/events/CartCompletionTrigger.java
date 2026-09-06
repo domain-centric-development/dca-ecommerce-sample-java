@@ -8,7 +8,8 @@ package dev.domaincentric.sample.ecommerce.cart.events;
  * on its event. This way the Cart module listens to its own interface, avoiding a dependency on the
  * Checkout module.
  *
- * @see dev.domaincentric.sample.ecommerce.cart.adapter.incoming.event.CartCompletionEventConsumer
+ * @see
+ *     dev.domaincentric.sample.ecommerce.cart.adapter.incoming.event.cartcheckout.CartCompletionEventConsumer
  */
 public interface CartCompletionTrigger {
 

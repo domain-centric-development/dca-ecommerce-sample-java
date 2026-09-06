@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.getorcreateactivecart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;

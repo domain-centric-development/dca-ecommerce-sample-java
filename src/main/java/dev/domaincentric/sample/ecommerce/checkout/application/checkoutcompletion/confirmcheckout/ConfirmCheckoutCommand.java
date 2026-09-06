@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.confirmcheckout;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout;
 
 /**
  * Input model for confirming a checkout session.

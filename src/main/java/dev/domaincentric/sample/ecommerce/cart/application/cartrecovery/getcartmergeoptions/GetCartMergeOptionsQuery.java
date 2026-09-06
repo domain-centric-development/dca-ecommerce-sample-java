@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.getcartmergeoptions;
+package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions;
 
 /**
  * Query to check if cart merge options should be presented to the user.

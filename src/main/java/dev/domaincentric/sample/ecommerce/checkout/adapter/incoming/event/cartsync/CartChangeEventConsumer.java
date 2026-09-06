@@ -1,8 +1,8 @@
-package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.event;
+package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.event.cartsync;
 
 import dev.domaincentric.sample.ecommerce.cart.events.CartContentsChangedEvent;
-import dev.domaincentric.sample.ecommerce.checkout.application.synccheckoutwithcart.SyncCheckoutWithCartCommand;
-import dev.domaincentric.sample.ecommerce.checkout.application.synccheckoutwithcart.SyncCheckoutWithCartInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.cartsync.synccheckoutwithcart.SyncCheckoutWithCartCommand;
+import dev.domaincentric.sample.ecommerce.checkout.application.cartsync.synccheckoutwithcart.SyncCheckoutWithCartInputPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.modulith.events.ApplicationModuleListener;

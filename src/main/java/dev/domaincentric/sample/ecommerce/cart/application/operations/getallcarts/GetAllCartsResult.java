@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.getallcarts;
+package dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts;
 
 import java.math.BigDecimal;
 import java.util.List;

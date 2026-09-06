@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.getcartbyid;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid;
 
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ArticleDataPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;

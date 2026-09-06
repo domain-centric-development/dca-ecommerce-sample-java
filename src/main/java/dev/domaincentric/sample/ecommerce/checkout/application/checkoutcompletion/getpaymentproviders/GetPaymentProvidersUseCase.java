@@ -1,6 +1,6 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getpaymentproviders;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders;
 
-import dev.domaincentric.sample.ecommerce.checkout.application.getpaymentproviders.GetPaymentProvidersResult.PaymentProviderData;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersResult.PaymentProviderData;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProvider;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderRegistry;
 import java.util.List;

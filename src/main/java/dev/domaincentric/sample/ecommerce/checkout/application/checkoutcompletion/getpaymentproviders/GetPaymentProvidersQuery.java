@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getpaymentproviders;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders;
 
 /**
  * Query model for retrieving available payment providers.

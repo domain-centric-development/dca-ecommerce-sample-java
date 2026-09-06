@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.completecart;
+package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart;
 
 /**
  * Output model for cart completion.

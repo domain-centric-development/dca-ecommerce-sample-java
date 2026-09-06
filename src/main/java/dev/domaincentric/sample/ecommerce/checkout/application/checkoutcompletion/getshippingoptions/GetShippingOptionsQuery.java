@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.application.getshippingoptions;
+package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions;
 
 /**
  * Query model for retrieving available shipping options.

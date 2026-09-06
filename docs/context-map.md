@@ -39,9 +39,9 @@ and universal value objects (`ProductId`, `Money`, …). Deliberately kept small
 | `product` | `checkout` | Customer/Supplier (OHS) | `product.api.ProductCatalogService` → `checkout/adapter/outgoing/product/*Adapter` |
 | `pricing` | `checkout` | Customer/Supplier (OHS) | `pricing.api.PricingService` |
 | `inventory` | `checkout` | Customer/Supplier (OHS) | `inventory.api.InventoryService` |
-| `cart` | `checkout` | Published Language (events) | `cart.events.CartContentsChangedEvent` → `checkout/adapter/incoming/event/CartChangeEventConsumer` |
+| `cart` | `checkout` | Published Language (events) | `cart.events.CartContentsChangedEvent` → `checkout/adapter/incoming/event/cartsync/CartChangeEventConsumer` |
 | `cart` | `checkout` | Customer/Supplier (OHS) | `cart.api.CartService` (lookups) |
-| `checkout` | `cart` | Published Language — Interface Inversion | `checkout.events.CheckoutConfirmedEvent` *implements* `cart.events.CartCompletionTrigger`; consumer in `cart/adapter/incoming/event/CartCompletionEventConsumer` |
+| `checkout` | `cart` | Published Language — Interface Inversion | `checkout.events.CheckoutConfirmedEvent` *implements* `cart.events.CartCompletionTrigger`; consumer in `cart/adapter/incoming/event/cartcheckout/CartCompletionEventConsumer` |
 | `checkout` | `inventory` | Published Language — Interface Inversion | `checkout.events.CheckoutConfirmedEvent` *implements* `inventory.events.StockReductionTrigger`; consumer in `inventory/adapter/incoming/event/StockReductionEventConsumer` |
 | `product` | `pricing` | Published Language — Interface Inversion | `product.events.ProductCreatedEvent` *implements* `pricing.events.PriceInitializationTrigger`; consumer in `pricing/adapter/incoming/event/PriceInitializationEventConsumer` |
 | `product` | `inventory` | Published Language — Interface Inversion | `product.events.ProductCreatedEvent` *implements* `inventory.events.StockInitializationTrigger`; consumer in `inventory/adapter/incoming/event/StockInitializationEventConsumer` |

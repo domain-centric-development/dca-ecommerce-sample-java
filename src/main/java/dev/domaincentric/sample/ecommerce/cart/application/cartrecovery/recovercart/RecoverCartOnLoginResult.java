@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.recovercart;
+package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart;
 
 import java.math.BigDecimal;
 import java.util.List;

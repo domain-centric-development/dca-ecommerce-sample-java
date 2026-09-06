@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.removeitemfromcart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;

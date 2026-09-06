@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.createcart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.createcart;
 
 /**
  * Output model for cart creation.

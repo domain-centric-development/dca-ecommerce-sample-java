@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.getorcreateactivecart;
+package dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart;
 
 /**
  * Command to get or create an active cart for a customer.
