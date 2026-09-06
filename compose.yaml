@@ -1,0 +1,29 @@
+# docker compose up --build          → shop on http://localhost:8080
+# docker compose run --rm test       → unit tests + architecture rules, no image build needed
+# docker compose run --rm gradle <task>  → any other Gradle task with a cached dependency store
+services:
+  shop-java:
+    build: .
+    image: dca-shop-java
+    ports:
+      - "8080:8080"
+    environment:
+      # SPRING_PROFILES_ACTIVE: jdbc
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+
+  gradle:
+    image: eclipse-temurin:25-jdk
+    profiles: [tools]
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - gradle-cache:/root/.gradle
+    entrypoint: ["./gradlew", "--no-daemon"]
+    command: ["build"]
+
+  test:
+    extends: gradle
+    command: ["test", "test-architecture"]
+
+volumes:
+  gradle-cache:

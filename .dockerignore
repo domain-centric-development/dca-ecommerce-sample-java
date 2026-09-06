@@ -1,0 +1,15 @@
+.git
+.gradle
+build
+bin
+out
+logs
+docs
+slides
+tasks
+scripts
+*.md
+!README.md
+.idea
+*.iml
+.vscode
