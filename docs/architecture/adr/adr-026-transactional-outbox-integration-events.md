@@ -58,7 +58,7 @@ The outbox persistence port is modelled as a `Store` (operational data, no aggre
 
 - Chris Richardson, *Microservices Patterns* — Transactional Outbox, Polling Publisher, Transaction Log Tailing
 - Vaughn Vernon, *Implementing Domain-Driven Design* — domain vs integration events, autonomy via messaging
-- [Chapter 14: Events Integration](https://github.com/chbloemer/domain-centric-architecture/blob/main/dca-book/14-events-integration.md) — full pattern with code
+- [Complete Cross-Context Event Flow](https://github.com/domain-centric-development/dca-guide/blob/main/README.md#complete-cross-context-event-flow) in the guide — domain event to integration event across contexts
 
 ### Related ADRs
 

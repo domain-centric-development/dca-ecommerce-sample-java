@@ -53,7 +53,7 @@ All eight contexts in this sample use the rich domain-model style — deliberate
 
 - Pattern style is declared per context in an ADR (this one covers the sample's contexts)
 - ArchUnit: scope tactical rule sets to declared domain-model contexts, e.g. a `DOMAIN_MODEL_CONTEXTS` list in `BaseArchUnitTest` used by tactical tests; structural rules (cycles, isolation, layer dependencies) always run for all contexts
-- See [ArchUnit Governance](https://github.com/chbloemer/domain-centric-architecture/blob/main/dca-guide/archunit-governance.md) for context-specific rule sets
+- See [ArchUnit Governance](https://github.com/domain-centric-development/dca-guide/blob/main/archunit-governance.md) for context-specific rule sets
 
 ## References
 
