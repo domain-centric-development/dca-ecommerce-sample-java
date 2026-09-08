@@ -168,8 +168,7 @@ The codebase already uses `*Result` for output port return types (e.g., `Payment
 - `README.md` - Project structure and examples
 - `CLAUDE.md` (root and dca-ecommerce-sample-java) - Naming conventions
 - `dca-guide/README.md` - Pattern documentation
-- `dca-book/06-application-layer.md` - Chapter content
-- `dca-book/appendix-d-cheat-sheet.md` - Quick reference
+- DCA guide, "Use Case Pattern with Input Ports" and "Shaping the Result" — the `*Result` convention this ADR adopts
 
 ---
 

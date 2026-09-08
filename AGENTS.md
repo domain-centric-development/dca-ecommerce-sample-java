@@ -98,9 +98,9 @@ Update architecture documentation **AND README.md** in the following scenarios:
 docs/
 └── architecture/
     ├── architecture-principles.md    # Main architecture documentation
-    ├── design-decisions.md           # ADRs (Architecture Decision Records)
-    ├── bounded-contexts.md           # Context mapping and relationships
-    └── patterns/                     # Pattern-specific guides
+    ├── adr/                          # ADRs (Architecture Decision Records), README.md is the index
+    ├── context-map.md                # Generated context map (architecture tests write it)
+    └── *.md                          # Topic guides (transaction-management, cross-context-integration-events, …)
         ├── repository-pattern.md
         ├── domain-events.md
         └── aggregate-design.md
