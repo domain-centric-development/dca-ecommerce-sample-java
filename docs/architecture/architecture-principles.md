@@ -529,7 +529,7 @@ public class ProductEventConsumer {
 **Implementation:**
 - Interface: `dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent`
 - Publisher Interface (SPI): `dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher`
-- Publisher Implementation: `dev.domaincentric.sample.ecommerce.sharedkernel.adapter.outgoing.event.SpringDomainEventPublisher`
+- Publisher Implementation: `dev.domaincentric.dca.spring.SpringDomainEventPublisher` from `dca-spring`, registered by its auto-configuration (ADR-037)
 - Examples: `ProductCreated`, `ProductPriceChanged`, `CartItemAddedToCart`, `CartCheckedOut`
 
 **Event Publishing Infrastructure:**
@@ -543,8 +543,8 @@ public interface DomainEventPublisher extends OutputPort {
     void publishAndClearEvents(AggregateRoot<?, ?> aggregate);
 }
 
-// Implementation in sharedkernel.adapter.outgoing.event - uses Spring framework
-@Component
+// Implementation in dev.domaincentric.dca.spring (artifact dca-spring) - uses Spring framework;
+// registered by DcaSpringAutoConfiguration unless the application defines the port itself
 public class SpringDomainEventPublisher implements DomainEventPublisher {
     private final ApplicationEventPublisher eventPublisher;
 
@@ -2037,8 +2037,7 @@ public interface DomainEventPublisher extends OutputPort {
     void publishAndClearEvents(AggregateRoot<?, ?> aggregate);
 }
 
-// sharedkernel.adapter.outgoing.event.SpringDomainEventPublisher (adapter implementation)
-@Component
+// dev.domaincentric.dca.spring.SpringDomainEventPublisher (adapter implementation, artifact dca-spring)
 public class SpringDomainEventPublisher implements DomainEventPublisher {
     private final ApplicationEventPublisher eventPublisher;
     // Spring-specific implementation...
@@ -2048,7 +2047,7 @@ public class SpringDomainEventPublisher implements DomainEventPublisher {
 **Rules:**
 1. **dev.domaincentric.dca.buildingblocks.hexagonal.port must contain ONLY interfaces** (enforced by ArchUnit)
 2. No concrete classes, no annotations, no framework dependencies
-3. Implementations reside in `sharedkernel.adapter` or context adapter packages
+3. Implementations reside in `dca-spring` (the shared runtime adapters) or in context adapter packages
 4. Application layer may depend on `dev.domaincentric.dca.buildingblocks.hexagonal.port`, never on implementations
 5. Only ports used by **multiple bounded contexts** belong here (not context-specific ports)
 

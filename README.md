@@ -100,10 +100,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── OrSpecification.java
 │   │       ├── NotSpecification.java
 │   │       └── SpecificationVisitor.java
-│   └── adapter/
-│       └── outgoing/
-│           └── event/
-│               └── SpringDomainEventPublisher.java  # Domain event publishing
+│   (DomainEventPublisher and TransactionBoundary implementations come from dca-spring)
 │
 ├── product/                              # Product Catalog bounded context
 │   ├── api/                              # Spring Modulith @NamedInterface API
@@ -892,7 +889,7 @@ For comprehensive architecture documentation, see:
 - `sharedkernel.application.shared` - Application-specific ports shared across contexts (IdentityProvider) — not part of the generic marker set
 - `sharedkernel.domain.model` - Shared value objects (Money, Price, ProductId, UserId, PageResult, PagingRequest)
 - `sharedkernel.domain.specification` - Composable specification pattern
-- `sharedkernel.adapter.outgoing.event` - Shared outgoing adapters (SpringDomainEventPublisher)
+- Runtime adapters for the shared ports come from `dev.domaincentric:dca-spring` (`SpringDomainEventPublisher`, `SpringTransactionBoundary`, auto-configured) — the sample holds no copy
 
 **Infrastructure Layer** - Cross-cutting concerns
 - `infrastructure.config` - Spring @Configuration classes
@@ -920,7 +917,7 @@ Architecture rules are **actively enforced** using ArchUnit (10 test suites) and
 - **UseCasePatternsArchUnitTest** - Application service patterns
 
 **Spring Modulith Verification:**
-- **SpringModulithVerificationTest** - Module boundary and cycle verification
+- **SpringModulithVerificationTest** - Module boundary and cycle verification, a `DcaSpringModulithTest` subclass from `dca-archunit-spring-modulith`
 
 **Shared Infrastructure:**
 - **BaseArchUnitTest** - Common test constants and helpers

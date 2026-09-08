@@ -35,7 +35,7 @@ public class ProductApplicationService {
 `@Transactional` on the class is right only while everything inside is local (repositories, stores, event
 publishers). A use case that also calls a port which may leave the process — another context's data port, a
 payment provider, a mail gateway — must not hold the connection for that round trip. It drops the annotation and
-uses `TransactionBoundary` instead — an application-layer execution abstraction, not a port; `SpringTransactionBoundary` (infrastructure) binds it to `TransactionTemplate`:
+uses `TransactionBoundary` instead — an application-layer execution abstraction, not a port; `SpringTransactionBoundary` from `dca-spring` binds it to `TransactionTemplate` (auto-configured once a transaction manager exists, ADR-037):
 
 ```java
 @Service                                   // no class-level @Transactional

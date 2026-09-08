@@ -28,10 +28,7 @@ dev.domaincentric.sample.ecommerce
 │   │   │   └── Money, Price, ProductId, UserId
 │   │   └── specification/         # Shared Specification Patterns
 │   │       └── CompositeSpecification, AndSpecification, OrSpecification, NotSpecification, SpecificationVisitor
-│   └── adapter/
-│       └── outgoing/
-│           └── event/
-│               └── SpringDomainEventPublisher
+│   (DomainEventPublisher / TransactionBoundary implementations: dev.domaincentric:dca-spring)
 │
 ├── product/                         # Product Catalog Bounded Context
 │   ├── domain/

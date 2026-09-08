@@ -2,7 +2,7 @@ rootProject.name = 'dca-ecommerce-sample-java'
 
 // The building blocks and the rule catalog come from Maven Central. To develop against unreleased
 // changes of the sibling dca-java build, run with -PwithDcaJava — Gradle then substitutes
-// dev.domaincentric:dca-building-blocks / dca-archunit with ../dca-java.
+// dev.domaincentric:dca-building-blocks / dca-spring / dca-archunit / dca-archunit-spring-modulith with ../dca-java.
 if (hasProperty('withDcaJava') && file('../dca-java').exists()) {
   includeBuild('../dca-java')
 }

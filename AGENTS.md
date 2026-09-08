@@ -255,7 +255,7 @@ dev.domaincentric.sample.ecommerce
 ├── sharedkernel/             # Shared Kernel (cross-context)
 │   ├── infrastructure/       # Sample-specific marker (AsyncInitialize); DCA markers come from dca-building-blocks
 │   ├── domain/               # Shared value objects and specifications
-│   └── adapter/outgoing/     # Shared adapters (e.g., SpringDomainEventPublisher)
+│   └── application/shared/   # IdentityProvider (the DomainEventPublisher/TransactionBoundary impls come from dca-spring)
 ├── {boundedcontext}/         # Each bounded context (product, cart, checkout, account, portal, inventory, pricing, backoffice)
 │   ├── domain/               # Domain model (aggregates, entities, events)
 │   ├── application/          # Use cases, ports, orchestration — flat ({usecase}/) or grouped by feature ({feature}/{usecase}/)
@@ -319,7 +319,9 @@ The rules themselves live in the library `dev.domaincentric:dca-archunit` (114 r
 - `EcommerceLayout` — the base package and `DcaLayout` all three tests share.
 - `ContextMapDocumentationTest` — renders `docs/architecture/context-map.md` via `ContextMapRenderer`
   and fails when the committed file was stale (fix: commit the regenerated file).
-- `SpringModulithVerificationTest` — Spring Modulith module boundaries (sample-specific, not a DCA rule).
+- `SpringModulithVerificationTest` — Spring Modulith module boundaries via `DcaSpringModulithTest` from
+  `dca-archunit-spring-modulith` (Modulith's own analyzer, not a DCA rule; the base class excludes these test
+  classes from Modulith's root module).
 
 To switch a rule off, return `DcaRuleSelection.all().excluding("<id>", "<reason>")` from
 `additionalSelection()` in `ArchitectureRulesTest` — the rule then shows up as an aborted test with
