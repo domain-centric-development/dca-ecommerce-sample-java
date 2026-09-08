@@ -32,11 +32,13 @@ Each context follows:
     └── outgoing/          # Repository implementations
 ```
 
+Building blocks: the dependency `dev.domaincentric:dca-building-blocks` (`dev.domaincentric.dca.buildingblocks`) — not project code
+- `ddd.tactical` — `AggregateRoot`, `BaseAggregateRoot`, `Entity`, `Value`, `Id`, `DomainEvent`, `IntegrationEvent`, `@IntegrationEventType`, `DomainService`, `DomainGateway`, `Factory`, `Specification`
+- `ddd.strategic` (+ `.relationships`) — `@BoundedContext`, `@SharedKernel`, `@OpenHostService`, `@Upstream`, `@ExternalUpstream`, `@Partnership`
+- `hexagonal.port.in` — `InputPort`, `UseCase<INPUT, OUTPUT>`
+- `hexagonal.port.out` — `OutputPort`, `Repository<T, ID>`, `Store`, `DomainEventPublisher`, `IntegrationEventPublisher`; `application` — `TransactionBoundary`
+
 Shared kernel: `dev.domaincentric.sample.ecommerce.sharedkernel`
-- `marker/tactical/` — `AggregateRoot`, `BaseAggregateRoot`, `Entity`, `Value`, `Id`, `DomainEvent`, `IntegrationEvent`, `@IntegrationEventType`, `DomainService`, `DomainGateway`, `Factory`, `Specification`
-- `marker/strategic/` — `@BoundedContext`, `@SharedKernel`, `@OpenHostService`
-- `marker/port/in/` — `InputPort`, `UseCase<INPUT, OUTPUT>`
-- `marker/port/out/` — `OutputPort`, `Repository<T, ID>`, `Store`, `DomainEventPublisher`, `IntegrationEventPublisher`
 - `application/shared/` — application-specific ports shared across contexts (`IdentityProvider`); not generic markers
 - `domain/model/` — Shared value objects (`Money`, `Price`, `ProductId`, `UserId`, `PagingRequest`, `PageResult`)
 
