@@ -40,8 +40,16 @@ class GetPricesForProductsUseCaseTest {
       // Arrange
       ProductId product1 = ProductId.generate();
       ProductId product2 = ProductId.generate();
-      ProductPrice price1 = ProductPrice.create(product1, Money.euro(10.00));
-      ProductPrice price2 = ProductPrice.create(product2, Money.euro(20.00));
+      ProductPrice price1 =
+          ProductPrice.create(
+              product1,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
+                  Money.euro(10.00)));
+      ProductPrice price2 =
+          ProductPrice.create(
+              product2,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
+                  Money.euro(20.00)));
       repository.save(price1);
       repository.save(price2);
 
@@ -64,7 +72,10 @@ class GetPricesForProductsUseCaseTest {
       // Arrange
       ProductId productId = ProductId.generate();
       Money price = Money.euro(15.50);
-      ProductPrice productPrice = ProductPrice.create(productId, price);
+      ProductPrice productPrice =
+          ProductPrice.create(
+              productId,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(price));
       repository.save(productPrice);
 
       GetPricesForProductsQuery query = new GetPricesForProductsQuery(List.of(productId));
@@ -100,7 +111,11 @@ class GetPricesForProductsUseCaseTest {
       // Arrange
       ProductId existingProduct = ProductId.generate();
       ProductId missingProduct = ProductId.generate();
-      ProductPrice price = ProductPrice.create(existingProduct, Money.euro(25.00));
+      ProductPrice price =
+          ProductPrice.create(
+              existingProduct,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
+                  Money.euro(25.00)));
       repository.save(price);
 
       GetPricesForProductsQuery query =

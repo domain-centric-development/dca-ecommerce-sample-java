@@ -41,7 +41,7 @@ public class CompleteCartUseCase implements CompleteCartInputPort {
             .orElseThrow(() -> new IllegalArgumentException("Cart not found: " + input.cartId()));
 
     // Complete cart (business logic validates status)
-    cart.complete();
+    cart.reconcileCheckout(input.sessionId(), input.purchasedPositions());
 
     // Persist
     shoppingCartRepository.save(cart);

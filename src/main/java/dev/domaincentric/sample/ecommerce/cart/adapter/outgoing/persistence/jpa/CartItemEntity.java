@@ -26,6 +26,17 @@ public class CartItemEntity {
   @Column(name = "price_currency", nullable = false, length = 3)
   private String priceCurrency;
 
+  @Column(name = "position_units", nullable = false, length = 16000)
+  private String positionUnits;
+
+  public String getPositionUnits() {
+    return positionUnits;
+  }
+
+  public void setPositionUnits(String value) {
+    positionUnits = value;
+  }
+
   public String getId() {
     return id;
   }

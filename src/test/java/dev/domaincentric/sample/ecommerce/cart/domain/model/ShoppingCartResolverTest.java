@@ -27,6 +27,15 @@ class ShoppingCartResolverTest {
   private ShoppingCart cart;
   private TestArticlePriceResolver priceResolver;
 
+  private java.util.Map<
+          dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId, ArticlePrice>
+      facts() {
+    return cart.items().stream()
+        .collect(
+            java.util.stream.Collectors.toMap(
+                CartItem::productId, item -> priceResolver.resolve(item.productId())));
+  }
+
   @BeforeEach
   void setUp() {
     cart = new ShoppingCart(CartId.generate(), CustomerId.of("test-customer"));
@@ -40,7 +49,7 @@ class ShoppingCartResolverTest {
     @Test
     @DisplayName("returns zero for empty cart")
     void returnsZeroForEmptyCart() {
-      Money total = cart.calculateTotal(priceResolver);
+      Money total = cart.calculateTotal(facts());
 
       assertEquals(Money.euro(0.0), total);
     }
@@ -60,7 +69,7 @@ class ShoppingCartResolverTest {
       priceResolver.setPrice(product1, Money.of(BigDecimal.valueOf(15.00), EUR), true, 100);
       priceResolver.setPrice(product2, Money.of(BigDecimal.valueOf(25.00), EUR), true, 100);
 
-      Money total = cart.calculateTotal(priceResolver);
+      Money total = cart.calculateTotal(facts());
 
       // Expected: 2 * 15 + 3 * 25 = 30 + 75 = 105
       assertEquals(Money.of(BigDecimal.valueOf(105.00), EUR), total);
@@ -83,7 +92,7 @@ class ShoppingCartResolverTest {
       // Resolver returns different price
       priceResolver.setPrice(productId, Money.of(BigDecimal.valueOf(50.00), EUR), true, 100);
 
-      Money total = cart.calculateTotal(priceResolver);
+      Money total = cart.calculateTotal(facts());
 
       // Should use resolver price (50), not original price (10)
       assertEquals(Money.of(BigDecimal.valueOf(100.00), EUR), total);
@@ -97,7 +106,7 @@ class ShoppingCartResolverTest {
     @Test
     @DisplayName("returns valid for empty cart")
     void returnsValidForEmptyCart() {
-      CartValidationResult outcome = cart.validateForCheckout(priceResolver);
+      CartValidationResult outcome = cart.validateForCheckout(facts());
 
       assertTrue(outcome.isValid());
       assertTrue(outcome.errors().isEmpty());
@@ -116,7 +125,7 @@ class ShoppingCartResolverTest {
       priceResolver.setPrice(product1, Money.of(BigDecimal.valueOf(10.00), EUR), true, 10);
       priceResolver.setPrice(product2, Money.of(BigDecimal.valueOf(10.00), EUR), true, 10);
 
-      CartValidationResult outcome = cart.validateForCheckout(priceResolver);
+      CartValidationResult outcome = cart.validateForCheckout(facts());
 
       assertTrue(outcome.isValid());
     }
@@ -130,7 +139,7 @@ class ShoppingCartResolverTest {
       cart.addItem(productId, Quantity.of(1), price);
       priceResolver.setPrice(productId, Money.of(BigDecimal.valueOf(10.00), EUR), false, 0);
 
-      CartValidationResult outcome = cart.validateForCheckout(priceResolver);
+      CartValidationResult outcome = cart.validateForCheckout(facts());
 
       assertFalse(outcome.isValid());
       assertEquals(1, outcome.errors().size());
@@ -148,7 +157,7 @@ class ShoppingCartResolverTest {
       cart.addItem(productId, Quantity.of(5), price);
       priceResolver.setPrice(productId, Money.of(BigDecimal.valueOf(10.00), EUR), true, 3);
 
-      CartValidationResult outcome = cart.validateForCheckout(priceResolver);
+      CartValidationResult outcome = cart.validateForCheckout(facts());
 
       assertFalse(outcome.isValid());
       assertEquals(1, outcome.errors().size());
@@ -171,7 +180,7 @@ class ShoppingCartResolverTest {
           unavailableProduct, Money.of(BigDecimal.valueOf(10.00), EUR), false, 0);
       priceResolver.setPrice(lowStockProduct, Money.of(BigDecimal.valueOf(10.00), EUR), true, 5);
 
-      CartValidationResult outcome = cart.validateForCheckout(priceResolver);
+      CartValidationResult outcome = cart.validateForCheckout(facts());
 
       assertFalse(outcome.isValid());
       assertEquals(2, outcome.errors().size());
@@ -192,7 +201,7 @@ class ShoppingCartResolverTest {
       cart.addItem(productId, Quantity.of(5), price);
       priceResolver.setPrice(productId, Money.of(BigDecimal.valueOf(10.00), EUR), true, 5);
 
-      CartValidationResult outcome = cart.validateForCheckout(priceResolver);
+      CartValidationResult outcome = cart.validateForCheckout(facts());
 
       assertTrue(outcome.isValid());
     }

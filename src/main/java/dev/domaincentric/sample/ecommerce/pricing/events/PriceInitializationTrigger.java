@@ -1,8 +1,5 @@
 package dev.domaincentric.sample.ecommerce.pricing.events;
 
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
-
 /**
  * Interface for events that trigger the creation of a price record.
  *
@@ -17,8 +14,10 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 public interface PriceInitializationTrigger {
 
   /** The product the price belongs to. */
-  ProductId productId();
+  String productId();
 
   /** The price the product starts with. */
-  Money initialPrice();
+  String amount();
+
+  String currency();
 }

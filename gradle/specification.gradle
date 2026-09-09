@@ -1,0 +1,30 @@
+// A commit SHA must be supplied after the specification repository is published. Never fabricate one.
+def localSpec = providers.gradleProperty('specification.path')
+def destination = layout.buildDirectory.dir('specification')
+tasks.register('materializeSpecification') {
+  notCompatibleWithConfigurationCache('Materializes a pinned external specification or an explicit paired checkout')
+  outputs.dir(destination)
+  outputs.upToDateWhen { false }
+  doLast {
+    def revision = project.property('specification.revision').toString()
+    def pinned = revision ==~ /[0-9a-f]{40}/
+    if (System.getenv('CI') && !pinned) throw new GradleException('Specification revision is unpinned; CI requires a published commit SHA')
+    File source
+    if (localSpec.isPresent()) source = file(localSpec.get())
+    else {
+      if (!pinned) throw new GradleException('Specification is unpublished: use -Pspecification.path=../dca-sample-specification for paired local work')
+      def archive = layout.buildDirectory.file('specification.zip').get().asFile
+      archive.parentFile.mkdirs()
+      new URI("https://github.com/domain-centric-development/dca-sample-specification/archive/${revision}.zip").toURL().withInputStream { input -> archive.withOutputStream { it << input } }
+      def unpacked = layout.buildDirectory.dir('specification-source').get().asFile
+      project.copy { spec -> spec.from(project.zipTree(archive)); spec.into(unpacked) }
+      source = new File(unpacked, "dca-sample-specification-${revision}")
+    }
+    if (!new File(source, 'vectors').isDirectory()) throw new GradleException('Specification vectors are missing')
+    project.sync { spec -> spec.from(source); spec.include('**/*.json', '**/*.md'); spec.into(destination) }
+  }
+}
+tasks.withType(Test).configureEach {
+  dependsOn tasks.named('materializeSpecification')
+  systemProperty 'specification.path', destination.get().asFile.absolutePath
+}

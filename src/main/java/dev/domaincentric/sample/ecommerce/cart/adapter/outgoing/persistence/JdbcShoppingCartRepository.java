@@ -104,13 +104,14 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
 
     for (final CartItem item : cart.items()) {
       jdbcTemplate.update(
-          "INSERT INTO cart_items (id, cart_id, product_id, quantity, price_amount, price_currency) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT INTO cart_items (id, cart_id, product_id, quantity, price_amount, price_currency, position_units) VALUES (?, ?, ?, ?, ?, ?, ?)",
           item.id().value(),
           cart.id().value(),
           item.productId().value(),
           item.quantity().value(),
           item.priceAtAddition().value().amount(),
-          item.priceAtAddition().value().currency().getCurrencyCode());
+          item.priceAtAddition().value().currency().getCurrencyCode(),
+          item.storedUnits());
     }
 
     return cart;
@@ -185,7 +186,7 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
   private List<ShoppingCart.StoredItem> storedItemsOf(final CartId cartId) {
     final List<Map<String, Object>> rows =
         jdbcTemplate.queryForList(
-            "SELECT id, product_id, quantity, price_amount, price_currency FROM cart_items WHERE cart_id = ?",
+            "SELECT id, product_id, quantity, price_amount, price_currency, position_units FROM cart_items WHERE cart_id = ?",
             cartId.value());
 
     final List<ShoppingCart.StoredItem> storedItems = new ArrayList<>();
@@ -197,7 +198,8 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
               CartItemId.of((String) row.get("id")),
               ProductId.of((String) row.get("product_id")),
               Quantity.of(((Number) row.get("quantity")).intValue()),
-              Price.of(Money.of(amount, java.util.Currency.getInstance(currency)))));
+              Price.of(Money.of(amount, java.util.Currency.getInstance(currency))),
+              (String) row.get("position_units")));
     }
     return storedItems;
   }

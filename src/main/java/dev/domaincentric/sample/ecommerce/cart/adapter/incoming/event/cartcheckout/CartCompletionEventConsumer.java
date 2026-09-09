@@ -38,6 +38,7 @@ public class CartCompletionEventConsumer {
   @ApplicationModuleListener
   void on(final CartCompletionTrigger event) {
     log.info("Completing cart {} after checkout confirmation", event.cartId());
-    completeCartInputPort.execute(new CompleteCartCommand(event.cartId()));
+    completeCartInputPort.execute(
+        new CompleteCartCommand(event.cartId(), event.sessionId(), event.purchasedPositions()));
   }
 }

@@ -5,7 +5,6 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublis
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ArticleDataPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ArticlePrice;
-import dev.domaincentric.sample.ecommerce.cart.domain.model.ArticlePriceResolver;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartArticle;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartValidationResult;
@@ -13,7 +12,6 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartFactory;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.time.Instant;
 import java.util.Map;
@@ -85,8 +83,8 @@ public class CheckoutCartUseCase implements CheckoutCartInputPort {
                       () -> new IllegalArgumentException("Cart not found: " + input.cartId()));
           final EnrichedCart enrichedCart = enrichedCartFactory.create(cart, articleData);
           if (!enrichedCart.isValidForCheckout()) {
-            final ArticlePriceResolver priceResolver = buildResolver(articleData);
-            final CartValidationResult validationResult = cart.validateForCheckout(priceResolver);
+            final Map<ProductId, ArticlePrice> facts = buildFacts(articleData);
+            final CartValidationResult validationResult = cart.validateForCheckout(facts);
             if (!validationResult.isValid()) {
               throw new CartValidationException(validationResult);
             }
@@ -107,16 +105,16 @@ public class CheckoutCartUseCase implements CheckoutCartInputPort {
    * @param articleDataMap the map of product IDs to CartArticle
    * @return a resolver that provides pricing information
    */
-  private ArticlePriceResolver buildResolver(final Map<ProductId, CartArticle> articleDataMap) {
-    return productId -> {
-      final CartArticle article = articleDataMap.get(productId);
-      if (article == null) {
-        // Product not found - treat as unavailable
-        return new ArticlePrice(Money.euro(0.0), false, 0);
-      }
-      return new ArticlePrice(
-          article.currentPrice(), article.isAvailable(), article.availableStock());
-    };
+  private Map<ProductId, ArticlePrice> buildFacts(final Map<ProductId, CartArticle> articles) {
+    return articles.entrySet().stream()
+        .collect(
+            Collectors.toUnmodifiableMap(
+                Map.Entry::getKey,
+                e ->
+                    new ArticlePrice(
+                        e.getValue().currentPrice(),
+                        e.getValue().isAvailable(),
+                        e.getValue().availableStock())));
   }
 
   /** Exception thrown when cart validation fails during checkout. */

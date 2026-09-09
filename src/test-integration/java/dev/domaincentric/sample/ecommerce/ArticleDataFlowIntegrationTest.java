@@ -202,7 +202,8 @@ class ArticleDataFlowIntegrationTest {
                   ProductDescription.of("Nobody has priced this yet"),
                   Category.of("Home"),
                   ImageUrl.of("/images/products/ddd-book.webp"),
-                  Money.euro(9.99),
+                  dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
+                      Money.euro(9.99)),
                   5);
       productRepository.save(unpriced);
       try {

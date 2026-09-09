@@ -217,7 +217,7 @@ class ShoppingCartMergeTest {
       Price price = Price.of(Money.of(BigDecimal.valueOf(10.00), EUR));
 
       targetCart.addItem(productId, Quantity.of(1), price);
-      targetCart.checkout();
+      targetCart.abandon();
 
       sourceCart.addItem(productId, Quantity.of(1), price);
 

@@ -41,8 +41,9 @@ public class SetProductPriceUseCase implements SetProductPriceInputPort {
   @Override
   public SetProductPriceResult execute(final SetProductPriceCommand command) {
     final ProductId productId = ProductId.of(command.productId());
-    final Money newPrice =
-        new Money(command.priceAmount(), Currency.getInstance(command.priceCurrency()));
+    final dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price newPrice =
+        dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
+            new Money(command.priceAmount(), Currency.getInstance(command.priceCurrency())));
 
     // Check if price exists for this product
     final var existingPrice = productPriceRepository.findByProductId(productId);
@@ -71,8 +72,8 @@ public class SetProductPriceUseCase implements SetProductPriceInputPort {
     return new SetProductPriceResult(
         productPrice.id().value(),
         productPrice.productId().value(),
-        productPrice.currentPrice().amount(),
-        productPrice.currentPrice().currency().getCurrencyCode(),
+        productPrice.currentPrice().value().amount(),
+        productPrice.currentPrice().value().currency().getCurrencyCode(),
         productPrice.effectiveFrom(),
         created);
   }

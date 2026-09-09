@@ -29,29 +29,23 @@ The Checkout context groups its use cases into three features — domain-named n
 
 ### CheckoutSession
 
-**Definition:** Represents a customer's complete payment process via a 5-step flow
-(buyer info → delivery → payment → review → confirmation) and encapsulates all captured data,
-amounts, and the order status.
+An explicit checkout action captures immutable positions, quantities and prices into a session. Cart edits do not
+create or mutate sessions. A new action supersedes the previous OPEN/Active session; confirmed/completed orders remain.
+Confirmation and replacement serialize through the same repository operation, including transaction completion.
+Superseded confirmation has no completion effect. Abandonment/expiry closes only an open session and leaves cart contents.
 
-**Type:** Aggregate Root
+Cart reconciliation intersects purchased unit intervals with the current stable position id. Later additions (also of
+the same product), removed/re-added positions and other contents survive. Replay and overlapping completed snapshots
+cannot remove a unit twice. JDBC/JPA cart persistence preserves the interval allocation watermark; in-memory persistence
+retains the same domain state. Legacy CheckedOut/Completed cart statuses remain readable, but snapshot checkout leaves
+an active cart editable and never completes the whole cart.
 
-**Identity:** `CheckoutSessionId`
+Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume
+immutable line/fact snapshots. Any changed price or shortage reports affected lines and leaves state, totals and events
+unchanged. The buyer explicitly starts a fresh checkout against the new prices. Success stores the recomputed total and
+publishes the same total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
+claim of durable distributed transactions or universal rollback of unenlisted resources.
 
-**Related terms:** `CartId`, `CustomerId`, `CheckoutLineItem`, `CheckoutTotals`, `CheckoutStep`,
-`CheckoutSessionStatus`, `BuyerInfo`, `DeliveryAddress`, `ShippingOption`, `PaymentSelection`,
-`CheckoutArticlePriceResolver`, `CheckoutValidationResult`.
-
-**Operations:** `start`, `syncLineItems`, `submitBuyerInfo`, `submitDelivery`, `submitPayment`,
-`calculateOrderTotal`, `validateItems`, `confirm`, `complete`, `abandon`, `expire`, `goBackTo`,
-`isStepCompleted`, `isActive`, `isCompleted`.
-
-**Notes:** Holds step data in nullable fields until each step is fulfilled. Terminal statuses
-(`COMPLETED`, `ABANDONED`, `EXPIRED`) prevent further mutations. `confirm()` without a resolver is
-deprecated.
-
----
-
-## Value Objects
 
 ### BuyerInfo
 
@@ -223,12 +217,7 @@ another step, or back to the cart (no usable session).
 
 ### CheckoutSessionStatus
 
-**Definition:** Lifecycle status of a checkout session: `ACTIVE`, `CONFIRMED`, `COMPLETED`,
-`ABANDONED`, `EXPIRED`.
-
-**Type:** Value Object (Enum)
-
-**Operations:** `isModifiable`, `isTerminal`, `canConfirm`, `canComplete`.
+ACTIVE/Active is the open, modifiable session. CONFIRMED/Confirmed may complete; COMPLETED/Completed is final. SUPERSEDED/Superseded, ABANDONED/Abandoned and EXPIRED/Expired reject confirmation. Only an open session may be replaced, abandoned or expired.
 
 ### ErrorType
 
@@ -382,21 +371,7 @@ use case invokes it when a step is requested and delivers the `StepAccess` in it
 adapter (`CheckoutRoutes`) maps the decision to a redirect path.
 ### CheckoutArticlePriceResolver
 
-**Definition:** Domain port for resolving current price and availability data for articles
-during checkout.
-
-**Type:** Domain Service (functional interface)
-
-**Related terms:** `ArticlePrice`, `CheckoutArticle`, `CheckoutSession`.
-
-**Operations:** `resolve`.
-
-**Notes:** Implementation lives in the adapter layer; conceptually an output port. To be
-clarified whether to formally classify as `OutputPort` or keep as `DomainService`.
-
----
-
-## Factories
+Legacy application/test lookup abstraction. CheckoutSession accepts supplied article facts; CheckoutPricing owns cross-article validation and calculation. No repository or remote callback enters the aggregate.
 
 ### CheckoutCartFactory
 
@@ -453,3 +428,9 @@ snapshot naming scheme (`CartSnapshot` / `CartItemSnapshot`).
   Align with the naming convention.
 - **`CustomerId` polysemy** — the same name exists in `cart`, with semantic overlap to `UserId`/
   `AccountId` from `sharedkernel`/`account`. Clarify which identity is authoritative.
+
+### Shared contract revision (2026-09-09)
+
+Price wraps strictly positive Money; Money is ISO 4217, non-negative, two decimals half-up, maximum 999999999999.99.
+Default quantities must be rejected before mutation/reconstitution. ProductCreated is raised by aggregate creation;
+product-created v1 exposes only eventId, occurredOn, productId, amount, currency and initialStock.

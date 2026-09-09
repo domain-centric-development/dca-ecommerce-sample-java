@@ -19,8 +19,20 @@ public record EnrichedCartItem(
     ProductId productId,
     Quantity quantity,
     Price priceAtAddition,
-    CartArticle currentArticle)
+    CartArticle currentArticle,
+    String positionSnapshot)
     implements Value {
+
+  public EnrichedCartItem(
+      CartItemId id, ProductId productId, Quantity quantity, Price price, CartArticle article) {
+    this(
+        id,
+        productId,
+        quantity,
+        price,
+        article,
+        id.value() + ":" + PositionUnits.initial(quantity.value()).serialize());
+  }
 
   public EnrichedCartItem {
     if (cartItemId == null) {
@@ -57,7 +69,8 @@ public record EnrichedCartItem(
         cartItem.productId(),
         cartItem.quantity(),
         cartItem.priceAtAddition(),
-        currentArticle);
+        currentArticle,
+        cartItem.positionSnapshot());
   }
 
   /**

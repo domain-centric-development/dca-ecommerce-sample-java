@@ -105,13 +105,14 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
         throw new IllegalArgumentException("Product not found: " + cartItem.productId().value());
       }
       lineItems.add(
-          CheckoutLineItem.of(
+          new CheckoutLineItem(
               CheckoutLineItemId.generate(),
               cartItem.productId(),
               article.name(),
               article.currentPrice(),
               cartItem.quantity(),
-              article.imageUrl()));
+              article.imageUrl(),
+              cartItem.positionSnapshot()));
     }
 
     // The enriched read model pairs each line item with its current article data, so the domain can
@@ -127,14 +128,24 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
     final Money total = checkoutCart.calculateCurrentSubtotal();
 
     // Short transaction: create, save, publish
-    return transactionBoundary.inTransaction(
-        () -> {
-          final CheckoutSession session =
-              CheckoutSession.start(
-                  cart.cartId(), cart.customerId(), lineItems, total, taxCalculator);
-          checkoutSessionRepository.save(session);
-          domainEventPublisher.publishAndClearEvents(session);
-          return StartCheckoutResult.from(session);
-        });
+    return checkoutSessionRepository.inCartSession(
+        cartId,
+        () ->
+            transactionBoundary.inTransaction(
+                () -> {
+                  checkoutSessionRepository
+                      .findActiveByCartId(cartId)
+                      .ifPresent(
+                          old -> {
+                            old.supersede();
+                            checkoutSessionRepository.save(old);
+                          });
+                  final CheckoutSession session =
+                      CheckoutSession.start(
+                          cart.cartId(), cart.customerId(), lineItems, total, taxCalculator);
+                  checkoutSessionRepository.save(session);
+                  domainEventPublisher.publishAndClearEvents(session);
+                  return StartCheckoutResult.from(session);
+                }));
   }
 }

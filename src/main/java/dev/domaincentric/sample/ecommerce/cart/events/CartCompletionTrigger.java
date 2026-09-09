@@ -15,4 +15,8 @@ public interface CartCompletionTrigger {
 
   /** The cart ID to complete. */
   String cartId();
+
+  String sessionId();
+
+  java.util.List<String> purchasedPositions();
 }

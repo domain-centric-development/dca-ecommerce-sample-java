@@ -10,6 +10,7 @@ import dev.domaincentric.sample.ecommerce.product.domain.model.ProductFactory;
 import dev.domaincentric.sample.ecommerce.product.domain.model.ProductName;
 import dev.domaincentric.sample.ecommerce.product.domain.model.SKU;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import java.util.Currency;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,8 +64,8 @@ public class CreateProductUseCase implements CreateProductInputPort {
     final ProductName name = new ProductName(input.name());
     final ProductDescription description = new ProductDescription(input.description());
     final ImageUrl imageUrl = new ImageUrl(input.imageUrl());
-    final Money initialPrice =
-        Money.of(input.priceAmount(), Currency.getInstance(input.priceCurrency()));
+    final Price initialPrice =
+        Price.of(Money.of(input.priceAmount(), Currency.getInstance(input.priceCurrency())));
     final Category category = new Category(input.category());
 
     // Create product aggregate (initial price and stock included in ProductCreated event)

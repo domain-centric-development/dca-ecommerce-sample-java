@@ -22,6 +22,9 @@ public record Money(BigDecimal amount, Currency currency) implements Value {
     if (amount.compareTo(BigDecimal.ZERO) < 0) {
       throw new IllegalArgumentException("Amount cannot be negative");
     }
+    if (amount.compareTo(new BigDecimal("999999999999.99")) > 0) {
+      throw new IllegalArgumentException("Amount exceeds maximum monetary value");
+    }
     // Normalize scale to 2 decimal places
     amount = amount.setScale(2, RoundingMode.HALF_UP);
   }

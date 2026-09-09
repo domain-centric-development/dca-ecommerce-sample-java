@@ -45,6 +45,12 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-036](adr-036-api-authorization-at-the-adapter.md) | A guard goes where its inputs are — and `authenticated()` is not one | ✅ Accepted |
 | [ADR-037](adr-037-adopt-dca-spring-and-dca-archunit-spring-modulith.md) | Adopt dca-spring and dca-archunit-spring-modulith | ✅ Accepted |
 
+| [ADR-038](adr-038-product-created-payload.md) | Product-created notification payload | Accepted |
+
+| [ADR-039](adr-039-aggregate-owned-event-registration.md) | Aggregate-owned event registration | Accepted |
+
+| [ADR-040](adr-040-checkout-snapshots-and-reconciliation.md) | Checkout snapshots and reconciliation | Accepted |
+
 ### Proposed 🟡
 
 | ADR | Title | Status |

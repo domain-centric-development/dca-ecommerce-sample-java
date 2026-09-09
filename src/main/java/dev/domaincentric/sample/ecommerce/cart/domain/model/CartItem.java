@@ -18,6 +18,7 @@ public final class CartItem implements Entity<CartItem, CartItemId> {
   private final CartItemId id;
   private final ProductId productId; // Reference to Product by ID only
   private Quantity quantity;
+  private PositionUnits units;
   private final Price priceAtAddition; // Price snapshot when item was added
 
   /** Package-private constructor - CartItems can only be created through ShoppingCart. */
@@ -29,7 +30,35 @@ public final class CartItem implements Entity<CartItem, CartItemId> {
     this.id = id;
     this.productId = productId;
     this.quantity = quantity;
+    this.units = PositionUnits.initial(quantity.value());
     this.priceAtAddition = priceAtAddition;
+  }
+
+  public String positionSnapshot() {
+    return id.value() + ":" + units.serialize();
+  }
+
+  public String storedUnits() {
+    return units.serialize();
+  }
+
+  void restoreUnits(String encoded) {
+    var restored = PositionUnits.parse(encoded);
+    if (restored.quantity() != quantity.value())
+      throw new IllegalArgumentException("Stored unit count mismatch");
+    units = restored;
+  }
+
+  boolean reconcile(PositionUnits purchased) {
+    var remaining = units.reconcile(purchased);
+    if (remaining.quantity() == units.quantity()) return false;
+    units = remaining;
+    if (units.quantity() > 0) quantity = Quantity.of(units.quantity());
+    return true;
+  }
+
+  boolean hasUnits() {
+    return units.quantity() > 0;
   }
 
   @Override
@@ -54,16 +83,17 @@ public final class CartItem implements Entity<CartItem, CartItemId> {
     if (newQuantity == null) {
       throw new IllegalArgumentException("Quantity cannot be null");
     }
+    this.units = units.resize(newQuantity.value());
     this.quantity = newQuantity;
   }
 
   /** Package-private - only ShoppingCart aggregate can increase quantity. */
   void increaseQuantity() {
-    this.quantity = this.quantity.increase();
+    updateQuantity(this.quantity.increase());
   }
 
   /** Package-private - only ShoppingCart aggregate can decrease quantity. */
   void decreaseQuantity() {
-    this.quantity = this.quantity.decrease();
+    updateQuantity(this.quantity.decrease());
   }
 }

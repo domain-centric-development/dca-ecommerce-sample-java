@@ -39,11 +39,14 @@ class ProductPriceTest {
       ProductId productId = ProductId.generate();
       Money price = Money.of(BigDecimal.valueOf(19.99), EUR);
 
-      ProductPrice productPrice = ProductPrice.create(productId, price);
+      ProductPrice productPrice =
+          ProductPrice.create(
+              productId,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(price));
 
       assertNotNull(productPrice.id());
       assertEquals(productId, productPrice.productId());
-      assertEquals(price, productPrice.currentPrice());
+      assertEquals(price, productPrice.currentPrice().value());
       assertNotNull(productPrice.effectiveFrom());
     }
 
@@ -53,7 +56,13 @@ class ProductPriceTest {
       ProductId productId = ProductId.generate();
       Money zeroPrice = Money.of(BigDecimal.ZERO, EUR);
 
-      assertThrows(IllegalArgumentException.class, () -> ProductPrice.create(productId, zeroPrice));
+      assertThrows(
+          IllegalArgumentException.class,
+          () ->
+              ProductPrice.create(
+                  productId,
+                  dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
+                      zeroPrice)));
     }
 
     @Test
@@ -71,7 +80,10 @@ class ProductPriceTest {
       ProductId productId = ProductId.generate();
       Money price = Money.of(BigDecimal.valueOf(19.99), EUR);
 
-      ProductPrice productPrice = ProductPrice.create(productId, price);
+      ProductPrice productPrice =
+          ProductPrice.create(
+              productId,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(price));
 
       assertEquals(1, productPrice.domainEvents().size());
       assertInstanceOf(PriceCreated.class, productPrice.domainEvents().get(0));
@@ -79,7 +91,7 @@ class ProductPriceTest {
       PriceCreated event = (PriceCreated) productPrice.domainEvents().get(0);
       assertEquals(productPrice.id(), event.priceId());
       assertEquals(productId, event.productId());
-      assertEquals(price, event.price());
+      assertEquals(price, event.price().value());
       assertEquals(productPrice.effectiveFrom(), event.effectiveFrom());
     }
   }
@@ -95,10 +107,14 @@ class ProductPriceTest {
       Money initialPrice = Money.of(BigDecimal.valueOf(10.00), EUR);
       Money newPrice = Money.of(BigDecimal.valueOf(15.00), EUR);
 
-      ProductPrice productPrice = ProductPrice.create(productId, initialPrice);
-      productPrice.updatePrice(newPrice);
+      ProductPrice productPrice =
+          ProductPrice.create(
+              productId,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(initialPrice));
+      productPrice.updatePrice(
+          dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(newPrice));
 
-      assertEquals(newPrice, productPrice.currentPrice());
+      assertEquals(newPrice, productPrice.currentPrice().value());
     }
 
     @Test
@@ -108,11 +124,15 @@ class ProductPriceTest {
       Money initialPrice = Money.of(BigDecimal.valueOf(10.00), EUR);
       Money newPrice = Money.of(BigDecimal.valueOf(15.00), EUR);
 
-      ProductPrice productPrice = ProductPrice.create(productId, initialPrice);
+      ProductPrice productPrice =
+          ProductPrice.create(
+              productId,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(initialPrice));
       var originalEffectiveFrom = productPrice.effectiveFrom();
 
       Thread.sleep(10); // Small delay to ensure timestamp difference
-      productPrice.updatePrice(newPrice);
+      productPrice.updatePrice(
+          dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(newPrice));
 
       assertTrue(productPrice.effectiveFrom().isAfter(originalEffectiveFrom));
     }
@@ -124,9 +144,17 @@ class ProductPriceTest {
       Money initialPrice = Money.of(BigDecimal.valueOf(10.00), EUR);
       Money zeroPrice = Money.of(BigDecimal.ZERO, EUR);
 
-      ProductPrice productPrice = ProductPrice.create(productId, initialPrice);
+      ProductPrice productPrice =
+          ProductPrice.create(
+              productId,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(initialPrice));
 
-      assertThrows(IllegalArgumentException.class, () -> productPrice.updatePrice(zeroPrice));
+      assertThrows(
+          IllegalArgumentException.class,
+          () ->
+              productPrice.updatePrice(
+                  dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
+                      zeroPrice)));
     }
 
     @Test
@@ -136,10 +164,14 @@ class ProductPriceTest {
       Money initialPrice = Money.of(BigDecimal.valueOf(10.00), EUR);
       Money newPrice = Money.of(BigDecimal.valueOf(15.00), EUR);
 
-      ProductPrice productPrice = ProductPrice.create(productId, initialPrice);
+      ProductPrice productPrice =
+          ProductPrice.create(
+              productId,
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(initialPrice));
       productPrice.clearDomainEvents();
 
-      productPrice.updatePrice(newPrice);
+      productPrice.updatePrice(
+          dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(newPrice));
 
       assertEquals(1, productPrice.domainEvents().size());
       assertInstanceOf(PriceChanged.class, productPrice.domainEvents().get(0));
@@ -147,8 +179,8 @@ class ProductPriceTest {
       PriceChanged event = (PriceChanged) productPrice.domainEvents().get(0);
       assertEquals(productPrice.id(), event.priceId());
       assertEquals(productId, event.productId());
-      assertEquals(initialPrice, event.oldPrice());
-      assertEquals(newPrice, event.newPrice());
+      assertEquals(initialPrice, event.oldPrice().value());
+      assertEquals(newPrice, event.newPrice().value());
     }
   }
 }

@@ -111,6 +111,9 @@ dependencies {
   implementation 'org.springframework.modulith:spring-modulith-starter-core'
   implementation 'org.springframework.modulith:spring-modulith-starter-jdbc'
 
+  // Inspect the retained registry state machine in the recovery integration test.
+  testIntegrationImplementation "org.springframework.modulith:spring-modulith-events-core"
+
   // Test dependencies are configured in test-common.gradle
 }
 
@@ -159,3 +162,7 @@ idea {
   }
 }
 
+
+// Shared specification review commit; use the local path override until publication.
+ext.set("specification.revision", "1e6be664a8535ad604b3686daf9e9ea2d0b02b59")
+apply from: "gradle/specification.gradle"

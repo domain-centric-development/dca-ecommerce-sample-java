@@ -38,7 +38,9 @@ public class GetPricesForProductsUseCase implements GetPricesForProductsInputPor
                     ProductPrice::productId,
                     price ->
                         new GetPricesForProductsResult.PriceData(
-                            price.productId(), price.currentPrice(), price.effectiveFrom())));
+                            price.productId(),
+                            price.currentPrice().value(),
+                            price.effectiveFrom())));
 
     return new GetPricesForProductsResult(priceMap);
   }

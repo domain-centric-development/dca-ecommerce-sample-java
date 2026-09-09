@@ -39,7 +39,10 @@ public class CartDataAdapter implements CartDataPort {
             .map(
                 item ->
                     new CartData.CartItemData(
-                        item.productId(), item.priceAtAddition(), item.quantity()))
+                        item.productId(),
+                        item.priceAtAddition(),
+                        item.quantity(),
+                        item.positionSnapshot()))
             .toList();
 
     return new CartData(

@@ -57,7 +57,8 @@ public class CartService {
    * @param priceAtAddition the price when item was added
    * @param quantity the item quantity
    */
-  public record CartItemSnapshot(ProductId productId, Price priceAtAddition, int quantity) {}
+  public record CartItemSnapshot(
+      ProductId productId, Price priceAtAddition, int quantity, String positionSnapshot) {}
 
   /**
    * Retrieves cart data by ID.
@@ -85,7 +86,10 @@ public class CartService {
             .map(
                 item ->
                     new CartItemSnapshot(
-                        item.productId(), item.priceAtAddition(), item.quantity().value()))
+                        item.productId(),
+                        item.priceAtAddition(),
+                        item.quantity().value(),
+                        item.positionSnapshot()))
             .toList();
 
     return Optional.of(
@@ -104,7 +108,9 @@ public class CartService {
    *
    * @param cartId the cart ID to complete
    */
-  public void completeCart(UUID cartId) {
-    completeCartInputPort.execute(new CompleteCartCommand(cartId.toString()));
+  public void completeCart(
+      UUID cartId, String sessionId, java.util.List<String> purchasedPositions) {
+    completeCartInputPort.execute(
+        new CompleteCartCommand(cartId.toString(), sessionId, purchasedPositions));
   }
 }

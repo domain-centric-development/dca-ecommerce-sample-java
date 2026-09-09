@@ -33,8 +33,13 @@ spring:
       jdbc:
         schema-initialization:
           enabled: true
-      republish-outstanding-events-on-restart: true
+      republish-outstanding-events-on-restart: false # bounded recovery uses retained attempts and backoff
       completion-mode: update
+      staleness:
+        published: PT1M
+        processing: PT1M
+        resubmission: PT1M
+        check-intervall: PT1S
   ai:
     mcp:
       server:

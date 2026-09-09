@@ -666,3 +666,41 @@ Code Change → Update architecture-principles.md → Run Tests → Commit
 ---
 
 **Remember:** Good architecture is about communication. Keep the documentation up-to-date so the next person (or AI) working on this code understands the decisions and patterns used.
+
+A domain term such as `PortfolioManager` is valid; the remaining technical suffix
+restrictions still apply. Operation implementations are discovered by InputPort
+assignability or the configured use-case suffix. Optional organisational segments
+are configured with `withOperationContainers(...)` / `WithOperationContainers(...)`
+and removed before measuring flat/grouped operation depth. Supporting subfolders do
+not define operations. One context must still use one depth. A Repository or Store
+used by one use case may live with it; `application/shared` is the reuse default.
+
+WP-34 policy: use-case stereotypes are optional; configuration registration is equally valid.
+NAM-002 is a non-failing Java diagnostic, not a wiring guarantee. Outgoing adapters may
+reuse global/own infrastructure. Domain metadata rules classify configured roles on
+types and members (including composed metadata), allow unclassified metadata, and assign
+exclusive ownership to ADV-004/011/015/018 before ONI-003.
+
+## Shared semantics since WP-39
+
+`../dca-sample-specification/` is the semantic authority; read its CONTRIBUTING.md, vectors and checkout-lifecycle.md before
+business changes. The user owns semantics. Both samples consume the same SHA after publication, or an explicit local path
+for paired work; no vector may lack a test adapter. Update both adapters, schema compatibility records, glossaries and pins.
+Both samples pin the same local review commit. Until publication, use the local specification path override; CI still rejects an empty pin.
+
+An explicit checkout action captures immutable positions, quantities and prices into a session. Cart edits do not
+create or mutate sessions. A new action supersedes the previous OPEN/Active session; confirmed/completed orders remain.
+Confirmation and replacement serialize through the same repository operation, including transaction completion.
+Superseded confirmation has no completion effect. Abandonment/expiry closes only an open session and leaves cart contents.
+
+Cart reconciliation intersects purchased unit intervals with the current stable position id. Later additions (also of
+the same product), removed/re-added positions and other contents survive. Replay and overlapping completed snapshots
+cannot remove a unit twice. JDBC/JPA cart persistence preserves the interval allocation watermark; in-memory persistence
+retains the same domain state. Legacy CheckedOut/Completed cart statuses remain readable, but snapshot checkout leaves
+an active cart editable and never completes the whole cart.
+
+Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume
+immutable line/fact snapshots. Any changed price or shortage reports affected lines and leaves state, totals and events
+unchanged. The buyer explicitly starts a fresh checkout against the new prices. Success stores the recomputed total and
+publishes the same total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
+claim of durable distributed transactions or universal rollback of unenlisted resources.

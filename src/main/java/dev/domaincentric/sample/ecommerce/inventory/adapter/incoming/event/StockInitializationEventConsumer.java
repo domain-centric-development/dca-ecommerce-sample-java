@@ -36,9 +36,9 @@ public class StockInitializationEventConsumer {
    */
   @ApplicationModuleListener
   void on(final StockInitializationTrigger event) {
-    log.info("Initializing stock for product {}", event.productId().value());
+    log.info("Initializing stock for product {}", event.productId());
 
     setStockLevelInputPort.execute(
-        new SetStockLevelCommand(event.productId().value(), event.initialStock()));
+        new SetStockLevelCommand(event.productId(), event.initialStock()));
   }
 }

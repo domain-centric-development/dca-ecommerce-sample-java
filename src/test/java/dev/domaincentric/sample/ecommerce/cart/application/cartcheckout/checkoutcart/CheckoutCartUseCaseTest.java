@@ -60,19 +60,19 @@ class CheckoutCartUseCaseTest {
   }
 
   @Test
-  @DisplayName("a cart that is already checked out says so")
-  void aCartThatIsAlreadyCheckedOutSaysSo() {
+  @DisplayName("an abandoned cart is refused")
+  void anAbandonedCartIsRefused() {
     final ShoppingCart cart = new ShoppingCart(CartId.generate(), CUSTOMER);
     final ProductId productId = ProductId.generate();
     cart.addItem(productId, Quantity.of(1), TEN);
-    cart.checkout();
+    cart.abandon();
     repository.save(cart);
     articleDataPort.available(productId, 5);
 
     final IllegalStateException failure =
         assertThrows(IllegalStateException.class, () -> execute(cart));
 
-    assertEquals("Cart is already checked out", failure.getMessage());
+    assertEquals("Cannot modify cart with status: ABANDONED", failure.getMessage());
   }
 
   @Test
@@ -123,7 +123,7 @@ class CheckoutCartUseCaseTest {
     final CheckoutCartResult result = execute(cart);
 
     assertEquals(cart.id().value(), result.cartId());
-    assertSame(CartStatus.CHECKED_OUT, cart.status());
+    assertSame(CartStatus.ACTIVE, cart.status());
   }
 
   private CheckoutCartResult execute(final ShoppingCart cart) {

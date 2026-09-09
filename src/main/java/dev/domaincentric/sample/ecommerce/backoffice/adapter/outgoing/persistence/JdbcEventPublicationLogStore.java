@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 public class JdbcEventPublicationLogStore implements EventPublicationLogStore {
 
   private static final String FIND_ALL_SQL =
-      "SELECT ID, EVENT_TYPE, SERIALIZED_EVENT, LISTENER_ID, PUBLICATION_DATE, COMPLETION_DATE "
+      "SELECT ID, EVENT_TYPE, SERIALIZED_EVENT, LISTENER_ID, PUBLICATION_DATE, COMPLETION_DATE, STATUS, COMPLETION_ATTEMPTS "
           + "FROM EVENT_PUBLICATION ORDER BY PUBLICATION_DATE DESC";
 
   private final JdbcTemplate jdbcTemplate;
@@ -40,7 +40,12 @@ public class JdbcEventPublicationLogStore implements EventPublicationLogStore {
     return new EventPublicationEntry(
         UUID.fromString(rs.getString("ID")),
         rs.getString("EVENT_TYPE"),
-        rs.getString("SERIALIZED_EVENT"),
+        "Status: "
+            + rs.getString("STATUS")
+            + ", attempts: "
+            + rs.getInt("COMPLETION_ATTEMPTS")
+            + "\n"
+            + rs.getString("SERIALIZED_EVENT"),
         rs.getString("LISTENER_ID"),
         rs.getTimestamp("PUBLICATION_DATE").toInstant(),
         completionTimestamp != null ? completionTimestamp.toInstant() : null);

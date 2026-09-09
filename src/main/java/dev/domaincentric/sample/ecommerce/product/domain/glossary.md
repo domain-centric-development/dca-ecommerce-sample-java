@@ -168,3 +168,9 @@ aggregate depending on foreign contexts.
 **Type:** Concept
 
 **Related terms:** `EnrichedProduct`, `ProductArticle`
+
+### Shared contract revision (2026-09-09)
+
+Price wraps strictly positive Money; Money is ISO 4217, non-negative, two decimals half-up, maximum 999999999999.99.
+Default quantities must be rejected before mutation/reconstitution. ProductCreated is raised by aggregate creation;
+product-created v1 exposes only eventId, occurredOn, productId, amount, currency and initialStock.

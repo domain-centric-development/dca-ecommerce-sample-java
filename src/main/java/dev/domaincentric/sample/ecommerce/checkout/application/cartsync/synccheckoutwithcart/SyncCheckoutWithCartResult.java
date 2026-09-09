@@ -1,11 +1,8 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.cartsync.synccheckoutwithcart;
 
 /**
- * Response from synchronizing a checkout session with cart.
- *
- * @param synced true if an active checkout session was found and synced
- * @param sessionId the checkout session ID if synced, null otherwise
- * @param itemCount the new number of line items after sync
+ * Legacy cart-change compatibility contract. Snapshot checkout never synchronizes sessions; only an
+ * explicit checkout action creates a new snapshot.
  */
 public record SyncCheckoutWithCartResult(boolean synced, String sessionId, int itemCount) {
 

@@ -9,9 +9,9 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutExpired;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutSessionStarted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.DeliverySubmitted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.PaymentSubmitted;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.checkout.domain.service.TaxCalculator;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -116,6 +116,12 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     return session;
   }
 
+  /** Replaced by a new explicit checkout action; confirmed orders cannot be superseded. */
+  public void supersede() {
+    ensureModifiable();
+    this.status = CheckoutSessionStatus.SUPERSEDED;
+  }
+
   @Override
   public CheckoutSessionId id() {
     return id;
@@ -186,20 +192,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
       final List<CheckoutLineItem> newLineItems,
       final Money newSubtotal,
       final TaxCalculator taxCalculator) {
-    ensureModifiable();
-
-    if (newLineItems == null || newLineItems.isEmpty()) {
-      throw new IllegalArgumentException("Cannot sync with empty line items");
-    }
-
-    this.lineItems.clear();
-    this.lineItems.addAll(newLineItems);
-
-    // Recalculate totals with existing shipping cost
-    final Money shippingCost = this.totals.shipping();
-    this.totals =
-        CheckoutTotals.calculate(
-            newSubtotal, shippingCost, taxCalculator.containedTax(newSubtotal.add(shippingCost)));
+    throw new IllegalStateException("Checkout snapshots are immutable; start a new session");
   }
 
   /**
@@ -289,18 +282,13 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * <p>Iterates through all line items and resolves current prices to compute the sum of (current
    * price × quantity) for each item.
    *
-   * @param resolver the resolver providing current pricing information
+   * @param facts the facts providing current pricing information
    * @return the calculated order total
    */
-  public Money calculateOrderTotal(final CheckoutArticlePriceResolver resolver) {
-    Money total = Money.zero(totals.subtotal().currency());
-    for (final CheckoutLineItem item : lineItems) {
-      final CheckoutArticlePriceResolver.ArticlePrice articlePrice =
-          resolver.resolve(item.productId());
-      final Money itemTotal = articlePrice.price().multiply(item.quantity());
-      total = total.add(itemTotal);
-    }
-    return total;
+  public Money calculateOrderTotal(
+      java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+    return new dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing()
+        .calculateOrderTotal(lineItems, facts, totals.subtotal().currency());
   }
 
   /**
@@ -313,25 +301,13 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    *   <li>Sufficient stock for the requested quantity
    * </ul>
    *
-   * @param resolver the resolver providing current pricing and availability information
+   * @param facts the facts providing current pricing and availability information
    * @return a validation result containing any errors found
    */
-  public CheckoutValidationResult validateItems(final CheckoutArticlePriceResolver resolver) {
-    final List<ValidationError> errors = new ArrayList<>();
-    for (final CheckoutLineItem item : lineItems) {
-      final CheckoutArticlePriceResolver.ArticlePrice articlePrice =
-          resolver.resolve(item.productId());
-      if (!articlePrice.isAvailable()) {
-        errors.add(ValidationError.productUnavailable(item.productId()));
-      } else if (articlePrice.availableStock() < item.quantity()) {
-        errors.add(
-            ValidationError.insufficientStock(
-                item.productId(), item.quantity(), articlePrice.availableStock()));
-      }
-    }
-    return errors.isEmpty()
-        ? CheckoutValidationResult.valid()
-        : CheckoutValidationResult.withErrors(errors);
+  public CheckoutValidationResult validateItems(
+      java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+    return new dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing()
+        .validateItems(lineItems, facts, totals.subtotal().currency());
   }
 
   /**
@@ -342,11 +318,11 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    *
    * <p>Raises a {@link CheckoutConfirmed} domain event on success.
    *
-   * @param resolver the resolver for validating current pricing and availability
+   * @param facts the resolver for validating current pricing and availability
    * @throws IllegalStateException if session is not confirmable, steps are incomplete, or
    *     validation fails
    */
-  public void confirm(final CheckoutArticlePriceResolver resolver) {
+  public void confirm(java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
     ensureModifiable();
     ensureAllStepsCompleted();
 
@@ -354,40 +330,17 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
       throw new IllegalStateException("Can only confirm from review step");
     }
 
-    final CheckoutValidationResult validationResult = validateItems(resolver);
+    final CheckoutValidationResult validationResult = validateItems(facts);
     if (!validationResult.isValid()) {
-      throw new IllegalStateException(
-          "Cannot confirm checkout: validation failed with "
-              + validationResult.errors().size()
-              + " error(s)");
+      throw new CheckoutValidationException(validationResult);
     }
 
-    this.status = CheckoutSessionStatus.CONFIRMED;
-    this.currentStep = CheckoutStep.CONFIRMATION;
-
-    registerEvent(
-        CheckoutConfirmed.now(
-            this.id, this.cartId, this.customerId, this.totals.total(), this.lineItems));
-  }
-
-  /**
-   * Confirms the checkout order after review.
-   *
-   * <p>Raises a {@link CheckoutConfirmed} domain event.
-   *
-   * @throws IllegalStateException if session is not confirmable or steps are incomplete
-   * @deprecated Use {@link #confirm(CheckoutArticlePriceResolver)} instead to validate items
-   *     against current pricing before confirmation
-   */
-  @Deprecated
-  public void confirm() {
-    ensureModifiable();
-    ensureAllStepsCompleted();
-
-    if (currentStep != CheckoutStep.REVIEW) {
-      throw new IllegalStateException("Can only confirm from review step");
-    }
-
+    final var recomputed = calculateOrderTotal(facts);
+    this.totals =
+        CheckoutTotals.calculate(
+            recomputed,
+            totals.shipping(),
+            new TaxCalculator().containedTax(recomputed.add(totals.shipping())));
     this.status = CheckoutSessionStatus.CONFIRMED;
     this.currentStep = CheckoutStep.CONFIRMATION;
 
@@ -423,7 +376,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * @throws IllegalStateException if session is already in a terminal state
    */
   public void abandon() {
-    if (status.isTerminal()) {
+    if (!status.isModifiable()) {
       throw new IllegalStateException("Cannot abandon checkout with status: " + status);
     }
 
@@ -441,7 +394,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * @throws IllegalStateException if session is already in a terminal state
    */
   public void expire() {
-    if (status.isTerminal()) {
+    if (!status.isModifiable()) {
       throw new IllegalStateException("Cannot expire checkout with status: " + status);
     }
 

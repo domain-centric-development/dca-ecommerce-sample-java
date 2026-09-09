@@ -37,12 +37,10 @@ public class PriceInitializationEventConsumer {
    */
   @ApplicationModuleListener
   void on(final PriceInitializationTrigger event) {
-    log.info("Initializing price for product {}", event.productId().value());
+    log.info("Initializing price for product {}", event.productId());
 
     setProductPriceInputPort.execute(
         new SetProductPriceCommand(
-            event.productId().value(),
-            event.initialPrice().amount(),
-            event.initialPrice().currency().getCurrencyCode()));
+            event.productId(), new java.math.BigDecimal(event.amount()), event.currency()));
   }
 }

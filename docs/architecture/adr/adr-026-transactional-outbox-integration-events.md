@@ -65,3 +65,27 @@ The outbox persistence port is modelled as a `Store` (operational data, no aggre
 - [ADR-005: Domain Events Publishing Strategy](adr-005-domain-events-publishing.md)
 - [ADR-024: Interface Inversion Pattern for Spring Modulith Event Listeners](adr-024-interface-inversion-spring-modulith.md)
 - [ADR-016: Shared Kernel Pattern for Cross-Context Value Objects](adr-016-shared-kernel-pattern.md)
+
+## 2026-09-09 amendment: bounded recovery and explicit failed-listener replay
+
+The existing Spring Modulith 2.0.3 registry remains the capture and per-listener completion mechanism. Its rows can
+contain integration contracts delivered across contexts in the same process; “internal” describes process scope,
+not domain-event classification. No broker is introduced.
+
+`IntegrationEventRecovery` filters FAILED rows with fewer than five completion attempts. It polls every 200 ms and
+uses 200 ms exponential backoff from publication/last-resubmission time. Automatic blanket restart resubmission is
+disabled. Modulith staleness monitoring checks every second, with one-minute PUBLISHED/PROCESSING/RESUBMITTED limits,
+so interrupted work can become FAILED and enter the same bounded policy. Exhausted rows remain inspectable.
+The Backoffice authenticated CSRF-protected POST replays one failed publication/listener intentionally, including
+an exhausted one; this is one attempt, not a reset of its historical attempt counter. Completed listeners are untouched.
+This differs deliberately from the .NET sample's new bounded retry run for failed consumers.
+
+`RetainedDeliveryIntegrationTest` verifies real JDBC aggregate/publication rollback, outside committed publication
+survival, successful first listener not retried when the second fails, bounded failure/manual replay, and original
+snapshot/stable effect identity. A fake provider tests the acceptance-before-local-ack crash: supported idempotency
+produces one effect; without provider support a duplicate is possible. Acceptance is the acknowledgement point.
+Template version and recipient capture/resolution belong to the future concrete effect contract; no email feature
+or universal rendering policy is implied. A local delivery key alone is not an exactly-once guarantee.
+
+Harness: generic delivery catalog note/decision/recipe and transaction pitfall updated; USE-012 static limit made
+explicit in both libraries, USE-009 optional-events proof conservative; marker: none.

@@ -3,9 +3,8 @@ package dev.domaincentric.sample.ecommerce.pricing.domain.model;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
 import dev.domaincentric.sample.ecommerce.pricing.domain.event.PriceChanged;
 import dev.domaincentric.sample.ecommerce.pricing.domain.event.PriceCreated;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
-import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
@@ -32,13 +31,13 @@ public final class ProductPrice extends BaseAggregateRoot<ProductPrice, PriceId>
 
   private final PriceId id;
   private final ProductId productId;
-  private Money currentPrice;
+  private Price currentPrice;
   private Instant effectiveFrom;
 
   private ProductPrice(
       final PriceId id,
       final ProductId productId,
-      final Money currentPrice,
+      final Price currentPrice,
       final Instant effectiveFrom) {
     this.id = id;
     this.productId = productId;
@@ -56,7 +55,7 @@ public final class ProductPrice extends BaseAggregateRoot<ProductPrice, PriceId>
    * @return the new ProductPrice aggregate
    * @throws IllegalArgumentException if price is not greater than zero
    */
-  public static ProductPrice create(final ProductId productId, final Money price) {
+  public static ProductPrice create(final ProductId productId, final Price price) {
     validatePriceGreaterThanZero(price);
     final PriceId priceId = PriceId.generate();
     final Instant effectiveFrom = Instant.now();
@@ -74,7 +73,7 @@ public final class ProductPrice extends BaseAggregateRoot<ProductPrice, PriceId>
     return productId;
   }
 
-  public Money currentPrice() {
+  public Price currentPrice() {
     return currentPrice;
   }
 
@@ -90,10 +89,10 @@ public final class ProductPrice extends BaseAggregateRoot<ProductPrice, PriceId>
    * @param newPrice the new price (must be greater than zero)
    * @throws IllegalArgumentException if newPrice is not greater than zero
    */
-  public void updatePrice(final Money newPrice) {
+  public void updatePrice(final Price newPrice) {
     validatePriceGreaterThanZero(newPrice);
 
-    final Money oldPrice = this.currentPrice;
+    final Price oldPrice = this.currentPrice;
     final Instant newEffectiveFrom = Instant.now();
 
     this.currentPrice = newPrice;
@@ -102,9 +101,7 @@ public final class ProductPrice extends BaseAggregateRoot<ProductPrice, PriceId>
     registerEvent(PriceChanged.now(this.id, this.productId, oldPrice, newPrice, newEffectiveFrom));
   }
 
-  private static void validatePriceGreaterThanZero(final Money price) {
-    if (price.amount().compareTo(BigDecimal.ZERO) <= 0) {
-      throw new IllegalArgumentException("Price must be greater than zero");
-    }
+  private static void validatePriceGreaterThanZero(final Price price) {
+    if (price == null) throw new IllegalArgumentException("Price is required");
   }
 }
