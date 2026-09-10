@@ -18,7 +18,9 @@
       "Edit(src/**)",
       "Edit(docs/**)",
       "Edit(scripts/**)",
-      "Bash(rm src/**)"
+      "Bash(rm src/**)",
+      "Bash(python3 .agents/factory/story-gate.py:*)",
+      "Bash(./gradlew:*)"
     ],
     "deny": [],
     "ask": []

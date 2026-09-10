@@ -1,0 +1,25 @@
+# Stack profile — the only place in the pipeline that knows how this project builds and tests.
+# The gate and the pre-commit hook read it; a command that is not declared is skipped and named.
+
+compile: ./gradlew testClasses
+test: ./gradlew test
+e2eTest: ./gradlew test-e2e
+filterFlag: --tests
+filterFormat: "{class}.{method}"
+architecture: ./gradlew test-architecture
+format: ./gradlew spotlessCheck
+
+# The one source a stage may treat as an authority. Generated from the same sources as the
+# building blocks and the rule catalog this project consumes.
+knowledge: dca-knowledge
+
+# Who carries a stage's craft and a review perspective. A skill works in every agent tool; an
+# agent only where the tool has agents, and the stage then falls back to its own description.
+carrier.build: ddd-modelling
+carrier.test: e2e-testing
+review.domain: review-domain
+review.boundaries: review-boundaries
+review.craft: review-craft
+
+# Where the project keeps its map; glossaries are the per-context glossary.md files.
+contextMap: docs/context-map.md

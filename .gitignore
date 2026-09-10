@@ -23,3 +23,9 @@ bin
 
 # Gastown PRD Integration
 tasks/.bead-map.json
+
+# Factory: per-tool copies of the pipeline skills (installed by factory.sh install)
+.claude/skills/
+.codex/
+.opencode/
+backlog/index.json
