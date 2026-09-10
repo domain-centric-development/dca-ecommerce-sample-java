@@ -4,6 +4,9 @@
 compile: ./gradlew testClasses
 test: ./gradlew test
 e2eTest: ./gradlew test-e2e
+# One more test source set: the gate picks the command that covers the file a mapped test
+# lives in, so `src/test-integration/java` needs its own entry.
+test.integration: ./gradlew test-integration
 filterFlag: --tests
 filterFormat: "{class}.{method}"
 architecture: ./gradlew test-architecture

@@ -333,6 +333,9 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── model/
 │   │   │   ├── StockLevel (Aggregate Root)
 │   │   │   ├── StockLevelId, StockQuantity (Value Objects)
+│   │   ├── specification/
+│   │   │   ├── StockLevelSpecification, StockLevelSpecificationVisitor
+│   │   │   └── AvailableQuantityBelow
 │   │   └── event/
 │   │       ├── StockLevelCreated, StockChanged
 │   │       ├── StockIncreased, StockDecreased
@@ -347,6 +350,9 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── getstockforproducts/
 │   │   │   ├── GetStockForProductsInputPort, GetStockForProductsUseCase
 │   │   │   ├── GetStockForProductsQuery, GetStockForProductsResult
+│   │   ├── getlowstockproducts/
+│   │   │   ├── GetLowStockProductsInputPort, GetLowStockProductsUseCase
+│   │   │   ├── GetLowStockProductsQuery, GetLowStockProductsResult
 │   │   └── shared/
 │   │       └── StockLevelRepository
 │   └── adapter/

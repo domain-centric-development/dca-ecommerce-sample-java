@@ -48,7 +48,7 @@ This project showcases best practices for structuring a Spring Boot application 
 - **Domain Services**: CartTotalCalculator, CheckoutStepValidator
 - **Domain Events**: ProductCreated, CartCheckedOut, CartItemAddedToCart, CartItemQuantityChanged, ProductRemovedFromCart, CartCleared, CheckoutSessionStarted, CheckoutConfirmed, AccountRegistered, PriceChanged, StockChanged, etc.
 - **Factories**: ProductFactory, EnrichedCartFactory, CheckoutCartFactory
-- **Specifications**: CartSpecification (with Visitor pattern: ActiveCart, HasMinTotal, HasAnyAvailableItem, LastUpdatedBefore, CustomerAllowsMarketing)
+- **Specifications**: CartSpecification (with Visitor pattern: ActiveCart, HasMinTotal, HasAnyAvailableItem, LastUpdatedBefore, CustomerAllowsMarketing); StockLevelSpecification (AvailableQuantityBelow, visited by StockLevelSpecificationVisitor)
 
 ### Clean Architecture
 

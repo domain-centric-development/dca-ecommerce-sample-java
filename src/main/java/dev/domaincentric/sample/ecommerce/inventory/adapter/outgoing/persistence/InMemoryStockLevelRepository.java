@@ -53,6 +53,11 @@ public class InMemoryStockLevelRepository implements StockLevelRepository {
   }
 
   @Override
+  public List<StockLevel> findAll() {
+    return List.copyOf(stockLevels.values());
+  }
+
+  @Override
   public StockLevel save(final StockLevel stockLevel) {
     stockLevels.put(stockLevel.id(), stockLevel);
     productIdIndex.put(stockLevel.productId(), stockLevel.id());
