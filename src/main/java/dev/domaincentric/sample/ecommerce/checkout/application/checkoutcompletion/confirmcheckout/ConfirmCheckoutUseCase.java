@@ -63,25 +63,29 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
         current.lineItems().stream().map(item -> item.productId()).toList();
     final Map<ProductId, CheckoutArticle> articleDataMap =
         checkoutArticleDataPort.getArticleData(productIds);
-    final CheckoutArticlePriceResolver resolver =
-        productId -> {
-          final CheckoutArticle article = articleDataMap.get(productId);
-          if (article == null) {
-            throw new IllegalArgumentException("Article data not found for: " + productId.value());
-          }
-          return new CheckoutArticlePriceResolver.ArticlePrice(
-              article.currentPrice(), article.isAvailable(), article.availableStock());
-        };
+    final Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts =
+        articleDataMap.entrySet().stream()
+            .collect(
+                java.util.stream.Collectors.toUnmodifiableMap(
+                    Map.Entry::getKey,
+                    e ->
+                        new CheckoutArticlePriceResolver.ArticlePrice(
+                            e.getValue().currentPrice(),
+                            e.getValue().isAvailable(),
+                            e.getValue().availableStock())));
 
     // Short transaction: reload, confirm, save, publish
-    return transactionBoundary.inTransaction(
-        () -> {
-          final CheckoutSession session = loadSession(sessionId, command);
-          session.confirm(resolver);
-          checkoutSessionRepository.save(session);
-          domainEventPublisher.publishAndClearEvents(session);
-          return ConfirmCheckoutResult.from(session);
-        });
+    return checkoutSessionRepository.inCartSession(
+        current.cartId(),
+        () ->
+            transactionBoundary.inTransaction(
+                () -> {
+                  final CheckoutSession session = loadSession(sessionId, command);
+                  session.confirm(facts);
+                  checkoutSessionRepository.save(session);
+                  domainEventPublisher.publishAndClearEvents(session);
+                  return ConfirmCheckoutResult.from(session);
+                }));
   }
 
   private CheckoutSession loadSession(

@@ -1,7 +1,5 @@
 package dev.domaincentric.sample.ecommerce.inventory.events;
 
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
-
 /**
  * Interface for events that trigger the creation of a stock level.
  *
@@ -16,7 +14,7 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 public interface StockInitializationTrigger {
 
   /** The product the stock level belongs to. */
-  ProductId productId();
+  String productId();
 
   /** The quantity the product starts with. */
   int initialStock();

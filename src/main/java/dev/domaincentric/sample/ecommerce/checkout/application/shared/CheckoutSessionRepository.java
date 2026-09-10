@@ -24,6 +24,13 @@ import java.util.Optional;
  */
 public interface CheckoutSessionRepository extends Repository<CheckoutSession, CheckoutSessionId> {
 
+  /** Serializes confirmation versus replacement, including the caller's transaction completion. */
+  default <T> T inCartSession(CartId cartId, java.util.function.Supplier<T> operation) {
+    synchronized (this) {
+      return operation.get();
+    }
+  }
+
   /**
    * Finds a checkout session by the cart it was created from.
    *

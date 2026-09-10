@@ -30,8 +30,13 @@ public class ProductCreatedEventPublisher {
   @EventListener
   public void on(final ProductCreated domainEvent) {
     var integrationEvent =
-        ProductCreatedEvent.now(
-            domainEvent.productId(), domainEvent.initialPrice(), domainEvent.initialStock());
+        new ProductCreatedEvent(
+            domainEvent.eventId(),
+            domainEvent.occurredOn(),
+            domainEvent.productId().value(),
+            domainEvent.initialPrice().value().amount().toPlainString(),
+            domainEvent.initialPrice().value().currency().getCurrencyCode(),
+            domainEvent.initialStock());
 
     logger.info("Publishing ProductCreatedEvent for product: {}", domainEvent.productId().value());
 

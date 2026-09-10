@@ -21,7 +21,7 @@ remote effect.
   Aggregates are (re)loaded inside `run`, so the transaction sees fresh state.
 - **Read-only use cases** that call remote ports run without a transaction; the repositories they read from
   manage their own.
-- Two rules of the DCA catalog enforce this: `DCA-USE-012` (a use case that publishes domain events is
+- Two rules of the DCA catalog enforce this: `DCA-USE-012` (a use case that saves or deletes an aggregate or publishes domain events is
   `@Transactional` or uses `TransactionBoundary.inTransaction`) and `DCA-USE-013` (a `@Transactional` use case calls no output port
   other than `Repository`, `Store`, `DomainEventPublisher`, `IntegrationEventPublisher`; `TransactionBoundary` is not a
   port — a use case with remote reads uses it instead of the annotation).

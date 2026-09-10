@@ -50,6 +50,11 @@ block content
                   span.event-log__detail-label Completed
                   span.event-log__detail-value(data-test="event-completion-date")= event.completionDate()
 
+            if !event.completed()
+              form(method="post" action="/backoffice/events/" + event.id() + "/replay")
+                input(type="hidden" name=_csrf.parameterName value=_csrf.token)
+                button(type="submit") Retry failed listener
+
             details.event-log__payload(data-test="event-payload")
               summary.event-log__payload-toggle Event Payload
               pre.event-log__payload-content= event.serializedEvent()

@@ -79,9 +79,11 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
     final ShoppingCart cart = new ShoppingCart(id, customerId);
     cart.status = status;
     for (final StoredItem stored : storedItems) {
-      cart.items.add(
+      var item =
           new CartItem(
-              stored.id(), stored.productId(), stored.quantity(), stored.priceAtAddition()));
+              stored.id(), stored.productId(), stored.quantity(), stored.priceAtAddition());
+      item.restoreUnits(stored.units());
+      cart.items.add(item);
     }
     return cart;
   }
@@ -99,7 +101,40 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * @param priceAtAddition the price captured when the line was added
    */
   public record StoredItem(
-      CartItemId id, ProductId productId, Quantity quantity, Price priceAtAddition) {}
+      CartItemId id, ProductId productId, Quantity quantity, Price priceAtAddition, String units) {
+    public StoredItem(
+        CartItemId id, ProductId productId, Quantity quantity, Price priceAtAddition) {
+      this(
+          id,
+          productId,
+          quantity,
+          priceAtAddition,
+          PositionUnits.initial(quantity.value()).serialize());
+    }
+  }
+
+  /**
+   * Reconciles the purchased unit identities; replay and overlapping snapshots are naturally
+   * idempotent.
+   */
+  public void reconcileCheckout(String sessionId, List<String> positions) {
+    if (sessionId == null || sessionId.isBlank())
+      throw new IllegalArgumentException("Session identity required");
+    // Parse the complete input before mutating any position.
+    var purchased = new java.util.LinkedHashMap<CartItemId, PositionUnits>();
+    for (String snapshot : positions) {
+      String[] parts = snapshot.split(":", 2);
+      if (parts.length != 2) throw new IllegalArgumentException("Position identity required");
+      purchased.put(CartItemId.of(parts[0]), PositionUnits.parse(parts[1]));
+    }
+    boolean changed = false;
+    for (CartItem item : items) {
+      var units = purchased.get(item.id());
+      if (units != null) changed |= item.reconcile(units);
+    }
+    items.removeIf(item -> !item.hasUnits());
+    if (changed) registerEvent(CartCompleted.now(id));
+  }
 
   @Override
   public CartId id() {
@@ -286,9 +321,7 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * @throws IllegalStateException if cart is already checked out or empty
    */
   public void checkout() {
-    if (status == CartStatus.CHECKED_OUT) {
-      throw new IllegalStateException("Cart is already checked out");
-    }
+    ensureCartIsActive();
     if (items.isEmpty()) {
       throw new IllegalStateException("Cannot checkout an empty cart");
     }
@@ -296,7 +329,7 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
     final Money totalAmount = calculateTotal();
     final int count = itemCount();
 
-    this.status = CartStatus.CHECKED_OUT;
+    // The submitted snapshot belongs to Checkout; Cart stays editable.
 
     // Raise domain event with cart items for cross-context integration
     registerEvent(CartCheckedOut.now(this.id, this.customerId, totalAmount, count, this.items));
@@ -360,24 +393,12 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * <p>This method iterates through all cart items and uses the resolver to fetch current pricing
    * for each product, ensuring accurate totals at checkout time.
    *
-   * @param priceResolver the resolver to fetch current pricing
+   * @param facts the resolver to fetch current pricing
    * @return the total money value based on current prices
    */
-  public Money calculateTotal(final ArticlePriceResolver priceResolver) {
-    if (priceResolver == null) {
-      throw new IllegalArgumentException("Price resolver cannot be null");
-    }
-    if (items.isEmpty()) {
-      return Money.euro(0.0);
-    }
-
-    Money total = Money.euro(0.0);
-    for (final CartItem item : items) {
-      final ArticlePrice articlePrice = priceResolver.resolve(item.productId());
-      final Money itemTotal = articlePrice.price().multiply(item.quantity().value());
-      total = total.add(itemTotal);
-    }
-    return total;
+  public Money calculateTotal(java.util.Map<ProductId, ArticlePrice> facts) {
+    return new dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing()
+        .calculateTotal(pricingLines(), facts);
   }
 
   /**
@@ -386,33 +407,12 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * <p>This method checks each item in the cart against current availability and stock levels to
    * ensure the cart can proceed to checkout.
    *
-   * @param priceResolver the resolver to fetch current pricing and availability
+   * @param facts the resolver to fetch current pricing and availability
    * @return a CartValidationResult containing any validation errors
    */
-  public CartValidationResult validateForCheckout(final ArticlePriceResolver priceResolver) {
-    if (priceResolver == null) {
-      throw new IllegalArgumentException("Price resolver cannot be null");
-    }
-    if (items.isEmpty()) {
-      return CartValidationResult.valid();
-    }
-
-    final List<CartValidationResult.ValidationError> errors = new ArrayList<>();
-    for (final CartItem item : items) {
-      final ArticlePrice articlePrice = priceResolver.resolve(item.productId());
-
-      if (!articlePrice.isAvailable()) {
-        errors.add(CartValidationResult.ValidationError.productUnavailable(item.productId()));
-      } else if (articlePrice.availableStock() < item.quantity().value()) {
-        errors.add(
-            CartValidationResult.ValidationError.insufficientStock(
-                item.productId(), item.quantity().value(), articlePrice.availableStock()));
-      }
-    }
-
-    return errors.isEmpty()
-        ? CartValidationResult.valid()
-        : CartValidationResult.withErrors(errors);
+  public CartValidationResult validateForCheckout(java.util.Map<ProductId, ArticlePrice> facts) {
+    return new dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing()
+        .validateForCheckout(pricingLines(), facts);
   }
 
   /**
@@ -491,6 +491,16 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
     }
 
     return mergedCount;
+  }
+
+  private List<dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing.Line>
+      pricingLines() {
+    return items.stream()
+        .map(
+            i ->
+                new dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing.Line(
+                    i.productId(), i.quantity()))
+        .toList();
   }
 
   private Optional<CartItem> findItemById(final CartItemId itemId) {

@@ -45,6 +45,17 @@ public class ProductCatalogPage extends BasePage {
   }
 
   /**
+   * Clicks "View Details" on the product at the given position (0-based) in the catalog.
+   *
+   * @param index the position of the product card
+   * @return the ProductDetailPage for the selected product
+   */
+  public ProductDetailPage viewProduct(int index) {
+    page.locator("[data-test='" + VIEW_DETAILS_LINK + "']").nth(index).click();
+    return new ProductDetailPage(page);
+  }
+
+  /**
    * Checks if product cards are displayed.
    *
    * @return true if at least one product card exists

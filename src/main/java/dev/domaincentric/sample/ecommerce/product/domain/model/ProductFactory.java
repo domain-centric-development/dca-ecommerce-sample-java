@@ -2,7 +2,7 @@ package dev.domaincentric.sample.ecommerce.product.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.Factory;
 import dev.domaincentric.sample.ecommerce.product.domain.event.ProductCreated;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 
 /**
@@ -38,17 +38,10 @@ public final class ProductFactory implements Factory {
       final ProductDescription description,
       final Category category,
       final ImageUrl imageUrl,
-      final Money initialPrice,
+      final Price initialPrice,
       final int initialStock) {
 
-    final ProductId id = ProductId.generate();
-
-    final Product product = new Product(id, sku, name, description, category, imageUrl);
-
-    // Raise domain event with initial price for Pricing context and stock for Inventory context
-    product.registerEvent(ProductCreated.now(id, sku, name, initialPrice, initialStock));
-
-    return product;
+    return Product.create(sku, name, description, category, imageUrl, initialPrice, initialStock);
   }
 
   /**
@@ -90,7 +83,7 @@ public final class ProductFactory implements Factory {
       final SKU sku,
       final ProductName name,
       final Category category,
-      final Money initialPrice,
+      final Price initialPrice,
       final int initialStock) {
 
     return createProduct(

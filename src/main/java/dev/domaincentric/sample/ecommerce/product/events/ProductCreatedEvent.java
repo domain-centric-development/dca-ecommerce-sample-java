@@ -4,8 +4,6 @@ import dev.domaincentric.dca.buildingblocks.ddd.tactical.IntegrationEvent;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.IntegrationEventType;
 import dev.domaincentric.sample.ecommerce.inventory.events.StockInitializationTrigger;
 import dev.domaincentric.sample.ecommerce.pricing.events.PriceInitializationTrigger;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -21,12 +19,10 @@ import java.util.UUID;
  */
 @IntegrationEventType(name = "product-created", version = 1)
 public record ProductCreatedEvent(
-    UUID eventId, ProductId productId, Money initialPrice, int initialStock, Instant occurredOn)
-    implements IntegrationEvent, PriceInitializationTrigger, StockInitializationTrigger {
-
-  /** Creates a new event from product creation data. */
-  public static ProductCreatedEvent now(ProductId productId, Money initialPrice, int initialStock) {
-    return new ProductCreatedEvent(
-        UUID.randomUUID(), productId, initialPrice, initialStock, Instant.now());
-  }
-}
+    UUID eventId,
+    Instant occurredOn,
+    String productId,
+    String amount,
+    String currency,
+    int initialStock)
+    implements IntegrationEvent, PriceInitializationTrigger, StockInitializationTrigger {}

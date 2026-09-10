@@ -63,6 +63,24 @@ public class CartPage extends BasePage {
   }
 
   /**
+   * Reads the cart lines as {@code name x quantity} pairs, in display order.
+   *
+   * @return one entry per cart line, e.g. {@code "DDD Pattern Card Deck x2"}
+   */
+  public java.util.List<String> lineItems() {
+    java.util.List<String> lines = new java.util.ArrayList<>();
+    var items = page.locator("[data-test='" + CART_ITEM + "']");
+    for (int i = 0; i < items.count(); i++) {
+      var item = items.nth(i);
+      lines.add(
+          item.locator("[data-test='cart-item-name']").textContent().trim()
+              + " x"
+              + item.locator("[data-test='cart-item-quantity']").textContent().trim());
+    }
+    return lines;
+  }
+
+  /**
    * Waits for cart items to be visible.
    *
    * @return this page for method chaining

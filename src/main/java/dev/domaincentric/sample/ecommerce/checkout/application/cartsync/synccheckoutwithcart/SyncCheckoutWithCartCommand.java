@@ -1,8 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.cartsync.synccheckoutwithcart;
 
 /**
- * Command for synchronizing a checkout session with current cart state.
- *
- * @param cartId the ID of the cart that changed
+ * Legacy cart-change compatibility contract. Snapshot checkout never synchronizes sessions; only an
+ * explicit checkout action creates a new snapshot.
  */
 public record SyncCheckoutWithCartCommand(String cartId) {}

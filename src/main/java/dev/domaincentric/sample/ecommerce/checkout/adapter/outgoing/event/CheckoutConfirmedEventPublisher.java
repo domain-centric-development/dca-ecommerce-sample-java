@@ -33,7 +33,10 @@ public class CheckoutConfirmedEventPublisher {
   public void on(final CheckoutConfirmed domainEvent) {
     final var items =
         domainEvent.items().stream()
-            .map(item -> new CheckoutConfirmedEvent.LineItemInfo(item.productId(), item.quantity()))
+            .map(
+                item ->
+                    new CheckoutConfirmedEvent.LineItemInfo(
+                        item.productId(), item.quantity(), item.positionSnapshot()))
             .toList();
 
     final var integrationEvent =

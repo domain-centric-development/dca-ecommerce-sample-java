@@ -42,7 +42,9 @@ public record CheckoutConfirmed(
 
     final List<LineItemInfo> itemInfos =
         lineItems.stream()
-            .map(item -> new LineItemInfo(item.productId(), item.quantity()))
+            .map(
+                item ->
+                    new LineItemInfo(item.productId(), item.quantity(), item.positionSnapshot()))
             .toList();
 
     return new CheckoutConfirmed(
@@ -55,5 +57,5 @@ public record CheckoutConfirmed(
    * @param productId the product ID from Shared Kernel
    * @param quantity the quantity
    */
-  public record LineItemInfo(ProductId productId, int quantity) {}
+  public record LineItemInfo(ProductId productId, int quantity, String positionSnapshot) {}
 }

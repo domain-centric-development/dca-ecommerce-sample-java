@@ -2,8 +2,10 @@ package dev.domaincentric.sample.ecommerce.product.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
 import dev.domaincentric.sample.ecommerce.product.domain.event.ProductCategoryChanged;
+import dev.domaincentric.sample.ecommerce.product.domain.event.ProductCreated;
 import dev.domaincentric.sample.ecommerce.product.domain.event.ProductDescriptionChanged;
 import dev.domaincentric.sample.ecommerce.product.domain.event.ProductNameChanged;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 
 /**
@@ -57,6 +59,22 @@ public final class Product extends BaseAggregateRoot<Product, ProductId> {
     this.description = description;
     this.category = category;
     this.imageUrl = imageUrl;
+  }
+
+  /** Creates the aggregate and raises its creation fact; factories delegate here. */
+  public static Product create(
+      SKU sku,
+      ProductName name,
+      ProductDescription description,
+      Category category,
+      ImageUrl imageUrl,
+      Price initialPrice,
+      int initialStock) {
+    if (initialStock < 0) throw new IllegalArgumentException("Initial stock cannot be negative");
+    if (initialPrice == null) throw new IllegalArgumentException("Initial price is required");
+    Product product = new Product(ProductId.generate(), sku, name, description, category, imageUrl);
+    product.registerEvent(ProductCreated.now(product.id(), sku, name, initialPrice, initialStock));
+    return product;
   }
 
   @Override

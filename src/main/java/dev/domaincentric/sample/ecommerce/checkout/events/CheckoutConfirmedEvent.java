@@ -25,7 +25,7 @@ import java.util.UUID;
  *   <li>{@link StockReductionTrigger} — triggers stock reduction in the Inventory module
  * </ul>
  */
-@IntegrationEventType(name = "checkout-confirmed", version = 1)
+@IntegrationEventType(name = "checkout-confirmed", version = 2)
 public record CheckoutConfirmedEvent(
     UUID eventId,
     String sessionId,
@@ -42,7 +42,12 @@ public record CheckoutConfirmedEvent(
    * @param productId the product ID from Shared Kernel
    * @param quantity the quantity
    */
-  public record LineItemInfo(ProductId productId, int quantity) {}
+  public record LineItemInfo(ProductId productId, int quantity, String positionSnapshot) {}
+
+  @Override
+  public List<String> purchasedPositions() {
+    return items.stream().map(LineItemInfo::positionSnapshot).toList();
+  }
 
   @Override
   public List<OrderLineItem> orderLineItems() {

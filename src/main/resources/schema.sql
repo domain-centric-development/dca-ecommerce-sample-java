@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
   cart_id VARCHAR(64) NOT NULL,
   product_id VARCHAR(64) NOT NULL,
   quantity INT NOT NULL,
+  position_units VARCHAR(16000) NOT NULL,
   price_amount DECIMAL(19,2) NOT NULL,
   price_currency VARCHAR(3) NOT NULL,
   CONSTRAINT fk_cart_items_cart FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE

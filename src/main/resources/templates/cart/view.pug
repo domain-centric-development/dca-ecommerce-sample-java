@@ -28,11 +28,11 @@ block content
               if item.imageUrl()
                 img(src=item.imageUrl() alt=item.productName() width="64" height="64")
             .cart__item-details
-              .cart__item-name= item.productName()
+              .cart__item-name(data-test="cart-item-name")= item.productName()
               .cart__item-info
                 .cart__item-row
                   span.cart__item-label Quantity
-                  span.cart__item-value= item.quantity()
+                  span.cart__item-value(data-test="cart-item-quantity")= item.quantity()
                 .cart__item-row
                   span.cart__item-label Unit Price
                   span.cart__item-value #{item.unitPrice()} #{item.currencyCode()}

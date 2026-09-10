@@ -16,5 +16,6 @@ public record CartData(
     CartId cartId, CustomerId customerId, List<CartItemData> items, boolean active) {
 
   /** Represents a cart item in terms the Checkout context understands. */
-  public record CartItemData(ProductId productId, Price priceAtAddition, int quantity) {}
+  public record CartItemData(
+      ProductId productId, Price priceAtAddition, int quantity, String positionSnapshot) {}
 }

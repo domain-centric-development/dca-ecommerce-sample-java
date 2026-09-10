@@ -255,7 +255,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │       ├── MergeCartsCommand.java
 │   │   │       ├── MergeCartsResult.java
 │   │   │       └── CartMergeStrategy.java
-│   │   ├── cartcheckout/                 # Feature: handing the cart over to Checkout and closing it
+│   │   ├── cartcheckout/                 # Feature: submitting snapshots and reconciling purchased contents
 │   │   │   ├── checkoutcart/             # Use case: Checkout Cart
 │   │   │   │   ├── CheckoutCartInputPort.java
 │   │   │   │   ├── CheckoutCartUseCase.java
@@ -409,7 +409,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │       ├── ConfirmCheckoutUseCase.java
 │   │   │       ├── ConfirmCheckoutCommand.java
 │   │   │       └── ConfirmCheckoutResult.java
-│   │   ├── cartsync/                     # Feature: following cart changes during checkout
+│   │   ├── cartsync/                     # Feature: legacy cart-change compatibility (snapshots stay unchanged)
 │   │   │   └── synccheckoutwithcart/     # Use case: Sync Checkout with Cart
 │   │   │       ├── SyncCheckoutWithCartInputPort.java
 │   │   │       ├── SyncCheckoutWithCartUseCase.java
@@ -1011,3 +1011,38 @@ product.
 
 Contributions are accepted under the MIT licence, and the copyright holder may additionally publish
 them under other licences (for example a documentation licence for prose).
+
+Event delivery (2026-09-09): committed capture is recovered independently of wakeup; completion is per listener/consumer. Automatic retry is bounded (five attempts, 200 ms exponential base), terminal failures remain inspectable, and Backoffice offers authenticated, CSRF-protected manual replay of failed work. Original payload/identity and acknowledged consumers are preserved. Provider idempotency is needed to suppress an external duplicate after acceptance-before-ack; local keys alone do not suffice. See the event-delivery ADR for storage limits and replay behavior.
+
+## Shared business specification (review batch 2026-09-09)
+
+Money uses ISO 4217 codes, non-negative amounts, two decimals half-up, and an upper bound of 999999999999.99.
+Product creation and Pricing use strictly positive Price. Product-created v1 is the six-field notification described
+in the local payload ADR. Invalid default quantities are rejected at entry/reconstitution; account role observations
+are immutable snapshots. Aggregate creation owns event registration.
+
+An explicit checkout action captures immutable positions, quantities and prices into a session. Cart edits do not
+create or mutate sessions. A new action supersedes the previous OPEN/Active session; confirmed/completed orders remain.
+Confirmation and replacement serialize through the same repository operation, including transaction completion.
+Superseded confirmation has no completion effect. Abandonment/expiry closes only an open session and leaves cart contents.
+
+Cart reconciliation intersects purchased unit intervals with the current stable position id. Later additions (also of
+the same product), removed/re-added positions and other contents survive. Replay and overlapping completed snapshots
+cannot remove a unit twice. JDBC/JPA cart persistence preserves the interval allocation watermark; in-memory persistence
+retains the same domain state. Legacy CheckedOut/Completed cart statuses remain readable, but snapshot checkout leaves
+an active cart editable and never completes the whole cart.
+
+Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume
+immutable line/fact snapshots. Any changed price or shortage reports affected lines and leaves state, totals and events
+unchanged. The buyer explicitly starts a fresh checkout against the new prices. Success stores the recomputed total and
+publishes the same total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
+claim of durable distributed transactions or universal rollback of unenlisted resources.
+
+The language-neutral specification is an independently owned, currently unpublished repository. It is **not part of the
+build**: a plain checkout builds and runs without it, and the specification tests are reported as skipped. To run them,
+point the build at a local checkout; the vectors are copied into the gitignored `build/specification/` directory and
+the adapters in `SharedSpecificationTest`, `CheckoutSpecificationTest` and `RetainedDeliveryIntegrationTest` drive the production code with them.
+
+```bash
+./gradlew test test-integration -Pspecification.path=../dca-sample-specification
+```

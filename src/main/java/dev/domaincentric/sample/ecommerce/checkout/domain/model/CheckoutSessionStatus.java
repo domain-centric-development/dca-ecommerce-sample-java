@@ -20,14 +20,15 @@ public enum CheckoutSessionStatus implements Value {
   CONFIRMED,
   COMPLETED,
   ABANDONED,
-  EXPIRED;
+  EXPIRED,
+  SUPERSEDED;
 
   public boolean isModifiable() {
     return this == ACTIVE;
   }
 
   public boolean isTerminal() {
-    return this == COMPLETED || this == ABANDONED || this == EXPIRED;
+    return this == SUPERSEDED || this == COMPLETED || this == ABANDONED || this == EXPIRED;
   }
 
   public boolean canConfirm() {

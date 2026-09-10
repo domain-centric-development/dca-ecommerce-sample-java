@@ -91,7 +91,7 @@ dependencies {
 
   // DCA building blocks: DDD markers and hexagonal port interfaces — and the Spring implementations
   // of the two runtime contracts (DomainEventPublisher, TransactionBoundary), auto-configured
-  implementation 'dev.domaincentric:dca-building-blocks:0.1.2'
+  implementation 'dev.domaincentric:dca-building-blocks:0.2.0'
   implementation 'dev.domaincentric:dca-spring:0.1.0'
 
   // JSpecify for nullability annotations
@@ -110,6 +110,9 @@ dependencies {
   // Spring Modulith
   implementation 'org.springframework.modulith:spring-modulith-starter-core'
   implementation 'org.springframework.modulith:spring-modulith-starter-jdbc'
+
+  // Inspect the retained registry state machine in the recovery integration test.
+  testIntegrationImplementation "org.springframework.modulith:spring-modulith-events-core"
 
   // Test dependencies are configured in test-common.gradle
 }
@@ -159,3 +162,6 @@ idea {
   }
 }
 
+
+// Optional shared sample specification check (local only, not part of the build): -Pspecification.path=../dca-sample-specification
+apply from: "gradle/specification.gradle"

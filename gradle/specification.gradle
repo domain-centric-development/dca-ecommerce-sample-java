@@ -1,0 +1,20 @@
+// The shared sample specification (../dca-sample-specification) is an optional, local-only check: it is not part
+// of the build and nothing is downloaded. Pass -Pspecification.path=<checkout> to run the specification tests;
+// without the property those tests are skipped and every other test runs as usual.
+def localSpec = providers.gradleProperty('specification.path')
+def destination = layout.buildDirectory.dir('specification')
+tasks.register('materializeSpecification') {
+  notCompatibleWithConfigurationCache('Materializes an explicit local specification checkout')
+  onlyIf { localSpec.isPresent() }
+  outputs.dir(destination)
+  outputs.upToDateWhen { false }
+  doLast {
+    File source = file(localSpec.get())
+    if (!new File(source, 'vectors').isDirectory()) throw new GradleException("Specification vectors are missing under ${source}")
+    project.sync { spec -> spec.from(source); spec.include('**/*.json', '**/*.md'); spec.into(destination) }
+  }
+}
+tasks.withType(Test).configureEach {
+  dependsOn tasks.named('materializeSpecification')
+  if (localSpec.isPresent()) systemProperty 'specification.path', destination.get().asFile.absolutePath
+}

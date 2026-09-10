@@ -350,7 +350,15 @@ class CheckoutStepValidatorTest {
 
   private CheckoutSession createConfirmedSession() {
     CheckoutSession session = createSessionAtReview();
-    session.confirm();
+    session.confirm(
+        session.lineItems().stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    item -> item.productId(),
+                    item ->
+                        new dev.domaincentric.sample.ecommerce.checkout.domain.model
+                            .CheckoutArticlePriceResolver.ArticlePrice(
+                            item.unitPrice(), true, item.quantity()))));
     return session;
   }
 

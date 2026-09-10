@@ -30,38 +30,7 @@ adapters mirror `shopping` and `cartrecovery`; the REST resource serves every fe
 
 ### ShoppingCart
 
-**Definition:** A customer's shopping cart — a collection of items the
-customer intends to purchase, with a lifecycle from ACTIVE through CHECKED_OUT
-to COMPLETED or ABANDONED.
-
-**Type:** Aggregate Root
-
-**Identity:** `CartId`
-
-**Synonyms (avoid):** "Cart" on its own is ambiguous; always use
-`ShoppingCart` when referring to the aggregate.
-
-**Related terms:**
-- `CartItem` — item within the shopping cart (Entity)
-- `CartStatus` — lifecycle state
-- `CustomerId` — owner of the shopping cart
-- `ArticlePriceResolver` — external price/availability lookup
-- `CartValidationResult` — result of checkout validation
-- `EnrichedCart` — enriched read model
-
-**Operations:** `reconstitute`, `addItem`, `removeItem`, `removeItemByProductId`,
-`updateItemQuantity`, `increaseItemQuantity`, `decreaseItemQuantity`, `clear`,
-`checkout`, `abandon`, `complete`, `merge`, `calculateTotal`,
-`validateForCheckout`
-
-**Notes:** A `ProductId` may only appear once — adding it again increases the
-quantity. Modifications are only allowed in state ACTIVE. `reconstitute` restores a
-stored cart — status and lines as they were — without re-evaluating a rule and
-without raising an event: a stored cart is a fact, not a decision. Repositories hand
-over the lines as `ShoppingCart.StoredItem`, so `CartItem`'s constructor can stay
-package-private and only the aggregate assembles its own lines.
-
-## Entities
+An editable collection of stable positions. Checkout copies a snapshot; completion reconciles captured unit identities without completing the current cart. Abandoned carts reject edits. Legacy CheckedOut/Completed states remain readable.
 
 ### CartItem
 
@@ -119,16 +88,7 @@ protection against values ≤ 0.
 
 ### CartStatus
 
-**Definition:** Lifecycle state of a shopping cart: `ACTIVE` (modifiable),
-`CHECKED_OUT` (checkout triggered, locked), `COMPLETED` (order confirmed), or
-`ABANDONED` (given up by the customer).
-
-**Type:** Value Object (Enum)
-
-**Notes:** Open question — clarify the relationship between `CHECKED_OUT` and
-`COMPLETED`. Today `CHECKED_OUT` is an intermediate state before `COMPLETED`,
-but `complete()` may also be invoked directly from `ACTIVE`. Does the domain
-expert expect a strict state machine?
+ACTIVE/Active permits editing before, during and after snapshot checkout. ABANDONED/Abandoned rejects edits. CHECKED_OUT/CheckedOut and COMPLETED/Completed are legacy whole-cart states, not transitions caused by the current checkout flow.
 
 ### ArticlePrice
 
@@ -212,30 +172,11 @@ via "clear cart").
 
 ### CartCheckedOut
 
-**Definition:** The checkout process was triggered — the shopping cart is
-closed and no longer modifiable. Contains a snapshot of total and items for
-integration into other contexts (notably Checkout/Order).
-
-**Type:** Domain Event
-
-**Synonyms (avoid):** `CartCompleted` — functionally different (see there).
-
-**Notes:** Cross-context propagation occurs via the integration event
-`CartCheckedOutEvent` in the outgoing adapter, not via this Domain Event
-directly.
+A snapshot-submission fact. It does not lock an active cart. Explicit Checkout start creates the session; cart-change notifications do not.
 
 ### CartCompleted
 
-**Definition:** The entire checkout process including customer confirmation
-(payment/review) is finished. Final state for successfully processed shopping
-carts.
-
-**Type:** Domain Event
-
-**Synonyms (avoid):** Do not use synonymously with `CartCheckedOut` —
-`CheckedOut` marks the triggering, `Completed` the final closing. Open
-question for the domain expert: should these two events be merged
-functionally, or does the distinction remain?
+Legacy event name retained for the cart reconciliation notification. The current completion handler removes only captured units; it does not change an active cart to Completed. Replays with no intersection emit nothing.
 
 ### CartAbandoned
 
@@ -326,16 +267,7 @@ completeness of the article data.
 
 ### ArticlePriceResolver
 
-**Definition:** Functional interface through which the Cart context retrieves
-current prices and availabilities for a product — without direct coupling to
-Pricing or Inventory infrastructure. Used in the aggregate for
-`calculateTotal(...)` and `validateForCheckout(...)`.
-
-**Type:** Concept (Domain Port)
-
-**Related terms:** `ArticlePrice`
-
-## Concepts (no code artifact)
+Legacy application/test lookup abstraction. No aggregate accepts this callback. CartPricing receives immutable line and ArticlePrice snapshots retrieved by the use case.
 
 ### Price Snapshot (priceAtAddition)
 
@@ -348,3 +280,9 @@ from the `ArticlePriceResolver`).
 
 **Notes:** Open question: which price is binding for the customer — the one
 at the time of adding or the current one? Clarify the business policy.
+
+### Shared contract revision (2026-09-09)
+
+Price wraps strictly positive Money; Money is ISO 4217, non-negative, two decimals half-up, maximum 999999999999.99.
+Default quantities must be rejected before mutation/reconstitution. ProductCreated is raised by aggregate creation;
+product-created v1 exposes only eventId, occurredOn, productId, amount, currency and initialStock.

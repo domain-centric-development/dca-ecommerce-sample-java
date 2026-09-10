@@ -17,8 +17,19 @@ public record CheckoutLineItem(
     String productName,
     Money unitPrice,
     int quantity,
-    @Nullable String imageUrl)
+    @Nullable String imageUrl,
+    String positionSnapshot)
     implements Value {
+
+  public CheckoutLineItem(
+      CheckoutLineItemId id,
+      ProductId productId,
+      String productName,
+      Money unitPrice,
+      int quantity,
+      @Nullable String imageUrl) {
+    this(id, productId, productName, unitPrice, quantity, imageUrl, "");
+  }
 
   public CheckoutLineItem {
     if (id == null) {
@@ -53,6 +64,7 @@ public record CheckoutLineItem(
   }
 
   public CheckoutLineItem withQuantity(final int newQuantity) {
-    return new CheckoutLineItem(id, productId, productName, unitPrice, newQuantity, imageUrl);
+    return new CheckoutLineItem(
+        id, productId, productName, unitPrice, newQuantity, imageUrl, positionSnapshot);
   }
 }

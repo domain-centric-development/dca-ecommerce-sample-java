@@ -3,7 +3,7 @@ package dev.domaincentric.sample.ecommerce.product.domain.event;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.sample.ecommerce.product.domain.model.ProductName;
 import dev.domaincentric.sample.ecommerce.product.domain.model.SKU;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.time.Instant;
 import java.util.UUID;
@@ -27,7 +27,7 @@ public record ProductCreated(
     ProductId productId,
     SKU sku,
     ProductName name,
-    Money initialPrice,
+    Price initialPrice,
     int initialStock,
     Instant occurredOn)
     implements DomainEvent {
@@ -36,7 +36,7 @@ public record ProductCreated(
       final ProductId productId,
       final SKU sku,
       final ProductName name,
-      final Money initialPrice,
+      final Price initialPrice,
       final int initialStock) {
     return new ProductCreated(
         UUID.randomUUID(), productId, sku, name, initialPrice, initialStock, Instant.now());

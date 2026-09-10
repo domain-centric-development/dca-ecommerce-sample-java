@@ -87,7 +87,7 @@ This is a **sample e-commerce application** demonstrating best practices for:
 - Spring AI 2.0.0-M2 (milestone)
 - `dev.domaincentric:dca-building-blocks` — architectural markers (DDD tactical/strategic, hexagonal ports)
 - `dev.domaincentric:dca-archunit` — the DCA governance rules (ArchUnit), run via JUnit 5
-- Both come from Maven Central (`dca-building-blocks` 0.1.2, `dca-archunit` 0.3.0). Working on unreleased rules or markers: `./gradlew -PwithDcaJava <task>` makes `settings.gradle` include the sibling build `../dca-java` and substitute the coordinates
+- Both come from Maven Central (`dca-building-blocks` 0.2.0, `dca-archunit` 0.4.0). Working on unreleased rules or markers: `./gradlew -PwithDcaJava <task>` makes `settings.gradle` include the sibling build `../dca-java` and substitute the coordinates — **run the build once without the switch before calling anything done**: it hides what a stranger sees, and CI (`.github/workflows/ci.yml`) exists because the sample once matched no published rule version for a day
 - JSpecify for nullability annotations
 
 **Purpose:**
@@ -338,7 +338,7 @@ Catalog reads are public. Resources and MCP tool providers depend on `*InputPort
 
 Location: `src/test-architecture/java/dev/domaincentric/sample/ecommerce/`
 
-The rules themselves live in the library `dev.domaincentric:dca-archunit` (114 rules in 10 sets, ids
+The rules themselves live in the library `dev.domaincentric:dca-archunit` (rule counts: see the library's `rules.json`; ids
 `DCA-<SET>-<NNN>`: LAY, ONI, HEX, TAC, STR, MAP, ADV, USE, NAM, CYC). This project only *runs* them:
 
 - `ArchitectureRulesTest` — extends `DcaArchitectureTest`, one dynamic test per rule, grouped into a
@@ -666,3 +666,42 @@ Code Change → Update architecture-principles.md → Run Tests → Commit
 ---
 
 **Remember:** Good architecture is about communication. Keep the documentation up-to-date so the next person (or AI) working on this code understands the decisions and patterns used.
+
+A domain term such as `PortfolioManager` is valid; the remaining technical suffix
+restrictions still apply. Operation implementations are discovered by InputPort
+assignability or the configured use-case suffix. Optional organisational segments
+are configured with `withOperationContainers(...)` / `WithOperationContainers(...)`
+and removed before measuring flat/grouped operation depth. Supporting subfolders do
+not define operations. One context must still use one depth. A Repository or Store
+used by one use case may live with it; `application/shared` is the reuse default.
+
+WP-34 policy: use-case stereotypes are optional; configuration registration is equally valid.
+NAM-002 is a non-failing Java diagnostic, not a wiring guarantee. Outgoing adapters may
+reuse global/own infrastructure. Domain metadata rules classify configured roles on
+types and members (including composed metadata), allow unclassified metadata, and assign
+exclusive ownership to ADV-004/011/015/018 before ONI-003.
+
+## Shared semantics since WP-39
+
+`../dca-sample-specification/` is the semantic authority; read its CONTRIBUTING.md, vectors and checkout-lifecycle.md before
+business changes. The user owns semantics. The specification is **unpublished and not part of the build** (decided
+2026-09-10): nothing is downloaded, no revision is pinned, and a plain checkout builds without it. The specification tests
+run only with `-Pspecification.path=../dca-sample-specification` and are skipped otherwise; no vector may lack a test
+adapter. Update both samples' adapters, schema compatibility records and glossaries together.
+
+An explicit checkout action captures immutable positions, quantities and prices into a session. Cart edits do not
+create or mutate sessions. A new action supersedes the previous OPEN/Active session; confirmed/completed orders remain.
+Confirmation and replacement serialize through the same repository operation, including transaction completion.
+Superseded confirmation has no completion effect. Abandonment/expiry closes only an open session and leaves cart contents.
+
+Cart reconciliation intersects purchased unit intervals with the current stable position id. Later additions (also of
+the same product), removed/re-added positions and other contents survive. Replay and overlapping completed snapshots
+cannot remove a unit twice. JDBC/JPA cart persistence preserves the interval allocation watermark; in-memory persistence
+retains the same domain state. Legacy CheckedOut/Completed cart statuses remain readable, but snapshot checkout leaves
+an active cart editable and never completes the whole cart.
+
+Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume
+immutable line/fact snapshots. Any changed price or shortage reports affected lines and leaves state, totals and events
+unchanged. The buyer explicitly starts a fresh checkout against the new prices. Success stores the recomputed total and
+publishes the same total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
+claim of durable distributed transactions or universal rollback of unenlisted resources.

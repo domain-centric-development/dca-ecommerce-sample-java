@@ -15,7 +15,7 @@ addCommonTestDependencies('testArchitectureImplementation')
 dependencies {
   testArchitectureImplementation sourceSets.main.output
   // DCA governance rules (brings ArchUnit transitively)
-  testArchitectureImplementation("dev.domaincentric:dca-archunit:0.3.0")
+  testArchitectureImplementation("dev.domaincentric:dca-archunit:0.4.0")
   testArchitectureImplementation("dev.domaincentric:dca-archunit-spring-modulith:0.1.0")
   testArchitectureImplementation("org.springframework.modulith:spring-modulith-starter-test")
 }

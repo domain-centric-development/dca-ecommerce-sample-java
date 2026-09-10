@@ -57,7 +57,7 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
 
 Rules: `DCA-USE-013` fails a `@Transactional` use case that calls any output port other than `Repository`,
 `Store`, `DomainEventPublisher`, `IntegrationEventPublisher` (`TransactionBoundary` is not a port); `DCA-USE-012` accepts either
-`@Transactional` or `TransactionBoundary.inTransaction` as the boundary for a publishing use case. See ADR-034.
+`@Transactional` or `TransactionBoundary.inTransaction` as the boundary for a use case that saves or deletes an aggregate or publishes domain events. See ADR-034.
 
 ## Read-Only Transactions
 

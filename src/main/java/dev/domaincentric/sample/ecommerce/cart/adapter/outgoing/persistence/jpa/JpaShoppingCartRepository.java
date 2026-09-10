@@ -111,7 +111,8 @@ public class JpaShoppingCartRepository implements ShoppingCartRepository {
                 Price.of(
                     Money.of(
                         it.getPriceAmount(),
-                        java.util.Currency.getInstance(it.getPriceCurrency())))));
+                        java.util.Currency.getInstance(it.getPriceCurrency()))),
+                it.getPositionUnits()));
       }
     }
 
@@ -137,6 +138,7 @@ public class JpaShoppingCartRepository implements ShoppingCartRepository {
       ie.setQuantity(item.quantity().value());
       ie.setPriceAmount(item.priceAtAddition().value().amount());
       ie.setPriceCurrency(item.priceAtAddition().value().currency().getCurrencyCode());
+      ie.setPositionUnits(item.storedUnits());
       itemEntities.add(ie);
     }
     e.setItems(itemEntities);
