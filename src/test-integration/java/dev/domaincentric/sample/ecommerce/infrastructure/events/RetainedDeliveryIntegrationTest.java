@@ -39,6 +39,10 @@ class RetainedDeliveryIntegrationTest {
   @Autowired Observed observed;
   @Autowired org.springframework.modulith.events.core.EventPublicationRegistry registry;
 
+  @org.junit.jupiter.api.condition.EnabledIfSystemProperty(
+      named = "specification.path",
+      matches = ".+",
+      disabledReason = "shared specification not supplied (-Pspecification.path)")
   @Test
   void productCreatedUsesTheSharedSixFieldWireSchema() throws Exception {
     var root = java.nio.file.Path.of(System.getProperty("specification.path"));
@@ -77,6 +81,10 @@ class RetainedDeliveryIntegrationTest {
     }
   }
 
+  @org.junit.jupiter.api.condition.EnabledIfSystemProperty(
+      named = "specification.path",
+      matches = ".+",
+      disabledReason = "shared specification not supplied (-Pspecification.path)")
   @TestFactory
   java.util.stream.Stream<DynamicTest> sharedDeliveryVectors() throws Exception {
     var root = java.nio.file.Path.of(System.getProperty("specification.path"));

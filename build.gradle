@@ -163,6 +163,5 @@ idea {
 }
 
 
-// Shared specification review commit; use the local path override until publication.
-ext.set("specification.revision", "1e6be664a8535ad604b3686daf9e9ea2d0b02b59")
+// Optional shared sample specification check (local only, not part of the build): -Pspecification.path=../dca-sample-specification
 apply from: "gradle/specification.gradle"

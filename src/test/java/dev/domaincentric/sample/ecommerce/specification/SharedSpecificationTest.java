@@ -13,10 +13,16 @@ import org.junit.jupiter.api.*;
 
 /**
  * Thin adapters: each scenario drives production domain methods; no second domain implementation.
+ * Runs only when the build was given the local specification checkout ({@code
+ * -Pspecification.path=../dca-sample-specification}); otherwise the class is skipped.
  */
+@org.junit.jupiter.api.condition.EnabledIfSystemProperty(
+    named = "specification.path",
+    matches = ".+",
+    disabledReason = "shared specification not supplied (-Pspecification.path)")
 class SharedSpecificationTest {
   static final ObjectMapper JSON = new ObjectMapper();
-  static final Path ROOT = Path.of(System.getProperty("specification.path"));
+  static final Path ROOT = Path.of(System.getProperty("specification.path", "."));
 
   @Test
   void everyVectorFamilyHasAnAdapterAndExceptionsAreCurrent() throws Exception {

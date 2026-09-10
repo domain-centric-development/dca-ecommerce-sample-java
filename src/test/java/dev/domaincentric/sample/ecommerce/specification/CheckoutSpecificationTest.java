@@ -19,6 +19,10 @@ import java.util.concurrent.*;
 import java.util.stream.*;
 import org.junit.jupiter.api.*;
 
+@org.junit.jupiter.api.condition.EnabledIfSystemProperty(
+    named = "specification.path",
+    matches = ".+",
+    disabledReason = "shared specification not supplied (-Pspecification.path)")
 class CheckoutSpecificationTest {
   @TestFactory
   Stream<DynamicTest> vectors() throws Exception {

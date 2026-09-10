@@ -684,9 +684,10 @@ exclusive ownership to ADV-004/011/015/018 before ONI-003.
 ## Shared semantics since WP-39
 
 `../dca-sample-specification/` is the semantic authority; read its CONTRIBUTING.md, vectors and checkout-lifecycle.md before
-business changes. The user owns semantics. Both samples consume the same SHA after publication, or an explicit local path
-for paired work; no vector may lack a test adapter. Update both adapters, schema compatibility records, glossaries and pins.
-Both samples pin the same local review commit. Until publication, use the local specification path override; CI still rejects an empty pin.
+business changes. The user owns semantics. The specification is **unpublished and not part of the build** (decided
+2026-09-10): nothing is downloaded, no revision is pinned, and a plain checkout builds without it. The specification tests
+run only with `-Pspecification.path=../dca-sample-specification` and are skipped otherwise; no vector may lack a test
+adapter. Update both samples' adapters, schema compatibility records and glossaries together.
 
 An explicit checkout action captures immutable positions, quantities and prices into a session. Cart edits do not
 create or mutate sessions. A new action supersedes the previous OPEN/Active session; confirmed/completed orders remain.
