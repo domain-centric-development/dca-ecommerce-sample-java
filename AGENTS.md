@@ -338,7 +338,7 @@ Catalog reads are public. Resources and MCP tool providers depend on `*InputPort
 
 Location: `src/test-architecture/java/dev/domaincentric/sample/ecommerce/`
 
-The rules themselves live in the library `dev.domaincentric:dca-archunit` (114 rules in 10 sets, ids
+The rules themselves live in the library `dev.domaincentric:dca-archunit` (rule counts: see the library's `rules.json`; ids
 `DCA-<SET>-<NNN>`: LAY, ONI, HEX, TAC, STR, MAP, ADV, USE, NAM, CYC). This project only *runs* them:
 
 - `ArchitectureRulesTest` — extends `DcaArchitectureTest`, one dynamic test per rule, grouped into a

@@ -43,12 +43,12 @@ block content
       .order-summary
         h3.order-summary__title Order Summary
         each item in paymentPage.lineItems()
-          .order-summary__item
+          .order-summary__item(data-test="order-summary-item")
             .order-summary__item-image
               if item.imageUrl()
                 img(src=item.imageUrl() alt=item.productName())
-            span.order-summary__item-name #{item.productName()}
-            span.order-summary__item-qty x#{item.quantity()}
+            span.order-summary__item-name(data-test="order-summary-item-name") #{item.productName()}
+            span.order-summary__item-qty(data-test="order-summary-item-qty") x#{item.quantity()}
             span.order-summary__item-price #{item.lineTotal()} #{item.currencyCode()}
 
         if paymentPage.totals()

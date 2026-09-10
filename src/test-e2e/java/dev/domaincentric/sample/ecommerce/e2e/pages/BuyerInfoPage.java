@@ -203,6 +203,25 @@ public class BuyerInfoPage extends BasePage {
    *
    * @return true if still on buyer info page
    */
+  /**
+   * Reads the checkout session's order summary as {@code name x quantity} pairs — the snapshot the
+   * session was started from, independent of the cart's current contents.
+   *
+   * @return one entry per summary line, e.g. {@code "DDD Pattern Card Deck x2"}
+   */
+  public java.util.List<String> summaryItems() {
+    java.util.List<String> lines = new java.util.ArrayList<>();
+    var items = page.locator("[data-test='order-summary-item']");
+    for (int i = 0; i < items.count(); i++) {
+      var item = items.nth(i);
+      lines.add(
+          item.locator("[data-test='order-summary-item-name']").textContent().trim()
+              + " "
+              + item.locator("[data-test='order-summary-item-qty']").textContent().trim());
+    }
+    return lines;
+  }
+
   public boolean isOnPage() {
     return getCurrentPath().contains("/checkout/buyer");
   }
