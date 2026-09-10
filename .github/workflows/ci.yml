@@ -1,0 +1,55 @@
+name: CI
+
+# Builds the sample the way somebody who just cloned it does: against the DCA packages published on
+# Maven Central, with no sibling checkout and no `-PwithDcaJava`. That switch substitutes the local
+# `../dca-java` build and is the right tool while working on unreleased rules — but it hides what a
+# stranger sees. Between 2026-09-09 and 2026-09-10 the sample matched no published rule version
+# (`DCA-HEX-005` failed with 0.2.0 and 0.3.0) and nothing reported it, because every run used the
+# switch. This workflow is what would have reported it.
+#
+# The Playwright suite (`test-e2e`) needs a running shop and stays out; the shared specification is an
+# opt-in local check, so its adapters report as skipped.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # The build declares a Java 25 toolchain (build.gradle).
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and unit tests against the published packages
+        run: ./gradlew build --no-daemon
+
+      - name: Integration tests
+        run: ./gradlew test-integration --no-daemon
+
+      - name: Architecture rules
+        run: ./gradlew test-architecture --no-daemon
+
+      - name: Context map is up to date
+        # The architecture suite regenerates it; a diff means the committed document was stale.
+        run: git diff --exit-code -- docs/architecture/context-map.md
+
+      - name: No local library switch leaked into the build
+        # The published coordinates must be the default; `-PwithDcaJava` stays opt-in.
+        run: |
+          grep -q "dev.domaincentric:dca-building-blocks:[0-9]" build.gradle
+          grep -q "dev.domaincentric:dca-archunit:[0-9]" gradle/plugins/test-architecture.gradle
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/
+            build/test-results/
