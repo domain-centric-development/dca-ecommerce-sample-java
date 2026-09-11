@@ -41,5 +41,3 @@ backlog/index.json
 __pycache__/
 *.pyc
 
-# Where this checkout got its gate from: a local absolute path, per machine
-.agents/factory/.installed-from
