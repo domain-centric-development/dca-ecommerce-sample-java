@@ -36,3 +36,10 @@ tasks/.bead-map.json
 .codex/
 .opencode/
 backlog/index.json
+
+# Python bytecode from the story gate
+__pycache__/
+*.pyc
+
+# Where this checkout got its gate from: a local absolute path, per machine
+.agents/factory/.installed-from
