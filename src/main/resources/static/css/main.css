@@ -3441,7 +3441,9 @@ ul, ol {
     column-gap: var(--space-sm);
     row-gap: 0;
     height: auto;
-    padding: var(--space-md);
+    /* Less below than above: the basket button is 38 px tall and reaches past the line of link text,
+       so equal padding reads as a wider gap under the links than over the logo. */
+    padding: var(--space-md) var(--space-md) var(--space-sm);
   }
 
   .site-header__logo {
