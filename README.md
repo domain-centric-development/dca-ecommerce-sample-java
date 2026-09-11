@@ -2,7 +2,7 @@
 
 The reference implementation of **Domain-Centric Architecture (DCA)** — a synthesis of **Domain-Driven Design**, **Hexagonal Architecture** and **Clean Architecture** — as a working e-commerce application, with **MCP (Model Context Protocol)** server integration for AI assistant interaction.
 
-*Written with AI assistance — drafted mainly by Claude, reviewed and directed by the author since
+*Written with AI assistance — drafted mainly by Claude, reviewed and directed by Christoph Bloemer since
 2025. The architecture rules in this repository's build are part of how that work is verified.*
 
 ## Overview
@@ -1003,6 +1003,10 @@ These tests verify:
 - **[Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)** by Robert C. Martin
 - **[ArchUnit](https://www.archunit.org/)** - Architecture testing framework
 - **[Spring Modulith](https://spring.io/projects/spring-modulith)** - Module boundary enforcement
+
+## Author
+
+**Christoph Bloemer** — [@chbloemer](https://github.com/chbloemer)
 
 ## License
 
