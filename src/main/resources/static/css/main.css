@@ -3428,31 +3428,38 @@ ul, ol {
     padding-right: var(--space-md);
   }
 
-  /* Header — two-row layout: logo + actions top, nav bottom */
+  /* Header — the logo on its own line, every link on the next one.
+     Home, Products, Cart, Login and Register stay together on that line for as long as they fit and
+     wrap below each other only when they do not (around 330 px). Each group is pulled back by its
+     own inner padding, so the link text lines up with the container edge in either state — without
+     that, a wrapped row of actions starts eight pixels further in than the nav above it.
+     A grid put both groups in one cell, where they silently overlapped. */
   .site-header__inner {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    column-gap: var(--space-sm);
+    row-gap: 0;
     height: auto;
     padding: var(--space-md);
-    gap: 0 var(--space-sm);
   }
 
   .site-header__logo {
-    grid-column: 1;
-    grid-row: 1;
+    flex: 0 0 100%;
     font-size: 1.25rem;
   }
 
+  .nav,
   .site-header__actions {
-    grid-column: 2;
-    grid-row: 1;
+    flex: 0 1 auto;
   }
 
   .nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    margin-left: calc(var(--space-sm) * -1);
+  }
+
+  .site-header__actions {
+    margin-left: calc(var(--space-md) * -1);
   }
 
   .nav__list {
@@ -3598,6 +3605,12 @@ ul, ol {
 
 /* Small mobile */
 @media (max-width: 480px) {
+  /* "domaincentric.commerce" is one token wider than a phone. Breaking anywhere splits it mid-word
+     ("…comm / erce"); the suffix is its own element, so it wraps as a unit instead. */
+  .hero__title .brand-tld {
+    display: inline-block;
+  }
+
   .hero__actions {
     flex-direction: column;
     align-items: center;
@@ -4153,7 +4166,9 @@ ul, ol {
   .stack-ribbon {
     top: auto;
     right: auto;
-    bottom: 0;
+    /* Flush with the left edge, the way a tab attached to the page is — but lifted off the bottom,
+       clear of the home indicator on a phone, where the last pixels belong to the system. */
+    bottom: max(var(--space-md), env(safe-area-inset-bottom, 0px));
     left: 0;
     width: auto;
     height: auto;
@@ -4167,7 +4182,7 @@ ul, ol {
     top: auto;
     right: auto;
     transform: none;
-    border-radius: 0 var(--radius-sm) 0 0;
-    box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.18);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
   }
 }
