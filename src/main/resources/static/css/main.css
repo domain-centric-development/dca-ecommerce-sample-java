@@ -861,15 +861,20 @@ html:not([data-theme]) .section--muted {
 
 /* The hex-graph mark is part of the logo in every theme; its core and the
    wordmark suffix take the theme's accent colour. */
-.site-header__logo { gap: 12px; }
-.site-header__mark { display: block; flex-shrink: 0; }
+/* the lockup: the mark's node distance and the gap are both one x-height of the wordmark; the
+   small shift centres the mark on a wordmark that is all lowercase and has no descenders */
+.site-header__logo { gap: 1ex; }
+.site-header__mark { display: block; flex-shrink: 0; width: 2.132ex; height: 2.402ex; overflow: visible; transform: translateY(0.16ex); }
 .site-header__mark-core { fill: var(--color-primary); }
+/* the text cut of the mark: on a light header the boundary is 10 % heavier than on a dark one,
+   because a light stroke on dark ground reads wider than the same ink on paper */
+[data-theme] .site-header__mark polygon { stroke-width: 7.7; }
+[data-theme="vibrant"] .site-header__mark polygon { stroke-width: 7; }
 .brand-tld { color: var(--color-primary); }
 
 html:not([data-theme]) .site-header__logo {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
   font-family: var(--font-display);
   font-size: 19px;
   font-weight: 700;
