@@ -6,11 +6,14 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Output port for looking up payment providers.
+ * Output port for managing payment provider registration and lookup.
  *
- * <p>The checkout discovers and selects {@link PaymentProvider}s at runtime through this port.
- * Which providers exist is the adapter's business — it fills its own list from configuration or
- * discovery — so the port carries lookups only, not registration.
+ * <p>Acts as a registry for available payment providers, allowing the checkout system to discover
+ * and select appropriate providers at runtime. This supports a plugin architecture where new
+ * payment providers can be added without modifying core checkout logic.
+ *
+ * <p>Implementations of this interface manage the collection of registered {@link PaymentProvider}
+ * instances and provide methods to query them.
  */
 public interface PaymentProviderRegistry extends OutputPort {
 
@@ -38,4 +41,29 @@ public interface PaymentProviderRegistry extends OutputPort {
    * @return list of available providers (never null, may be empty)
    */
   List<PaymentProvider> findAvailable();
+
+  /**
+   * Registers a new payment provider with the registry.
+   *
+   * <p>If a provider with the same ID is already registered, it will be replaced.
+   *
+   * @param provider the provider to register
+   */
+  void register(PaymentProvider provider);
+
+  /**
+   * Removes a payment provider from the registry.
+   *
+   * @param providerId the ID of the provider to remove
+   * @return true if the provider was removed, false if it was not found
+   */
+  boolean unregister(PaymentProviderId providerId);
+
+  /**
+   * Checks if a provider with the given ID is registered.
+   *
+   * @param providerId the payment provider ID to check
+   * @return true if registered, false otherwise
+   */
+  boolean isRegistered(PaymentProviderId providerId);
 }
