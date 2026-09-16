@@ -101,6 +101,18 @@ public abstract class BasePage {
    *
    * @param path the path to navigate to (e.g., "/cart")
    */
+  /**
+   * Checks that nothing on the page reaches past the viewport, i.e. the document cannot scroll
+   * sideways.
+   *
+   * @return true if the page fits the viewport
+   */
+  public boolean fitsViewport() {
+    return (Boolean)
+        page.evaluate(
+            "() => document.documentElement.scrollWidth <= document.documentElement.clientWidth");
+  }
+
   protected void navigateTo(String path) {
     page.navigate(BASE_URL + path);
   }

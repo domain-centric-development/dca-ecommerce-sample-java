@@ -98,8 +98,18 @@ public abstract class BaseE2ETest {
 
   @BeforeEach
   void createContextAndPage() {
-    context = browser.newContext();
+    context = browser.newContext(contextOptions());
     page = context.newPage();
+  }
+
+  /**
+   * Options for the browser context of each test. A suite that needs a phone viewport overrides
+   * this; the default is Playwright's desktop viewport.
+   *
+   * @return the context options
+   */
+  protected Browser.NewContextOptions contextOptions() {
+    return new Browser.NewContextOptions();
   }
 
   @AfterEach
