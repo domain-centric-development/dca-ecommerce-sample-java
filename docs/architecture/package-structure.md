@@ -296,10 +296,11 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── changepassword/
 │   │   │   ├── ChangePasswordInputPort, ChangePasswordUseCase
 │   │   │   ├── ChangePasswordCommand, ChangePasswordResult
+│   │   ├── isaccountregistered/       # query the authentication filter asks before honouring a token
+│   │   │   ├── IsAccountRegisteredInputPort, IsAccountRegisteredUseCase
+│   │   │   ├── IsAccountRegisteredQuery, IsAccountRegisteredResult
 │   │   └── shared/
-│   │       ├── AccountRepository
-│   │       ├── RegisteredUserValidator, TokenService
-│   │       └── IdentitySession
+│   │       └── AccountRepository
 │   ├── infrastructure/            # Per-context infrastructure
 │   │   └── SecurityConfiguration
 │   └── adapter/
@@ -308,6 +309,8 @@ dev.domaincentric.sample.ecommerce
 │       │   │   ├── AuthResource
 │       │   │   ├── LoginRequest, LoginResponse
 │       │   │   └── RegisterRequest, RegisterResponse
+│       │   ├── security/                  # adapter-internal mechanics, no OutputPort marker
+│       │   │   └── TokenService, IdentitySession
 │       │   └── web/
 │       │       ├── LoginPageController, LogoutPageController
 │       │       ├── RegisterPageController
@@ -319,8 +322,9 @@ dev.domaincentric.sample.ecommerce
 │           │   ├── JdbcAccountRepository      # default (ADR-031)
 │           │   └── InMemoryAccountRepository  # "inmemory" profile
 │           └── security/
-│               ├── SpringSecurityPasswordHasher
-│               └── AccountBasedRegisteredUserValidator
+│               ├── SpringSecurityPasswordHasher, SpringSecurityIdentityProvider
+│               ├── JwtTokenService, JwtIdentitySession   # implement the incoming/security interfaces
+│               └── JwtAuthenticationFilter, JwtProperties, JwtIdentity, JwtIdentityType
 │
 ├── inventory/                       # Inventory Bounded Context
 │   ├── api/                         # @NamedInterface("api") — Open Host Service

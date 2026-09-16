@@ -1,10 +1,10 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountResult;
-import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.LocalDate;

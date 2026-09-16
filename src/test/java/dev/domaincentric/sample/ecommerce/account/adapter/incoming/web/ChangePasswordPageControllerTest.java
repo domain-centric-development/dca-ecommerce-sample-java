@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestGetAccountOverview;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentity;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentityProvider;
@@ -17,8 +19,6 @@ import dev.domaincentric.sample.ecommerce.account.application.changepassword.Cha
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult.AccountOverview;
-import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;

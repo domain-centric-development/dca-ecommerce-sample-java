@@ -1,12 +1,12 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.api;
 
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountResult;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountResult;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import jakarta.validation.Valid;

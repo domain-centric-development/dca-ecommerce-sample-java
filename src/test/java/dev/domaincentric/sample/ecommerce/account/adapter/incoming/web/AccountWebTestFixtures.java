@@ -2,14 +2,14 @@ package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult;
-import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URLDecoder;

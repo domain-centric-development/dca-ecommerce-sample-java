@@ -1,6 +1,6 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
 
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import io.jsonwebtoken.Claims;

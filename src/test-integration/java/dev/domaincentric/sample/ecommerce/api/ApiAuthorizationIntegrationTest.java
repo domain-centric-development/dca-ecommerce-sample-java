@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;

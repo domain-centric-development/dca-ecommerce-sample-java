@@ -11,12 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordResult.Outcome;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestAccountRepository;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestDomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestPasswordHasher;
-import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountPasswordChanged;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Account;
 import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;

@@ -504,11 +504,13 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── ChangeProfileUseCase.java
 │   │   │   ├── ChangeProfileCommand.java
 │   │   │   └── ChangeProfileResult.java
+│   │   ├── isaccountregistered/          # Use case: Is Account Registered (asked by the JWT filter)
+│   │   │   ├── IsAccountRegisteredInputPort.java
+│   │   │   ├── IsAccountRegisteredUseCase.java
+│   │   │   ├── IsAccountRegisteredQuery.java
+│   │   │   └── IsAccountRegisteredResult.java
 │   │   └── shared/                       # Shared output ports
-│   │       ├── AccountRepository.java
-│   │       ├── RegisteredUserValidator.java
-│   │       ├── TokenService.java
-│   │       └── IdentitySession.java
+│   │       └── AccountRepository.java
 │   ├── infrastructure/                   # Per-context infrastructure
 │   │   └── SecurityConfiguration.java
 │   └── adapter/                          # Adapters
@@ -519,6 +521,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │   │   ├── LoginResponse.java
 │       │   │   ├── RegisterRequest.java
 │       │   │   └── RegisterResponse.java
+│       │   ├── security/                 # Adapter-internal mechanics (no OutputPort marker)
+│       │   │   ├── TokenService.java
+│       │   │   └── IdentitySession.java
 │       │   └── web/
 │       │       ├── LoginPageController.java
 │       │       ├── LogoutPageController.java
@@ -536,7 +541,6 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           │   └── InMemoryAccountRepository.java # "inmemory" profile
 │           └── security/
 │               ├── SpringSecurityPasswordHasher.java
-│               ├── AccountBasedRegisteredUserValidator.java
 │               ├── SpringSecurityIdentityProvider.java
 │               ├── JwtTokenService.java
 │               ├── JwtIdentitySession.java

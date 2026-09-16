@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileCommand;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileResult;
@@ -7,8 +9,6 @@ import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProf
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult.Profile;
-import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
 import java.time.LocalDate;
