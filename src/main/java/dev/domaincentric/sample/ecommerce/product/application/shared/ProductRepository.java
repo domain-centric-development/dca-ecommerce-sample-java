@@ -36,14 +36,17 @@ public interface ProductRepository extends Repository<Product, ProductId> {
    * Finds all products in a specific category.
    *
    * @param category the category to filter by
-   * @return list of products in the category
+   * @return list of products in the category, ordered by product name (ordinal)
    */
   List<Product> findByCategory(Category category);
 
   /**
    * Retrieves all products.
    *
-   * @return list of all products
+   * <p>The order is part of the contract: products are sorted by product name (ordinal comparison),
+   * so the catalog reads the same in every persistence profile and in the .NET twin.
+   *
+   * @return list of all products, ordered by product name
    */
   List<Product> findAll();
 

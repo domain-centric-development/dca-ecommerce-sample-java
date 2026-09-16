@@ -6,6 +6,7 @@ import dev.domaincentric.sample.ecommerce.product.domain.model.Product;
 import dev.domaincentric.sample.ecommerce.product.domain.model.SKU;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import dev.domaincentric.sample.ecommerce.sharedkernel.infrastructure.AsyncInitialize;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +21,10 @@ import org.springframework.stereotype.Repository;
  * <p>This secondary adapter provides a thread-safe in-memory storage for products using
  * ConcurrentHashMap. In a production system, this would be replaced with a database implementation.
  *
+ * <p>Listings are ordered by product name (ordinal), as the {@link ProductRepository} contract
+ * requires — a hash map has no order of its own, and the catalog page must read the same in every
+ * persistence profile.
+ *
  * <p><b>Async Initialization:</b> This repository uses {@link AsyncInitialize} to perform
  * non-blocking cache warmup. The {@code asyncInitialize()} method is invoked asynchronously after
  * bean initialization, allowing the application to start without waiting for cache warmup.
@@ -31,6 +36,9 @@ import org.springframework.stereotype.Repository;
 public class InMemoryProductRepository implements ProductRepository {
 
   private static final Logger logger = LoggerFactory.getLogger(InMemoryProductRepository.class);
+
+  private static final Comparator<Product> BY_NAME =
+      Comparator.comparing(product -> product.name().value());
 
   private final ConcurrentHashMap<ProductId, Product> products = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<SKU, ProductId> skuIndex = new ConcurrentHashMap<>();
@@ -53,12 +61,13 @@ public class InMemoryProductRepository implements ProductRepository {
   public List<Product> findByCategory(final Category category) {
     return products.values().stream()
         .filter(product -> product.category().equals(category))
+        .sorted(BY_NAME)
         .toList();
   }
 
   @Override
   public List<Product> findAll() {
-    return List.copyOf(products.values());
+    return products.values().stream().sorted(BY_NAME).toList();
   }
 
   @Override
