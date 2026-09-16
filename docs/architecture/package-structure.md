@@ -118,8 +118,8 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── service/                # Domain Services
 │   │   │   └── CartTotalCalculator
 │   │   └── event/                  # Domain Events
-│   │       ├── CartCheckedOut, CartItemAddedToCart
-│   │       ├── CartItemQuantityChanged, ProductRemovedFromCart
+│   │       ├── CartItemAddedToCart, CartItemQuantityChanged
+│   │       ├── ProductRemovedFromCart
 │   │       └── CartCleared
 │   ├── application/                # Application Layer
 │   │   ├── createcart/
@@ -128,9 +128,6 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── additemtocart/
 │   │   │   ├── AddItemToCartInputPort, AddItemToCartUseCase
 │   │   │   ├── AddItemToCartCommand, AddItemToCartResult
-│   │   ├── checkoutcart/
-│   │   │   ├── CheckoutCartInputPort, CheckoutCartUseCase
-│   │   │   ├── CheckoutCartCommand, CheckoutCartResult
 │   │   ├── getallcarts/
 │   │   │   ├── GetAllCartsInputPort, GetAllCartsUseCase
 │   │   │   ├── GetAllCartsQuery, GetAllCartsResult

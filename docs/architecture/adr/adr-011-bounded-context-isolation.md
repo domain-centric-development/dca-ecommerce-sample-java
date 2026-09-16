@@ -1,7 +1,7 @@
 # ADR-011: Bounded Context Isolation via Package Structure
 
 **Date**: October 24, 2025
-**Status**: ✅ Accepted
+**Status**: ✅ Accepted — amended 2026-09-16 (see the amendment at the end)
 **Deciders**: Architecture Team
 **Priority**: ⭐⭐⭐⭐
 
@@ -237,3 +237,11 @@ def "Contexts should only reference via IDs"() {
 **Approved by**: Architecture Team
 **Date**: October 24, 2025
 **Version**: 1.0
+
+## 2026-09-16 amendment: the Cart context no longer raises `CartCheckedOut`
+
+The Cart inventory above lists `CartCheckedOut` among the context's domain events. That event, its
+integration twin `CartCheckedOutEvent`, the `CheckoutCart` use case and `POST /api/carts/{id}/checkout`
+were removed: the checkout is started by the Checkout context, which reads the cart through Cart's Open
+Host Service and captures a snapshot into a `CheckoutSession`. The Cart context reacts only to the
+confirmation (`CartCompletionTrigger`). The isolation decision itself is unchanged.

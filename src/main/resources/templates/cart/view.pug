@@ -74,9 +74,7 @@ block content
             .cart__actions-warning Some items are unavailable or have insufficient stock
         else
           .status-badge
-            if shoppingCart.status() === 'CHECKED_OUT'
-              span.badge.badge--success Checked Out
-            else if shoppingCart.status() === 'COMPLETED'
+            if shoppingCart.status() === 'COMPLETED'
               span.badge.badge--info Order Completed
             else if shoppingCart.status() === 'ABANDONED'
               span.badge.badge--warning Abandoned

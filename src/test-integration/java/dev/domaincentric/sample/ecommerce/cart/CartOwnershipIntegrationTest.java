@@ -3,8 +3,6 @@ package dev.domaincentric.sample.ecommerce.cart;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
@@ -38,7 +36,6 @@ class CartOwnershipIntegrationTest {
   @Autowired private GetOrCreateActiveCartInputPort getOrCreateActiveCart;
   @Autowired private GetCartByIdInputPort getCartById;
   @Autowired private AddItemToCartInputPort addItemToCart;
-  @Autowired private CheckoutCartInputPort checkoutCart;
   @Autowired private StartCheckoutInputPort startCheckout;
   @Autowired private GetAllProductsInputPort getAllProducts;
 
@@ -64,10 +61,6 @@ class CartOwnershipIntegrationTest {
 
     assertThatThrownBy(
             () -> addItemToCart.execute(new AddItemToCartCommand(cartId, stranger, productId, 1)))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Cart not found");
-
-    assertThatThrownBy(() -> checkoutCart.execute(new CheckoutCartCommand(cartId, stranger)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Cart not found");
 

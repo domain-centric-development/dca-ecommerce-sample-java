@@ -530,7 +530,7 @@ public class ProductEventConsumer {
 - Interface: `dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent`
 - Publisher Interface (SPI): `dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher`
 - Publisher Implementation: `dev.domaincentric.dca.spring.SpringDomainEventPublisher` from `dca-spring`, registered by its auto-configuration (ADR-037)
-- Examples: `ProductCreated`, `ProductPriceChanged`, `CartItemAddedToCart`, `CartCheckedOut`
+- Examples: `ProductCreated`, `ProductPriceChanged`, `CartItemAddedToCart`, `CheckoutConfirmed`
 
 **Event Publishing Infrastructure:**
 
@@ -577,7 +577,7 @@ Integration Events are **adapter-layer DTOs** published across bounded context b
 |--------|--------------|-------------------|
 | **Layer** | Domain (`domain.event`) | Adapter (`adapter.outgoing.event`) |
 | **Interface** | `DomainEvent` | `IntegrationEvent` (separate hierarchy) |
-| **Naming** | No suffix (`CartCheckedOut`) | `Event` suffix (`CartCheckedOutEvent`) |
+| **Naming** | No suffix (`CheckoutConfirmed`) | `Event` suffix (`CheckoutConfirmedEvent`) |
 | **Versioning** | None — can change freely | `@IntegrationEventType(name, version)` as a class property, not a data field (ADR-027) |
 | **Creation** | Raised by aggregates | Created by outgoing event adapters via `from()` factory |
 | **Consumption** | Within same context | By incoming event adapters in other contexts |
@@ -585,9 +585,9 @@ Integration Events are **adapter-layer DTOs** published across bounded context b
 **Event Flow:**
 
 ```
-Aggregate raises DomainEvent (e.g., CartCheckedOut)
+Aggregate raises DomainEvent (e.g., CheckoutConfirmed)
   → Outgoing EventPublisher adapter listens (@EventListener)
-    → Creates IntegrationEvent via from() factory (CartCheckedOutEvent)
+    → Creates IntegrationEvent (CheckoutConfirmedEvent)
       → Publishes IntegrationEvent via ApplicationEventPublisher
         → Incoming EventConsumer in other context receives it
 ```
@@ -595,65 +595,54 @@ Aggregate raises DomainEvent (e.g., CartCheckedOut)
 **Example: Domain Event (domain layer)**
 
 ```java
-// cart/domain/event/CartCheckedOut.java — internal, no version
-public record CartCheckedOut(
+// checkout/domain/event/CheckoutConfirmed.java — internal, no version
+public record CheckoutConfirmed(
     UUID eventId,
+    CheckoutSessionId sessionId,
     CartId cartId,
     CustomerId customerId,
     Money totalAmount,
-    int itemCount,
-    List<ItemInfo> items,
+    List<LineItemInfo> items,
     Instant occurredOn
 ) implements DomainEvent {
 
-    public record ItemInfo(ProductId productId, int quantity) {}
-
-    public static CartCheckedOut now(CartId cartId, ...) {
-        return new CartCheckedOut(UUID.randomUUID(), cartId, ..., Instant.now());
+    public static CheckoutConfirmed now(CheckoutSessionId sessionId, CartId cartId, ...) {
+        return new CheckoutConfirmed(UUID.randomUUID(), sessionId, cartId, ..., Instant.now());
     }
 }
 ```
 
-**Example: Integration Event (adapter layer)**
+**Example: Integration Event (published language)**
 
 ```java
-// cart/adapter/outgoing/event/CartCheckedOutEvent.java — versioned public contract
+// checkout/events/CheckoutConfirmedEvent.java — versioned public contract
 // The schema version is a class property (@IntegrationEventType), never a data field (ADR-027).
-@IntegrationEventType(name = "cart-checked-out", version = 1)
-public record CartCheckedOutEvent(
+@IntegrationEventType(name = "checkout-confirmed", version = 2)
+public record CheckoutConfirmedEvent(
     UUID eventId,
-    CartId cartId,
-    CustomerId customerId,
+    String sessionId,
+    String cartId,
+    String customerId,
     Money totalAmount,
-    int itemCount,
-    List<ItemInfo> items,
+    List<LineItemInfo> items,
     Instant occurredOn
-) implements IntegrationEvent {
+) implements IntegrationEvent, CartCompletionTrigger, StockReductionTrigger {
 
-    public record ItemInfo(ProductId productId, int quantity) {}
-
-    public static CartCheckedOutEvent from(CartCheckedOut domainEvent) {
-        List<ItemInfo> items = domainEvent.items().stream()
-            .map(i -> new ItemInfo(i.productId(), i.quantity()))
-            .toList();
-        return new CartCheckedOutEvent(
-            domainEvent.eventId(), domainEvent.cartId(), ...,
-            items, domainEvent.occurredOn());
-    }
+    public record LineItemInfo(ProductId productId, int quantity, String positionSnapshot) {}
 }
 ```
 
 **Example: Outgoing Event Publisher (adapter)**
 
 ```java
-// cart/adapter/outgoing/event/CartCheckedOutEventPublisher.java
+// checkout/adapter/outgoing/event/CheckoutConfirmedEventPublisher.java
 @Component
-public class CartCheckedOutEventPublisher {
+public class CheckoutConfirmedEventPublisher {
     private final ApplicationEventPublisher publisher;
 
     @EventListener
-    public void on(CartCheckedOut domainEvent) {
-        publisher.publishEvent(CartCheckedOutEvent.from(domainEvent));
+    public void on(CheckoutConfirmed domainEvent) {
+        publisher.publishEvent(new CheckoutConfirmedEvent(domainEvent.eventId(), ...));
     }
 }
 ```
@@ -677,17 +666,17 @@ public class CheckoutConfirmedEventConsumer {
 ```
 
 **Rules:**
-1. Integration events live in `adapter.outgoing.event` (not `domain.event`)
+1. Integration events live in the context's `events` package (the published language), not in `domain.event`
 2. Implement `IntegrationEvent` (not `DomainEvent`) — separate interface hierarchies
-3. Named with `Event` suffix (e.g., `CartCheckedOutEvent`)
-4. Created via `from(DomainEvent)` factory method in outgoing event adapters
-5. Include `int version` field for schema evolution
+3. Named with `Event` suffix (e.g., `CheckoutConfirmedEvent`)
+4. Created by the outgoing event adapter that listens to the domain event
+5. Carry their contract identity as `@IntegrationEventType(name, version)` on the class (ADR-027)
 6. Use DTOs with Shared Kernel types or primitives only
 
 **Implementation:**
 - Interface: `dev.domaincentric.dca.buildingblocks.ddd.tactical.IntegrationEvent`
-- Example Event: `dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.event.CartCheckedOutEvent`
-- Example Publisher: `dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.event.CartCheckedOutEventPublisher`
+- Example Event: `dev.domaincentric.sample.ecommerce.checkout.events.CheckoutConfirmedEvent`
+- Example Publisher: `dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.event.CheckoutConfirmedEventPublisher`
 - Example Consumer: `dev.domaincentric.sample.ecommerce.inventory.adapter.incoming.event.CheckoutConfirmedEventConsumer`
 
 #### Interface Inversion for Cross-Module Events
@@ -994,30 +983,28 @@ public class GetCartByIdUseCase implements GetCartByIdInputPort {
 
 ```java
 @Service
-@Transactional
-public class CheckoutCartUseCase implements CheckoutCartInputPort {
-  private final ShoppingCartRepository cartRepository;
-  private final ArticleDataPort articleDataPort;
+public class StartCheckoutUseCase implements StartCheckoutInputPort {
+  private final CartService cartService;                 // Cart's Open Host Service
+  private final CheckoutArticleDataPort articleDataPort;
+  private final CheckoutCartFactory checkoutCartFactory;
 
   @Override
-  public CheckoutCartResult execute(final CheckoutCartCommand command) {
-    final ShoppingCart cart = cartRepository.findById(command.cartId())
-        .orElseThrow(() -> new CartNotFoundException(command.cartId()));
+  public StartCheckoutResult execute(final StartCheckoutCommand command) {
+    final CartData cart = cartService.getCart(command.cartId(), command.customerId())
+        .orElseThrow(() -> new IllegalArgumentException("Cart not found"));
 
     // Create enriched model to evaluate cross-context business rules
-    final Map<ProductId, CartArticle> articleData = articleDataPort.getArticleData(cart.productIds());
-    final EnrichedCart enrichedCart = EnrichedCart.from(cart, articleData);
+    final Map<ProductId, CheckoutArticle> articleData = articleDataPort.getArticleData(cart.productIds());
+    final CheckoutCart checkoutCart =
+        checkoutCartFactory.create(cart.cartId(), cart.customerId(), lineItems, articleData);
 
     // Business rule enforcement using enriched model
-    if (!enrichedCart.canCheckout()) {
-      return CheckoutCartResult.cannotCheckout(enrichedCart.getCheckoutBlockers());
+    if (!checkoutCart.isValidForCheckout()) {
+      throw new IllegalStateException("Cart is not valid for checkout");
     }
 
-    // Proceed with checkout - aggregate handles state mutation
-    cart.checkout();
-    cartRepository.save(cart);
-
-    return CheckoutCartResult.success(enrichedCart.currentSubtotal());
+    // Proceed — the CheckoutSession aggregate captures the snapshot
+    ...
   }
 }
 ```
@@ -1362,7 +1349,7 @@ Commands modify system state and publish domain events.
 - `CreateProductUseCase` - Creates a new product
 - `UpdateProductPriceUseCase` - Changes product price
 - `AddItemToCartUseCase` - Adds item to cart
-- `CheckoutCartUseCase` - Completes cart checkout
+- `StartCheckoutUseCase` - Captures the cart into a checkout session
 - `ChangePasswordUseCase` - Replaces an account's password; a wrong current password or a rejected
   new one is reported as an outcome of `ChangePasswordResult`, not as an exception crossing the port
 - `ChangeProfileUseCase` (`account.application.changeprofile`) - Changes the basic information of
@@ -1551,8 +1538,6 @@ public class UpdateProductPriceUseCase implements UpdateProductPriceInputPort {
 - Implementation: `CreateCartUseCase implements CreateCartInputPort`
 - Input Port: `AddItemToCartInputPort extends UseCase<AddItemToCartCommand, AddItemToCartResult>`
 - Implementation: `AddItemToCartUseCase implements AddItemToCartInputPort`
-- Input Port: `CheckoutCartInputPort extends UseCase<CheckoutCartCommand, CheckoutCartResult>`
-- Implementation: `CheckoutCartUseCase implements CheckoutCartInputPort`
 - Input Port: `GetCartByIdInputPort extends UseCase<GetCartByIdQuery, GetCartByIdResult>`
 - Implementation: `GetCartByIdUseCase implements GetCartByIdInputPort`
 
@@ -2204,7 +2189,7 @@ the file-location quick reference.
 - `CartId` - unique cart identifier
 - `CustomerId` - customer identifier
 - `Quantity` - item quantity
-- `CartStatus` - cart state (ACTIVE, CHECKED_OUT, ABANDONED)
+- `CartStatus` - cart state (ACTIVE, COMPLETED, ABANDONED)
 
 **Dependencies:**
 - Shared Kernel: `Money`, `ProductId`, `Price`

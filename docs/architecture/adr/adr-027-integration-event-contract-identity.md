@@ -1,7 +1,7 @@
 # ADR-027: Integration-Event Contract Identity via @IntegrationEventType
 
 **Date**: July 3, 2026
-**Status**: ✅ Accepted
+**Status**: ✅ Accepted — amended 2026-09-16 (see the amendment at the end)
 **Deciders**: Architecture Team
 **Priority**: ⭐⭐⭐⭐
 
@@ -54,3 +54,9 @@ The decision has four load-bearing parts:
 - [ADR-026: Transactional Outbox for Integration Events](adr-026-transactional-outbox-integration-events.md)
 - [ADR-005: Domain Events Publishing Strategy](adr-005-domain-events-publishing.md)
 - [ADR-006: Domain Events as Immutable Records](adr-006-domain-events-immutable-records.md) — its illustrative interface still shows an `int version()` method. That part is superseded here; the immutability and naming decisions remain in force.
+
+## 2026-09-16 amendment: the example event
+
+`CartCheckedOutEvent`, used above to illustrate the per-class version, no longer exists; the Cart context
+publishes no checkout event. Read the examples against `CheckoutConfirmedEvent`
+(`@IntegrationEventType(name = "checkout-confirmed", version = 2)`). The decision is unchanged.

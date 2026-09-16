@@ -303,7 +303,7 @@ Superseded confirmation has no completion effect. Abandonment/expiry closes only
 Cart reconciliation intersects purchased unit intervals with the current stable position id. Later additions (also of
 the same product), removed/re-added positions and other contents survive. Replay and overlapping completed snapshots
 cannot remove a unit twice. JDBC/JPA cart persistence preserves the interval allocation watermark; in-memory persistence
-retains the same domain state. Legacy CheckedOut/Completed cart statuses remain readable, but snapshot checkout leaves
+retains the same domain state. The legacy Completed cart status remains readable, but snapshot checkout leaves
 an active cart editable and never completes the whole cart.
 
 Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume

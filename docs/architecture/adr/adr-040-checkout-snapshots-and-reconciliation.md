@@ -1,6 +1,6 @@
 # ADR-040: Checkout snapshots and reconciliation
 
-Status: Accepted, 2026-09-09 (approved review batch)
+Status: Accepted, 2026-09-09 (approved review batch) — amended 2026-09-16 (see the amendment at the end)
 
 ## Context and decision
 
@@ -31,3 +31,10 @@ for the paired-checkout command; both samples pin the initial specification revi
 ## Event schema migration
 
 `checkout-confirmed` becomes v2 in both samples: each line now requires stable position/interval correlation. This is a contract change, not a safe reinterpretation of historical v1 payloads. Retained v1 snapshots must not be rebuilt from the current cart or treated as whole-cart completion; a missing correlation fails reconciliation and requires operator review. No migration invents purchased units. The separately approved `product-created` change adjusts its unpublished v1 in place.
+
+## 2026-09-16 amendment: no checked-out cart status
+
+The body keeps a legacy `CheckedOut` cart status readable. That status, the Cart-side `CheckoutCart` use
+case, its REST endpoint and the `CartCheckedOut` / `CartCheckedOutEvent` pair are removed: a cart is
+`ACTIVE`, `COMPLETED` (legacy, readable) or `ABANDONED`, and Checkout never locks it. Snapshot capture and
+reconciliation are unchanged.

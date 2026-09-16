@@ -18,7 +18,7 @@ public interface CompleteCartInputPort extends UseCase<CompleteCartCommand, Comp
    * @param command the command containing cart ID
    * @return response containing completion confirmation
    * @throws IllegalArgumentException if cart not found
-   * @throws IllegalStateException if cart is not in CHECKED_OUT status
+   * @throws IllegalStateException if the cart cannot be reconciled in its current status
    */
   @Override
   CompleteCartResult execute(CompleteCartCommand command);

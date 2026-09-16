@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.cart.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartAbandoned;
-import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCheckedOut;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCleared;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCompleted;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartItemAddedToCart;
@@ -38,7 +37,6 @@ import java.util.Optional;
  *   <li>{@link ProductRemovedFromCart} - when a product is removed from the cart
  *   <li>{@link CartItemQuantityChanged} - when an item's quantity is updated
  *   <li>{@link CartCleared} - when all items are removed from the cart
- *   <li>{@link CartCheckedOut} - when the cart is checked out
  *   <li>{@link CartAbandoned} - when the cart is abandoned
  *   <li>{@link CartCompleted} - when the cart is completed after checkout confirmation
  * </ul>
@@ -314,28 +312,6 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
   }
 
   /**
-   * Checks out the cart, preventing further modifications.
-   *
-   * <p>Raises a {@link CartCheckedOut} domain event.
-   *
-   * @throws IllegalStateException if cart is already checked out or empty
-   */
-  public void checkout() {
-    ensureCartIsActive();
-    if (items.isEmpty()) {
-      throw new IllegalStateException("Cannot checkout an empty cart");
-    }
-
-    final Money totalAmount = calculateTotal();
-    final int count = itemCount();
-
-    // The submitted snapshot belongs to Checkout; Cart stays editable.
-
-    // Raise domain event with cart items for cross-context integration
-    registerEvent(CartCheckedOut.now(this.id, this.customerId, totalAmount, count, this.items));
-  }
-
-  /**
    * Marks the cart as abandoned.
    *
    * <p>Raises a {@link CartAbandoned} domain event.
@@ -349,8 +325,7 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * Marks the cart as completed after checkout confirmation.
    *
    * <p>This method is called when the checkout process has been fully confirmed (customer has
-   * completed payment/review steps). The cart can be completed from either ACTIVE or CHECKED_OUT
-   * status.
+   * completed payment/review steps). The cart is completed from ACTIVE status.
    *
    * <p>Raises a {@link CartCompleted} domain event.
    *

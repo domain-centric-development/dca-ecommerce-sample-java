@@ -1,6 +1,5 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.event;
 
-import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCheckedOut;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartItemAddedToCart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,15 +10,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 /**
  * Event listener for Shopping Cart domain events.
  *
- * <p>Demonstrates handling domain events to implement eventual consistency across bounded contexts.
- * For example, when a cart is checked out, we might need to:
- *
- * <ul>
- *   <li>Reserve inventory in the Product context
- *   <li>Create an order in the Order context (if we had one)
- *   <li>Trigger payment processing
- *   <li>Send confirmation email
- * </ul>
+ * <p>Demonstrates handling domain events after the owning transaction committed — the hook where a
+ * context reacts to its own facts (analytics, abandonment timers) without coupling the aggregate to
+ * those concerns.
  *
  * <p><b>Transactional Event Handling:</b>
  *
@@ -70,55 +63,5 @@ public class CartEventConsumer {
 
     // Example: Reset cart abandonment timer
     // cartAbandonmentService.resetTimer(event.cartId());
-  }
-
-  /**
-   * Handles CartCheckedOut events after transaction commit.
-   *
-   * <p>This handler only executes after the transaction commits successfully, ensuring the checkout
-   * was actually completed before triggering downstream operations.
-   *
-   * <p>This is the key integration point for eventual consistency across bounded contexts. When a
-   * cart is checked out, we need to coordinate with other aggregates/contexts:
-   *
-   * <ul>
-   *   <li>Reserve inventory (Product context)
-   *   <li>Create order (Order context)
-   *   <li>Process payment (Payment context)
-   *   <li>Send confirmation (Notification context)
-   * </ul>
-   *
-   * <p>Each of these operations happens in its own transaction, achieving eventual consistency
-   * rather than strong consistency. This is the DDD recommended approach for cross-aggregate
-   * operations.
-   *
-   * @param event the cart checked out event
-   */
-  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  public void onCartCheckedOut(final CartCheckedOut event) {
-    log.info(
-        "Cart checked out: Cart {} for Customer {} - Total: {} EUR ({} items) at {}",
-        event.cartId().value(),
-        event.customerId().value(),
-        event.totalAmount().amount(),
-        event.itemCount(),
-        event.occurredOn());
-
-    // Example: Reserve inventory for all cart items
-    // This demonstrates cross-aggregate coordination via events
-    // inventoryService.reserveInventory(event.cartId());
-
-    // Example: Create order in Order bounded context
-    // This demonstrates cross-context coordination
-    // orderService.createOrderFromCart(event.cartId(), event.customerId(), event.totalAmount());
-
-    // Example: Trigger payment processing
-    // paymentService.initiatePayment(event.cartId(), event.totalAmount());
-
-    // Example: Send confirmation email
-    // emailService.sendOrderConfirmation(event.customerId(), event.cartId());
-
-    // Example: Update customer analytics
-    // analyticsService.trackCheckout(event);
   }
 }

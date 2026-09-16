@@ -46,7 +46,7 @@ This project showcases best practices for structuring a Spring Boot application 
 - **Value Objects**: ProductId, SKU, Price, Money, Quantity, Category, BuyerInfo, DeliveryAddress, Email, HashedPassword, etc.
 - **Repositories**: Interfaces in application layer, implementations in adapters
 - **Domain Services**: CartTotalCalculator, CheckoutStepValidator
-- **Domain Events**: ProductCreated, CartCheckedOut, CartItemAddedToCart, CartItemQuantityChanged, ProductRemovedFromCart, CartCleared, CheckoutSessionStarted, CheckoutConfirmed, AccountRegistered, PriceChanged, StockChanged, etc.
+- **Domain Events**: ProductCreated, CartItemAddedToCart, CartItemQuantityChanged, ProductRemovedFromCart, CartCleared, CheckoutSessionStarted, CheckoutConfirmed, AccountRegistered, PriceChanged, StockChanged, etc.
 - **Factories**: ProductFactory, EnrichedCartFactory, CheckoutCartFactory
 - **Specifications**: CartSpecification (with Visitor pattern: ActiveCart, HasMinTotal, HasAnyAvailableItem, LastUpdatedBefore, CustomerAllowsMarketing); StockLevelSpecification (AvailableQuantityBelow, visited by StockLevelSpecificationVisitor)
 
@@ -176,7 +176,6 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   ├── api/                              # Spring Modulith @NamedInterface API
 │   │   └── CartService.java             # Open Host Service
 │   ├── events/                           # Spring Modulith integration events
-│   │   ├── CartCheckedOutEvent.java
 │   │   ├── CartCompletionTrigger.java
 │   │   └── CartContentsChangedEvent.java
 │   ├── domain/
@@ -206,7 +205,6 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   ├── service/                      # Domain services
 │   │   │   └── CartTotalCalculator.java
 │   │   └── event/                        # Domain events
-│   │       ├── CartCheckedOut.java
 │   │       ├── CartItemAddedToCart.java
 │   │       ├── CartItemQuantityChanged.java
 │   │       ├── ProductRemovedFromCart.java
@@ -257,12 +255,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │       ├── MergeCartsCommand.java
 │   │   │       ├── MergeCartsResult.java
 │   │   │       └── CartMergeStrategy.java
-│   │   ├── cartcheckout/                 # Feature: submitting snapshots and reconciling purchased contents
-│   │   │   ├── checkoutcart/             # Use case: Checkout Cart
-│   │   │   │   ├── CheckoutCartInputPort.java
-│   │   │   │   ├── CheckoutCartUseCase.java
-│   │   │   │   ├── CheckoutCartCommand.java
-│   │   │   │   └── CheckoutCartResult.java
+│   │   ├── cartcheckout/                 # Feature: reconciling purchased contents after checkout confirmation
 │   │   │   └── completecart/             # Use case: Complete Cart (after checkout)
 │   │   │       ├── CompleteCartInputPort.java
 │   │   │       ├── CompleteCartUseCase.java
@@ -303,7 +296,6 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │           └── CartCompletionEventConsumer.java
 │       └── outgoing/                     # Outgoing adapters
 │           ├── event/
-│           │   ├── CartCheckedOutEventPublisher.java
 │           │   └── CartContentsChangedEventPublisher.java
 │           ├── product/
 │           │   └── CompositeArticleDataAdapter.java  # Composite adapter for article data
@@ -773,8 +765,6 @@ curl -X POST http://localhost:8080/api/carts/{cartId}/items \
 
 curl -X DELETE http://localhost:8080/api/carts/{cartId}/items/{productId} -H "Authorization: Bearer $TOKEN"
 
-curl -X POST http://localhost:8080/api/carts/{cartId}/checkout -H "Authorization: Bearer $TOKEN"
-
 # Every cart in the shop — staff only
 curl http://localhost:8080/api/carts -H "Authorization: Bearer $STAFF_TOKEN"
 ```
@@ -1033,7 +1023,7 @@ Superseded confirmation has no completion effect. Abandonment/expiry closes only
 Cart reconciliation intersects purchased unit intervals with the current stable position id. Later additions (also of
 the same product), removed/re-added positions and other contents survive. Replay and overlapping completed snapshots
 cannot remove a unit twice. JDBC/JPA cart persistence preserves the interval allocation watermark; in-memory persistence
-retains the same domain state. Legacy CheckedOut/Completed cart statuses remain readable, but snapshot checkout leaves
+retains the same domain state. The legacy Completed cart status remains readable, but snapshot checkout leaves
 an active cart editable and never completes the whole cart.
 
 Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume

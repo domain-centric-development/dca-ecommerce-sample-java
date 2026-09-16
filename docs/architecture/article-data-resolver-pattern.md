@@ -84,25 +84,22 @@ public class CompositeArticleDataAdapter implements ArticleDataPort {
 
 ```java
 @Service
-public class CheckoutCartUseCase implements CheckoutCartInputPort {
+public class StartCheckoutUseCase implements StartCheckoutInputPort {
     @Override
-    public CheckoutCartResult execute(CheckoutCartCommand command) {
-        ShoppingCart cart = repository.findById(command.cartId()).orElseThrow();
+    public StartCheckoutResult execute(StartCheckoutCommand command) {
+        CartData cart = cartService.getCart(command.cartId(), command.customerId()).orElseThrow();
 
-        // 1. Fetch fresh data
-        Map<ProductId, ArticleData> articleData = articleDataPort.getArticleData(cart.productIds());
+        // 1. Fetch fresh data — outside the transaction
+        Map<ProductId, CheckoutArticle> articleData = articleDataPort.getArticleData(cart.productIds());
 
-        // 2. Build resolver
-        ArticlePriceResolver resolver = productId -> {
-            ArticleData data = articleData.get(productId);
-            return new ArticlePrice(data.currentPrice(), data.isAvailable(), data.availableStock());
-        };
+        // 2. Build the enriched model from the fetched data
+        CheckoutCart checkoutCart = checkoutCartFactory.create(cart.cartId(), cart.customerId(), lineItems, articleData);
 
-        // 3. Domain operation with fresh data
-        cart.checkout(resolver);
-
-        repository.save(cart);
-        return mapToResult(cart, articleData);
+        // 3. Domain decision with fresh data
+        if (!checkoutCart.isValidForCheckout()) {
+            throw new IllegalStateException("Cart is not valid for checkout");
+        }
+        ...
     }
 }
 ```

@@ -1,8 +1,5 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.api;
 
-import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsResult;
@@ -54,7 +51,6 @@ public class ShoppingCartResource {
   private final GetOrCreateActiveCartInputPort getOrCreateActiveCart;
   private final AddItemToCartInputPort addItemToCart;
   private final RemoveItemFromCartInputPort removeItemFromCart;
-  private final CheckoutCartInputPort checkoutCart;
   private final ShoppingCartDtoConverter converter;
   private final IdentityProvider identityProvider;
 
@@ -65,7 +61,6 @@ public class ShoppingCartResource {
       final GetOrCreateActiveCartInputPort getOrCreateActiveCart,
       final AddItemToCartInputPort addItemToCart,
       final RemoveItemFromCartInputPort removeItemFromCart,
-      final CheckoutCartInputPort checkoutCart,
       final ShoppingCartDtoConverter converter,
       final IdentityProvider identityProvider) {
     this.createCart = createCart;
@@ -74,7 +69,6 @@ public class ShoppingCartResource {
     this.getOrCreateActiveCart = getOrCreateActiveCart;
     this.addItemToCart = addItemToCart;
     this.removeItemFromCart = removeItemFromCart;
-    this.checkoutCart = checkoutCart;
     this.converter = converter;
     this.identityProvider = identityProvider;
   }
@@ -162,18 +156,6 @@ public class ShoppingCartResource {
     final RemoveItemFromCartCommand input =
         new RemoveItemFromCartCommand(cartId, currentCustomerId(), productId);
     final RemoveItemFromCartResult output = removeItemFromCart.execute(input);
-
-    return ResponseEntity.ok(converter.toDto(output));
-  }
-
-  @PostMapping("/{cartId}/checkout")
-  public ResponseEntity<ShoppingCartDto> checkout(@PathVariable final String cartId) {
-    if (ownCart(cartId).isEmpty()) {
-      return ResponseEntity.notFound().build();
-    }
-
-    final CheckoutCartResult output =
-        checkoutCart.execute(new CheckoutCartCommand(cartId, currentCustomerId()));
 
     return ResponseEntity.ok(converter.toDto(output));
   }

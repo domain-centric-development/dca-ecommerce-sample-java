@@ -1,6 +1,5 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.api;
 
-import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.checkoutcart.CheckoutCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.CartItemSummary;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
@@ -72,20 +71,6 @@ public final class ShoppingCartDtoConverter {
         output.customerId(),
         items,
         "ACTIVE", // Always active when removing items
-        output.total().amount(),
-        output.total().currency().getCurrencyCode(),
-        items.size());
-  }
-
-  /** Converts CheckoutCartResult to DTO. */
-  public ShoppingCartDto toDto(final CheckoutCartResult output) {
-    final List<CartItemDto> items = output.items().stream().map(this::toItemDto).toList();
-
-    return new ShoppingCartDto(
-        output.cartId(),
-        output.customerId(),
-        items,
-        "CHECKED_OUT",
         output.total().amount(),
         output.total().currency().getCurrencyCode(),
         items.size());

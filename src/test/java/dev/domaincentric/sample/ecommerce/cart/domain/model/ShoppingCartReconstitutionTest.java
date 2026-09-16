@@ -46,12 +46,12 @@ class ShoppingCartReconstitutionTest {
   @Test
   @DisplayName("restores identity, customer and status")
   void restoresIdentityAndStatus() {
-    final ShoppingCart cart = reconstituted(CartStatus.CHECKED_OUT, List.of());
+    final ShoppingCart cart = reconstituted(CartStatus.COMPLETED, List.of());
 
     assertEquals(CART_ID, cart.id());
     assertEquals(CUSTOMER_ID, cart.customerId());
     assertEquals(
-        CartStatus.CHECKED_OUT,
+        CartStatus.COMPLETED,
         cart.status(),
         "a stored status must survive, not fall back to ACTIVE");
   }
@@ -99,9 +99,9 @@ class ShoppingCartReconstitutionTest {
   }
 
   @Test
-  @DisplayName("a restored checked-out cart still refuses changes")
-  void restoredCheckedOutCartRefusesChanges() {
-    final ShoppingCart cart = reconstituted(CartStatus.CHECKED_OUT, List.of());
+  @DisplayName("a restored completed cart still refuses changes")
+  void restoredCompletedCartRefusesChanges() {
+    final ShoppingCart cart = reconstituted(CartStatus.COMPLETED, List.of());
 
     assertThrows(
         IllegalStateException.class, () -> cart.addItem(PRODUCT_ID, Quantity.of(1), PRICE));
