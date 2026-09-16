@@ -1,7 +1,5 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.api;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsResult;
@@ -20,6 +18,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfr
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import jakarta.validation.Valid;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
@@ -53,7 +52,7 @@ public class ShoppingCartResource {
   private final AddItemToCartInputPort addItemToCart;
   private final RemoveItemFromCartInputPort removeItemFromCart;
   private final ShoppingCartDtoConverter converter;
-  private final IdentityService identityService;
+  private final IdentityProvider identityProvider;
 
   public ShoppingCartResource(
       final CreateCartInputPort createCart,
@@ -63,7 +62,7 @@ public class ShoppingCartResource {
       final AddItemToCartInputPort addItemToCart,
       final RemoveItemFromCartInputPort removeItemFromCart,
       final ShoppingCartDtoConverter converter,
-      final IdentityService identityService) {
+      final IdentityProvider identityProvider) {
     this.createCart = createCart;
     this.getAllCarts = getAllCarts;
     this.getCartById = getCartById;
@@ -71,7 +70,7 @@ public class ShoppingCartResource {
     this.addItemToCart = addItemToCart;
     this.removeItemFromCart = removeItemFromCart;
     this.converter = converter;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
   }
 
   /** Creates a cart for the caller. The customer is the caller's identity, never a parameter. */
@@ -87,7 +86,7 @@ public class ShoppingCartResource {
    */
   @GetMapping
   public ResponseEntity<ShoppingCartListDto> getAllCarts() {
-    if (!identityService.currentIdentity().hasRole(Identity.ROLE_STAFF)) {
+    if (!identityProvider.getCurrentIdentity().hasRole(IdentityProvider.Identity.ROLE_STAFF)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
@@ -162,7 +161,7 @@ public class ShoppingCartResource {
   }
 
   private String currentCustomerId() {
-    return identityService.currentIdentity().userId().value();
+    return identityProvider.getCurrentIdentity().userId().value();
   }
 
   /**

@@ -1,7 +1,5 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
@@ -10,6 +8,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,15 +36,15 @@ public class ReviewPageController {
 
   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
-  private final IdentityService identityService;
+  private final IdentityProvider identityProvider;
 
   public ReviewPageController(
       final GetCheckoutSessionInputPort getCheckoutSessionInputPort,
       final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort,
-      final IdentityService identityService) {
+      final IdentityProvider identityProvider) {
     this.getCheckoutSessionInputPort = getCheckoutSessionInputPort;
     this.getActiveCheckoutSessionInputPort = getActiveCheckoutSessionInputPort;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
   }
 
   /**
@@ -63,7 +62,7 @@ public class ReviewPageController {
   public String showReviewPage(final Model model, final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
     // Find active checkout session for the user

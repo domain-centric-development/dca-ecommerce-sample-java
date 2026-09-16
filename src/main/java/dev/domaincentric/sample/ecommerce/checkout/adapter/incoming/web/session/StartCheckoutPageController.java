@@ -1,8 +1,8 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.session;
 
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,16 +32,17 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class StartCheckoutPageController {
 
   private final StartCheckoutInputPort startCheckoutInputPort;
-  private final IdentityService identityService;
+  private final IdentityProvider identityProvider;
 
   public StartCheckoutPageController(
-      final StartCheckoutInputPort startCheckoutInputPort, final IdentityService identityService) {
+      final StartCheckoutInputPort startCheckoutInputPort,
+      final IdentityProvider identityProvider) {
     this.startCheckoutInputPort = startCheckoutInputPort;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
   }
 
   private String currentCustomerId() {
-    return identityService.currentIdentity().userId().value();
+    return identityProvider.getCurrentIdentity().userId().value();
   }
 
   /**

@@ -8,17 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtIdentitySession;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestGetAccountOverview;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentityService;
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentity;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentityProvider;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordCommand;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult.AccountOverview;
+import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
+import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -39,8 +39,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
  * password into the model; a confirmation mismatch short-circuits before the port and wins over a
  * wrong current password; error re-render; success redirect carrying a flash message and the GET
  * handler folding it into the ViewModel; an inaccessible account redirecting; and that no token is
- * issued — the controller depends on neither {@code JwtTokenService} nor {@code
- * JwtIdentitySession}.
+ * issued — the controller depends on neither {@code TokenService} nor {@code IdentitySession}.
  *
  * <p>The HTTP status codes are the servlet-level effect of the returned view name and are not
  * asserted here; there is no MockMvc or E2E test for the account area yet.
@@ -57,7 +56,7 @@ class ChangePasswordPageControllerTest {
 
   private TestChangePassword changePassword;
   private TestGetAccountOverview getAccountOverview;
-  private TestIdentityService identityService;
+  private TestIdentityProvider identityProvider;
   private ChangePasswordPageController controller;
   private Model model;
   private RedirectAttributes redirectAttributes;
@@ -66,15 +65,15 @@ class ChangePasswordPageControllerTest {
   void setUp() {
     changePassword = new TestChangePassword();
     getAccountOverview = new TestGetAccountOverview();
-    identityService = new TestIdentityService();
+    identityProvider = new TestIdentityProvider();
     controller =
-        new ChangePasswordPageController(changePassword, getAccountOverview, identityService);
+        new ChangePasswordPageController(changePassword, getAccountOverview, identityProvider);
     model = new ExtendedModelMap();
     redirectAttributes = new RedirectAttributesModelMap();
   }
 
   private void givenRegisteredIdentityWithAccessibleAccount() {
-    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
+    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getAccountOverview.setResult(GetAccountOverviewResult.found(new AccountOverview(EMAIL, null)));
   }
 
@@ -83,7 +82,7 @@ class ChangePasswordPageControllerTest {
   @Test
   @DisplayName("anonymous GET redirects to login with returnUrl /account/change-password")
   void anonymousGetRedirectsToLogin() {
-    identityService.setIdentity(Identity.anonymous(UserId.of(USER_ID)));
+    identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
     final String viewName = controller.showChangePasswordPage(model);
 
@@ -97,7 +96,7 @@ class ChangePasswordPageControllerTest {
   @Test
   @DisplayName("anonymous GET does not invoke the change password use case")
   void anonymousGetDoesNotInvokePort() {
-    identityService.setIdentity(Identity.anonymous(UserId.of(USER_ID)));
+    identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
     controller.showChangePasswordPage(model);
 
@@ -109,7 +108,7 @@ class ChangePasswordPageControllerTest {
   @Test
   @DisplayName("GET without an accessible account redirects instead of throwing")
   void getWithoutAccessibleAccountRedirects() {
-    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
+    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getAccountOverview.setResult(GetAccountOverviewResult.notFound());
 
     assertEquals(LOGIN_REDIRECT, controller.showChangePasswordPage(model));
@@ -194,7 +193,7 @@ class ChangePasswordPageControllerTest {
   @Test
   @DisplayName("anonymous POST redirects to login and does not invoke the use case")
   void anonymousPostRedirectsToLogin() {
-    identityService.setIdentity(Identity.anonymous(UserId.of(USER_ID)));
+    identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
     final String viewName =
         controller.handleChangePassword(CURRENT, NEW, NEW, model, redirectAttributes);
@@ -311,7 +310,7 @@ class ChangePasswordPageControllerTest {
   @Test
   @DisplayName("an inaccessible account redirects to login")
   void inaccessibleAccountRedirectsToLogin() {
-    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
+    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     changePassword.setResult(ChangePasswordResult.accountNotAccessible());
 
     final String viewName =
@@ -327,7 +326,7 @@ class ChangePasswordPageControllerTest {
   // ---------------------------------------------------------------- structure
 
   @Test
-  @DisplayName("the controller depends on neither the token service nor the identity session")
+  @DisplayName("the controller depends on neither TokenService nor IdentitySession")
   void controllerIssuesNoToken() {
     final List<Class<?>> parameterTypes =
         Arrays.stream(ChangePasswordPageController.class.getDeclaredConstructors())
@@ -335,10 +334,10 @@ class ChangePasswordPageControllerTest {
             .toList();
 
     assertFalse(
-        parameterTypes.contains(JwtTokenService.class),
+        parameterTypes.contains(TokenService.class),
         "changing a password must not issue a new token");
     assertFalse(
-        parameterTypes.contains(JwtIdentitySession.class),
+        parameterTypes.contains(IdentitySession.class),
         "changing a password must not touch the identity session");
     assertEquals(
         1,

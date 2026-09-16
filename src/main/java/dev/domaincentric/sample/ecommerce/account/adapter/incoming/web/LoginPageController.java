@@ -1,11 +1,11 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtIdentitySession;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountResult;
+import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
+import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -33,18 +33,18 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class LoginPageController {
 
   private final AuthenticateAccountInputPort authenticateAccountUseCase;
-  private final JwtTokenService tokenService;
-  private final IdentityService identityService;
-  private final JwtIdentitySession identitySession;
+  private final TokenService tokenService;
+  private final IdentityProvider identityProvider;
+  private final IdentitySession identitySession;
 
   public LoginPageController(
       final AuthenticateAccountInputPort authenticateAccountUseCase,
-      final JwtTokenService tokenService,
-      final IdentityService identityService,
-      final JwtIdentitySession identitySession) {
+      final TokenService tokenService,
+      final IdentityProvider identityProvider,
+      final IdentitySession identitySession) {
     this.authenticateAccountUseCase = authenticateAccountUseCase;
     this.tokenService = tokenService;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
     this.identitySession = identitySession;
   }
 
@@ -93,7 +93,7 @@ public class LoginPageController {
       final Model model) {
 
     // Capture anonymous user ID before authentication changes the identity
-    final String anonymousUserId = identityService.currentIdentity().userId().value();
+    final String anonymousUserId = identityProvider.getCurrentIdentity().userId().value();
 
     try {
       final AuthenticateAccountCommand command = new AuthenticateAccountCommand(email, password);

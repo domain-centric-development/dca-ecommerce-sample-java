@@ -1,7 +1,5 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersQuery;
@@ -15,6 +13,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,19 +45,19 @@ public class PaymentPageController {
   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
   private final GetPaymentProvidersInputPort getPaymentProvidersInputPort;
   private final SubmitPaymentInputPort submitPaymentInputPort;
-  private final IdentityService identityService;
+  private final IdentityProvider identityProvider;
 
   public PaymentPageController(
       final GetCheckoutSessionInputPort getCheckoutSessionInputPort,
       final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort,
       final GetPaymentProvidersInputPort getPaymentProvidersInputPort,
       final SubmitPaymentInputPort submitPaymentInputPort,
-      final IdentityService identityService) {
+      final IdentityProvider identityProvider) {
     this.getCheckoutSessionInputPort = getCheckoutSessionInputPort;
     this.getActiveCheckoutSessionInputPort = getActiveCheckoutSessionInputPort;
     this.getPaymentProvidersInputPort = getPaymentProvidersInputPort;
     this.submitPaymentInputPort = submitPaymentInputPort;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
   }
 
   /**
@@ -76,7 +75,7 @@ public class PaymentPageController {
   public String showPaymentForm(final Model model, final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
     // Find active checkout session for the user
@@ -129,7 +128,7 @@ public class PaymentPageController {
       @RequestParam final String providerId, final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
     // Find active checkout session for the user

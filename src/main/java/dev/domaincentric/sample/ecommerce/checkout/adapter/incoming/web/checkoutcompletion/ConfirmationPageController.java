@@ -1,7 +1,5 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
@@ -15,6 +13,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfir
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,19 +44,19 @@ public class ConfirmationPageController {
   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
   private final GetConfirmedCheckoutSessionInputPort getConfirmedCheckoutSessionInputPort;
-  private final IdentityService identityService;
+  private final IdentityProvider identityProvider;
 
   public ConfirmationPageController(
       final ConfirmCheckoutInputPort confirmCheckoutInputPort,
       final GetCheckoutSessionInputPort getCheckoutSessionInputPort,
       final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort,
       final GetConfirmedCheckoutSessionInputPort getConfirmedCheckoutSessionInputPort,
-      final IdentityService identityService) {
+      final IdentityProvider identityProvider) {
     this.confirmCheckoutInputPort = confirmCheckoutInputPort;
     this.getCheckoutSessionInputPort = getCheckoutSessionInputPort;
     this.getActiveCheckoutSessionInputPort = getActiveCheckoutSessionInputPort;
     this.getConfirmedCheckoutSessionInputPort = getConfirmedCheckoutSessionInputPort;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
   }
 
   /**
@@ -73,7 +72,7 @@ public class ConfirmationPageController {
   public String confirmOrder(final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
     // Find active checkout session for the user
@@ -113,7 +112,7 @@ public class ConfirmationPageController {
       final Model model, final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
     // Find confirmed or completed checkout session for the user

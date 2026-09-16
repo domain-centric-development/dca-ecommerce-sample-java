@@ -48,7 +48,8 @@ patterns themselves are the guide's, this file is how they look in *this* code b
 dev.domaincentric.sample.ecommerce
 ├── sharedkernel/             # Shared Kernel (cross-context)
 │   ├── infrastructure/       # Sample-specific marker (AsyncInitialize); DCA markers come from dca-building-blocks
-│   └── domain/               # Shared value objects and specifications (the DomainEventPublisher/TransactionBoundary impls come from dca-spring)
+│   ├── domain/               # Shared value objects and specifications
+│   └── application/shared/   # IdentityProvider (the DomainEventPublisher/TransactionBoundary impls come from dca-spring)
 ├── {boundedcontext}/         # Each bounded context (product, cart, checkout, account, portal, inventory, pricing, backoffice)
 │   ├── domain/               # Domain model (aggregates, entities, events)
 │   ├── application/          # Use cases, ports, orchestration — flat ({usecase}/) or grouped by feature ({feature}/{usecase}/)
@@ -73,7 +74,7 @@ where its inputs are** (ADR-036) — the discriminator is whether the check need
 feels "business" or "technical":
 
 - **Claims only** → the incoming adapter. `POST /api/products` and `GET /api/carts` require
-  `Identity#hasRole(ROLE_STAFF)`, read from the Account context's published `IdentityService` (`account/api/`). That is a property of the exposure: the same use case is
+  `IdentityProvider.Identity#hasRole(ROLE_STAFF)`. That is a property of the exposure: the same use case is
   legitimate for a console or batch job with no HTTP identity.
 - **Ownership of a resource** → the use case, always, because no adapter may be the only thing standing between a
   caller and a stranger's data. The caller is part of the command (`GetCartByIdQuery(cartId, customerId)`,

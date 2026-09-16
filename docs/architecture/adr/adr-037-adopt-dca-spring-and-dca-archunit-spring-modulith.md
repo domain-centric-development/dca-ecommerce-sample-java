@@ -33,7 +33,8 @@ Dependencies of a DCA Spring project, in full: `dca-building-blocks` + `dca-spri
 
 - Two fewer places where the save → dispatch → clear ordering and the nesting semantics of the boundary are
   written by hand; both are now pinned by the library's tests.
-- The shared kernel holds only project-specific code: value objects, specifications, `AsyncInitialize`.
+- The shared kernel holds only project-specific code: `IdentityProvider`, value objects, specifications,
+  `AsyncInitialize`.
 - The sample cannot demonstrate the in-memory failure mode (`@Transactional` inert without a transaction
   manager) because JPA gives it a manager; the library's auto-configuration javadoc and the guide carry that
   knowledge.

@@ -1,7 +1,5 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.cartrecovery;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsResult;
@@ -11,6 +9,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecar
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts.MergeCartsResult;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartOnLoginCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartOnLoginInputPort;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,17 +37,17 @@ public class CartMergePageController {
   private final GetCartMergeOptionsInputPort getCartMergeOptionsUseCase;
   private final MergeCartsInputPort mergeCartsUseCase;
   private final RecoverCartOnLoginInputPort recoverCartOnLoginUseCase;
-  private final IdentityService identityService;
+  private final IdentityProvider identityProvider;
 
   public CartMergePageController(
       final GetCartMergeOptionsInputPort getCartMergeOptionsUseCase,
       final MergeCartsInputPort mergeCartsUseCase,
       final RecoverCartOnLoginInputPort recoverCartOnLoginUseCase,
-      final IdentityService identityService) {
+      final IdentityProvider identityProvider) {
     this.getCartMergeOptionsUseCase = getCartMergeOptionsUseCase;
     this.mergeCartsUseCase = mergeCartsUseCase;
     this.recoverCartOnLoginUseCase = recoverCartOnLoginUseCase;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
   }
 
   /**
@@ -70,7 +69,7 @@ public class CartMergePageController {
       @RequestParam(required = false) final String returnUrl,
       final RedirectAttributes redirectAttributes) {
 
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String registeredUserId = identity.userId().value();
 
     // Get merge options
@@ -121,7 +120,7 @@ public class CartMergePageController {
       @RequestParam(required = false) final String returnUrl,
       final RedirectAttributes redirectAttributes) {
 
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String registeredUserId = identity.userId().value();
 
     // Parse strategy

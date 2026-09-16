@@ -1,7 +1,5 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
@@ -11,6 +9,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,31 +41,31 @@ public class CartPageController {
   private final GetCartByIdInputPort getCartByIdUseCase;
   private final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase;
   private final AddItemToCartInputPort addItemToCartUseCase;
-  private final IdentityService identityService;
+  private final IdentityProvider identityProvider;
 
   public CartPageController(
       final GetCartByIdInputPort getCartByIdUseCase,
       final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase,
       final AddItemToCartInputPort addItemToCartUseCase,
-      final IdentityService identityService) {
+      final IdentityProvider identityProvider) {
     this.getCartByIdUseCase = getCartByIdUseCase;
     this.getOrCreateActiveCartUseCase = getOrCreateActiveCartUseCase;
     this.addItemToCartUseCase = addItemToCartUseCase;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
   }
 
   /**
    * Displays the shopping cart page for the current user.
    *
    * <p>Returns the cart details rendered using the Pug template. The user's identity is obtained
-   * from the JWT token via the Account context's IdentityService.
+   * from the JWT token via IdentityProvider.
    *
    * @param model Spring MVC model to pass data to the view
    * @return view name "cart/view" which resolves to templates/cart/view.pug
    */
   @GetMapping
   public String showCart(final Model model) {
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
     // Get or create active cart for the current user
@@ -114,7 +113,7 @@ public class CartPageController {
       final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
-    final Identity identity = identityService.currentIdentity();
+    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
     // Get or create active cart

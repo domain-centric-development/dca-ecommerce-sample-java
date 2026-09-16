@@ -9,13 +9,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtIdentitySession;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtProperties;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService.TokenValidation;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestGetProfile;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentityService;
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentity;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentityProvider;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentitySession;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestTokenService;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestTokenService.IssuedToken;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileCommand;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileResult;
@@ -31,7 +30,6 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -67,10 +65,9 @@ class ProfilePageControllerTest {
 
   private TestGetProfile getProfile;
   private TestChangeProfile changeProfile;
-  private TestIdentityService identityService;
-  private JwtTokenService tokenService;
-  private MockHttpServletResponse response;
-  private JwtIdentitySession identitySession;
+  private TestIdentityProvider identityProvider;
+  private TestTokenService tokenService;
+  private TestIdentitySession identitySession;
   private ProfilePageController controller;
   private Model model;
   private RedirectAttributes redirectAttributes;
@@ -79,29 +76,18 @@ class ProfilePageControllerTest {
   void setUp() {
     getProfile = new TestGetProfile();
     changeProfile = new TestChangeProfile();
-    identityService = new TestIdentityService();
-    final JwtProperties properties =
-        new JwtProperties(
-            "test-secret-key-that-is-at-least-32-characters-long",
-            30,
-            7,
-            "test-issuer",
-            "shop-identity",
-            "shop-session",
-            false,
-            "Lax");
-    tokenService = new JwtTokenService(properties);
-    response = new MockHttpServletResponse();
-    identitySession = new JwtIdentitySession(properties, tokenService, response);
+    identityProvider = new TestIdentityProvider();
+    tokenService = new TestTokenService();
+    identitySession = new TestIdentitySession();
     controller =
         new ProfilePageController(
-            getProfile, changeProfile, identityService, tokenService, identitySession);
+            getProfile, changeProfile, identityProvider, tokenService, identitySession);
     model = new ExtendedModelMap();
     redirectAttributes = new RedirectAttributesModelMap();
   }
 
   private void givenRegisteredIdentityWithAccessibleAccount() {
-    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
+    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getProfile.setResult(
         GetProfileResult.found(new Profile(EMAIL, FIRST_NAME, LAST_NAME, DATE_OF_BIRTH)));
   }
@@ -111,7 +97,7 @@ class ProfilePageControllerTest {
   @Test
   @DisplayName("anonymous GET redirects to login with returnUrl /account/profile")
   void anonymousGetRedirectsToLogin() {
-    identityService.setIdentity(Identity.anonymous(UserId.of(USER_ID)));
+    identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
     final String viewName = controller.showProfilePage(model);
 
@@ -129,7 +115,7 @@ class ProfilePageControllerTest {
   @Test
   @DisplayName("anonymous GET does not read the profile")
   void anonymousGetDoesNotReadProfile() {
-    identityService.setIdentity(Identity.anonymous(UserId.of(USER_ID)));
+    identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
     controller.showProfilePage(model);
 
@@ -141,7 +127,7 @@ class ProfilePageControllerTest {
   @Test
   @DisplayName("GET without an accessible account redirects and exposes no profile data")
   void getWithoutAccessibleAccountRedirects() {
-    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
+    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getProfile.setResult(GetProfileResult.notFound());
 
     assertEquals(LOGIN_REDIRECT, controller.showProfilePage(model));
@@ -222,7 +208,7 @@ class ProfilePageControllerTest {
   @Test
   @DisplayName("anonymous POST redirects to login and does not invoke the use case")
   void anonymousPostRedirectsToLogin() {
-    identityService.setIdentity(Identity.anonymous(UserId.of(USER_ID)));
+    identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
     final String viewName =
         controller.handleProfileUpdate(
@@ -251,7 +237,7 @@ class ProfilePageControllerTest {
   @Test
   @DisplayName("an inaccessible account redirects to login")
   void inaccessibleAccountRedirectsToLogin() {
-    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
+    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     changeProfile.setResult(ChangeProfileResult.accountNotAccessible());
 
     final String viewName =
@@ -288,26 +274,15 @@ class ProfilePageControllerTest {
     controller.handleProfileUpdate(
         NEW_EMAIL.toUpperCase(Locale.ROOT), NEW_DATE_OF_BIRTH_INPUT, model, redirectAttributes);
 
-    final String sessionCookie =
-        response.getHeaders("Set-Cookie").stream()
-            .filter(header -> header.startsWith("shop-session="))
-            .findFirst()
-            .orElseThrow(
-                () ->
-                    new AssertionError(
-                        "the re-issued token must be written to the session cookie"));
-    assertFalse(
-        sessionCookie.contains("Max-Age=0"), "changing the email must not log the user out");
-    final String token =
-        sessionCookie.substring("shop-session=".length(), sessionCookie.indexOf(';'));
-    final Identity reIssued =
-        assertInstanceOf(TokenValidation.Valid.class, tokenService.validate(token)).identity();
-    assertEquals(UserId.of(USER_ID), reIssued.userId(), "the new token keeps the userId");
-    assertEquals(Set.of("CUSTOMER"), reIssued.roles(), "the new token keeps the roles");
     assertEquals(
-        java.util.Optional.of(NEW_EMAIL),
-        reIssued.email(),
-        "the new token claims the stored, normalised email");
+        List.of(new IssuedToken(UserId.of(USER_ID), NEW_EMAIL, Set.of("CUSTOMER"))),
+        tokenService.issuedTokens(),
+        "the new token keeps the userId and roles and claims the stored, normalised email");
+    assertEquals(
+        List.of("token-for-" + NEW_EMAIL),
+        identitySession.setTokens(),
+        "the re-issued token must be written to the identity cookie");
+    assertEquals(0, identitySession.clearCount(), "changing the email must not log the user out");
   }
 
   @Test
@@ -361,8 +336,8 @@ class ProfilePageControllerTest {
         "taken@example.com", NEW_DATE_OF_BIRTH_INPUT, model, redirectAttributes);
 
     assertTrue(
-        response.getHeaders("Set-Cookie").isEmpty(),
-        "a rejected change must not re-issue the token");
+        tokenService.issuedTokens().isEmpty(), "a rejected change must not re-issue the token");
+    assertTrue(identitySession.setTokens().isEmpty());
   }
 
   @Test

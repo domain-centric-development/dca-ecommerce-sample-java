@@ -17,9 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
  * Without it, a suspended account holding a still-valid token would keep rendering its account
  * data.
  *
- * <p>A UserId with no account at all is the stale-token case that the authentication filter
- * normally downgrades to anonymous through {@code IsAccountRegistered}; this branch covers the race
- * with that filter, not a business case.
+ * <p>A UserId with no account at all is the stale-token case that {@code RegisteredUserValidator}
+ * normally downgrades to anonymous in the authentication filter; this branch covers the race with
+ * that filter, not a business case.
  */
 @Service
 public class GetAccountOverviewUseCase implements GetAccountOverviewInputPort {

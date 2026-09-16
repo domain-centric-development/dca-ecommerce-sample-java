@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
 import de.neuland.pug4j.PugEngine;
 import de.neuland.pug4j.template.ClasspathTemplateLoader;
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.HashMap;
 import java.util.List;
@@ -51,7 +50,9 @@ final class PugTemplateRenderer {
     model.put("miniBasketTotal", "");
     model.put("miniBasketItems", List.of());
     model.put(
-        "identity", Identity.registeredCustomer(UserId.of("user-4711"), "jane.doe@example.com"));
+        "identity",
+        AccountWebTestFixtures.TestIdentity.registered(
+            UserId.of("user-4711"), "jane.doe@example.com"));
     return model;
   }
 

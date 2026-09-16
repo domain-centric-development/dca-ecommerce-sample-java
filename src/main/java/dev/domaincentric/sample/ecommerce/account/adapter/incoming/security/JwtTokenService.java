@@ -1,6 +1,7 @@
-package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
+package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -19,7 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Mints and reads the JWT tokens the identity and session cookies carry.
+ * JWT implementation of the TokenService.
  *
  * <p>This service handles all JWT token operations including:
  *
@@ -45,7 +46,7 @@ import org.springframework.stereotype.Service;
  * </pre>
  */
 @Service
-public class JwtTokenService {
+public class JwtTokenService implements TokenService {
 
   private static final Logger LOG = LoggerFactory.getLogger(JwtTokenService.class);
 
@@ -92,6 +93,7 @@ public class JwtTokenService {
    * @param roles the user's roles
    * @return the generated JWT token string
    */
+  @Override
   public String generateRegisteredToken(
       final UserId userId, final String email, final Set<String> roles) {
     final Date now = new Date();
@@ -120,7 +122,7 @@ public class JwtTokenService {
   public sealed interface TokenValidation {
 
     /** The token verified and is within its validity period. */
-    record Valid(Identity identity) implements TokenValidation {}
+    record Valid(IdentityProvider.Identity identity) implements TokenValidation {}
 
     /** The token verified but its validity period has passed — expected, not an error. */
     record Expired() implements TokenValidation {}
@@ -162,7 +164,7 @@ public class JwtTokenService {
    * @param token the JWT token to validate
    * @return an Optional containing the Identity if valid, empty otherwise
    */
-  public Optional<Identity> validateAndParse(final String token) {
+  public Optional<IdentityProvider.Identity> validateAndParse(final String token) {
     try {
       final Claims claims =
           Jwts.parser()
@@ -204,7 +206,7 @@ public class JwtTokenService {
     }
   }
 
-  private Identity buildIdentityFromClaims(final Claims claims) {
+  private IdentityProvider.Identity buildIdentityFromClaims(final Claims claims) {
     final String subject = claims.getSubject();
     final String type = claims.get(CLAIM_TYPE, String.class);
 
@@ -224,10 +226,10 @@ public class JwtTokenService {
         throw new IllegalArgumentException("Registered JWT missing email claim");
       }
 
-      return Identity.registered(userId, email, roles);
+      return JwtIdentity.registered(userId, email, roles);
     }
 
     // Default to anonymous if type is missing or "anonymous"
-    return Identity.anonymous(userId);
+    return JwtIdentity.anonymous(userId);
   }
 }

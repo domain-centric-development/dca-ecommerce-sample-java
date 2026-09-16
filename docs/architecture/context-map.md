@@ -17,7 +17,7 @@ modules and the shared kernel are intentionally not part of this map.
 
 | Module | Name | Description | Published interfaces |
 |---|---|---|---|
-| account | Account | User account management, authentication, and profile handling | api |
+| account | Account | User account management, authentication, and profile handling | — |
 | backoffice | Backoffice | Operating this application: event publication log, dashboards, operator views | — |
 | cart | Shopping Cart | Cart management, item additions/removals, and cart lifecycle | api, events |
 | checkout | Checkout | Checkout process, order placement, and payment orchestration | events |
@@ -30,7 +30,7 @@ modules and the shared kernel are intentionally not part of this map.
 
 ```mermaid
 graph LR
-  account["Account<br/><i>api</i>"]
+  account["Account"]
   backoffice["Backoffice"]
   cart["Shopping Cart<br/><i>api · events</i>"]
   checkout["Checkout<br/><i>events</i>"]
@@ -42,19 +42,16 @@ graph LR
   cart -->|"ACL / api"| product
   cart -->|"ACL / api"| pricing
   cart -->|"ACL / api"| inventory
-  cart -->|"Conformist / api"| account
   checkout -->|"ACL / api"| product
   checkout -->|"ACL / api"| pricing
   checkout -->|"ACL / api"| inventory
   checkout -.->|"Conformist / events"| inventory
   checkout -->|"ACL / api"| cart
   checkout -.->|"Conformist / events"| cart
-  checkout -->|"Conformist / api"| account
   product -->|"ACL / api"| pricing
   product -->|"ACL / api"| inventory
   product -.->|"Conformist / events"| pricing
   product -.->|"Conformist / events"| inventory
-  product -->|"Conformist / api"| account
   ext_payment_service_provider[["Payment Service Provider"]]
   checkout -->|"ACL / REST"| ext_payment_service_provider
   checkout -.->|"ACL / webhook / planned"| ext_payment_service_provider
@@ -77,19 +74,16 @@ Edges labeled `planned` are declared intent without a code dependency yet.
 | cart | product | api | ACL | implemented | Cart works with its own article snapshot; the catalog model must not leak into cart invariants |
 | cart | pricing | api | ACL | implemented | Price lookups are translated into the cart's own price representation |
 | cart | inventory | api | ACL | implemented | Stock availability is translated into the cart's own article data |
-| cart | account | api | Conformist | implemented | Incoming adapters read the caller's identity from Account's published IdentityService as-is and hand the customer to their use cases as a command or query parameter |
 | checkout | product | api | ACL | implemented | Product data is translated into checkout's own article and product info types |
 | checkout | pricing | api | ACL | implemented | Prices are translated into checkout's own line item amounts |
 | checkout | inventory | api | ACL | implemented | Stock availability is translated into checkout's own article data |
 | checkout | inventory | events | Conformist | implemented | CheckoutConfirmedEvent implements inventory's consumer-defined StockReductionTrigger contract as-is |
 | checkout | cart | api | ACL | implemented | Cart snapshots are translated into checkout's own CartData |
 | checkout | cart | events | Conformist | implemented | CheckoutConfirmedEvent implements cart's consumer-defined CartCompletionTrigger contract as-is; cart change events are consumed directly |
-| checkout | account | api | Conformist | implemented | Incoming adapters read the caller's identity from Account's published IdentityService as-is and hand the customer to their use cases as a command or query parameter |
 | product | pricing | api | ACL | implemented | Prices are translated into the catalog's own product presentation data |
 | product | inventory | api | ACL | implemented | Stock levels are translated into the catalog's own availability data |
 | product | pricing | events | Conformist | implemented | ProductCreatedEvent implements pricing's consumer-defined PriceInitializationTrigger contract as-is |
 | product | inventory | events | Conformist | implemented | ProductCreatedEvent implements inventory's consumer-defined StockInitializationTrigger contract as-is |
-| product | account | api | Conformist | implemented | Incoming adapters read the caller's identity from Account's published IdentityService as-is and hand the customer to their use cases as a command or query parameter |
 
 ## External systems
 

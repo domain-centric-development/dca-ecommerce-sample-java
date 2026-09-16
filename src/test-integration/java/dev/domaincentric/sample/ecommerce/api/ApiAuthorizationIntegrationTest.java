@@ -6,9 +6,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService;
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Base64;
 import java.util.Set;
@@ -37,7 +37,7 @@ class ApiAuthorizationIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @Autowired private JwtTokenService tokenService;
+  @Autowired private TokenService tokenService;
 
   @Test
   @DisplayName("Reading the catalog is public, creating a product needs the staff role")
@@ -141,7 +141,7 @@ class ApiAuthorizationIntegrationTest {
     return tokenService.generateRegisteredToken(
         UserId.of(claims.get("sub").asText()),
         claims.get("email").asText(),
-        Set.of(Identity.ROLE_CUSTOMER, Identity.ROLE_STAFF));
+        Set.of(IdentityProvider.Identity.ROLE_CUSTOMER, IdentityProvider.Identity.ROLE_STAFF));
   }
 
   private static JsonNode claimsOf(final String jwt) throws Exception {

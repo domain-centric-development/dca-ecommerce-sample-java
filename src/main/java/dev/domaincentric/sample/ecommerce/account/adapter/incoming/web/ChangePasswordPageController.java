@@ -1,12 +1,12 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordCommand;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,15 +57,15 @@ public class ChangePasswordPageController {
 
   private final ChangePasswordInputPort changePasswordUseCase;
   private final GetAccountOverviewInputPort getAccountOverviewUseCase;
-  private final IdentityService identityService;
+  private final IdentityProvider identityProvider;
 
   public ChangePasswordPageController(
       final ChangePasswordInputPort changePasswordUseCase,
       final GetAccountOverviewInputPort getAccountOverviewUseCase,
-      final IdentityService identityService) {
+      final IdentityProvider identityProvider) {
     this.changePasswordUseCase = changePasswordUseCase;
     this.getAccountOverviewUseCase = getAccountOverviewUseCase;
-    this.identityService = identityService;
+    this.identityProvider = identityProvider;
   }
 
   /**
@@ -79,7 +79,7 @@ public class ChangePasswordPageController {
    */
   @GetMapping
   public String showChangePasswordPage(final Model model) {
-    final Identity identity = identityService.currentIdentity();
+    final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
     }
@@ -117,7 +117,7 @@ public class ChangePasswordPageController {
       @RequestParam final String confirmPassword,
       final Model model,
       final RedirectAttributes redirectAttributes) {
-    final Identity identity = identityService.currentIdentity();
+    final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
     }

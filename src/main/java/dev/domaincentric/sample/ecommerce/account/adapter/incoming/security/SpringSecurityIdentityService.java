@@ -1,22 +1,37 @@
-package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
+package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
 
-import dev.domaincentric.sample.ecommerce.account.api.Identity;
-import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
- * Spring Security implementation of the Account context's {@link IdentityService}.
+ * Spring Security implementation of IdentityProvider.
  *
- * <p>Reads the {@link Identity} that {@link JwtAuthenticationFilter} placed in the security context
- * for the current request. Thread-safe because Spring Security keeps the context per thread.
+ * <p>This component extracts the current user's Identity from the Spring Security context. The
+ * Identity is placed in the security context by the {@link JwtAuthenticationFilter}.
+ *
+ * <p><b>Usage:</b>
+ *
+ * <pre>{@code
+ * @Autowired
+ * private IdentityProvider identityProvider;
+ *
+ * public void someMethod() {
+ *     IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
+ *     UserId userId = identity.userId();
+ *     // ...
+ * }
+ * }</pre>
+ *
+ * <p><b>Thread Safety:</b> This implementation is thread-safe because Spring Security uses
+ * thread-local storage for the security context.
  */
 @Component
-public class SpringSecurityIdentityService implements IdentityService {
+public class SpringSecurityIdentityProvider implements IdentityProvider {
 
   @Override
-  public Identity currentIdentity() {
+  public IdentityProvider.Identity getCurrentIdentity() {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
     if (authentication == null) {
@@ -27,7 +42,7 @@ public class SpringSecurityIdentityService implements IdentityService {
 
     final Object principal = authentication.getPrincipal();
 
-    if (principal instanceof Identity identity) {
+    if (principal instanceof IdentityProvider.Identity identity) {
       return identity;
     }
 
