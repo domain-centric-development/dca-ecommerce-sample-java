@@ -18,19 +18,14 @@ import org.springframework.stereotype.Service;
 /**
  * Open Host Service for Product Catalog.
  *
- * <p>This is an incoming adapter that exposes Product context capabilities to other bounded
- * contexts. It delegates to use cases (input ports) and translates responses to OHS DTOs, similar
- * to how REST controllers work.
+ * <p>An Open Host Service in {@code api/}: the in-process published contract of the Product
+ * context. It delegates to use cases (input ports) and translates responses to its own DTOs.
  *
  * <p>Consuming contexts should NOT use this service directly in their use cases - they should
  * define their own output ports and implement adapters that delegate to this service.
  *
- * <p><b>Hexagonal Architecture:</b> As an incoming adapter, this service calls input ports (use
- * cases), NOT output ports (repositories) directly.
- *
- * <p><b>Placement rationale:</b> This is an incoming adapter because other contexts "call into"
- * Product context through this service. It's parallel to REST controllers which also reside in
- * adapter/incoming/.
+ * <p><b>Hexagonal Architecture:</b> Like an incoming adapter, this service calls input ports (use
+ * cases), never output ports (repositories) directly.
  *
  * <p><b>Note:</b> Product context owns identity (productId, sku) and description (name). Pricing is
  * provided by PricingService. Stock/availability is provided by InventoryService.

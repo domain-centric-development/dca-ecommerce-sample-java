@@ -19,14 +19,14 @@ import org.springframework.stereotype.Service;
 /**
  * Open Host Service for Pricing.
  *
- * <p>This is an incoming adapter that exposes Pricing context capabilities to other bounded
- * contexts. It delegates to use cases (input ports) and translates responses to OHS DTOs.
+ * <p>An Open Host Service in {@code api/}: the in-process published contract of the Pricing
+ * context. It delegates to use cases (input ports) and translates responses to its own DTOs.
  *
  * <p>Consuming contexts should NOT use this service directly in their use cases - they should
  * define their own output ports and implement adapters that delegate to this service.
  *
- * <p><b>Hexagonal Architecture:</b> As an incoming adapter, this service calls input ports (use
- * cases), NOT output ports (repositories) directly.
+ * <p><b>Hexagonal Architecture:</b> Like an incoming adapter, this service calls input ports (use
+ * cases), never output ports (repositories) directly.
  */
 @OpenHostService(
     context = "Pricing",

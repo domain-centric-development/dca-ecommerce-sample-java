@@ -20,8 +20,8 @@ import org.springframework.stereotype.Service;
  * <p>Exposes cart snapshots and cart completion for cross-module access. The Checkout context uses
  * this service instead of directly accessing Cart internals (repository, domain model).
  *
- * <p><b>Hexagonal Architecture:</b> As an incoming adapter, this service calls input ports (use
- * cases), NOT output ports (repositories) directly.
+ * <p><b>Hexagonal Architecture:</b> Like an incoming adapter, this service calls input ports (use
+ * cases), never output ports (repositories) directly.
  */
 @OpenHostService(
     context = "Shopping Cart",
