@@ -1,7 +1,10 @@
 /**
  * Portal Bounded Context.
  *
- * <p>Responsible for web portal, user interface composition, and cross-context views.
+ * <p>Responsible for the web portal: the landing page, navigation and cross-context views. A
+ * generic subdomain — UI composition — and a bounded context because its terms are its own; it
+ * displays the concepts of other contexts by link, never by call, and has no rich domain model yet.
+ * The pattern-selection decision (ADR-025) allows that thin shape for a generic subdomain.
  */
 @NullMarked
 @BoundedContext(

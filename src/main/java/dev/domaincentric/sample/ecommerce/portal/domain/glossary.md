@@ -1,16 +1,17 @@
 # Portal — Ubiquitous Language (Bootstrap)
 
 > **Bootstrap status:** This glossary was initially derived from the existing code.
-> Portal has **no domain model of its own** — it is a pure UI shell that provides
-> navigation and the landing page and *displays* concepts of other Bounded
-> Contexts but does not *own* them. No terms are invented here on purpose;
-> instead, this glossary lists the concepts the Portal refers to.
+> Portal is the Bounded Context of a **generic subdomain — UI composition**: it owns
+> the landing page and the navigation and *displays* concepts of other Bounded
+> Contexts without *owning* them. It has no rich domain model yet. No terms are
+> invented here on purpose; instead, this glossary lists the concepts the Portal
+> refers to.
 
 ## Module Character
 
-According to `package-info.java`, Portal is marked as a **Bounded Context**
-(`@BoundedContext(name = "Portal")`), but functionally it is a **UI composition
-shell**:
+Portal is declared a **Bounded Context** in `package-info.java`
+(`@BoundedContext(name = "Portal")`). Its subdomain is generic — UI composition —
+so it carries the thin shape the pattern-selection decision (ADR-025) allows:
 
 - A landing page (`HomePageController`, `GET /`)
 - Navigation to Product Catalog, Shopping Cart, Checkout
@@ -18,9 +19,10 @@ shell**:
 - No application use cases (purely presentational)
 - Allowed dependencies: `sharedkernel`, `infrastructure`
 
-**Classification recommendation:** Portal more closely matches a **Generic
-Subdomain for UI composition** than a business Bounded Context in the DDD
-sense. See "Open Questions" below.
+**Classification:** a Bounded Context with a generic subdomain (UI composition).
+The boundary is a language boundary, not a model size: the Portal's terms —
+landing page, navigation — are its own, and the eight contexts of this sample
+stay eight. See "Open Questions" below for how the context may grow.
 
 ---
 
@@ -55,11 +57,6 @@ them. Definitions can be found in the respective context glossaries.
 
 ## Open Questions
 
-- **Bounded Context or Generic Subdomain?** Portal is marked as
-  `@BoundedContext` in the code but has **no domain model**. Recommendation:
-  classify it as a **Generic Subdomain** (UI shell / composition) and possibly
-  rename the marker to something more appropriate (`@GenericSubdomain`,
-  `@UiModule`, or keep it with clear documentation).
 - Should Portal eventually get its own view model for cross-context dashboards
   (e.g. "Recommendations", "My Dashboard")? If so, real application use cases
   would emerge here — but still no Aggregates of its own, only read models
