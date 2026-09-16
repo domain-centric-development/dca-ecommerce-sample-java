@@ -21,8 +21,15 @@ services:
     entrypoint: ["./gradlew", "--no-daemon"]
     command: ["build"]
 
+  # Spelled out rather than `extends: gradle` — podman-compose 1.6 cannot resolve extends.
   test:
-    extends: gradle
+    image: eclipse-temurin:25-jdk
+    profiles: [tools]
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - gradle-cache:/root/.gradle
+    entrypoint: ["./gradlew", "--no-daemon"]
     command: ["test", "test-architecture"]
 
 volumes:
