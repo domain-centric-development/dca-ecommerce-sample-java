@@ -152,6 +152,8 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │   │   ├── CreateProductRequest.java
 │       │   │   ├── ProductDto.java
 │       │   │   └── ProductDtoConverter.java
+│       │   ├── bootstrap/
+│       │   │   └── SampleDataInitializer.java  # Seeds the catalog at start-up
 │       │   ├── mcp/
 │       │   │   └── ProductCatalogMcpToolProvider.java
 │       │   ├── web/
@@ -662,8 +664,6 @@ src/main/java/dev/domaincentric/sample/ecommerce/
     │   ├── TransactionConfiguration.java
     │   ├── AsyncConfiguration.java
     │   └── Pug4jConfiguration.java
-    ├── init/                             # Initialization
-    │   └── SampleDataInitializer.java    # Sample data seeding
     └── support/                          # Framework support components
         └── AsyncInitializationProcessor.java
 ```

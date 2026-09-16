@@ -77,6 +77,8 @@ dev.domaincentric.sample.ecommerce
 │       │   │   ├── ProductResource
 │       │   │   ├── CreateProductRequest
 │       │   │   ├── ProductDto, ProductDtoConverter
+│       │   ├── bootstrap/
+│       │   │   └── SampleDataInitializer   # Seeds the catalog at start-up
 │       │   ├── mcp/
 │       │   │   └── ProductCatalogMcpToolProvider
 │       │   ├── web/
@@ -424,8 +426,6 @@ dev.domaincentric.sample.ecommerce
     │   ├── SecurityConfiguration, TransactionConfiguration
     │   ├── AsyncConfiguration, DomainConfiguration
     │   └── Pug4jConfiguration
-    ├── init/
-    │   └── SampleDataInitializer
     ├── support/
     │   └── AsyncInitializationProcessor
     └── security/

@@ -1,6 +1,7 @@
-package dev.domaincentric.sample.ecommerce.infrastructure.init;
+package dev.domaincentric.sample.ecommerce.product.adapter.incoming.bootstrap;
 
-import dev.domaincentric.sample.ecommerce.product.api.ProductCatalogService;
+import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductCommand;
+import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductInputPort;
 import java.math.BigDecimal;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -8,15 +9,19 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Initializes sample product data for demonstration purposes.
+ * Incoming adapter that seeds the catalog at start-up, for demonstration purposes.
  *
  * <p>The catalog sells what this architecture is made of: the books the guide grew out of,
  * modelling supplies for a design workshop, and hexagon merchandise.
  *
- * <p>Uses the published API of the Product Catalog to create products with their initial price and
- * stock level. Pricing and Inventory pick those figures up from the {@code ProductCreatedEvent},
- * each through its own trigger contract — the seeder never calls them, and this initializer knows
- * only the one context it writes to.
+ * <p>Start-up is a driving protocol like HTTP or an event stream: this adapter drives the Product
+ * Catalog through its {@link CreateProductInputPort} — the same input port the REST resource and
+ * the Open Host Service use — to create products with their initial price and stock level. Pricing
+ * and Inventory pick those figures up from the {@code ProductCreatedEvent}, each through its own
+ * trigger contract — the seeder never calls them, and this adapter knows only the one context it
+ * belongs to. That is why it lives inside the Product context rather than in {@code
+ * infrastructure}: there it would need the context's application layer, which the module exposes to
+ * nobody. The .NET twin's {@code SampleDataSeeder} has the same place and shape.
  *
  * <p>Runs as an {@link ApplicationRunner} within a {@link TransactionTemplate} to ensure all
  * operations complete within a proper transaction.
@@ -24,13 +29,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Component
 public class SampleDataInitializer implements ApplicationRunner {
 
-  private final ProductCatalogService productCatalogService;
+  private final CreateProductInputPort createProduct;
   private final TransactionTemplate transactionTemplate;
 
   public SampleDataInitializer(
-      final ProductCatalogService productCatalogService,
-      final TransactionTemplate transactionTemplate) {
-    this.productCatalogService = productCatalogService;
+      final CreateProductInputPort createProduct, final TransactionTemplate transactionTemplate) {
+    this.createProduct = createProduct;
     this.transactionTemplate = transactionTemplate;
   }
 
@@ -248,7 +252,15 @@ public class SampleDataInitializer implements ApplicationRunner {
       final String category,
       final int initialStock) {
 
-    productCatalogService.createProduct(
-        sku, name, description, imageUrl, BigDecimal.valueOf(price), "EUR", category, initialStock);
+    createProduct.execute(
+        new CreateProductCommand(
+            sku,
+            name,
+            description,
+            imageUrl,
+            BigDecimal.valueOf(price),
+            "EUR",
+            category,
+            initialStock));
   }
 }
