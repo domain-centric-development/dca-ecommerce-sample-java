@@ -7,7 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.domaincentric.sample.ecommerce.account.application.shared.RegisteredUserValidator;
+import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredInputPort;
+import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredQuery;
+import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredResult;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import jakarta.servlet.http.Cookie;
@@ -41,7 +43,7 @@ class JwtAuthenticationFilterTest {
 
   private JwtProperties properties;
   private JwtTokenService tokenService;
-  private TestRegisteredUserValidator userValidator;
+  private TestIsAccountRegistered accounts;
   private JwtAuthenticationFilter filter;
 
   @BeforeEach
@@ -49,8 +51,8 @@ class JwtAuthenticationFilterTest {
     properties =
         new JwtProperties(SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, false);
     tokenService = new JwtTokenService(properties);
-    userValidator = new TestRegisteredUserValidator();
-    filter = new JwtAuthenticationFilter(tokenService, properties, userValidator);
+    accounts = new TestIsAccountRegistered();
+    filter = new JwtAuthenticationFilter(tokenService, properties, accounts);
   }
 
   @AfterEach
@@ -82,7 +84,7 @@ class JwtAuthenticationFilterTest {
   }
 
   private Cookie sessionCookieFor(final UserId userId) {
-    userValidator.register(userId);
+    accounts.register(userId);
     return new Cookie(
         SESSION_COOKIE, tokenService.generateRegisteredToken(userId, EMAIL, Set.of("CUSTOMER")));
   }
@@ -170,7 +172,7 @@ class JwtAuthenticationFilterTest {
   void sessionWithoutAccountKeepsIdentity() throws Exception {
     final UserId visitor = UserId.generateAnonymous();
     final Cookie session = sessionCookieFor(visitor);
-    userValidator.forget(visitor);
+    accounts.forget(visitor);
 
     final IdentityProvider.Identity identity = runFilter(identityCookieFor(visitor), session);
 
@@ -182,7 +184,7 @@ class JwtAuthenticationFilterTest {
   @DisplayName("a legacy all-in-one cookie is used for its UserId only, never for its claims")
   void legacyCookieGrantsNoAuthentication() throws Exception {
     final UserId visitor = UserId.generateAnonymous();
-    userValidator.register(visitor);
+    accounts.register(visitor);
     final Cookie legacy =
         new Cookie(
             IDENTITY_COOKIE, tokenService.generateRegisteredToken(visitor, EMAIL, Set.of("ADMIN")));
@@ -213,8 +215,7 @@ class JwtAuthenticationFilterTest {
   void secureFlagIsConfigurable() throws Exception {
     properties =
         new JwtProperties(SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, true);
-    filter =
-        new JwtAuthenticationFilter(new JwtTokenService(properties), properties, userValidator);
+    filter = new JwtAuthenticationFilter(new JwtTokenService(properties), properties, accounts);
 
     runFilter();
 
@@ -304,8 +305,10 @@ class JwtAuthenticationFilterTest {
     assertTrue(cleared.contains("Max-Age=0"), cleared);
   }
 
-  /** Test double for the registered-user check, so no repository is pulled into a filter test. */
-  private static final class TestRegisteredUserValidator implements RegisteredUserValidator {
+  /**
+   * Test double for the account-registered query, so no repository is pulled into a filter test.
+   */
+  private static final class TestIsAccountRegistered implements IsAccountRegisteredInputPort {
 
     private final Set<String> known = new HashSet<>();
 
@@ -318,8 +321,8 @@ class JwtAuthenticationFilterTest {
     }
 
     @Override
-    public boolean existsForUserId(final UserId userId) {
-      return known.contains(userId.value());
+    public IsAccountRegisteredResult execute(final IsAccountRegisteredQuery query) {
+      return new IsAccountRegisteredResult(known.contains(query.userId()));
     }
   }
 }

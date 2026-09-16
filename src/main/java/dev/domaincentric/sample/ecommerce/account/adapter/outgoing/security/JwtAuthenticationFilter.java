@@ -1,7 +1,8 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
 
 import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtTokenService.TokenValidation;
-import dev.domaincentric.sample.ecommerce.account.application.shared.RegisteredUserValidator;
+import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredInputPort;
+import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredQuery;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import jakarta.servlet.FilterChain;
@@ -63,15 +64,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtTokenService tokenService;
   private final JwtProperties jwtProperties;
-  private final RegisteredUserValidator registeredUserValidator;
+  private final IsAccountRegisteredInputPort isAccountRegistered;
 
   public JwtAuthenticationFilter(
       final JwtTokenService tokenService,
       final JwtProperties jwtProperties,
-      final RegisteredUserValidator registeredUserValidator) {
+      final IsAccountRegisteredInputPort isAccountRegistered) {
     this.tokenService = tokenService;
     this.jwtProperties = jwtProperties;
-    this.registeredUserValidator = registeredUserValidator;
+    this.isAccountRegistered = isAccountRegistered;
   }
 
   @Override
@@ -169,8 +170,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     // The token is self-contained, so it outlives the account it names: a deleted account leaves a
-    // session that still validates and still carries roles.
-    if (!registeredUserValidator.existsForUserId(identity.userId())) {
+    // session that still validates and still carries roles. The question points inward, so it is
+    // asked of the Account context through a query use case, not through an output port.
+    if (!isRegistered(identity.userId())) {
       LOG.info("Session for {} has no account, continuing anonymously", identity.userId().value());
       return JwtIdentity.anonymous(identityUserId);
     }
@@ -191,10 +193,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       return JwtIdentity.anonymous(UserId.generateAnonymous());
     }
     final IdentityProvider.Identity identity = valid.identity();
-    if (identity.isRegistered() && !registeredUserValidator.existsForUserId(identity.userId())) {
+    if (identity.isRegistered() && !isRegistered(identity.userId())) {
       return JwtIdentity.anonymous(identity.userId());
     }
     return identity;
+  }
+
+  private boolean isRegistered(final UserId userId) {
+    return isAccountRegistered.execute(new IsAccountRegisteredQuery(userId.value())).registered();
   }
 
   private static boolean isTokenOnlyEndpoint(final HttpServletRequest request) {
