@@ -32,8 +32,13 @@ import org.springframework.stereotype.Component;
  * <p>This adapter is the ONLY place in Cart context that imports from Product, Pricing, and
  * Inventory contexts, isolating cross-context coupling to the adapter layer.
  *
+ * <p><b>Deliberate duplication:</b> Checkout's {@code CompositeCheckoutArticleDataAdapter} composes
+ * the same three services. The two adapters are not consolidated on purpose — each context
+ * translates the siblings' published data into its <em>own</em> article model, and sharing the
+ * translation would couple the two models to each other (context isolation, see ADR-011).
+ *
  * <p><b>Hexagonal Architecture:</b> This is an outgoing adapter that implements an output port by
- * delegating to incoming adapters (OHS) of other contexts.
+ * delegating to the Open Host Services of other contexts.
  */
 @Component
 public class CompositeArticleDataAdapter implements ArticleDataPort {

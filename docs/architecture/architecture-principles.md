@@ -1782,6 +1782,9 @@ public class CompositeCheckoutArticleDataAdapter implements CheckoutArticleDataP
 3. Translates external DTOs into context-specific domain value objects
 4. Is the ONLY place in the context that imports from external contexts
 5. Resides in `adapter/outgoing` package
+6. Is owned by its context, even when a sibling composes the same services: Cart's `CompositeArticleDataAdapter`
+   and Checkout's `CompositeCheckoutArticleDataAdapter` are deliberately not consolidated — each translates the
+   published data into its own article model, and a shared translation would couple the two models (ADR-011)
 
 **Benefits:**
 - Single integration point for cross-context data
