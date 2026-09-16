@@ -25,7 +25,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-016](adr-016-shared-kernel-pattern.md) | Shared Kernel Pattern for Cross-Context Value Objects | ✅ Accepted |
 | [ADR-017](adr-017-e2e-data-test-attributes.md) | Data-Test Attributes for E2E Test Selectors | ✅ Accepted |
 | [ADR-018](adr-018-page-object-pattern-e2e.md) | Page Object Pattern for E2E Tests | ✅ Accepted |
-| [ADR-019](adr-019-open-host-service-pattern.md) | Open Host Service Pattern for Cross-Context Communication | ✅ Accepted |
+| [ADR-019](adr-019-open-host-service-pattern.md) | Open Host Service Pattern for Cross-Context Communication | ✅ Accepted (amended 2026-09-16: one contract, two representations) |
 | [ADR-020](adr-020-use-case-result-naming.md) | Use Case Output Naming Convention (*Result instead of *Response) | ✅ Accepted |
 | [ADR-021](adr-021-enriched-domain-model-pattern.md) | Enriched Domain Model Pattern | ✅ Accepted |
 | [ADR-022](adr-022-viewmodel-pattern.md) | ViewModel Pattern for Web Adapters | ✅ Accepted |

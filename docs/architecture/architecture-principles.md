@@ -2241,8 +2241,13 @@ covered without being registered anywhere. No rule names a context.
    translating an Open Host Service is the application layer's or an adapter's job
 3. **No context's application layer may reach another context directly** - define output ports and
    use adapters
-4. **Outgoing adapters may only use another context's `api/` or `events/`** - never its domain or
-   application layer
+4. **An outgoing adapter consumes a sibling context only through its published contract** - the
+   sibling's `api/` (Open Host Service, called in-process) and `events/` (integration events), never its
+   domain, application or adapter packages. `api/` and `events/` are the supplier's half of the
+   integration; the adapter is the consumer's half: it implements the caller's own output port and
+   conforms to or translates the sibling's contract, as thin or as thick as the two models require.
+   Events are preferred for state-changing effects across contexts, a synchronous `api/` call for
+   queries
 5. **Every context may access the Shared Kernel** - it carries `@SharedKernel`, not
    `@BoundedContext`, so it never appears among a rule's forbidden targets
 6. **Shared Kernel must be minimal** - only universal concepts with consistent meaning

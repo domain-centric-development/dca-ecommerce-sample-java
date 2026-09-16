@@ -1,7 +1,7 @@
 # ADR-019: Open Host Service Pattern for Cross-Context Communication
 
 **Date**: January 31, 2026
-**Status**: ✅ Accepted
+**Status**: ✅ Accepted — amended 2026-09-16 (see the amendment at the end)
 **Deciders**: Architecture Team
 **Priority**: ⭐⭐⭐⭐
 
@@ -435,3 +435,35 @@ BUILD SUCCESSFUL
 **Date**: January 31, 2026
 **Version**: 1.0
 **Relates to**: ADR-007, ADR-011, ADR-016
+
+---
+
+## 2026-09-16 amendment: one published contract, two representations
+
+The body above frames REST as the canonical Open Host Service and the in-process service as an
+optimisation for the modulith. That framing is withdrawn. An Open Host Service is the relationship a
+context publishes; the transport is a detail. The sample gives that one contract two representations:
+
+| Consumer | Contract surface | DTOs and translation |
+|---|---|---|
+| Sibling context, same process | `api/` — the OHS as a Java interface (`@NamedInterface("api")`, `@OpenHostService`), next to `events/` | The OHS result types are the contract; the consumer's adapter conforms to them or translates |
+| External system | `adapter/incoming/api/` — a `*Resource` with its own request and response DTOs mapping to commands and input ports | The DTOs are the wire-level Published Language and shield the domain in both directions |
+
+Consequences for the text above:
+
+- **Location.** The in-process OHS lives in the context's published `api/` package
+  (`product/api/ProductCatalogService`), not in `adapter/incoming/openhost/`. `api/` and `events/` are
+  the supplier's half of every integration; a sibling's outgoing adapter calls the OHS directly. The
+  `@OpenHostService` marker stayed and now comes from the building blocks; the openhost-package rule was
+  replaced by the rule that an outgoing adapter reaches another context only through its `api/` and
+  `events/` packages.
+- **Consumer side unchanged.** The caller keeps its own output port and implements it in an outgoing
+  adapter, for both representations. Translation depth is a decision per integration: a conformist
+  adapter that only renames is enough when the contract fits the consumer's language; a translating
+  anti-corruption layer is added when the models diverge.
+- **Sync versus async.** Events are preferred for state-changing effects across contexts. A synchronous
+  `api/` call is for queries — here the price and stock check before an item enters the cart, which the
+  body lists under *Alternative 3*.
+
+*Alternative 4* is therefore neither deferred nor rejected: the REST `*Resource` exists today, for
+external consumers, beside the in-process `api/`.
