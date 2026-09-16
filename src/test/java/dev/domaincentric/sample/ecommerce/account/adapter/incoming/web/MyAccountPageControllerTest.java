@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestGetAccountOverview;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentity;
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentityProvider;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.web.AccountWebTestFixtures.TestIdentityService;
+import dev.domaincentric.sample.ecommerce.account.api.Identity;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult.AccountOverview;
@@ -41,22 +41,22 @@ class MyAccountPageControllerTest {
   private static final Instant LAST_LOGIN = Instant.parse("2026-07-31T08:15:30Z");
 
   private TestGetAccountOverview getAccountOverview;
-  private TestIdentityProvider identityProvider;
+  private TestIdentityService identityService;
   private MyAccountPageController controller;
   private Model model;
 
   @BeforeEach
   void setUp() {
     getAccountOverview = new TestGetAccountOverview();
-    identityProvider = new TestIdentityProvider();
-    controller = new MyAccountPageController(getAccountOverview, identityProvider);
+    identityService = new TestIdentityService();
+    controller = new MyAccountPageController(getAccountOverview, identityService);
     model = new ExtendedModelMap();
   }
 
   @Test
   @DisplayName("registered identity renders the account/overview view")
   void registeredIdentityRendersOverview() {
-    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
+    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
     getAccountOverview.setResult(
         GetAccountOverviewResult.found(new AccountOverview(EMAIL, LAST_LOGIN)));
 
@@ -72,7 +72,7 @@ class MyAccountPageControllerTest {
   @Test
   @DisplayName("exposes a ViewModel carrying the authenticated email")
   void exposesViewModelWithEmail() {
-    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
+    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
     getAccountOverview.setResult(
         GetAccountOverviewResult.found(new AccountOverview(EMAIL, LAST_LOGIN)));
 
@@ -88,7 +88,7 @@ class MyAccountPageControllerTest {
   @Test
   @DisplayName("anonymous identity redirects to login with returnUrl /account")
   void anonymousIdentityRedirectsToLogin() {
-    identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
+    identityService.setIdentity(Identity.anonymous(UserId.of(USER_ID)));
 
     final String viewName = controller.showMyAccountPage(model);
 
@@ -101,7 +101,7 @@ class MyAccountPageControllerTest {
   @Test
   @DisplayName("registered identity without an account redirects instead of throwing")
   void registeredIdentityWithoutAccountRedirectsToLogin() {
-    identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
+    identityService.setIdentity(Identity.registeredCustomer(UserId.of(USER_ID), EMAIL));
     getAccountOverview.setResult(GetAccountOverviewResult.notFound());
 
     final String viewName = controller.showMyAccountPage(model);

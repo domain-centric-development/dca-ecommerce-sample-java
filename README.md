@@ -83,9 +83,6 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │                                     #  ddd.tactical, ddd.strategic[.relationships], hexagonal.port.in/out)
 │   ├── infrastructure/
 │   │   └── AsyncInitialize.java          # Sample-specific framework marker (not a DCA building block)
-│   ├── application/
-│   │   └── shared/                       # App-specific ports shared by several contexts
-│   │       └── IdentityProvider.java     # Current caller's identity (not a generic marker)
 │   ├── domain/
 │   │   ├── model/                        # Shared value objects
 │   │   │   ├── ProductId.java            # Cross-context ID
@@ -504,11 +501,17 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── ChangeProfileUseCase.java
 │   │   │   ├── ChangeProfileCommand.java
 │   │   │   └── ChangeProfileResult.java
+│   │   ├── isaccountregistered/          # Use case: Is Account Registered (asked by the JWT filter)
+│   │   │   ├── IsAccountRegisteredInputPort.java
+│   │   │   ├── IsAccountRegisteredUseCase.java
+│   │   │   ├── IsAccountRegisteredQuery.java
+│   │   │   └── IsAccountRegisteredResult.java
 │   │   └── shared/                       # Shared output ports
-│   │       ├── AccountRepository.java
-│   │       ├── RegisteredUserValidator.java
-│   │       ├── TokenService.java
-│   │       └── IdentitySession.java
+│   │       └── AccountRepository.java
+│   ├── api/                              # Open Host Service: the caller's identity
+│   │   ├── IdentityService.java
+│   │   ├── Identity.java
+│   │   └── IdentityType.java
 │   ├── infrastructure/                   # Per-context infrastructure
 │   │   └── SecurityConfiguration.java
 │   └── adapter/                          # Adapters
@@ -519,31 +522,29 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │   │   ├── LoginResponse.java
 │       │   │   ├── RegisterRequest.java
 │       │   │   └── RegisterResponse.java
-│       │   └── web/
-│       │       ├── LoginPageController.java
-│       │       ├── LogoutPageController.java
-│       │       ├── RegisterPageController.java
-│       │       ├── MyAccountPageController.java
-│       │       ├── MyAccountPageViewModel.java
-│       │       ├── ChangePasswordPageController.java
-│       │       ├── ChangePasswordPageViewModel.java
-│       │       ├── ProfilePageController.java
-│       │       ├── ProfilePageViewModel.java
-│       │       └── AccountNavigation.java
+│       │   ├── web/
+│       │   │   ├── LoginPageController.java
+│       │   │   ├── LogoutPageController.java
+│       │   │   ├── RegisterPageController.java
+│       │   │   ├── MyAccountPageController.java
+│       │   │   ├── MyAccountPageViewModel.java
+│       │   │   ├── ChangePasswordPageController.java
+│       │   │   ├── ChangePasswordPageViewModel.java
+│       │   │   ├── ProfilePageController.java
+│       │   │   ├── ProfilePageViewModel.java
+│       │   │   └── AccountNavigation.java
+│       │   └── security/                 # JWT filter, token and cookie mechanics, IdentityService impl
+│       │       ├── JwtAuthenticationFilter.java
+│       │       ├── JwtTokenService.java
+│       │       ├── JwtIdentitySession.java
+│       │       ├── JwtProperties.java
+│       │       └── SpringSecurityIdentityService.java
 │       └── outgoing/                     # Outgoing adapters
 │           ├── persistence/
 │           │   ├── JdbcAccountRepository.java     # default (ADR-031)
 │           │   └── InMemoryAccountRepository.java # "inmemory" profile
 │           └── security/
-│               ├── SpringSecurityPasswordHasher.java
-│               ├── AccountBasedRegisteredUserValidator.java
-│               ├── SpringSecurityIdentityProvider.java
-│               ├── JwtTokenService.java
-│               ├── JwtIdentitySession.java
-│               ├── JwtIdentity.java
-│               ├── JwtIdentityType.java
-│               ├── JwtProperties.java
-│               └── JwtAuthenticationFilter.java
+│               └── SpringSecurityPasswordHasher.java
 │
 ├── inventory/                            # Inventory bounded context
 │   ├── api/                              # Spring Modulith @NamedInterface API
@@ -876,7 +877,6 @@ For comprehensive architecture documentation, see:
   `ddd.strategic.relationships` (SharedKernel, OpenHostService, Upstream, ExternalUpstream, Partnership),
   `hexagonal.port.in` (InputPort, UseCase), `hexagonal.port.out` (OutputPort, Repository, Store, DomainEventPublisher, IntegrationEventPublisher)
 - `sharedkernel.infrastructure` - Sample-specific framework marker (AsyncInitialize)
-- `sharedkernel.application.shared` - Application-specific ports shared across contexts (IdentityProvider) — not part of the generic marker set
 - `sharedkernel.domain.model` - Shared value objects (Money, Price, ProductId, UserId, PageResult, PagingRequest)
 - `sharedkernel.domain.specification` - Composable specification pattern
 - Runtime adapters for the shared ports come from `dev.domaincentric:dca-spring` (`SpringDomainEventPublisher`, `SpringTransactionBoundary`, auto-configured) — the sample holds no copy

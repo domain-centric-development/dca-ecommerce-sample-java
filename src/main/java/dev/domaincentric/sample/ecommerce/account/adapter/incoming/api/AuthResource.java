@@ -1,13 +1,13 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.api;
 
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService;
+import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountResult;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountResult;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -41,18 +41,18 @@ public class AuthResource {
 
   private final AuthenticateAccountInputPort authenticateAccountUseCase;
   private final RegisterAccountInputPort registerAccountUseCase;
-  private final TokenService tokenService;
-  private final IdentityProvider identityProvider;
+  private final JwtTokenService tokenService;
+  private final IdentityService identityService;
 
   public AuthResource(
       final AuthenticateAccountInputPort authenticateAccountUseCase,
       final RegisterAccountInputPort registerAccountUseCase,
-      final TokenService tokenService,
-      final IdentityProvider identityProvider) {
+      final JwtTokenService tokenService,
+      final IdentityService identityService) {
     this.authenticateAccountUseCase = authenticateAccountUseCase;
     this.registerAccountUseCase = registerAccountUseCase;
     this.tokenService = tokenService;
-    this.identityProvider = identityProvider;
+    this.identityService = identityService;
   }
 
   @PostMapping("/login")
@@ -79,7 +79,7 @@ public class AuthResource {
   public ResponseEntity<RegisterResponse> register(
       @Valid @RequestBody final RegisterRequest request) {
 
-    final String currentUserId = identityProvider.getCurrentIdentity().userId().value();
+    final String currentUserId = identityService.currentIdentity().userId().value();
 
     final RegisterAccountCommand command =
         new RegisterAccountCommand(

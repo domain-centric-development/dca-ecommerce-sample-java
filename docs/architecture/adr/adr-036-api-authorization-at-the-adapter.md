@@ -1,6 +1,6 @@
 # ADR-036: A Guard Goes Where Its Inputs Are — and `authenticated()` Is Not One
 
-**Date**: 2026-08-30 · **Status**: Accepted
+**Date**: 2026-08-30 · **Status**: Accepted — amended 2026-09-16 (see the amendment at the end)
 
 ## Context
 
@@ -75,3 +75,11 @@ commented-out endpoint blocks are gone.
   `GetActiveCart`, `MergeCarts`, `RecoverCartOnLogin`, `GetCartMergeOptions`). The five that did not are exactly
   the five that needed a guard. Read that way this is less a decision about authorization than a correction of
   five under-specified commands: "check out cart X" without saying on whose behalf is an incomplete instruction.
+
+## 2026-09-16 amendment: where the adapter reads the claims
+
+The body names `IdentityProvider.Identity#hasRole(ROLE_STAFF)` on a shared-kernel port. That port is gone: the
+caller's identity is published by the Account context as the Open Host Service `account.api.IdentityService`
+(`Identity#hasRole(ROLE_STAFF)`), which the incoming adapters of Cart, Checkout and Product read and declare as an
+upstream (Conformist via `api`) on the context map. The decision — a claims-only gate belongs to the adapter,
+ownership to the use case — is unchanged.

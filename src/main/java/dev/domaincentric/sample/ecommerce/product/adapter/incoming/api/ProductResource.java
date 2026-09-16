@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.product.adapter.incoming.api;
 
+import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductCommand;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductResult;
@@ -9,7 +11,6 @@ import dev.domaincentric.sample.ecommerce.product.application.getallproducts.Get
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdQuery;
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdResult;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -39,26 +40,26 @@ public class ProductResource {
   private final GetAllProductsInputPort getAllProducts;
   private final GetProductByIdInputPort getProductById;
   private final ProductDtoConverter converter;
-  private final IdentityProvider identityProvider;
+  private final IdentityService identityService;
 
   public ProductResource(
       final CreateProductInputPort createProduct,
       final GetAllProductsInputPort getAllProducts,
       final GetProductByIdInputPort getProductById,
       final ProductDtoConverter converter,
-      final IdentityProvider identityProvider) {
+      final IdentityService identityService) {
     this.createProduct = createProduct;
     this.getAllProducts = getAllProducts;
     this.getProductById = getProductById;
     this.converter = converter;
-    this.identityProvider = identityProvider;
+    this.identityService = identityService;
   }
 
   @PostMapping
   public ResponseEntity<ProductDto> createProduct(
       @Valid @RequestBody final CreateProductRequest request) {
 
-    if (!identityProvider.getCurrentIdentity().hasRole(IdentityProvider.Identity.ROLE_STAFF)) {
+    if (!identityService.currentIdentity().hasRole(Identity.ROLE_STAFF)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 

@@ -29,10 +29,18 @@
     rationale =
         "Cart owns the consumer-defined CartCompletionTrigger contract that checkout events"
             + " implement; both contexts evolve it together")
+@Upstream(
+    context = "account",
+    translation = Upstream.Translation.CONFORMIST,
+    via = Upstream.Consumes.API,
+    rationale =
+        "Incoming adapters read the caller's identity from Account's published IdentityService"
+            + " as-is and hand the customer to their use cases as a command or query parameter")
 @ApplicationModule(
     allowedDependencies = {
       "sharedkernel",
       "infrastructure",
+      "account :: api",
       "product :: api",
       "pricing :: api",
       "inventory :: api"

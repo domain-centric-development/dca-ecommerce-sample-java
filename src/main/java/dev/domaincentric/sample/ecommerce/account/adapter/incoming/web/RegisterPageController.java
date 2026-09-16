@@ -1,11 +1,11 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtIdentitySession;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService;
+import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountResult;
-import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -30,18 +30,18 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class RegisterPageController {
 
   private final RegisterAccountInputPort registerAccountUseCase;
-  private final TokenService tokenService;
-  private final IdentityProvider identityProvider;
-  private final IdentitySession identitySession;
+  private final JwtTokenService tokenService;
+  private final IdentityService identityService;
+  private final JwtIdentitySession identitySession;
 
   public RegisterPageController(
       final RegisterAccountInputPort registerAccountUseCase,
-      final TokenService tokenService,
-      final IdentityProvider identityProvider,
-      final IdentitySession identitySession) {
+      final JwtTokenService tokenService,
+      final IdentityService identityService,
+      final JwtIdentitySession identitySession) {
     this.registerAccountUseCase = registerAccountUseCase;
     this.tokenService = tokenService;
-    this.identityProvider = identityProvider;
+    this.identityService = identityService;
     this.identitySession = identitySession;
   }
 
@@ -104,7 +104,7 @@ public class RegisterPageController {
     }
 
     try {
-      final String currentUserId = identityProvider.getCurrentIdentity().userId().value();
+      final String currentUserId = identityService.currentIdentity().userId().value();
 
       final RegisterAccountCommand command =
           new RegisterAccountCommand(

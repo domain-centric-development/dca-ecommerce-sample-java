@@ -12,8 +12,6 @@
  *   <li>{@code marker/port/in/} - Input ports (UseCase, InputPort)
  *   <li>{@code marker/port/out/} - Output port markers (OutputPort, Repository,
  *       DomainEventPublisher)
- *   <li>{@code application/shared/} - Application-specific ports shared across contexts
- *       (IdentityProvider)
  *   <li>{@code domain/model/} - Universal value objects (Money, Price, ProductId, UserId)
  *   <li>{@code domain/specification/} - Composable specification pattern
  * </ul>

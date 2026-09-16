@@ -1,11 +1,11 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
+import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult.AccountOverview;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,13 +36,13 @@ public class MyAccountPageController {
       AccountLoginRedirect.toLoginWithReturnUrl(ACCOUNT_PATH);
 
   private final GetAccountOverviewInputPort getAccountOverviewUseCase;
-  private final IdentityProvider identityProvider;
+  private final IdentityService identityService;
 
   public MyAccountPageController(
       final GetAccountOverviewInputPort getAccountOverviewUseCase,
-      final IdentityProvider identityProvider) {
+      final IdentityService identityService) {
     this.getAccountOverviewUseCase = getAccountOverviewUseCase;
-    this.identityProvider = identityProvider;
+    this.identityService = identityService;
   }
 
   /**
@@ -54,7 +54,7 @@ public class MyAccountPageController {
    */
   @GetMapping
   public String showMyAccountPage(final Model model) {
-    final Identity identity = identityProvider.getCurrentIdentity();
+    final Identity identity = identityService.currentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
     }

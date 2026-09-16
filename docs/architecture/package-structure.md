@@ -21,8 +21,6 @@ dev.domaincentric.sample.ecommerce
 │   │   │   └── out/               # Output Port Markers (OutputPort, Repository, DomainEventPublisher)
 │   │   └── infrastructure/        # Infrastructure Markers
 │   │       └── AsyncInitialize
-│   ├── application/
-│   │   └── shared/                # App-specific ports shared by several contexts (IdentityProvider)
 │   ├── domain/
 │   │   ├── model/                 # Shared Value Objects
 │   │   │   └── Money, Price, ProductId, UserId
@@ -296,10 +294,14 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── changepassword/
 │   │   │   ├── ChangePasswordInputPort, ChangePasswordUseCase
 │   │   │   ├── ChangePasswordCommand, ChangePasswordResult
+│   │   │   ├── isaccountregistered/   # asked by the JWT filter before honouring a session token
+│   │   │   ├── IsAccountRegisteredInputPort, IsAccountRegisteredUseCase
+│   │   │   ├── IsAccountRegisteredQuery, IsAccountRegisteredResult
 │   │   └── shared/
-│   │       ├── AccountRepository
-│   │       ├── RegisteredUserValidator, TokenService
-│   │       └── IdentitySession
+│   │       └── AccountRepository
+│   ├── api/                       # @NamedInterface("api") — Open Host Service
+│   │   ├── IdentityService        # the caller's identity for other contexts' incoming adapters
+│   │   └── Identity, IdentityType
 │   ├── infrastructure/            # Per-context infrastructure
 │   │   └── SecurityConfiguration
 │   └── adapter/
@@ -308,19 +310,22 @@ dev.domaincentric.sample.ecommerce
 │       │   │   ├── AuthResource
 │       │   │   ├── LoginRequest, LoginResponse
 │       │   │   └── RegisterRequest, RegisterResponse
-│       │   └── web/
-│       │       ├── LoginPageController, LogoutPageController
-│       │       ├── RegisterPageController
-│       │       ├── MyAccountPageController, MyAccountPageViewModel
-│       │       ├── ChangePasswordPageController, ChangePasswordPageViewModel
-│       │       └── AccountNavigation
+│       │   ├── web/
+│       │   │   ├── LoginPageController, LogoutPageController
+│       │   │   ├── RegisterPageController
+│       │   │   ├── MyAccountPageController, MyAccountPageViewModel
+│       │   │   ├── ChangePasswordPageController, ChangePasswordPageViewModel
+│       │   │   └── AccountNavigation
+│       │   └── security/          # request-side security mechanics, no ports
+│       │       ├── JwtAuthenticationFilter, JwtProperties
+│       │       ├── JwtTokenService, JwtIdentitySession
+│       │       └── SpringSecurityIdentityService   # implements api.IdentityService
 │       └── outgoing/
 │           ├── persistence/
 │           │   ├── JdbcAccountRepository      # default (ADR-031)
 │           │   └── InMemoryAccountRepository  # "inmemory" profile
 │           └── security/
-│               ├── SpringSecurityPasswordHasher
-│               └── AccountBasedRegisteredUserValidator
+│               └── SpringSecurityPasswordHasher
 │
 ├── inventory/                       # Inventory Bounded Context
 │   ├── api/                         # @NamedInterface("api") — Open Host Service
@@ -423,15 +428,8 @@ dev.domaincentric.sample.ecommerce
     │   ├── SecurityConfiguration, TransactionConfiguration
     │   ├── AsyncConfiguration, DomainConfiguration
     │   └── Pug4jConfiguration
-    ├── support/
-    │   └── AsyncInitializationProcessor
-    └── security/
-        ├── SpringSecurityIdentityProvider
-        ├── JwtIdentity, JwtIdentityType
-        └── jwt/
-            ├── JwtTokenService, JwtIdentitySession
-            ├── JwtProperties
-            └── JwtAuthenticationFilter
+    └── support/
+        └── AsyncInitializationProcessor
 ```
 
 ## Bounded Context Organization

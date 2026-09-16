@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
+import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions.GetShippingOptionsInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions.GetShippingOptionsQuery;
@@ -13,7 +15,6 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.math.BigDecimal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -46,19 +47,19 @@ public class DeliveryPageController {
   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
   private final GetShippingOptionsInputPort getShippingOptionsInputPort;
   private final SubmitDeliveryInputPort submitDeliveryInputPort;
-  private final IdentityProvider identityProvider;
+  private final IdentityService identityService;
 
   public DeliveryPageController(
       final GetCheckoutSessionInputPort getCheckoutSessionInputPort,
       final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort,
       final GetShippingOptionsInputPort getShippingOptionsInputPort,
       final SubmitDeliveryInputPort submitDeliveryInputPort,
-      final IdentityProvider identityProvider) {
+      final IdentityService identityService) {
     this.getCheckoutSessionInputPort = getCheckoutSessionInputPort;
     this.getActiveCheckoutSessionInputPort = getActiveCheckoutSessionInputPort;
     this.getShippingOptionsInputPort = getShippingOptionsInputPort;
     this.submitDeliveryInputPort = submitDeliveryInputPort;
-    this.identityProvider = identityProvider;
+    this.identityService = identityService;
   }
 
   /**
@@ -76,7 +77,7 @@ public class DeliveryPageController {
   public String showDeliveryForm(final Model model, final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
-    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
+    final Identity identity = identityService.currentIdentity();
     final String customerId = identity.userId().value();
 
     // Find active checkout session for the user
@@ -150,7 +151,7 @@ public class DeliveryPageController {
       final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
-    final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
+    final Identity identity = identityService.currentIdentity();
     final String customerId = identity.userId().value();
 
     // Find active checkout session for the user

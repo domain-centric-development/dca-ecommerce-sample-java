@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
+import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
@@ -8,7 +10,6 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
  *   <li>{@code miniBasketItemCount} - number of distinct items in the cart
  *   <li>{@code miniBasketTotal} - formatted cart total (e.g., "49.97 EUR")
  *   <li>{@code miniBasketItems} - list of {@link MiniBasketItemViewModel} for the dropdown
- *   <li>{@code identity} - the current user's {@link IdentityProvider.Identity}
+ *   <li>{@code identity} - the current user's {@link Identity}
  * </ul>
  *
  * <p>Errors are handled gracefully: if the cart cannot be loaded, the mini basket shows zero items
@@ -39,23 +40,23 @@ public class MiniBasketControllerAdvice {
 
   private final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase;
   private final GetCartByIdInputPort getCartByIdUseCase;
-  private final IdentityProvider identityProvider;
+  private final IdentityService identityService;
 
   public MiniBasketControllerAdvice(
       final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase,
       final GetCartByIdInputPort getCartByIdUseCase,
-      final IdentityProvider identityProvider) {
+      final IdentityService identityService) {
     this.getOrCreateActiveCartUseCase = getOrCreateActiveCartUseCase;
     this.getCartByIdUseCase = getCartByIdUseCase;
-    this.identityProvider = identityProvider;
+    this.identityService = identityService;
   }
 
   /** Adds mini basket data and identity to the model for every request. */
   @ModelAttribute
   public void addMiniBasketAndIdentity(final Model model) {
-    final IdentityProvider.Identity identity;
+    final Identity identity;
     try {
-      identity = identityProvider.getCurrentIdentity();
+      identity = identityService.currentIdentity();
     } catch (final IllegalStateException ex) {
       // Non-JWT security context (e.g., backoffice form login) — skip mini basket
       model.addAttribute("miniBasketItemCount", 0);

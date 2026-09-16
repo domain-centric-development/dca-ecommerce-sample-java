@@ -1,5 +1,9 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtIdentitySession;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService;
+import dev.domaincentric.sample.ecommerce.account.api.Identity;
+import dev.domaincentric.sample.ecommerce.account.api.IdentityService;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileCommand;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileResult;
@@ -7,10 +11,6 @@ import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProf
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult.Profile;
-import dev.domaincentric.sample.ecommerce.account.application.shared.IdentitySession;
-import dev.domaincentric.sample.ecommerce.account.application.shared.TokenService;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.springframework.stereotype.Controller;
@@ -56,19 +56,19 @@ public class ProfilePageController {
 
   private final GetProfileInputPort getProfileUseCase;
   private final ChangeProfileInputPort changeProfileUseCase;
-  private final IdentityProvider identityProvider;
-  private final TokenService tokenService;
-  private final IdentitySession identitySession;
+  private final IdentityService identityService;
+  private final JwtTokenService tokenService;
+  private final JwtIdentitySession identitySession;
 
   public ProfilePageController(
       final GetProfileInputPort getProfileUseCase,
       final ChangeProfileInputPort changeProfileUseCase,
-      final IdentityProvider identityProvider,
-      final TokenService tokenService,
-      final IdentitySession identitySession) {
+      final IdentityService identityService,
+      final JwtTokenService tokenService,
+      final JwtIdentitySession identitySession) {
     this.getProfileUseCase = getProfileUseCase;
     this.changeProfileUseCase = changeProfileUseCase;
-    this.identityProvider = identityProvider;
+    this.identityService = identityService;
     this.tokenService = tokenService;
     this.identitySession = identitySession;
   }
@@ -81,7 +81,7 @@ public class ProfilePageController {
    */
   @GetMapping
   public String showProfilePage(final Model model) {
-    final Identity identity = identityProvider.getCurrentIdentity();
+    final Identity identity = identityService.currentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
     }
@@ -124,7 +124,7 @@ public class ProfilePageController {
       @RequestParam final String dateOfBirth,
       final Model model,
       final RedirectAttributes redirectAttributes) {
-    final Identity identity = identityProvider.getCurrentIdentity();
+    final Identity identity = identityService.currentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
     }
