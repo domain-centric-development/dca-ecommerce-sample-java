@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,14 +18,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Who may reach what over the REST API. The JWT filter gives <i>every</i> request an authentication
- * — an anonymous identity is still an authentication — so {@code anyRequest().authenticated()} in
- * the security configuration guards nothing here; the resources do, and this is where that is held
- * to.
+ * Who may reach what over the REST API, and how a refusal is phrased.
+ *
+ * <p>A stranger is challenged: {@code 401} with {@code WWW-Authenticate: Bearer}, because they have
+ * not authenticated and can still do something about it. A registered caller who lacks the role is
+ * forbidden: {@code 403}, because no token of theirs will open that route (ADR-036). Both samples
+ * answer alike; this is where the Java half is held to it.
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
@@ -47,7 +51,8 @@ class ApiAuthorizationIntegrationTest {
     mockMvc
         .perform(
             post("/api/products").contentType(MediaType.APPLICATION_JSON).content(newProduct()))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
 
     final String customer = register("api-catalog-customer@example.com");
     mockMvc
@@ -71,7 +76,10 @@ class ApiAuthorizationIntegrationTest {
   @Test
   @DisplayName("Listing every cart needs the staff role")
   void listingEveryCartNeedsStaff() throws Exception {
-    mockMvc.perform(get("/api/carts")).andExpect(status().isForbidden());
+    mockMvc
+        .perform(get("/api/carts"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
 
     final String customer = register("api-cart-lister@example.com");
     mockMvc

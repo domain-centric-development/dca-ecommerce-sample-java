@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
@@ -232,6 +233,29 @@ class JwtAuthenticationFilterTest {
     assertTrue(
         setCookieHeader(IDENTITY_COOKIE).isEmpty(),
         "rewriting the cookie on every request would extend its lifetime silently");
+  }
+
+  // ------------------------------------------------- challenged, not forbidden
+
+  @Test
+  @DisplayName("a visitor is anonymous in the security context, a session is authenticated")
+  void aVisitorIsNotAuthenticated() throws Exception {
+    runFilter();
+
+    assertInstanceOf(
+        AnonymousAuthenticationToken.class,
+        SecurityContextHolder.getContext().getAuthentication(),
+        "a visitor has not authenticated, so a gate must challenge them rather than forbid them");
+
+    final UserId registered = UserId.generateAnonymous();
+    runFilter(identityCookieFor(registered), sessionCookieFor(registered));
+
+    assertTrue(
+        SecurityContextHolder.getContext().getAuthentication().isAuthenticated(),
+        "a registered session is an authentication");
+    assertFalse(
+        SecurityContextHolder.getContext().getAuthentication()
+            instanceof AnonymousAuthenticationToken);
   }
 
   @Test
