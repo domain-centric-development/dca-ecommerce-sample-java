@@ -23,6 +23,7 @@ import jakarta.validation.Valid;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -83,13 +84,12 @@ public class ShoppingCartResource {
 
   /**
    * Every cart in the shop — the operator view, and the only route that leaves the caller's data.
+   * Crossing that boundary demands the staff role; a stranger is challenged with {@code 401}, a
+   * customer without the role forbidden with {@code 403} (ADR-036).
    */
   @GetMapping
+  @PreAuthorize("hasRole('STAFF')")
   public ResponseEntity<ShoppingCartListDto> getAllCarts() {
-    if (!identityProvider.getCurrentIdentity().hasRole(IdentityProvider.Identity.ROLE_STAFF)) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
-
     final GetAllCartsResult output = getAllCarts.execute(new GetAllCartsQuery());
 
     return ResponseEntity.ok(converter.toListDto(output));

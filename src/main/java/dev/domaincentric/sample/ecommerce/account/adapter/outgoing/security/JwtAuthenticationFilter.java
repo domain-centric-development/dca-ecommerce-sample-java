@@ -11,13 +11,17 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -50,9 +54,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *   <li>MaxAge: based on token type (30 days anonymous, 7 days registered)
  * </ul>
  *
- * <p><b>Security Context:</b> The Identity is stored in the SecurityContext as the principal of an
- * UsernamePasswordAuthenticationToken. This allows downstream code to access the identity via
- * SecurityContextHolder or the IdentityProvider.
+ * <p><b>Security Context:</b> The Identity is always the principal, so downstream code reaches it
+ * via the IdentityProvider on every request. A registered session becomes an authenticated token; a
+ * visitor becomes an anonymous one. The filter still only enriches the request (ADR-029) — the
+ * anonymous token is what lets a gate on a resource challenge a stranger with {@code 401} rather
+ * than forbid them with {@code 403} (ADR-036).
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -61,6 +67,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private static final String AUTHORIZATION_HEADER = "Authorization";
   private static final String BEARER_PREFIX = "Bearer ";
+
+  /** Distinguishes tokens this filter issued for a visitor from any other anonymous token. */
+  private static final String ANONYMOUS_KEY = "shop-visitor";
+
+  private static final String ROLE_ANONYMOUS = "ROLE_ANONYMOUS";
 
   private final JwtTokenService tokenService;
   private final JwtProperties jwtProperties;
@@ -91,7 +102,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     // The identity is resolved first and independently of authentication: it carries the cart, so
     // an expired or missing session must never cost it (ADR-029). It is the same UserId before and
     // after login — authentication adds a session, it does not replace who the browser is.
-    if (isTokenOnlyEndpoint(request)) {
+    if (TokenOnlyPaths.isTokenOnlyEndpoint(request)) {
       setSecurityContext(resolveBearerIdentity(request));
     } else {
       final UserId identityUserId = resolveIdentity(request, response);
@@ -203,11 +214,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     return isAccountRegistered.execute(new IsAccountRegisteredQuery(userId.value())).registered();
   }
 
-  private static boolean isTokenOnlyEndpoint(final HttpServletRequest request) {
-    final String path = request.getRequestURI();
-    return path.startsWith("/api/") || path.startsWith("/mcp");
-  }
-
   private Optional<String> sessionToken(final HttpServletRequest request) {
     final Optional<String> fromCookie = readCookie(request, jwtProperties.sessionCookieName());
     return fromCookie.isPresent() ? fromCookie : extractTokenFromHeader(request);
@@ -252,17 +258,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     return Optional.empty();
   }
 
+  /**
+   * Puts the resolved identity into the security context — as an authenticated token for a
+   * registered session, and as an anonymous token for a visitor.
+   *
+   * <p>The principal is the {@link IdentityProvider.Identity} in both cases, so every use case
+   * still gets the identity its data is keyed on. Only the security context stops pretending that a
+   * visitor authenticated: a gate therefore challenges them ({@code 401}) instead of forbidding
+   * them, and reserves {@code 403} for a registered caller who lacks a role.
+   */
   private void setSecurityContext(final IdentityProvider.Identity identity) {
     final var authorities =
         identity.roles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role)).toList();
 
-    final var authentication =
-        new UsernamePasswordAuthenticationToken(
-            identity, // principal
-            null, // credentials (not needed for JWT)
-            authorities);
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            identity.isRegistered()
+                ? new UsernamePasswordAuthenticationToken(
+                    identity, // principal
+                    null, // credentials (not needed for JWT)
+                    authorities)
+                : anonymousAuthentication(identity, authorities));
+  }
 
-    SecurityContextHolder.getContext().setAuthentication(authentication);
+  private static AnonymousAuthenticationToken anonymousAuthentication(
+      final IdentityProvider.Identity identity, final List<SimpleGrantedAuthority> authorities) {
+
+    final List<GrantedAuthority> granted = new ArrayList<>(authorities);
+    granted.add(new SimpleGrantedAuthority(ROLE_ANONYMOUS));
+    return new AnonymousAuthenticationToken(ANONYMOUS_KEY, identity, granted);
   }
 
   private boolean isStaticResource(final HttpServletRequest request) {

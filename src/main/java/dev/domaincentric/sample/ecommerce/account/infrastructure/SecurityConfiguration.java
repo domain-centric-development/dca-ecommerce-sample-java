@@ -2,12 +2,15 @@ package dev.domaincentric.sample.ecommerce.account.infrastructure;
 
 import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtAuthenticationFilter;
 import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtProperties;
+import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.ShopAccessDeniedHandler;
+import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.ShopAuthenticationEntryPoint;
 import jakarta.servlet.DispatcherType;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -46,23 +49,34 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
  * <p><b>URL Security:</b>
  *
  * <ul>
- *   <li>Public: /, /products, /api/products, /h2-console, /actuator/health
- *   <li>Authenticated: /cart, /checkout, /api/carts, /api/checkout-sessions
- *   <li>Note: "Authenticated" means having a valid JWT (anonymous or registered)
+ *   <li>Public: everything the shop shows a visitor — the catalog, the cart, the checkout
+ *   <li>Staff only: {@code @PreAuthorize} on the route that crosses a customer's data, such as
+ *       listing every cart or creating a product
+ *   <li>A stranger is challenged, not forbidden: the JWT filter marks a visitor as an anonymous
+ *       authentication, so a gate answers {@code 401} to them and {@code 403} to a registered
+ *       caller without the role (ADR-036)
  * </ul>
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfiguration {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final JwtProperties jwtProperties;
+  private final ShopAuthenticationEntryPoint authenticationEntryPoint;
+  private final ShopAccessDeniedHandler accessDeniedHandler;
 
   public SecurityConfiguration(
-      final JwtAuthenticationFilter jwtAuthenticationFilter, final JwtProperties jwtProperties) {
+      final JwtAuthenticationFilter jwtAuthenticationFilter,
+      final JwtProperties jwtProperties,
+      final ShopAuthenticationEntryPoint authenticationEntryPoint,
+      final ShopAccessDeniedHandler accessDeniedHandler) {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     this.jwtProperties = jwtProperties;
+    this.authenticationEntryPoint = authenticationEntryPoint;
+    this.accessDeniedHandler = accessDeniedHandler;
   }
 
   @Bean
@@ -119,9 +133,21 @@ public class SecurityConfiguration {
                     .dispatcherTypeMatchers(DispatcherType.ERROR)
                     .permitAll()
 
-                    // All other requests require authentication (JWT - anonymous or registered)
+                    // Everything else is open to a visitor: the shop is browsable, and a cart
+                    // belongs to whoever holds it, registered or not. What a visitor may not do is
+                    // guarded where it is decided — @PreAuthorize on the route, or the use case
+                    // asking its question scoped to the caller. A blanket authenticated() here
+                    // would guard nothing anyway, because every request carries an identity.
                     .anyRequest()
-                    .authenticated())
+                    .permitAll())
+
+        // Refusals: a stranger is challenged (401 with WWW-Authenticate on the API, the login form
+        // in the browser), a caller who lacks a role is forbidden (403) — ADR-036.
+        .exceptionHandling(
+            exceptions ->
+                exceptions
+                    .authenticationEntryPoint(authenticationEntryPoint)
+                    .accessDeniedHandler(accessDeniedHandler))
 
         // Disable Spring Security's default LogoutFilter — logout is handled by
         // LogoutPageController via IdentitySession.logOut(), which clears the session cookie and
