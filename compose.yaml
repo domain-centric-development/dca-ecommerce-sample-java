@@ -1,5 +1,6 @@
 # docker compose up --build          → shop on http://localhost:8080
 # docker compose run --rm test       → unit tests + architecture rules, no image build needed
+# docker compose --profile tools run --rm e2e  → the browser suite against the shop service; the image brings the browsers
 # docker compose run --rm gradle <task>  → any other Gradle task with a cached dependency store
 # podman-compose does not activate a service's profile on `run`: `podman-compose --profile tools run --rm test`.
 services:
@@ -27,6 +28,20 @@ services:
       - gradle-cache:/root/.gradle
     entrypoint: ["./gradlew", "--no-daemon"]
     command: ["build"]
+
+  # The E2E suite needs a browser, which the JDK image does not have. This image ships the browser builds of the
+  # Playwright release the suite compiles against — keep the tag and `test-e2e.gradle` on one version.
+  # `docker compose --profile tools run --rm e2e` runs it against the shop service over the compose network.
+  e2e:
+    image: mcr.microsoft.com/playwright/java:v1.62.0-noble
+    profiles: [tools]
+    working_dir: /workspace
+    depends_on: [shop-java]
+    volumes:
+      - .:/workspace
+      - gradle-cache:/root/.gradle
+    entrypoint: ["./gradlew", "--no-daemon"]
+    command: ["test-e2e", "-De2e.baseUrl=http://shop-java:8080"]
 
   # Spelled out rather than `extends: gradle` — podman-compose 1.6 cannot resolve extends.
   test:

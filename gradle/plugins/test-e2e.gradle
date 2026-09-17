@@ -16,8 +16,9 @@ configurations {
 }
 
 dependencies {
-  // Playwright for browser automation
-  testE2eImplementation 'com.microsoft.playwright:playwright:1.50.0'
+  // Playwright for browser automation. The same release as the .NET sample's suite, so both drive the same browser
+  // builds — and the same one the e2e compose service's image ships (see compose.yaml).
+  testE2eImplementation 'com.microsoft.playwright:playwright:1.62.0'
 
   // JUnit for test framework (version managed by Spring Boot BOM)
   testE2eImplementation 'org.junit.jupiter:junit-jupiter'
@@ -54,6 +55,10 @@ tasks.named('test-e2e').configure {
 
   // Headless mode (default: true for CI, can set false for debugging)
   systemProperty 'e2e.headless', System.getProperty('e2e.headless', 'true')
+
+  // The shop under test runs embedded (JWT_SAME_SITE=None JWT_SECURE_COOKIES=true). Tests that only
+  // hold for that deployment run when it is true; those that only hold for a normal shop skip.
+  systemProperty 'e2e.embedded', System.getProperty('e2e.embedded', 'false')
 
   // Verbose logging for debugging
   if (project.hasProperty('log-debug')) {

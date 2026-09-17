@@ -75,9 +75,11 @@ public class SecurityConfiguration {
 
         // CSRF: cookie-backed token (no HTTP session to store it in); every writing Pug form
         // carries it via CsrfTokenModelAdvice. Bearer-only endpoints are exempt (ADR-035).
+        // The token cookie follows the identity cookie's policy: a form inside a foreign frame
+        // sends the token only if the cookie carrying it is allowed to travel there too.
         .csrf(
             csrf ->
-                csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                csrf.csrfTokenRepository(csrfTokenRepository())
                     .ignoringRequestMatchers("/api/**", "/mcp/**", "/h2-console/**"))
 
         // Configure authorization rules
@@ -185,5 +187,18 @@ public class SecurityConfiguration {
         new FilterRegistrationBean<>(filter);
     registration.setEnabled(false);
     return registration;
+  }
+
+  /**
+   * The CSRF token cookie, readable by the form script ({@code HttpOnly} off) and carrying the same
+   * {@code SameSite} and {@code Secure} policy as the identity cookie. Without that the token is
+   * withheld exactly where the identity still travels — inside a foreign frame — and every form
+   * POST fails as a missing token rather than as a refused one.
+   */
+  private CookieCsrfTokenRepository csrfTokenRepository() {
+    final CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+    repository.setCookieCustomizer(
+        cookie -> cookie.sameSite(jwtProperties.sameSite()).secure(jwtProperties.secureCookies()));
+    return repository;
   }
 }

@@ -932,6 +932,35 @@ These tests verify:
 ./gradlew test
 ```
 
+### End-to-End Tests
+
+`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors) and needs a
+running instance:
+
+```bash
+./gradlew bootRun &
+./gradlew test-e2e -De2e.baseUrl=http://localhost:8080
+```
+
+`-De2e.browser` (`chromium` | `firefox` | `webkit`) and `-De2e.headless=false` are honoured. Without a local browser
+install, the compose service brings its own — the image ships the browser builds of the Playwright release the suite
+compiles against, so the run is the same everywhere:
+
+```bash
+docker compose --profile tools run --rm e2e     # podman-compose needs the --profile flag as shown
+```
+
+One suite describes both deployments. `EmbeddedShopE2ETest` frames the shop from the machine's other name
+(`127.0.0.1` while the shop is `localhost`) and expects a normal shop to refuse it; the embedded case needs a shop
+started for it:
+
+```bash
+JWT_SAME_SITE=None JWT_SECURE_COOKIES=true ./gradlew bootRun &
+./gradlew test-e2e -De2e.baseUrl=http://localhost:8080 -De2e.embedded=true
+```
+
+Because the markup is the same as the .NET sample's, either suite runs against either shop.
+
 ## Key Design Decisions
 
 1. **In-Memory Storage**: Uses ConcurrentHashMap for simplicity; production would use JPA/database
