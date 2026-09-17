@@ -7,6 +7,11 @@ services:
   shop-java:
     build: .
     image: dca-shop-java
+    networks:
+      default:
+        # A second name for the same server: the embedded-shop tests need a cross-site origin, and two names are
+        # what makes a frame cross-site to the browser.
+        aliases: [shop-java, shop-java-other-origin]
     ports:
       - "8080:8080"
     environment:
@@ -41,7 +46,10 @@ services:
       - .:/workspace
       - gradle-cache:/root/.gradle
     entrypoint: ["./gradlew", "--no-daemon"]
-    command: ["test-e2e", "-De2e.baseUrl=http://shop-java:8080"]
+    command:
+      - "test-e2e"
+      - "-De2e.baseUrl=http://shop-java:8080"
+      - "-De2e.otherOriginBaseUrl=http://shop-java-other-origin:8080"
 
   # Spelled out rather than `extends: gradle` — podman-compose 1.6 cannot resolve extends.
   test:

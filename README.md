@@ -950,9 +950,11 @@ compiles against, so the run is the same everywhere:
 docker compose --profile tools run --rm e2e     # podman-compose needs the --profile flag as shown
 ```
 
-One suite describes both deployments. `EmbeddedShopE2ETest` frames the shop from the machine's other name
-(`127.0.0.1` while the shop is `localhost`) and expects a normal shop to refuse it; the embedded case needs a shop
-started for it:
+One suite describes both deployments. `EmbeddedShopE2ETest` frames the shop from a second name for the same server —
+`127.0.0.1` while the shop is `localhost`, two sites to the browser — and expects a normal shop to refuse it. Where
+the shop is reached by another name (a container network, say), give the second one with
+`-De2e.otherOriginBaseUrl=http://shop-java-other-origin:8080`; without it those tests skip rather than run
+same-origin and prove nothing. The embedded case needs a shop started for it:
 
 ```bash
 JWT_SAME_SITE=None JWT_SECURE_COOKIES=true ./gradlew bootRun &

@@ -16,12 +16,16 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
  * The shop inside an iframe on another origin — the case the {@code same-site} and frame-options
  * switch exists for.
  *
- * <p>The embedding page is the shop's own landing page reached under its other name — {@code
- * 127.0.0.1} where the shop under test is {@code localhost} — with an iframe put into it by the
- * test. No second server is needed. The two names are different sites to the browser, so the frame
- * is cross-site exactly as a real foreign host would be, and both stay inside the local network: a
- * page on a public domain may not frame localhost at all (private network access), which would hide
- * the very behaviour under test.
+ * <p>The embedding page is the shop's own landing page reached under a second name for the same
+ * server, with an iframe put into it by the test. No second server is needed. The two names are
+ * different sites to the browser, so the frame is cross-site exactly as a real foreign host would
+ * be, and both stay inside the local network: a page on a public domain may not frame localhost at
+ * all (private network access), which would hide the very behaviour under test.
+ *
+ * <p>That second name defaults to {@code 127.0.0.1} where the shop under test is {@code localhost}.
+ * Anywhere else — a shop reached by service name in a container network, say — it has to be given:
+ * {@code -De2e.otherOriginBaseUrl=http://shop-java-other-origin:8080}. Without a second name these
+ * tests skip rather than quietly run same-origin and prove nothing.
  *
  * <p>Two deployments, two expectations:
  *
@@ -41,11 +45,25 @@ class EmbeddedShopE2ETest extends BaseE2ETest {
   /**
    * The shop's own address under its other name — a different site to the browser, the same server.
    */
-  private static final String OTHER_ORIGIN_URL = BASE_URL.replace("localhost", "127.0.0.1");
+  private static final String OTHER_ORIGIN_URL = otherOriginUrl();
+
+  /**
+   * A second name for the same shop. Defaults to {@code 127.0.0.1} where the shop is {@code
+   * localhost}; anywhere else — a shop reached by service name in a container network, say — it has
+   * to be given as {@code -De2e.otherOriginBaseUrl}.
+   */
+  private static String otherOriginUrl() {
+    final String configured = System.getProperty("e2e.otherOriginBaseUrl", "");
+    if (!configured.isBlank()) {
+      return configured;
+    }
+    return BASE_URL.contains("localhost") ? BASE_URL.replace("localhost", "127.0.0.1") : "";
+  }
 
   @Test
   @DisplayName("A normal shop refuses to render inside a frame on another origin")
   void framingIsRefusedByDefault() {
+    assumeASecondNameForTheShop();
     Assumptions.assumeFalse(
         Boolean.getBoolean("e2e.embedded"),
         "the shop under test runs embedded — framing is allowed there by design");
@@ -74,6 +92,7 @@ class EmbeddedShopE2ETest extends BaseE2ETest {
               + " -De2e.embedded=true")
   @DisplayName("An embedded shop accepts a form POST made from inside the foreign frame")
   void formPostFromAForeignFrameReachesTheCart() {
+    assumeASecondNameForTheShop();
     openEmbeddingPage();
     frameTheShop("/products");
 
@@ -89,6 +108,16 @@ class EmbeddedShopE2ETest extends BaseE2ETest {
     final Locator cartItems = shop.locator("[data-test='cart-item']");
     cartItems.first().waitFor();
     assertTrue(cartItems.count() >= 1, "the product reached the cart of the framed shop");
+  }
+
+  /**
+   * Cross-site means two names for one server. Without the second one there is nothing to test, and
+   * running the scenario same-origin would pass while proving nothing.
+   */
+  private void assumeASecondNameForTheShop() {
+    Assumptions.assumeFalse(
+        OTHER_ORIGIN_URL.isEmpty() || OTHER_ORIGIN_URL.equals(BASE_URL),
+        "no second name for the shop under test — pass -De2e.otherOriginBaseUrl=<same shop, other host name>");
   }
 
   /** Opens a page on the other origin — any page of it will do, it only has to host the frame. */
