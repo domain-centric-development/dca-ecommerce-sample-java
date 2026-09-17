@@ -36,7 +36,7 @@ public class GetCheckoutSessionUseCase implements GetCheckoutSessionInputPort {
   public GetCheckoutSessionResult execute(final GetCheckoutSessionQuery query) {
     final CheckoutStep requestedStep = query.requestedStep();
     return checkoutSessionRepository
-        .findById(query.sessionId())
+        .findByIdForCustomer(query.sessionId(), query.customerId())
         .map(CheckoutCartSnapshot::from)
         .map(
             snapshot ->

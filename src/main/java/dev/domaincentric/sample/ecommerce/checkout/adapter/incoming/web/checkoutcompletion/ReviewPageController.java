@@ -77,7 +77,8 @@ public class ReviewPageController {
     // Full session details, plus the domain's decision whether this step may be opened
     final GetCheckoutSessionResult result =
         getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(activeSession.sessionId(), CheckoutStep.REVIEW));
+            GetCheckoutSessionQuery.forStep(
+                activeSession.sessionId(), customerId, CheckoutStep.REVIEW));
 
     if (!result.found()) {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");

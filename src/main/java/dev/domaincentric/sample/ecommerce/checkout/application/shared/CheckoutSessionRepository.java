@@ -32,6 +32,20 @@ public interface CheckoutSessionRepository extends Repository<CheckoutSession, C
   }
 
   /**
+   * Finds a checkout session that belongs to a customer.
+   *
+   * <p>Every use case that acts on a session a caller named reaches for this rather than {@code
+   * findById}: a session that is not theirs and a session that does not exist are indistinguishable
+   * on purpose, and a persistence adapter expresses it as one predicate. {@code findById} stays for
+   * the system paths that act on nobody's behalf.
+   *
+   * @param sessionId the checkout session ID
+   * @param customerId the customer the caller is acting as
+   * @return the session if it exists and belongs to that customer
+   */
+  Optional<CheckoutSession> findByIdForCustomer(CheckoutSessionId sessionId, CustomerId customerId);
+
+  /**
    * Finds a checkout session by the cart it was created from.
    *
    * <p>Returns any session for this cart, regardless of status.

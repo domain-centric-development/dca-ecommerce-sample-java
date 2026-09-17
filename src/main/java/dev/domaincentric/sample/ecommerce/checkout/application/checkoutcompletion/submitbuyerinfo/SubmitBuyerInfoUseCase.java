@@ -5,6 +5,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSe
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.BuyerInfo;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,11 +40,11 @@ public class SubmitBuyerInfoUseCase implements SubmitBuyerInfoInputPort {
 
   @Override
   public SubmitBuyerInfoResult execute(final SubmitBuyerInfoCommand command) {
-    // Load session
+    // Load the session as the caller's own: a session that is not theirs is not found
     final CheckoutSessionId sessionId = CheckoutSessionId.of(command.sessionId());
     final CheckoutSession session =
         checkoutSessionRepository
-            .findById(sessionId)
+            .findByIdForCustomer(sessionId, CustomerId.of(command.customerId()))
             .orElseThrow(
                 () -> new IllegalArgumentException("Session not found: " + command.sessionId()));
 

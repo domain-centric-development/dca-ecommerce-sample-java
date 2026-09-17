@@ -7,6 +7,7 @@ import org.jspecify.annotations.Nullable;
  * Input model for submitting delivery information during checkout.
  *
  * @param sessionId the checkout session ID
+ * @param customerId the customer the caller is acting as
  * @param street the street address
  * @param streetLine2 optional second address line
  * @param city the city
@@ -21,6 +22,7 @@ import org.jspecify.annotations.Nullable;
  */
 public record SubmitDeliveryCommand(
     String sessionId,
+    String customerId,
     String street,
     @Nullable String streetLine2,
     String city,
@@ -37,6 +39,9 @@ public record SubmitDeliveryCommand(
   public SubmitDeliveryCommand {
     if (sessionId == null || sessionId.isBlank()) {
       throw new IllegalArgumentException("Session ID cannot be null or blank");
+    }
+    if (customerId == null || customerId.isBlank()) {
+      throw new IllegalArgumentException("Customer ID cannot be null or blank");
     }
     if (street == null || street.isBlank()) {
       throw new IllegalArgumentException("Street cannot be null or blank");

@@ -85,7 +85,8 @@ public class ConfirmationPageController {
     }
 
     try {
-      confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(activeSession.sessionId()));
+      confirmCheckoutInputPort.execute(
+          new ConfirmCheckoutCommand(activeSession.sessionId(), customerId));
 
       redirectAttributes.addFlashAttribute("orderConfirmed", true);
       return "redirect:/checkout/confirmation";
@@ -129,7 +130,7 @@ public class ConfirmationPageController {
     final GetCheckoutSessionResult result =
         getCheckoutSessionInputPort.execute(
             GetCheckoutSessionQuery.forStep(
-                confirmedSession.sessionId(), CheckoutStep.CONFIRMATION));
+                confirmedSession.sessionId(), customerId, CheckoutStep.CONFIRMATION));
 
     if (!result.found()) {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");

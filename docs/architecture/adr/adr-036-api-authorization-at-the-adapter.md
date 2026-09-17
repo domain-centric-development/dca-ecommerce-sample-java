@@ -75,3 +75,37 @@ commented-out endpoint blocks are gone.
   `GetActiveCart`, `MergeCarts`, `RecoverCartOnLogin`, `GetCartMergeOptions`). The five that did not are exactly
   the five that needed a guard. Read that way this is less a decision about authorization than a correction of
   five under-specified commands: "check out cart X" without saying on whose behalf is an incomplete instruction.
+
+## Amendment (2026-09-17): the checkout steps carry the caller too
+
+**Context.** The rule above reached `StartCheckoutCommand`, and stopped there. The five commands and the query of
+the wizard steps — `SubmitBuyerInfoCommand`, `SubmitDeliveryCommand`, `SubmitPaymentCommand`,
+`ConfirmCheckoutCommand`, `GetCheckoutSessionQuery` — carried the session id alone and loaded through
+`findById`, so at the use-case boundary any caller who knew a session id could fill in its buyer information, pay
+for it or confirm it. Nothing exploited that today: the web adapter resolves the visitor's *active* session and
+never takes a session id from the request. That is exactly the shape this ADR calls out — a guard living in one
+exposure rather than in the operation — and the .NET twin carried it identically.
+
+**Decision.** The caller is part of those commands and that query, next to the session id, and every step loads
+through `CheckoutSessionRepository#findByIdForCustomer` (`FindByIdForCustomerAsync` in .NET), beside the
+unscoped `findById` that stays for the system paths. The use case asks the scoped question rather than comparing
+after the fact; a session that is not the caller's is not found, and the adapter renders that as it renders a
+missing one.
+
+**Consequences.**
+
+- Positive: `CheckoutOwnershipIntegrationTest` (Java) and `CheckoutOwnershipTest` (.NET) hold the rule at the
+  use-case level, where every adapter inherits it. Both fail without the scoped lookup — verified by removing the
+  customer predicate from the in-memory repository in each sample.
+- Positive: the two samples stay identical on this rule; the .NET half was changed in the same work package.
+- Negative: the wizard now passes the caller through five call sites in the page controllers. The web flow does
+  not need it — it already resolved the session from the caller — so the parameter looks redundant at the adapter
+  and is load-bearing only at the boundary.
+- Neutral: `GetActiveCheckoutSession` and `GetConfirmedCheckoutSession` were already keyed on the customer and
+  are unchanged.
+
+**Harness questions.** Catalog: covered — the pitfall "resource id without an owner" already states this exactly,
+and the fix is what it prescribes; no new node. Rule: the same candidate as before — a command naming an owned
+aggregate must also carry the caller — still needs a marker to be mechanical, and is parked. Marker: an `Owned`
+marker on the aggregate would make the rule checkable, but the identity port is deliberately project-specific,
+so it stays an open question rather than a change.

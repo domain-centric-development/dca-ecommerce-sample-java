@@ -84,7 +84,8 @@ public class BuyerInfoPageController {
     // Full session details, plus the domain's decision whether this step may be opened
     final GetCheckoutSessionResult result =
         getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(activeSession.sessionId(), CheckoutStep.BUYER_INFO));
+            GetCheckoutSessionQuery.forStep(
+                activeSession.sessionId(), customerId, CheckoutStep.BUYER_INFO));
 
     if (!result.found()) {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
@@ -140,7 +141,8 @@ public class BuyerInfoPageController {
 
     try {
       submitBuyerInfoInputPort.execute(
-          new SubmitBuyerInfoCommand(activeSession.sessionId(), email, firstName, lastName, phone));
+          new SubmitBuyerInfoCommand(
+              activeSession.sessionId(), customerId, email, firstName, lastName, phone));
 
       return "redirect:/checkout/delivery";
 

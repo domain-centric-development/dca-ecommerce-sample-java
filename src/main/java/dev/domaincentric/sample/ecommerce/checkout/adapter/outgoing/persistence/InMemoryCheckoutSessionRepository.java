@@ -32,6 +32,12 @@ public class InMemoryCheckoutSessionRepository implements CheckoutSessionReposit
   }
 
   @Override
+  public Optional<CheckoutSession> findByIdForCustomer(
+      final CheckoutSessionId id, final CustomerId customerId) {
+    return findById(id).filter(session -> session.customerId().equals(customerId));
+  }
+
+  @Override
   public Optional<CheckoutSession> findByCartId(final CartId cartId) {
     return sessions.values().stream()
         .filter(session -> session.cartId().equals(cartId))
