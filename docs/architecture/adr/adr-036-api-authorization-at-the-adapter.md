@@ -116,4 +116,5 @@ paragraph and the pitfall "authenticated is not authorized" gained the two parag
 the visitor anonymous; declare the claims-only gate). No node of its own: the split is a consequence of that
 pitfall, not a second one. Rule: a candidate exists — a claims-only gate is an annotation, never a role branch
 inside a handler — but the selection needs a framework-neutral phrasing in both libraries before it can be
-written, and it is not written yet. Marker: none.
+written, and it is not written yet — it is parked as an open finding with the three options for that phrasing.
+Marker: none.
