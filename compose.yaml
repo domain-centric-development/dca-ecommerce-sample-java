@@ -1,6 +1,7 @@
 # docker compose up --build          → shop on http://localhost:8080
 # docker compose run --rm test       → unit tests + architecture rules, no image build needed
 # docker compose run --rm gradle <task>  → any other Gradle task with a cached dependency store
+# podman-compose does not activate a service's profile on `run`: `podman-compose --profile tools run --rm test`.
 services:
   shop-java:
     build: .

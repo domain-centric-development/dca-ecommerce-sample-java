@@ -689,6 +689,7 @@ No local JDK needed — the `Dockerfile` builds the jar and runs it on a JRE:
 ```bash
 docker compose up --build                 # http://localhost:8080
 docker compose run --rm test              # unit tests + architecture rules, dependencies cached in a volume
+                                          # (podman-compose: podman-compose --profile tools run --rm test)
 docker compose run --rm gradle bootJar    # any other Gradle task
 ```
 
