@@ -50,6 +50,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-039](adr-039-aggregate-owned-event-registration.md) | Aggregate-owned event registration | Accepted |
 
 | [ADR-040](adr-040-checkout-snapshots-and-reconciliation.md) | Checkout snapshots and reconciliation | Accepted |
+| [ADR-041](adr-041-local-preconditions-before-a-remote-effect.md) | Local preconditions come before a remote effect, and an unusable effect is released | Accepted |
 
 ### Proposed 🟡
 

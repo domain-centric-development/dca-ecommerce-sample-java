@@ -253,6 +253,27 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
+   * Asserts that this session may be paid for right now.
+   *
+   * <p>The same preconditions {@link #submitPayment(PaymentSelection)} enforces, without changing
+   * anything: a caller that is about to reach a payment provider asks this first, so a session that
+   * would be rejected afterwards never produces a payment intent at the provider.
+   *
+   * @throws IllegalStateException if the session is not modifiable, the buyer or delivery step is
+   *     missing, the session is past the payment step, or there is nothing to charge
+   */
+  public void assertReadyForPayment() {
+    ensureModifiable();
+    ensureStepCompleted(CheckoutStep.BUYER_INFO);
+    ensureStepCompleted(CheckoutStep.DELIVERY);
+    ensureAtOrBeforeStep(CheckoutStep.PAYMENT);
+
+    if (totals.total().isZero()) {
+      throw new IllegalStateException("Nothing to pay: the total is " + totals.total());
+    }
+  }
+
+  /**
    * Submits payment method selection for the checkout.
    *
    * <p>Raises a {@link PaymentSubmitted} domain event.
