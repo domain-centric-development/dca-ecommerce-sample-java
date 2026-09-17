@@ -53,7 +53,8 @@ class JwtAuthenticationFilterExpiryTest {
   @BeforeEach
   void setUp() {
     final JwtProperties properties =
-        new JwtProperties(SECRET, 30, 7, ISSUER, IDENTITY_COOKIE, SESSION_COOKIE, false, "Lax");
+        new JwtProperties(
+            SECRET, 30, 7, ISSUER, IDENTITY_COOKIE, SESSION_COOKIE, false, "Lax", false);
     tokenService = new JwtTokenService(properties);
     accounts = new TestIsAccountRegistered();
     filter = new JwtAuthenticationFilter(tokenService, properties, accounts);

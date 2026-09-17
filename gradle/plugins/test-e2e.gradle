@@ -50,11 +50,6 @@ tasks.named('test-e2e').configure {
   // Base URL for the application under test (can be overridden)
   systemProperty 'e2e.baseUrl', System.getProperty('e2e.baseUrl', 'http://localhost:8080')
 
-  // A second name for the same shop. The embedded-shop tests frame it from there, because two names are what makes
-  // a frame cross-site to the browser. Default: 127.0.0.1 where the shop is localhost; elsewhere it must be given,
-  // and without it those tests skip rather than run same-origin.
-  systemProperty 'e2e.otherOriginBaseUrl', System.getProperty('e2e.otherOriginBaseUrl', '')
-
   // Browser configuration (chromium, firefox, webkit)
   systemProperty 'e2e.browser', System.getProperty('e2e.browser', 'chromium')
 

@@ -86,10 +86,15 @@ app:
       session-cookie-name: shop-session
       # Must be true wherever the app is reachable over HTTPS; false only for local HTTP
       secure-cookies: ${JWT_SECURE_COOKIES:false}
-      # Lax everywhere. None only to run the shop inside an iframe on another origin
-      # (a demo), where the browser would otherwise withhold the identity cookie and
-      # every request arrives anonymous. Requires secure-cookies=true.
+      # Lax everywhere. None only when the embedding page is on another site — a different
+      # domain, not merely another port — where the browser would otherwise withhold the
+      # identity cookie and every request arrives anonymous. Requires secure-cookies=true.
       same-site: ${JWT_SAME_SITE:Lax}
+      # Whether another origin may frame the shop. On by default so the sample runs embedded
+      # out of the box — a slide deck on another port, a docs page, a local demo; its cookies
+      # are same-site already and need no relaxing. A real deployment turns this off, together
+      # with secure-cookies=true: JWT_ALLOW_FRAMING=false JWT_SECURE_COOKIES=true.
+      allow-framing: ${JWT_ALLOW_FRAMING:true}
     password:
       bcrypt-strength: 12
       min-length: 8

@@ -1,86 +1,60 @@
 package dev.domaincentric.sample.ecommerce.e2e;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.microsoft.playwright.FrameLocator;
 import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.Response;
+import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 /**
- * The shop inside an iframe on another origin — the case the {@code same-site} and frame-options
- * switch exists for.
+ * The shop inside someone else's iframe — a slide deck, a docs page, a demo.
  *
- * <p>The embedding page is the shop's own landing page reached under a second name for the same
- * server, with an iframe put into it by the test. No second server is needed. The two names are
- * different sites to the browser, so the frame is cross-site exactly as a real foreign host would
- * be, and both stay inside the local network: a page on a public domain may not frame localhost at
- * all (private network access), which would hide the very behaviour under test.
- *
- * <p>That second name defaults to {@code 127.0.0.1} where the shop under test is {@code localhost}.
- * Anywhere else — a shop reached by service name in a container network, say — it has to be given:
- * {@code -De2e.otherOriginBaseUrl=http://shop-java-other-origin:8080}. Without a second name these
- * tests skip rather than quietly run same-origin and prove nothing.
- *
- * <p>Two deployments, two expectations:
+ * <p>Two cases, and the difference is what "someone else" means to the browser:
  *
  * <ul>
- *   <li>the normal shop refuses to be framed and says so in {@code X-Frame-Options}
- *   <li>the embedded shop ({@code JWT_SAME_SITE=None JWT_SECURE_COOKIES=true}) renders in the
- *       frame, and a form POST from inside it reaches the cart — which is what fails while any of
- *       its cookies stays {@code Lax}. That test runs only against a shop started that way: {@code
- *       ./gradlew test-e2e -De2e.embedded=true}
+ *   <li><b>Another port of the same host.</b> A different <em>origin</em>, so the shop has to allow
+ *       framing — which it does out of the box — but the same <em>site</em>, so its {@code Lax}
+ *       cookies travel into the frame unchanged. This is the slide-deck case and needs no
+ *       configuration at all.
+ *   <li><b>Another site.</b> {@code 127.0.0.1} against {@code localhost} here. Now the cookies stay
+ *       behind unless the shop is started for it ({@code JWT_SAME_SITE=None
+ *       JWT_SECURE_COOKIES=true}), so that case runs only against such a shop and skips otherwise.
  * </ul>
  *
- * <p>Same scenario as the .NET sample's {@code EmbeddedShopE2eTest}.
+ * <p>Both embedding pages come from a throwaway HTTP server the test starts on a free port, bound
+ * to {@code localhost} for the first case and to {@code 127.0.0.1} for the second. A real origin
+ * rather than an intercepted one, because a browser refuses to frame anything on the local network
+ * from a page whose own origin it could not resolve. Same scenarios as the .NET sample's {@code
+ * EmbeddedShopE2eTest}.
  */
 @DisplayName("Embedded Shop E2E Tests")
 class EmbeddedShopE2ETest extends BaseE2ETest {
 
-  /**
-   * The shop's own address under its other name — a different site to the browser, the same server.
-   */
-  private static final String OTHER_ORIGIN_URL = otherOriginUrl();
+  private HttpServer embeddingServer;
 
-  /**
-   * A second name for the same shop. Defaults to {@code 127.0.0.1} where the shop is {@code
-   * localhost}; anywhere else — a shop reached by service name in a container network, say — it has
-   * to be given as {@code -De2e.otherOriginBaseUrl}.
-   */
-  private static String otherOriginUrl() {
-    final String configured = System.getProperty("e2e.otherOriginBaseUrl", "");
-    if (!configured.isBlank()) {
-      return configured;
+  @AfterEach
+  void stopEmbeddingServer() {
+    if (embeddingServer != null) {
+      embeddingServer.stop(0);
+      embeddingServer = null;
     }
-    return BASE_URL.contains("localhost") ? BASE_URL.replace("localhost", "127.0.0.1") : "";
   }
 
   @Test
-  @DisplayName("A normal shop refuses to render inside a frame on another origin")
-  void framingIsRefusedByDefault() {
-    assumeASecondNameForTheShop();
-    Assumptions.assumeFalse(
-        Boolean.getBoolean("e2e.embedded"),
-        "the shop under test runs embedded — framing is allowed there by design");
-    openEmbeddingPage();
+  @DisplayName("A slide deck on another port frames the shop and adds to the cart")
+  void framedByAnotherPortOfTheSameHost() {
+    page.navigate(startEmbeddingServer("localhost", "/products"));
 
-    final Response framed =
-        page.waitForResponse(
-            response -> response.url().equals(BASE_URL + "/products"),
-            () -> frameTheShop("/products"));
-
-    assertEquals(
-        "SAMEORIGIN",
-        framed.allHeaders().get("x-frame-options"),
-        "the shop tells the browser to refuse the frame");
-    assertFalse(
-        framedShop().locator("[data-test='product-card']").first().isVisible(),
-        "the shop must not render inside a foreign frame");
+    addFirstProductToTheCartInTheFrame();
   }
 
   @Test
@@ -90,19 +64,30 @@ class EmbeddedShopE2ETest extends BaseE2ETest {
       disabledReason =
           "needs a shop started with JWT_SAME_SITE=None JWT_SECURE_COOKIES=true; run with"
               + " -De2e.embedded=true")
-  @DisplayName("An embedded shop accepts a form POST made from inside the foreign frame")
-  void formPostFromAForeignFrameReachesTheCart() {
-    assumeASecondNameForTheShop();
-    openEmbeddingPage();
-    frameTheShop("/products");
+  @DisplayName("A page on another site frames the shop and adds to the cart")
+  void framedByAnotherSite() {
+    Assumptions.assumeTrue(
+        BASE_URL.contains("localhost"),
+        "the cross-site case pairs localhost with 127.0.0.1; point e2e.baseUrl at localhost to run it");
 
-    final FrameLocator shop = framedShop();
+    // 127.0.0.1 is the same machine under a name the browser counts as a different site — which is
+    // what makes the shop's cookies cross-site here, unlike the port-only difference above.
+    page.navigate(startEmbeddingServer("127.0.0.1", "/products"));
+
+    addFirstProductToTheCartInTheFrame();
+  }
+
+  /**
+   * The whole point of framing the shop: the visitor can still use it. Adding to the cart is a form
+   * POST carrying the CSRF token, so it only arrives complete when the identity cookie and the
+   * token cookie both travelled into the frame.
+   */
+  private void addFirstProductToTheCartInTheFrame() {
+    final FrameLocator shop = page.frameLocator("#shop");
     final Locator firstProduct = shop.locator("[data-test='view-product']").first();
     firstProduct.waitFor();
     firstProduct.click();
 
-    // Adding to the cart is a form POST carrying the CSRF token. It arrives complete only when the
-    // identity cookie and the token cookie both travel into the frame.
     shop.locator("[data-test='product-add-to-cart-button']").click();
 
     final Locator cartItems = shop.locator("[data-test='cart-item']");
@@ -111,37 +96,38 @@ class EmbeddedShopE2ETest extends BaseE2ETest {
   }
 
   /**
-   * Cross-site means two names for one server. Without the second one there is nothing to test, and
-   * running the scenario same-origin would pass while proving nothing.
+   * A throwaway server on a free port of this host, serving nothing but the embedding page. A real
+   * origin rather than an intercepted one: a browser refuses to frame anything on the local network
+   * from a page whose own origin it could not resolve.
+   *
+   * @return the address of that page
    */
-  private void assumeASecondNameForTheShop() {
-    Assumptions.assumeFalse(
-        OTHER_ORIGIN_URL.isEmpty() || OTHER_ORIGIN_URL.equals(BASE_URL),
-        "no second name for the shop under test — pass -De2e.otherOriginBaseUrl=<same shop, other host name>");
+  private String startEmbeddingServer(final String host, final String shopPath) {
+    try {
+      embeddingServer = HttpServer.create(new InetSocketAddress(host, 0), 0);
+      final byte[] page = embeddingPage(shopPath).getBytes(StandardCharsets.UTF_8);
+      embeddingServer.createContext(
+          "/",
+          exchange -> {
+            exchange.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");
+            exchange.sendResponseHeaders(200, page.length);
+            try (OutputStream body = exchange.getResponseBody()) {
+              body.write(page);
+            }
+          });
+      embeddingServer.start();
+      return "http://" + host + ":" + embeddingServer.getAddress().getPort() + "/";
+    } catch (final IOException e) {
+      throw new IllegalStateException("could not start the embedding server", e);
+    }
   }
 
-  /** Opens a page on the other origin — any page of it will do, it only has to host the frame. */
-  private void openEmbeddingPage() {
-    page.navigate(OTHER_ORIGIN_URL + "/");
-  }
-
-  /** Puts the shop into a frame of that page, the way a foreign site would embed it. */
-  private void frameTheShop(final String shopPath) {
-    page.evaluate(
+  private static String embeddingPage(final String shopPath) {
+    return """
+        <!doctype html>
+        <title>A page that frames the shop</title>
+        <iframe id="shop" src="%s%s" width="1000" height="800"></iframe>
         """
-        src => {
-            const frame = document.createElement('iframe');
-            frame.id = 'shop';
-            frame.src = src;
-            frame.width = 1000;
-            frame.height = 800;
-            document.body.appendChild(frame);
-        }
-        """,
-        BASE_URL + shopPath);
-  }
-
-  private FrameLocator framedShop() {
-    return page.frameLocator("#shop");
+        .formatted(BASE_URL, shopPath);
   }
 }

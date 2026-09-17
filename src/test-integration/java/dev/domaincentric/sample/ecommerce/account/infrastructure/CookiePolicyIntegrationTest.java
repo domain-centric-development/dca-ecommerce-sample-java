@@ -9,11 +9,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * The cookie and framing policy a normal deployment runs with: cookies are {@code SameSite=Lax} and
- * the shop refuses to be framed by another origin.
+ * What the sample does with no configuration at all: cookies are {@code SameSite=Lax}, carry no
+ * {@code Secure} flag over plain HTTP, and the shop may be framed — so it runs embedded in a slide
+ * deck or a docs page straight from {@code docker compose up} or the IDE.
  *
- * <p>Counterpart: {@link EmbeddedShopCookiePolicyIntegrationTest} covers the embedded deployment.
- * Same two scenarios as the .NET sample's {@code CookiePolicyTest}.
+ * <p>Counterparts: {@link HardenedShopCookiePolicyIntegrationTest} is the deployment that refuses
+ * the frame, {@link EmbeddedShopCookiePolicyIntegrationTest} the one framed from another site. Same
+ * scenarios as the .NET sample's {@code CookiePolicyTest}.
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
@@ -48,8 +50,8 @@ class CookiePolicyIntegrationTest extends CookiePolicyTestBase {
   }
 
   @Test
-  @DisplayName("A page refuses to be framed by another origin")
-  void framingIsRefused() {
-    assertThat(headerOfProductList("X-Frame-Options")).isEqualTo("SAMEORIGIN");
+  @DisplayName("A page may be framed, so the sample runs embedded without configuration")
+  void framingIsAllowedOutOfTheBox() {
+    assertThat(headerOfProductList("X-Frame-Options")).isNull();
   }
 }

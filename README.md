@@ -950,11 +950,13 @@ compiles against, so the run is the same everywhere:
 docker compose --profile tools run --rm e2e     # podman-compose needs the --profile flag as shown
 ```
 
-One suite describes both deployments. `EmbeddedShopE2ETest` frames the shop from a second name for the same server —
-`127.0.0.1` while the shop is `localhost`, two sites to the browser — and expects a normal shop to refuse it. Where
-the shop is reached by another name (a container network, say), give the second one with
-`-De2e.otherOriginBaseUrl=http://shop-java-other-origin:8080`; without it those tests skip rather than run
-same-origin and prove nothing. The embedded case needs a shop started for it:
+`EmbeddedShopE2ETest` covers the shop inside someone else's iframe — a slide deck, a docs page, a demo. It starts a
+throwaway page on another port of this host, frames the shop in it and adds a product to the cart. That case needs
+no configuration: the shop allows framing out of the box, and another port is the same *site*, so its `Lax` cookies
+travel into the frame unchanged.
+
+Framing from another *site* is the second case, and only that one needs the cookie policy relaxed. It runs against
+a shop started for it:
 
 ```bash
 JWT_SAME_SITE=None JWT_SECURE_COOKIES=true ./gradlew bootRun &

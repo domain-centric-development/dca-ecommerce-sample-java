@@ -36,12 +36,19 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     the application is reachable over HTTPS, and is configuration rather than a constant so that
  *     local HTTP development cannot bake {@code false} into a deployment
  * @param sameSite the {@code SameSite} policy for both cookies; {@code Lax} unless configured
- *     otherwise. The one reason to set {@code None} is running the shop inside an iframe on another
- *     origin — a demo or a presentation — where the browser withholds a {@code Lax} cookie and
- *     every request arrives without an identity, so the cart is never found. That widens the CSRF
+ *     otherwise. Set {@code None} only where the embedding page is on another <em>site</em> — a
+ *     different domain, not merely a different port — because a browser withholds a {@code Lax}
+ *     cookie there and every request would arrive without an identity. That widens the CSRF
  *     surface, which is why it is opt-in and never the default; browsers also reject {@code None}
  *     without {@code Secure}, and the constructor refuses the combination rather than letting the
  *     browser drop the cookie silently.
+ * @param allowFraming whether another origin may put the shop in a frame. Separate from {@code
+ *     sameSite} because the two answer different questions: framing is about the <em>origin</em>,
+ *     where the port counts, and cookies are about the <em>site</em>, where it does not. A slide
+ *     deck on {@code localhost:3030} framing this shop on {@code localhost:8080} needs framing
+ *     allowed and nothing else — its cookies are same-site already. This sample leaves it on so it
+ *     runs embedded without configuration; a real deployment turns it off along with setting {@code
+ *     secureCookies}.
  */
 @ConfigurationProperties(prefix = "app.security.jwt")
 public record JwtProperties(
@@ -52,7 +59,8 @@ public record JwtProperties(
     String cookieName,
     String sessionCookieName,
     boolean secureCookies,
-    String sameSite) {
+    String sameSite,
+    boolean allowFraming) {
 
   /** Default cookie name if not configured. */
   public static final String DEFAULT_COOKIE_NAME = "shop-identity";

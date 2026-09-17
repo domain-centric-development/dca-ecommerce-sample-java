@@ -7,20 +7,17 @@ services:
   shop-java:
     build: .
     image: dca-shop-java
-    networks:
-      default:
-        # A second name for the same server: the embedded-shop tests need a cross-site origin, and two names are
-        # what makes a frame cross-site to the browser.
-        aliases: [shop-java, shop-java-other-origin]
     ports:
       - "8080:8080"
     environment:
       # SPRING_PROFILES_ACTIVE: jdbc
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
-      # Both default to the safe value. Set them only to run the shop inside an
-      # iframe on another origin (a demo): a Lax cookie is withheld there, so every
-      # request arrives anonymous and the cart is never found.
-      #   JWT_SAME_SITE=None JWT_SECURE_COOKIES=true docker compose up
+      # The sample runs embeddable out of the box: another page may frame it, and on another port of
+      # the same host its Lax cookies travel into the frame unchanged. Nothing to set for a demo.
+      # A real deployment hardens both: JWT_ALLOW_FRAMING=false JWT_SECURE_COOKIES=true.
+      # A page on another *site* (a different domain) additionally needs JWT_SAME_SITE=None, which
+      # requires Secure cookies and therefore HTTPS.
+      JWT_ALLOW_FRAMING: ${JWT_ALLOW_FRAMING:-true}
       JWT_SAME_SITE: ${JWT_SAME_SITE:-Lax}
       JWT_SECURE_COOKIES: ${JWT_SECURE_COOKIES:-false}
 
@@ -42,14 +39,14 @@ services:
     profiles: [tools]
     working_dir: /workspace
     depends_on: [shop-java]
+    # Share the shop's network namespace, so the shop is `localhost:8080` in here too. The embedded-shop tests put
+    # their own page on another port of that same host, which is what makes the frame same-site.
+    network_mode: "service:shop-java"
     volumes:
       - .:/workspace
       - gradle-cache:/root/.gradle
     entrypoint: ["./gradlew", "--no-daemon"]
-    command:
-      - "test-e2e"
-      - "-De2e.baseUrl=http://shop-java:8080"
-      - "-De2e.otherOriginBaseUrl=http://shop-java-other-origin:8080"
+    command: ["test-e2e", "-De2e.baseUrl=http://localhost:8080"]
 
   # Spelled out rather than `extends: gradle` — podman-compose 1.6 cannot resolve extends.
   test:

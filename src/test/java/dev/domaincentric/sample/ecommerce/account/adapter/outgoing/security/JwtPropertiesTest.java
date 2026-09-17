@@ -42,6 +42,7 @@ class JwtPropertiesTest {
         JwtProperties.DEFAULT_COOKIE_NAME,
         JwtProperties.DEFAULT_SESSION_COOKIE_NAME,
         secureCookies,
-        sameSite);
+        sameSite,
+        false);
   }
 }

@@ -128,16 +128,16 @@ public class SecurityConfiguration {
         // rotates the visitor identity rather than deleting it (ADR-029)
         .logout(logout -> logout.disable())
 
-        // Framing is refused unless the shop is explicitly configured as embeddable
-        // (app.security.jwt.same-site=None). That switch already says the shop is meant to run in
-        // a foreign frame — a demo or a presentation — and without it the browser withholds the
-        // identity cookie there anyway, so the two belong to one decision. Default: X-Frame-Options
-        // stays on. The .NET twin does the same in Program.cs.
+        // Framing is refused unless the shop is configured as embeddable
+        // (app.security.jwt.allow-framing). Its own switch, because framing is about the origin —
+        // where the port counts — while the cookie policy is about the site, where it does not: a
+        // slide deck on another port needs framing allowed and nothing else. The .NET twin does the
+        // same in Program.cs.
         .headers(
             headers ->
                 headers.frameOptions(
                     frame -> {
-                      if ("None".equalsIgnoreCase(jwtProperties.sameSite())) {
+                      if (jwtProperties.allowFraming()) {
                         frame.disable();
                       } else {
                         frame.sameOrigin();

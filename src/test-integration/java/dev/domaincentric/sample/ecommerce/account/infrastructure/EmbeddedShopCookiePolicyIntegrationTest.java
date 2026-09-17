@@ -9,13 +9,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * The embedded deployment: the shop runs inside an iframe on another origin. Every cookie the shop
- * needs there must be {@code SameSite=None; Secure} — the identity, the session and the CSRF token
- * alike, because a browser withholds the others in a foreign frame and the request would arrive
- * anonymous or without its form token. Framing is allowed in the same breath.
+ * The shop framed by another <em>site</em> — a different domain, not merely another port. Only then
+ * does the cookie policy have to be relaxed: every cookie the shop needs must be {@code
+ * SameSite=None; Secure}, the identity, the session and the CSRF token alike, because a browser
+ * withholds the others there and the request would arrive anonymous or without its form token.
  *
- * <p>Counterpart: {@link CookiePolicyIntegrationTest} covers the normal deployment. Same two
- * scenarios as the .NET sample's {@code EmbeddedShopCookiePolicyTest}.
+ * <p>Counterparts: {@link CookiePolicyIntegrationTest} is the unconfigured sample, {@link
+ * HardenedShopCookiePolicyIntegrationTest} the hardened deployment. Same scenarios as the .NET
+ * sample's {@code CookiePolicyTest}.
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
@@ -49,11 +50,5 @@ class EmbeddedShopCookiePolicyIntegrationTest extends CookiePolicyTestBase {
               assertThat(cookie.sameSite()).isEqualTo("None");
               assertThat(cookie.secure()).isTrue();
             });
-  }
-
-  @Test
-  @DisplayName("A page may be framed by another origin")
-  void framingIsAllowed() {
-    assertThat(headerOfProductList("X-Frame-Options")).isNull();
   }
 }

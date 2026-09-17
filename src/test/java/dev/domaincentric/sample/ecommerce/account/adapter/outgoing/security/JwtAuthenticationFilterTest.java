@@ -50,7 +50,7 @@ class JwtAuthenticationFilterTest {
   void setUp() {
     properties =
         new JwtProperties(
-            SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, false, "Lax");
+            SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, false, "Lax", false);
     tokenService = new JwtTokenService(properties);
     accounts = new TestIsAccountRegistered();
     filter = new JwtAuthenticationFilter(tokenService, properties, accounts);
@@ -216,7 +216,7 @@ class JwtAuthenticationFilterTest {
   void secureFlagIsConfigurable() throws Exception {
     properties =
         new JwtProperties(
-            SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, true, "Lax");
+            SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, true, "Lax", false);
     filter = new JwtAuthenticationFilter(new JwtTokenService(properties), properties, accounts);
 
     runFilter();
