@@ -49,7 +49,8 @@ class JwtAuthenticationFilterTest {
   @BeforeEach
   void setUp() {
     properties =
-        new JwtProperties(SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, false);
+        new JwtProperties(
+            SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, false, "Lax");
     tokenService = new JwtTokenService(properties);
     accounts = new TestIsAccountRegistered();
     filter = new JwtAuthenticationFilter(tokenService, properties, accounts);
@@ -214,7 +215,8 @@ class JwtAuthenticationFilterTest {
   @DisplayName("the Secure flag follows configuration rather than being hardcoded")
   void secureFlagIsConfigurable() throws Exception {
     properties =
-        new JwtProperties(SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, true);
+        new JwtProperties(
+            SECRET, 30, 7, "test-issuer", IDENTITY_COOKIE, SESSION_COOKIE, true, "Lax");
     filter = new JwtAuthenticationFilter(new JwtTokenService(properties), properties, accounts);
 
     runFilter();

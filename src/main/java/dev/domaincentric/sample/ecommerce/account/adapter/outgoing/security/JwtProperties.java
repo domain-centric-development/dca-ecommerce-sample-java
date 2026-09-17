@@ -35,6 +35,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param secureCookies whether cookies are flagged {@code Secure}; must be {@code true} wherever
  *     the application is reachable over HTTPS, and is configuration rather than a constant so that
  *     local HTTP development cannot bake {@code false} into a deployment
+ * @param sameSite the {@code SameSite} policy for both cookies; {@code Lax} unless configured
+ *     otherwise. The one reason to set {@code None} is running the shop inside an iframe on another
+ *     origin — a demo or a presentation — where the browser withholds a {@code Lax} cookie and
+ *     every request arrives without an identity, so the cart is never found. That widens the CSRF
+ *     surface, which is why it is opt-in and never the default; browsers also reject {@code None}
+ *     without {@code Secure}, and the constructor refuses the combination rather than letting the
+ *     browser drop the cookie silently.
  */
 @ConfigurationProperties(prefix = "app.security.jwt")
 public record JwtProperties(
@@ -44,7 +51,8 @@ public record JwtProperties(
     String issuer,
     String cookieName,
     String sessionCookieName,
-    boolean secureCookies) {
+    boolean secureCookies,
+    String sameSite) {
 
   /** Default cookie name if not configured. */
   public static final String DEFAULT_COOKIE_NAME = "shop-identity";
@@ -53,18 +61,26 @@ public record JwtProperties(
   public static final String DEFAULT_SESSION_COOKIE_NAME = "shop-session";
 
   /**
-   * SameSite policy for both cookies.
+   * Default SameSite policy for both cookies.
    *
    * <p>{@code Lax} rather than {@code Strict}: the identity cookie must survive a top-level
    * navigation from an external link, or someone arriving from a search result would be handed a
    * fresh identity and lose their cart.
    */
-  public static final String SAME_SITE = "Lax";
+  public static final String DEFAULT_SAME_SITE = "Lax";
 
   /** Default issuer if not configured. */
   public static final String DEFAULT_ISSUER = "dca-ecommerce-sample";
 
   public JwtProperties {
+    if (sameSite == null || sameSite.isBlank()) {
+      sameSite = DEFAULT_SAME_SITE;
+    }
+    if ("None".equalsIgnoreCase(sameSite) && !secureCookies) {
+      throw new IllegalArgumentException(
+          "SameSite=None requires Secure cookies; browsers drop the cookie otherwise. "
+              + "Set app.security.jwt.secure-cookies=true (JWT_SECURE_COOKIES=true).");
+    }
     if (secret == null || secret.length() < 32) {
       throw new IllegalArgumentException(
           "JWT secret must be at least 32 characters (256 bits) for HS256");

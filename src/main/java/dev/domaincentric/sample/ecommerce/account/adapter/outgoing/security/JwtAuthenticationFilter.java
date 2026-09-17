@@ -235,7 +235,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         ResponseCookie.from(name, value)
             .httpOnly(true)
             .secure(jwtProperties.secureCookies())
-            .sameSite(JwtProperties.SAME_SITE)
+            .sameSite(jwtProperties.sameSite())
             .path("/")
             .maxAge(maxAgeSeconds)
             .build()

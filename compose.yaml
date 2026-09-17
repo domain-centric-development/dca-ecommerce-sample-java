@@ -11,6 +11,12 @@ services:
     environment:
       # SPRING_PROFILES_ACTIVE: jdbc
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+      # Both default to the safe value. Set them only to run the shop inside an
+      # iframe on another origin (a demo): a Lax cookie is withheld there, so every
+      # request arrives anonymous and the cart is never found.
+      #   JWT_SAME_SITE=None JWT_SECURE_COOKIES=true docker compose up
+      JWT_SAME_SITE: ${JWT_SAME_SITE:-Lax}
+      JWT_SECURE_COOKIES: ${JWT_SECURE_COOKIES:-false}
 
   gradle:
     image: eclipse-temurin:25-jdk

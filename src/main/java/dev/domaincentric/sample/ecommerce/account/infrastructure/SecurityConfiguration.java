@@ -57,9 +57,12 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 public class SecurityConfiguration {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final JwtProperties jwtProperties;
 
-  public SecurityConfiguration(final JwtAuthenticationFilter jwtAuthenticationFilter) {
+  public SecurityConfiguration(
+      final JwtAuthenticationFilter jwtAuthenticationFilter, final JwtProperties jwtProperties) {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    this.jwtProperties = jwtProperties;
   }
 
   @Bean
@@ -123,8 +126,21 @@ public class SecurityConfiguration {
         // rotates the visitor identity rather than deleting it (ADR-029)
         .logout(logout -> logout.disable())
 
-        // Allow iframes (development only - enables embedding in Slidev presentations)
-        .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+        // Framing is refused unless the shop is explicitly configured as embeddable
+        // (app.security.jwt.same-site=None). That switch already says the shop is meant to run in
+        // a foreign frame — a demo or a presentation — and without it the browser withholds the
+        // identity cookie there anyway, so the two belong to one decision. Default: X-Frame-Options
+        // stays on. The .NET twin does the same in Program.cs.
+        .headers(
+            headers ->
+                headers.frameOptions(
+                    frame -> {
+                      if ("None".equalsIgnoreCase(jwtProperties.sameSite())) {
+                        frame.disable();
+                      } else {
+                        frame.sameOrigin();
+                      }
+                    }))
 
         // Add JWT filter before UsernamePasswordAuthenticationFilter
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

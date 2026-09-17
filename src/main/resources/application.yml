@@ -86,6 +86,10 @@ app:
       session-cookie-name: shop-session
       # Must be true wherever the app is reachable over HTTPS; false only for local HTTP
       secure-cookies: ${JWT_SECURE_COOKIES:false}
+      # Lax everywhere. None only to run the shop inside an iframe on another origin
+      # (a demo), where the browser would otherwise withhold the identity cookie and
+      # every request arrives anonymous. Requires secure-cookies=true.
+      same-site: ${JWT_SAME_SITE:Lax}
     password:
       bcrypt-strength: 12
       min-length: 8
