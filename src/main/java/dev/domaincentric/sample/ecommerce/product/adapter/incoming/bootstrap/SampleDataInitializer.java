@@ -6,7 +6,6 @@ import java.math.BigDecimal;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Incoming adapter that seeds the catalog at start-up, for demonstration purposes.
@@ -23,24 +22,23 @@ import org.springframework.transaction.support.TransactionTemplate;
  * infrastructure}: there it would need the context's application layer, which the module exposes to
  * nobody. The .NET twin's {@code SampleDataSeeder} has the same place and shape.
  *
- * <p>Runs as an {@link ApplicationRunner} within a {@link TransactionTemplate} to ensure all
- * operations complete within a proper transaction.
+ * <p>Runs as an {@link ApplicationRunner} and manages no transaction of its own: each {@code
+ * CreateProduct} call runs inside the use case's transaction boundary, which is where a transaction
+ * belongs (DCA-LAY-004). An incoming adapter drives, it does not decide how far a unit of work
+ * reaches.
  */
 @Component
 public class SampleDataInitializer implements ApplicationRunner {
 
   private final CreateProductInputPort createProduct;
-  private final TransactionTemplate transactionTemplate;
 
-  public SampleDataInitializer(
-      final CreateProductInputPort createProduct, final TransactionTemplate transactionTemplate) {
+  public SampleDataInitializer(final CreateProductInputPort createProduct) {
     this.createProduct = createProduct;
-    this.transactionTemplate = transactionTemplate;
   }
 
   @Override
   public void run(final ApplicationArguments args) {
-    transactionTemplate.executeWithoutResult(status -> loadSampleProducts());
+    loadSampleProducts();
   }
 
   private void loadSampleProducts() {
