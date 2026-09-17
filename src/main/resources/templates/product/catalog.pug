@@ -18,7 +18,7 @@ block content
             else
               .product-card__image-placeholder #{product.name().charAt(0)}
           .product-card__body
-            h3.product-card__title #{product.name()}
+            h3.product-card__title(data-test="product-card-title") #{product.name()}
             if product.description() != null && product.description() != ''
               p.product-card__description #{product.description()}
             .product-card__price #{product.priceAmount()} #{product.priceCurrency()}

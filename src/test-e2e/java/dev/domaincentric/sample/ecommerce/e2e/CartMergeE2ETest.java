@@ -72,46 +72,21 @@ class CartMergeE2ETest extends BaseE2ETest {
     // Wait for redirect after login to complete
     page.waitForURL(url -> !url.contains("/login"));
 
-    // Step 5: Check if we're on the merge page
-    String currentPath = getCurrentPath();
+    // Step 5: Logging in with items in both carts leaves a decision to make — the merge page
+    assertTrue(
+        getCurrentPath().contains("/cart/merge"),
+        "Should be on the merge page. Got: " + getCurrentPath());
+    CartMergePage mergePage = new CartMergePage(page, true);
+    assertTrue(mergePage.showsAnonymousCart(), "Should show anonymous cart summary");
+    assertTrue(mergePage.showsAccountCart(), "Should show account cart summary");
+    assertTrue(mergePage.showsMergeOptions(), "Should show all merge options");
 
-    if (currentPath.contains("/cart/merge")) {
-      // We're on the merge page - expected behavior
-      CartMergePage mergePage = new CartMergePage(page, true);
+    // Step 6: Select "Merge Both Carts" option and submit
+    cart = mergePage.mergeBothCarts();
 
-      // Verify merge page shows both carts and options
-      assertTrue(mergePage.showsAnonymousCart(), "Should show anonymous cart summary");
-      assertTrue(mergePage.showsAccountCart(), "Should show account cart summary");
-      assertTrue(mergePage.showsMergeOptions(), "Should show all merge options");
-
-      // Step 6: Select "Merge Both Carts" option and submit
-      cart = mergePage.mergeBothCarts();
-
-      // Step 7: Verify the merged cart
-      cart.waitForItems();
-      int mergedItemCount = cart.getItemCount();
-
-      // The merged cart should have items (at least 1 since we added same product which combines
-      // quantities)
-      assertTrue(mergedItemCount >= 1, "Merged cart should have items");
-
-      // Verify we're back on the cart page
-      assertTrue(getCurrentPath().startsWith("/cart"), "Should be on cart page after merge");
-
-    } else if (currentPath.contains("/cart")) {
-      // No merge required - either carts were auto-merged or one was empty
-      // This is acceptable if the system auto-handles single-item scenarios
-      cart = new CartPage(page);
-      cart.waitForItems();
-      assertTrue(cart.hasItems(), "Cart should have items after login");
-
-    } else {
-      // Check if we ended up on a different expected page
-      assertTrue(
-          currentPath.contains("/cart")
-              || currentPath.contains("/products")
-              || currentPath.equals("/"),
-          "Should end up on cart, products, or home page after login. Got: " + currentPath);
-    }
+    // Step 7: Verify the merged cart
+    cart.waitForItems();
+    assertTrue(cart.hasItems(), "Merged cart should have items");
+    assertTrue(getCurrentPath().startsWith("/cart"), "Should be on cart page after merge");
   }
 }

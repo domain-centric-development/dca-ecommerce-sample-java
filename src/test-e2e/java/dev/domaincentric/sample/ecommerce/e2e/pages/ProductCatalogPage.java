@@ -12,6 +12,7 @@ public class ProductCatalogPage extends BasePage {
   private static final String URL_PATTERN = "/products";
   private static final String PRODUCT_CARD = "product-card";
   private static final String VIEW_DETAILS_LINK = "view-product";
+  private static final String PRODUCT_TITLE = "product-card-title";
 
   /**
    * Creates a new ProductCatalogPage and waits for it to load.
@@ -62,5 +63,16 @@ public class ProductCatalogPage extends BasePage {
    */
   public boolean hasProducts() {
     return exists(PRODUCT_CARD);
+  }
+
+  /**
+   * The product names as the catalog shows them, in page order.
+   *
+   * @return one entry per product card
+   */
+  public java.util.List<String> productTitles() {
+    return page.locator("[data-test='" + PRODUCT_TITLE + "']").allTextContents().stream()
+        .map(String::trim)
+        .toList();
   }
 }

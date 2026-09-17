@@ -295,6 +295,11 @@ business changes. The user owns semantics. The specification is **unpublished an
 run only with `-Pspecification.path=../dca-sample-specification` and are skipped otherwise; no vector may lack a test
 adapter. Update both samples' adapters, schema compatibility records and glossaries together.
 
+The browser suite in `src/test-e2e` implements the specification's `scenarios.md` and nothing else: each scenario title
+is the `@DisplayName` of exactly one test, and `SharedScenariosTest` (same switch) fails on a scenario without a test, a
+test without a scenario or two tests for one title. A new end-user test therefore starts as a scenario in the
+specification, then lands in both suites under the same title.
+
 An explicit checkout action captures immutable positions, quantities and prices into a session. Cart edits do not
 create or mutate sessions. A new action supersedes the previous OPEN/Active session; confirmed/completed orders remain.
 Confirmation and replacement serialize through the same repository operation, including transaction completion.
