@@ -4,6 +4,7 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublis
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.DeliveryAddress;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ShippingOption;
 import dev.domaincentric.sample.ecommerce.checkout.domain.service.TaxCalculator;
@@ -46,11 +47,11 @@ public class SubmitDeliveryUseCase implements SubmitDeliveryInputPort {
 
   @Override
   public SubmitDeliveryResult execute(final SubmitDeliveryCommand command) {
-    // Load session
+    // Load the session as the caller's own: a session that is not theirs is not found
     final CheckoutSessionId sessionId = CheckoutSessionId.of(command.sessionId());
     final CheckoutSession session =
         checkoutSessionRepository
-            .findById(sessionId)
+            .findByIdForCustomer(sessionId, CustomerId.of(command.customerId()))
             .orElseThrow(
                 () -> new IllegalArgumentException("Session not found: " + command.sessionId()));
 

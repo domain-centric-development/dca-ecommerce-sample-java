@@ -262,7 +262,7 @@ class ArticleDataFlowIntegrationTest {
       assertNotNull(result.sessionId(), "Session should be created");
       CheckoutCartSnapshot session =
           getCheckoutSessionInputPort
-              .execute(GetCheckoutSessionQuery.of(result.sessionId()))
+              .execute(GetCheckoutSessionQuery.of(result.sessionId(), customerId))
               .session();
       assertFalse(session.lineItems().isEmpty(), "Should have line items");
 
@@ -292,7 +292,7 @@ class ArticleDataFlowIntegrationTest {
       // Then: Line item should have product name
       LineItemSnapshot lineItem =
           getCheckoutSessionInputPort
-              .execute(GetCheckoutSessionQuery.of(result.sessionId()))
+              .execute(GetCheckoutSessionQuery.of(result.sessionId(), customerId))
               .session()
               .lineItems()
               .get(0);
@@ -326,11 +326,11 @@ class ArticleDataFlowIntegrationTest {
       String sessionId = startResult.sessionId();
 
       // Complete all checkout steps
-      completeCheckoutSteps(sessionId);
+      completeCheckoutSteps(sessionId, customerId);
 
       // When: Confirming checkout
       ConfirmCheckoutResult result =
-          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId));
+          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId, customerId));
 
       // Then: Checkout should be confirmed successfully
       assertEquals("CONFIRMED", result.status(), "Checkout should be confirmed");
@@ -353,16 +353,16 @@ class ArticleDataFlowIntegrationTest {
       String sessionId = startResult.sessionId();
 
       // Complete all checkout steps
-      completeCheckoutSteps(sessionId);
+      completeCheckoutSteps(sessionId, customerId);
 
       // Get session before confirmation
       GetCheckoutSessionResult beforeConfirm =
-          getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId));
+          getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));
       assertEquals("REVIEW", beforeConfirm.currentStep(), "Should be at review step");
 
       // When: Confirming - the resolver will fetch fresh prices from CheckoutArticleDataPort
       ConfirmCheckoutResult result =
-          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId));
+          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId, customerId));
 
       // Then: Confirmation should use prices from the resolver
       assertEquals("CONFIRMED", result.status());
@@ -596,7 +596,7 @@ class ArticleDataFlowIntegrationTest {
           startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
       assertNotNull(
           getCheckoutSessionInputPort
-              .execute(GetCheckoutSessionQuery.of(startResult.sessionId()))
+              .execute(GetCheckoutSessionQuery.of(startResult.sessionId(), customerId))
               .session()
               .lineItems()
               .get(0)
@@ -605,11 +605,11 @@ class ArticleDataFlowIntegrationTest {
 
       // Step 3: Complete checkout steps
       String sessionId = startResult.sessionId();
-      completeCheckoutSteps(sessionId);
+      completeCheckoutSteps(sessionId, customerId);
 
       // Step 4: Confirm (uses resolver with fresh pricing)
       ConfirmCheckoutResult confirmResult =
-          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId));
+          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId, customerId));
       assertEquals(
           "CONFIRMED",
           confirmResult.status(),
@@ -638,15 +638,17 @@ class ArticleDataFlowIntegrationTest {
   }
 
   /** Helper method to complete all checkout steps before confirmation. */
-  private void completeCheckoutSteps(String sessionId) {
+  private void completeCheckoutSteps(String sessionId, String customerId) {
     // Submit buyer info
     submitBuyerInfoInputPort.execute(
-        new SubmitBuyerInfoCommand(sessionId, "test@example.com", "John", "Doe", "+1-555-0100"));
+        new SubmitBuyerInfoCommand(
+            sessionId, customerId, "test@example.com", "John", "Doe", "+1-555-0100"));
 
     // Submit delivery
     submitDeliveryInputPort.execute(
         new SubmitDeliveryCommand(
             sessionId,
+            customerId,
             "123 Main Street",
             null,
             "Springfield",
@@ -660,6 +662,6 @@ class ArticleDataFlowIntegrationTest {
             "EUR"));
 
     // Submit payment
-    submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, "mock"));
+    submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, customerId, "mock"));
   }
 }

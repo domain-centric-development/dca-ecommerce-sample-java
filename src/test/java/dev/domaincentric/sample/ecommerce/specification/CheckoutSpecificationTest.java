@@ -195,7 +195,7 @@ class CheckoutSpecificationTest {
 
     void confirm(CheckoutSession session) {
       new ConfirmCheckoutUseCase(repository, this, events, new InMemoryTransactionBoundary())
-          .execute(new ConfirmCheckoutCommand(session.id().value()));
+          .execute(new ConfirmCheckoutCommand(session.id().value(), session.customerId().value()));
     }
 
     public Optional<CartData> findById(CartId id, CustomerId customer) {

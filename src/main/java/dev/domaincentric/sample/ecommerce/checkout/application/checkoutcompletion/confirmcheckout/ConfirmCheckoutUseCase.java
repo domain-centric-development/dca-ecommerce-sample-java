@@ -8,6 +8,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticle;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticlePriceResolver;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
 import java.util.Map;
@@ -88,10 +89,11 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
                 }));
   }
 
+  /** Loads the session as the caller's own: a session that is not theirs is not found. */
   private CheckoutSession loadSession(
       final CheckoutSessionId sessionId, final ConfirmCheckoutCommand command) {
     return checkoutSessionRepository
-        .findById(sessionId)
+        .findByIdForCustomer(sessionId, CustomerId.of(command.customerId()))
         .orElseThrow(
             () -> new IllegalArgumentException("Session not found: " + command.sessionId()));
   }

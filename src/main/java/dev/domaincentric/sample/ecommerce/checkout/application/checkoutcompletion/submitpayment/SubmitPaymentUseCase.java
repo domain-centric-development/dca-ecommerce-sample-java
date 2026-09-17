@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentPro
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderRegistry;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentSelection;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -50,6 +51,7 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
   @Override
   public SubmitPaymentResult execute(final SubmitPaymentCommand command) {
     final CheckoutSessionId sessionId = CheckoutSessionId.of(command.sessionId());
+    final CustomerId customerId = CustomerId.of(command.customerId());
     final PaymentProviderId providerId = PaymentProviderId.of(command.providerId());
 
     // Provider lookup and payment initiation are remote-capable (payment service provider) -
@@ -69,7 +71,7 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
     // The amount to charge is the session total as it stands when payment is submitted
     final Money amount =
         checkoutSessionRepository
-            .findById(sessionId)
+            .findByIdForCustomer(sessionId, customerId)
             .orElseThrow(
                 () -> new IllegalArgumentException("Session not found: " + command.sessionId()))
             .totals()
@@ -88,7 +90,7 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
         () -> {
           final CheckoutSession session =
               checkoutSessionRepository
-                  .findById(sessionId)
+                  .findByIdForCustomer(sessionId, customerId)
                   .orElseThrow(
                       () ->
                           new IllegalArgumentException(

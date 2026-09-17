@@ -126,16 +126,18 @@ class CheckoutFlowIntegrationTest {
 
     // Step 3: Submit buyer information
     submitBuyerInfoInputPort.execute(
-        new SubmitBuyerInfoCommand(sessionId, "test@example.com", "John", "Doe", "+1-555-0100"));
+        new SubmitBuyerInfoCommand(
+            sessionId, customerId, "test@example.com", "John", "Doe", "+1-555-0100"));
 
     GetCheckoutSessionResult afterBuyer =
-        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId));
+        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));
     assertEquals("DELIVERY", afterBuyer.currentStep(), "Should advance to DELIVERY step");
 
     // Step 4: Submit delivery information
     submitDeliveryInputPort.execute(
         new SubmitDeliveryCommand(
             sessionId,
+            customerId,
             "123 Main Street",
             null, // streetLine2
             "Springfield",
@@ -149,19 +151,19 @@ class CheckoutFlowIntegrationTest {
             "EUR"));
 
     GetCheckoutSessionResult afterDelivery =
-        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId));
+        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));
     assertEquals("PAYMENT", afterDelivery.currentStep(), "Should advance to PAYMENT step");
 
     // Step 5: Submit payment information (using "mock" payment provider)
-    submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, "mock"));
+    submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, customerId, "mock"));
 
     GetCheckoutSessionResult afterPayment =
-        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId));
+        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));
     assertEquals("REVIEW", afterPayment.currentStep(), "Should advance to REVIEW step");
 
     // Step 6: Confirm checkout
     ConfirmCheckoutResult confirmResponse =
-        confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId));
+        confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId, customerId));
 
     assertEquals("CONFIRMED", confirmResponse.status(), "Session should be CONFIRMED");
     // Note: orderReference is set when complete() is called, not during confirm()

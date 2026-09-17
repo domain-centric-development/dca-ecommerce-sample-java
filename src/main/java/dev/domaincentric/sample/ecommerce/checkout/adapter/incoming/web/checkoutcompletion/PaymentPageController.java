@@ -90,7 +90,8 @@ public class PaymentPageController {
     // Full session details, plus the domain's decision whether this step may be opened
     final GetCheckoutSessionResult result =
         getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(activeSession.sessionId(), CheckoutStep.PAYMENT));
+            GetCheckoutSessionQuery.forStep(
+                activeSession.sessionId(), customerId, CheckoutStep.PAYMENT));
 
     if (!result.found()) {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
@@ -142,7 +143,7 @@ public class PaymentPageController {
 
     try {
       submitPaymentInputPort.execute(
-          new SubmitPaymentCommand(activeSession.sessionId(), providerId));
+          new SubmitPaymentCommand(activeSession.sessionId(), customerId, providerId));
 
       return "redirect:/checkout/review";
 
