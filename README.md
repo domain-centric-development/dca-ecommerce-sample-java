@@ -1074,6 +1074,8 @@ The language-neutral specification is an independently owned, currently unpublis
 build**: a plain checkout builds and runs without it, and the specification tests are reported as skipped. To run them,
 point the build at a local checkout; the vectors are copied into the gitignored `build/specification/` directory and
 the adapters in `SharedSpecificationTest`, `CheckoutSpecificationTest` and `RetainedDeliveryIntegrationTest` drive the production code with them.
+The specification's `scenarios.md` names the end-user scenarios both samples' browser suites implement, test for test
+under the scenario title; `SharedScenariosTest` checks that binding against the sources of `src/test-e2e`.
 
 ```bash
 ./gradlew test test-integration -Pspecification.path=../dca-sample-specification
