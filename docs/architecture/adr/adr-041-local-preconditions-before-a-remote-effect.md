@@ -39,9 +39,18 @@ load-bearing, which it was not: two of the port's three operations had no caller
   records what it was asked to do; both tests fail when either half is removed.
 - Negative: the session is loaded twice, once for the check and once inside the transaction. That is the price of
   keeping the remote call outside the transaction (ADR-034).
-- Negative: compensation is best effort. If the process dies between initiation and cancellation, the intent is
-  orphaned at the provider, and nothing in the shop will retry. A real system needs a reconciliation job; this
-  one says so here rather than pretending otherwise.
+- Negative: compensation is best effort, and three things decide how much of it survives.
+  - **It must catch every way out of the transaction.** A compensation attached to the ordinary failure type
+    only — `RuntimeException` in Java, a narrowed exception filter in .NET — leaves the intent behind for every
+    other failure. Both samples catch as widely as their runtime allows (`Throwable` / `Exception`); the clean-up
+    swallows its own failures, so attempting it in a dying process costs nothing.
+  - **It must not hang on what killed the operation.** Where the write is cancellable, the token that aborted it
+    must not be the token the release call runs under, or the clean-up is cancelled before it reaches the
+    provider — exactly the case it exists for. The .NET side gives the release its own deadline; the Java side
+    has no ambient cancellation to inherit.
+  - **If the process dies between initiation and cancellation**, the intent is orphaned at the provider and
+    nothing in the shop will retry. A real system needs a reconciliation job; this one says so here rather than
+    pretending otherwise.
 - Neutral: the redirect flow of WP-16 will revisit this path. The check stays valid there; the compensation may
   be replaced by the authorisation round trip.
 

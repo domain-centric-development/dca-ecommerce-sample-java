@@ -268,7 +268,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     ensureStepCompleted(CheckoutStep.DELIVERY);
     ensureAtOrBeforeStep(CheckoutStep.PAYMENT);
 
-    if (totals.total().isZero()) {
+    if (!totals.total().isPositive()) {
       throw new IllegalStateException("Nothing to pay: the total is " + totals.total());
     }
   }

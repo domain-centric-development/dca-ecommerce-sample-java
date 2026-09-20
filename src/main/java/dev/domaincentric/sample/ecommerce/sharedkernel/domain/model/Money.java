@@ -71,6 +71,11 @@ public record Money(BigDecimal amount, Currency currency) implements Value {
     return amount.compareTo(BigDecimal.ZERO) == 0;
   }
 
+  /** Whether there is an amount at all. An amount is never negative, so this is "not zero". */
+  public boolean isPositive() {
+    return !isZero();
+  }
+
   public boolean isGreaterThan(final Money other) {
     if (!this.currency.equals(other.currency)) {
       throw new IllegalArgumentException("Cannot compare money with different currencies");
