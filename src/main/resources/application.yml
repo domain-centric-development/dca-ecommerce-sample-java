@@ -73,8 +73,9 @@ logging:
 app:
   security:
     jwt:
-      # IMPORTANT: In production, use a strong secret from environment variable
-      # The secret must be at least 256 bits (32 bytes) for HS256
+      # The fallback is committed, therefore public: anyone can mint a token this shop accepts.
+      # It is JwtProperties.DEVELOPMENT_SECRET, and JwtDevelopmentDefaultsValidator refuses it
+      # outside the dev and inmemory profiles. The secret must be at least 256 bits for HS256.
       secret: ${JWT_SECRET:dev-only-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256}
       # The visitor identity carries the cart and survives session expiry (ADR-029)
       anonymous-expiration-days: 30
@@ -84,7 +85,8 @@ app:
       # Identity and session are separate cookies (ADR-030)
       cookie-name: shop-identity
       session-cookie-name: shop-session
-      # Must be true wherever the app is reachable over HTTPS; false only for local HTTP
+      # Must be true wherever the app is reachable over HTTPS; false only for local HTTP, and
+      # refused outside the dev and inmemory profiles
       secure-cookies: ${JWT_SECURE_COOKIES:false}
       # Lax everywhere. None only when the embedding page is on another site — a different
       # domain, not merely another port — where the browser would otherwise withhold the
@@ -99,5 +101,8 @@ app:
       bcrypt-strength: 12
       min-length: 8
     backoffice:
-      username: admin
-      password: admin
+      # The operator login replays failed publications, so it is the most privileged door in the
+      # shop. These values are committed and therefore public; BackofficeDevelopmentDefaultsValidator
+      # refuses them outside the dev and inmemory profiles.
+      username: ${BACKOFFICE_USERNAME:admin}
+      password: ${BACKOFFICE_PASSWORD:admin}

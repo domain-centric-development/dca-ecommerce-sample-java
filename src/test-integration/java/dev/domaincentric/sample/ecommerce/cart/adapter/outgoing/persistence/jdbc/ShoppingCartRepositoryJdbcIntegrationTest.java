@@ -27,7 +27,9 @@ import org.springframework.test.context.ActiveProfiles;
  * <p>Mirrors the scenarios covered by the JPA-based test to ensure specification pushdown and
  * paging work equivalently in the JDBC adapter.
  */
-@ActiveProfiles("jdbc")
+// A development run with a real database. Without "dev" the shop refuses the
+// committed secret and the non-Secure cookies (JwtDevelopmentDefaultsValidator).
+@ActiveProfiles({"dev", "jdbc"})
 @SpringBootTest(classes = EcommerceSampleApplication.class)
 class ShoppingCartRepositoryJdbcIntegrationTest {
 

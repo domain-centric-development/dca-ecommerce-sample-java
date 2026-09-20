@@ -2,6 +2,7 @@
   <configuration default="false" name="EcommerceSampleApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
     <module name="dca-ecommerce-sample-java.main" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication" />
+    <option name="ACTIVE_PROFILES" value="dev" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

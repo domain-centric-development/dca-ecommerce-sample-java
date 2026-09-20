@@ -141,6 +141,13 @@ bootRun {
   systemProperties System.properties.findAll { k, v ->
     k.toString().startsWith('spring.') || k.toString().startsWith('e2e.')
   }
+  // Running from a checkout is a development run, and the shop refuses its committed defaults
+  // anywhere else (JwtDevelopmentDefaultsValidator). Naming a profile yourself takes precedence —
+  // including `-Dspring.profiles.active=dev,jdbc`, which is how a real database is added to a
+  // development run.
+  if (!System.getProperty('spring.profiles.active') && !System.getenv('SPRING_PROFILES_ACTIVE')) {
+    systemProperty 'spring.profiles.active', 'dev'
+  }
 }
 
 // IntelliJ IDEA module configuration (Gradle 9+ compatible)
