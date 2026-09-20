@@ -36,6 +36,16 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
 
   private final ConcurrentHashMap<CartId, ShoppingCart> carts = new ConcurrentHashMap<>();
 
+  /**
+   * The one active cart per customer, held as an index rather than derived by scanning.
+   *
+   * <p>"At most one active cart per customer" is an invariant no single aggregate can hold, so the
+   * store holds it: a claim on this map is what a unique index gives a relational adapter for free.
+   * Without it, two requests that both find no active cart both create one.
+   */
+  private final ConcurrentHashMap<CustomerId, CartId> activeCartByCustomer =
+      new ConcurrentHashMap<>();
+
   @Override
   public Optional<ShoppingCart> findById(final CartId id) {
     return Optional.ofNullable(carts.get(id));
@@ -54,10 +64,7 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
 
   @Override
   public Optional<ShoppingCart> findActiveCartByCustomerId(final CustomerId customerId) {
-    return carts.values().stream()
-        .filter(cart -> cart.customerId().equals(customerId))
-        .filter(cart -> cart.status() == CartStatus.ACTIVE)
-        .findFirst();
+    return Optional.ofNullable(activeCartByCustomer.get(customerId)).map(carts::get);
   }
 
   @Override
@@ -65,15 +72,33 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
     return List.copyOf(carts.values());
   }
 
+  /**
+   * @throws IllegalStateException if the cart is active and the customer already has a different
+   *     active cart — the answer a unique index gives, so a caller written against this adapter
+   *     works unchanged against a relational one
+   */
   @Override
   public ShoppingCart save(final ShoppingCart cart) {
+    if (cart.status() == CartStatus.ACTIVE) {
+      final CartId claimed = activeCartByCustomer.putIfAbsent(cart.customerId(), cart.id());
+      if (claimed != null && !claimed.equals(cart.id())) {
+        throw new IllegalStateException(
+            "Customer " + cart.customerId().value() + " already has an active cart");
+      }
+    } else {
+      activeCartByCustomer.remove(cart.customerId(), cart.id());
+    }
+
     carts.put(cart.id(), cart);
     return cart;
   }
 
   @Override
   public void deleteById(final CartId id) {
-    carts.remove(id);
+    final ShoppingCart removed = carts.remove(id);
+    if (removed != null) {
+      activeCartByCustomer.remove(removed.customerId(), id);
+    }
   }
 
   /**
