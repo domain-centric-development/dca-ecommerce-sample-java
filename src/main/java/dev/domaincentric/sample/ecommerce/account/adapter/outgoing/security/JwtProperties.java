@@ -77,6 +77,17 @@ public record JwtProperties(
    */
   public static final String DEFAULT_SAME_SITE = "Lax";
 
+  /**
+   * The signing secret the sample ships with, so it starts without configuration.
+   *
+   * <p>It is committed, therefore public, therefore not a secret: anyone can mint a token this shop
+   * accepts. {@code JwtDevelopmentDefaultsValidator} refuses it outside the development profiles,
+   * and {@code application.yml} uses it as the fallback of {@code JWT_SECRET} — the two must stay
+   * the same string, which {@code DevelopmentDefaultsTest} pins.
+   */
+  public static final String DEVELOPMENT_SECRET =
+      "dev-only-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256";
+
   /** Default issuer if not configured. */
   public static final String DEFAULT_ISSUER = "dca-ecommerce-sample";
 

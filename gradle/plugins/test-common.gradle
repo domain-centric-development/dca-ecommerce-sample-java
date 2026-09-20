@@ -18,6 +18,13 @@ ext.configureTestTask = { testTask, outputDir = null ->
   testTask.configure {
     useJUnitPlatform()
 
+    // The shop refuses its committed development defaults outside the development profiles
+    // (JwtDevelopmentDefaultsValidator). A test run is a development run; a test class that needs
+    // a different profile still overrides this with @ActiveProfiles.
+    if (!System.getProperty('spring.profiles.active')) {
+      systemProperty 'spring.profiles.active', 'dev'
+    }
+
     // Filter support
     if (project.hasProperty('filter')) {
       filter {

@@ -52,6 +52,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-040](adr-040-checkout-snapshots-and-reconciliation.md) | Checkout snapshots and reconciliation | Accepted |
 | [ADR-041](adr-041-local-preconditions-before-a-remote-effect.md) | Local preconditions come before a remote effect, and an unusable effect is released | Accepted |
 | [ADR-042](adr-042-uniqueness-is-claimed-in-the-store.md) | Uniqueness that spans aggregates is claimed in the store, not checked before it | Accepted |
+| [ADR-043](adr-043-development-defaults-fail-closed.md) | A committed default must not start a real deployment | Accepted |
 
 ### Proposed 🟡
 
