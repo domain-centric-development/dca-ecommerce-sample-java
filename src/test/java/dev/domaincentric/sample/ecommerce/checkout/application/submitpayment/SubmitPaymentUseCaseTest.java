@@ -46,11 +46,12 @@ class SubmitPaymentUseCaseTest {
   private final InMemoryCheckoutSessionRepository sessions =
       new InMemoryCheckoutSessionRepository();
   private final RecordingPaymentProvider provider = new RecordingPaymentProvider();
+  private final SilentEventPublisher events = new SilentEventPublisher();
   private final SubmitPaymentUseCase useCase =
       new SubmitPaymentUseCase(
           sessions,
           new SingleProviderRegistry(provider),
-          new SilentEventPublisher(),
+          events,
           new InMemoryTransactionBoundary());
 
   @Test
@@ -87,6 +88,22 @@ class SubmitPaymentUseCaseTest {
     assertEquals(1, provider.initiations.size(), "the intent was created before the session moved");
     assertEquals(
         provider.initiations, provider.cancellations, "and exactly that intent was released");
+  }
+
+  @Test
+  @DisplayName("An intent is released even when the failure is an Error")
+  void anIntentIsReleasedOnAnError() {
+    final CheckoutSession session = readySession();
+    events.failWith = new StackOverflowError("the write fails in a way nobody catches");
+
+    assertThrows(
+        StackOverflowError.class,
+        () -> useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock")));
+
+    assertEquals(
+        provider.initiations,
+        provider.cancellations,
+        "an intent must not survive a failure just because the failure was not an exception");
   }
 
   @Test
@@ -193,6 +210,9 @@ class SubmitPaymentUseCaseTest {
 
   private static final class SilentEventPublisher implements DomainEventPublisher {
 
+    /** What the write fails with, when the test is about a failing write. */
+    private Error failWith;
+
     @Override
     public void publish(final DomainEvent event) {
       // the events of this use case are not what is under test
@@ -200,6 +220,9 @@ class SubmitPaymentUseCaseTest {
 
     @Override
     public void publishAndClearEvents(final AggregateRoot<?, ?> aggregate) {
+      if (failWith != null) {
+        throw failWith;
+      }
       aggregate.clearDomainEvents();
     }
   }

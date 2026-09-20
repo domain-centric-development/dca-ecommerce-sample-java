@@ -109,9 +109,12 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
             eventPublisher.publishAndClearEvents(session);
             return SubmitPaymentResult.from(session);
           });
-    } catch (final RuntimeException e) {
+    } catch (final Throwable t) {
+      // Every way out of the transaction releases the intent, an Error included: the clean-up is
+      // one call that swallows its own failures, and leaving a payment behind is worse than
+      // attempting it while the JVM is in trouble. The .NET twin catches as widely.
       cancelQuietly(provider, initiation.providerReference());
-      throw e;
+      throw t;
     }
   }
 
