@@ -110,6 +110,10 @@ REST Controller (no transaction)
 3. **Events After Commit** - Use `@TransactionalEventListener(phase = AFTER_COMMIT)`
 4. **One Transaction Per Use Case** - Each public method is one transaction
 5. **Domain Layer Never Transactional** - Domain objects remain framework-independent
+6. **One Transaction Manager, Every Profile** - the `inmemory` profile runs on the same manager as the others.
+   A stand-in that opens nothing is not a cheaper variant of a transaction: the event publication registry writes
+   its rows under the caller's transaction, so with a stand-in those rows commit on their own and a rolled-back
+   unit of work leaves a publication the next recovery run delivers (ADR-034)
 
 ## Anti-Patterns to Avoid
 
@@ -136,6 +140,19 @@ public class SubmitPaymentUseCase {
 @EventListener  // WRONG - may execute before commit
 public void onProductCreated(ProductCreated event) { }
 ```
+
+❌ **A Placeholder Transaction Manager:**
+```java
+@Profile("inmemory")
+public class TransactionConfiguration {
+  @Bean
+  public PlatformTransactionManager transactionManager() {
+    return new InMemoryTransactionManager();   // WRONG - manages nothing, so nothing rolls back
+  }
+}
+```
+The declaration looks transactional and the tests pass; what is missing shows up as a publication row that
+outlives the work that wrote it. Where a datasource exists, let the framework's manager stand.
 
 ❌ **Domain Layer with @Transactional:**
 ```java

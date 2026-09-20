@@ -32,3 +32,20 @@ remote effect.
   listeners and the event publication registry still work — `TransactionTemplate` is a real transaction.
 - Negative: two shapes of use case exist; a reader has to know why one is annotated and the other is not. The
   rules make the choice a compile-time fact rather than a convention.
+
+## Amendment (2026-09-20): one transaction manager, every profile
+
+The `inmemory` profile registered a placeholder `PlatformTransactionManager` that opened, committed and rolled
+back nothing. It won over the framework's manager, so that profile had declarative transactions in name only.
+
+Delivery was never the problem — `@ApplicationModuleListener` fires after commit, so a rolled-back publication
+reaches no listener in the same run. The registry row is: it belongs to the publishing transaction, and under a
+placeholder it commits on its own. A unit of work that failed therefore left a publication behind, which the next
+recovery run would deliver.
+
+**Decision.** The placeholder is gone; every profile uses the manager the framework configures for the datasource
+the sample already has. The `inmemory` profile keeps its in-memory repositories and loses nothing else.
+
+Two integration tests hold it: one asserts the profile does not swap in a placeholder, the other publishes an
+integration event in a unit of work that then fails and asserts that no publication row survives it. Both fail
+against the placeholder — the second one on exactly that row, which is the fact this amendment is about.
