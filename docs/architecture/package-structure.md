@@ -424,7 +424,7 @@ dev.domaincentric.sample.ecommerce
 └── infrastructure/                  # Infrastructure (cross-cutting)
     ├── EcommerceSampleApplication
     ├── config/                    # Spring @Configuration classes
-    │   ├── SecurityConfiguration, TransactionConfiguration
+    │   ├── SecurityConfiguration
     │   ├── AsyncConfiguration, DomainConfiguration
     │   └── Pug4jConfiguration
     ├── support/
