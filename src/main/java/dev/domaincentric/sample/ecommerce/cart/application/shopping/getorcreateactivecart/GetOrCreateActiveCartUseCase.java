@@ -47,10 +47,19 @@ public class GetOrCreateActiveCartUseCase implements GetOrCreateActiveCartInputP
           existingCart.get().id().value(), customerId.value(), false);
     }
 
-    // Create new cart
+    // Create new cart. The store refuses a second active cart for the same customer, so a request
+    // that lost the race takes the cart that won rather than adding one of its own.
     final CartId newCartId = CartId.generate();
     final ShoppingCart newCart = new ShoppingCart(newCartId, customerId);
-    shoppingCartRepository.save(newCart);
+    try {
+      shoppingCartRepository.save(newCart);
+    } catch (final IllegalStateException alreadyActive) {
+      final ShoppingCart winner =
+          shoppingCartRepository
+              .findActiveCartByCustomerId(customerId)
+              .orElseThrow(() -> alreadyActive);
+      return new GetOrCreateActiveCartResult(winner.id().value(), customerId.value(), false);
+    }
 
     eventPublisher.publishAndClearEvents(newCart);
 

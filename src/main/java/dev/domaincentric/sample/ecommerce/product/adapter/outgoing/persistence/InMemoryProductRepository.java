@@ -70,10 +70,24 @@ public class InMemoryProductRepository implements ProductRepository {
     return products.values().stream().sorted(BY_NAME).toList();
   }
 
+  /**
+   * @throws IllegalStateException if another product already carries this SKU — the answer a unique
+   *     index gives, so a caller written against this adapter works unchanged against a relational
+   *     one
+   */
   @Override
   public Product save(final Product product) {
+    final ProductId claimed = skuIndex.putIfAbsent(product.sku(), product.id());
+    if (claimed != null && !claimed.equals(product.id())) {
+      throw new IllegalStateException("SKU " + product.sku().value() + " is already taken");
+    }
+
+    // A product that changed its SKU must stop resolving under the old one
+    skuIndex
+        .entrySet()
+        .removeIf(e -> e.getValue().equals(product.id()) && !e.getKey().equals(product.sku()));
+
     products.put(product.id(), product);
-    skuIndex.put(product.sku(), product.id());
     return product;
   }
 

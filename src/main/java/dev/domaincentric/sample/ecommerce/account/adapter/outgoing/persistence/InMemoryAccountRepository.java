@@ -55,8 +55,16 @@ public class InMemoryAccountRepository implements AccountRepository {
     return findById(accountId);
   }
 
+  /**
+   * @throws IllegalStateException if the email address or the linked user id already belongs to
+   *     another account — the answer the {@code UNIQUE} columns of the schema give, so a caller
+   *     written against this adapter works unchanged against the relational one
+   */
   @Override
   public Account save(final Account account) {
+    claim(emailIndex, account.email().value(), account.id(), "Email address");
+    claim(userIdIndex, account.linkedUserId().value(), account.id(), "Linked user id");
+
     // Stored as a copy so that a later mutation of the caller's instance does not reach the store
     // without a save, the way it would not reach a database either.
     accounts.put(account.id(), copyOf(account));
@@ -71,11 +79,20 @@ public class InMemoryAccountRepository implements AccountRepository {
                 entry.getValue().equals(account.id())
                     && !entry.getKey().equals(account.email().value()));
 
-    // Update indexes
-    emailIndex.put(account.email().value(), account.id());
-    userIdIndex.put(account.linkedUserId().value(), account.id());
-
     return account;
+  }
+
+  /** Claims a unique value for one account, or refuses when somebody else holds it. */
+  private static void claim(
+      final ConcurrentHashMap<String, AccountId> index,
+      final String value,
+      final AccountId accountId,
+      final String what) {
+
+    final AccountId holder = index.putIfAbsent(value, accountId);
+    if (holder != null && !holder.equals(accountId)) {
+      throw new IllegalStateException(what + " " + value + " already belongs to another account");
+    }
   }
 
   /**
