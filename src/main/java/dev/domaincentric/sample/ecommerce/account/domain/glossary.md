@@ -293,3 +293,50 @@ because it is consumed by domain code and expressed in domain language.
 - **Password policy** should be extracted as a standalone domain specification rather than
   being buried in `HashedPassword.validatePasswordStrength` — the same move already made for the
   date-of-birth rule (`UsableDateOfBirth`).
+
+---
+
+## Failures
+
+Named refusals of the account model, plus the two the registration use case owns.
+
+### AccountClosed
+
+**Definition:** A closed account would be changed. Closing is final; every change refuses alike.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `AccountStatus.CLOSED`
+
+---
+
+### AccountNotAccessible
+
+**Definition:** An account whose status does not allow signing in would record a login.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `Account.recordLogin`, `AccountStatus`
+
+---
+
+### AccountNotSuspended
+
+**Definition:** An account that is not suspended would be reactivated.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `Account.reactivate`
+
+---
+
+### PasswordTooWeak
+
+**Definition:** A plaintext password does not meet the strength rules. A rule of the model, not an argument
+contract: the string is well formed and refused for what it is made of.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `HashedPassword.validatePasswordStrength`
+
+---
+
+### EmailAlreadyRegistered / AccountAlreadyExists
+
+**Definition:** The address is held by another account, or the signed-in user already has one. Both are statements
+about all accounts, which only the store can make.
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `AccountRepository`
+

@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
+import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
@@ -91,7 +93,10 @@ public class ConfirmationPageController {
       redirectAttributes.addFlashAttribute("orderConfirmed", true);
       return "redirect:/checkout/confirmation";
 
-    } catch (IllegalArgumentException | IllegalStateException e) {
+    } catch (UseCaseException | DomainException | IllegalArgumentException e) {
+      // The two base types are the checkout's own refusals. IllegalArgumentException is still
+      // here because a form field the customer typed reaches a value object unvalidated; each
+      // field moved into request validation is one reason less to catch it.
       redirectAttributes.addFlashAttribute("error", e.getMessage());
       return "redirect:/checkout/review";
     }

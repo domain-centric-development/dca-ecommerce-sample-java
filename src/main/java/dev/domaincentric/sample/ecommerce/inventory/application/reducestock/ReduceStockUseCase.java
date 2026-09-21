@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.inventory.application.reducestock;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.inventory.application.shared.StockLevelRepository;
+import dev.domaincentric.sample.ecommerce.inventory.domain.model.InsufficientStockException;
 import dev.domaincentric.sample.ecommerce.inventory.domain.model.StockLevel;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import org.slf4j.Logger;
@@ -64,9 +65,10 @@ public class ReduceStockUseCase implements ReduceStockInputPort {
 
       return ReduceStockResult.success(command.productId(), previousStock, newStock);
 
-    } catch (IllegalArgumentException e) {
-      logger.error(
-          "Failed to reduce stock for product {}: {}", command.productId(), e.getMessage());
+    } catch (final InsufficientStockException e) {
+      // Only the stock rule becomes a failure result. An argument guard from the aggregate would be
+      // a malformed call - a defect here, not an answer for the caller - and keeps travelling.
+      logger.warn("Stock too low for product {}: {}", command.productId(), e.getMessage());
       return ReduceStockResult.failure(command.productId(), e.getMessage());
     }
   }

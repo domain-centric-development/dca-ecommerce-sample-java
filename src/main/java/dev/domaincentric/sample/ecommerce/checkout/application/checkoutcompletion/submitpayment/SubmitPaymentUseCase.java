@@ -2,9 +2,13 @@ package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompleti
 
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProvider;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderRegistry;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
@@ -63,13 +67,9 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
     final PaymentProvider provider =
         paymentProviderRegistry
             .findById(providerId)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "Payment provider not found: " + command.providerId()));
+            .orElseThrow(() -> new PaymentProviderNotFoundException(command.providerId()));
     if (!provider.isAvailable()) {
-      throw new IllegalStateException(
-          "Payment provider is currently unavailable: " + command.providerId());
+      throw new PaymentProviderUnavailableException(command.providerId());
     }
 
     // Everything the session itself can refuse is refused here, before the provider is reached: a
@@ -78,14 +78,13 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
     final CheckoutSession snapshot =
         checkoutSessionRepository
             .findByIdForCustomer(sessionId, customerId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("Session not found: " + command.sessionId()));
+            .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
     snapshot.assertReadyForPayment();
     final Money amount = snapshot.totals().total();
 
     final PaymentProvider.PaymentResult initiation = provider.initiatePayment(sessionId, amount);
     if (!initiation.success()) {
-      throw new IllegalStateException(initiation.errorMessage());
+      throw new PaymentInitiationFailedException(command.providerId(), initiation.errorMessage());
     }
 
     final PaymentSelection paymentSelection =
@@ -100,10 +99,7 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
             final CheckoutSession session =
                 checkoutSessionRepository
                     .findByIdForCustomer(sessionId, customerId)
-                    .orElseThrow(
-                        () ->
-                            new IllegalArgumentException(
-                                "Session not found: " + command.sessionId()));
+                    .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
             session.submitPayment(paymentSelection);
             checkoutSessionRepository.save(session);
             eventPublisher.publishAndClearEvents(session);

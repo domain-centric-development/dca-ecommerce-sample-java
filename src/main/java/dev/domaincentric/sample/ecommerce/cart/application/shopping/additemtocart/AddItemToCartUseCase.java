@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtoca
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ArticleDataPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartArticle;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
@@ -65,10 +66,9 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
     final CartArticle cartArticle =
         articleDataPort
             .getArticleData(productId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("Product not found: " + input.productId()));
+            .orElseThrow(() -> new ArticleNotAvailableException(productId));
     if (!cartArticle.hasStockFor(quantity.value())) {
-      throw new IllegalArgumentException("Insufficient stock for product: " + input.productId());
+      throw new InsufficientArticleStockException(productId, quantity.value());
     }
     final Price priceAtAddition = Price.of(cartArticle.currentPrice());
 
@@ -78,8 +78,7 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
           final ShoppingCart cart =
               shoppingCartRepository
                   .findByIdForCustomer(cartId, CustomerId.of(input.customerId()))
-                  .orElseThrow(
-                      () -> new IllegalArgumentException("Cart not found: " + input.cartId()));
+                  .orElseThrow(() -> new CartNotFoundException(cartId));
           cart.addItem(productId, quantity, priceAtAddition);
           shoppingCartRepository.save(cart);
           eventPublisher.publishAndClearEvents(cart);

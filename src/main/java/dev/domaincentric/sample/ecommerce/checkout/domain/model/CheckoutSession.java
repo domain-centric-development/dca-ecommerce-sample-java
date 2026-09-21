@@ -94,7 +94,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * @param subtotal the subtotal of all line items
    * @param taxCalculator resolves the tax contained in the totals
    * @return a new checkout session
-   * @throws IllegalArgumentException if lineItems is empty
+   * @throws EmptyCheckoutException if lineItems is empty
    */
   public static CheckoutSession start(
       final CartId cartId,
@@ -103,7 +103,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
       final Money subtotal,
       final TaxCalculator taxCalculator) {
     if (lineItems == null || lineItems.isEmpty()) {
-      throw new IllegalArgumentException("Cannot start checkout with empty line items");
+      throw new EmptyCheckoutException(cartId);
     }
 
     final CheckoutSessionId sessionId = CheckoutSessionId.generate();
@@ -177,22 +177,24 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
-   * Synchronizes line items with the current cart state.
+   * Refuses to update the line items of a running session.
    *
-   * <p>This method updates the checkout session's line items when the underlying cart changes
-   * during the checkout flow. It recalculates the subtotal and updates totals accordingly.
+   * <p>A session is the snapshot the customer decided on. When the cart changes underneath it, the
+   * answer is a new session over the new contents, not a session whose totals move while somebody
+   * is looking at them. The method exists to say so at the call site rather than in prose.
    *
    * @param newLineItems the updated line items from the cart
    * @param newSubtotal the new subtotal calculated from the cart
    * @param taxCalculator resolves the tax contained in the totals
-   * @throws IllegalStateException if session is not modifiable
-   * @throws IllegalArgumentException if newLineItems is empty
+   * @throws UnsupportedOperationException always — this is not an operation the model has, which is
+   *     a statement about the model and not a rule a caller can satisfy
    */
   public void syncLineItems(
       final List<CheckoutLineItem> newLineItems,
       final Money newSubtotal,
       final TaxCalculator taxCalculator) {
-    throw new IllegalStateException("Checkout snapshots are immutable; start a new session");
+    throw new UnsupportedOperationException(
+        "Checkout snapshots are immutable; start a new session");
   }
 
   /**
@@ -201,7 +203,8 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * <p>Raises a {@link BuyerInfoSubmitted} domain event.
    *
    * @param buyerInfo the buyer contact information
-   * @throws IllegalStateException if session is not modifiable or if trying to skip steps
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   * @throws CheckoutStepOutOfOrderException if the step is ahead of the current one
    */
   public void submitBuyerInfo(final BuyerInfo buyerInfo) {
     ensureModifiable();
@@ -225,7 +228,8 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * @param address the delivery address
    * @param shippingOption the selected shipping option
    * @param taxCalculator resolves the tax contained in the totals
-   * @throws IllegalStateException if session is not modifiable or if trying to skip steps
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   * @throws CheckoutStepOutOfOrderException if the step is ahead of the current one
    */
   public void submitDelivery(
       final DeliveryAddress address,
@@ -259,8 +263,10 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * anything: a caller that is about to reach a payment provider asks this first, so a session that
    * would be rejected afterwards never produces a payment intent at the provider.
    *
-   * @throws IllegalStateException if the session is not modifiable, the buyer or delivery step is
-   *     missing, the session is past the payment step, or there is nothing to charge
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   * @throws CheckoutStepNotCompletedException if the buyer or delivery step is missing
+   * @throws CheckoutStepOutOfOrderException if the session is past the payment step
+   * @throws NothingToPayException if the total is not positive
    */
   public void assertReadyForPayment() {
     ensureModifiable();
@@ -269,7 +275,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     ensureAtOrBeforeStep(CheckoutStep.PAYMENT);
 
     if (!totals.total().isPositive()) {
-      throw new IllegalStateException("Nothing to pay: the total is " + totals.total());
+      throw new NothingToPayException(this.id, totals.total());
     }
   }
 
@@ -279,7 +285,8 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * <p>Raises a {@link PaymentSubmitted} domain event.
    *
    * @param payment the payment method selection
-   * @throws IllegalStateException if session is not modifiable or if trying to skip steps
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   * @throws CheckoutStepOutOfOrderException if the step is ahead of the current one
    */
   public void submitPayment(final PaymentSelection payment) {
     ensureModifiable();
@@ -340,15 +347,17 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * <p>Raises a {@link CheckoutConfirmed} domain event on success.
    *
    * @param facts the resolver for validating current pricing and availability
-   * @throws IllegalStateException if session is not confirmable, steps are incomplete, or
-   *     validation fails
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   * @throws CheckoutStepNotCompletedException if a step is still missing its data
+   * @throws CheckoutStepOutOfOrderException if the session does not stand at the review step
+   * @throws CheckoutValidationException if a line item no longer passes validation
    */
   public void confirm(java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
     ensureModifiable();
     ensureAllStepsCompleted();
 
     if (currentStep != CheckoutStep.REVIEW) {
-      throw new IllegalStateException("Can only confirm from review step");
+      throw new CheckoutStepOutOfOrderException(this.id, CheckoutStep.REVIEW, currentStep);
     }
 
     final CheckoutValidationResult validationResult = validateItems(facts);
@@ -376,11 +385,11 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * <p>Raises a {@link CheckoutCompleted} domain event.
    *
    * @param orderReference optional order reference from order system
-   * @throws IllegalStateException if session is not in confirmed status
+   * @throws CheckoutNotConfirmedException if the session was never confirmed
    */
   public void complete(@Nullable final String orderReference) {
     if (!status.canComplete()) {
-      throw new IllegalStateException("Cannot complete checkout with status: " + status);
+      throw new CheckoutNotConfirmedException(this.id, status);
     }
 
     this.orderReference = orderReference;
@@ -394,11 +403,11 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    *
    * <p>Raises a {@link CheckoutAbandoned} domain event.
    *
-   * @throws IllegalStateException if session is already in a terminal state
+   * @throws CheckoutNotModifiableException if the session is already in a terminal state
    */
   public void abandon() {
     if (!status.isModifiable()) {
-      throw new IllegalStateException("Cannot abandon checkout with status: " + status);
+      throw new CheckoutNotModifiableException(this.id, status);
     }
 
     final CheckoutStep abandonedAt = this.currentStep;
@@ -412,11 +421,11 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    *
    * <p>Raises a {@link CheckoutExpired} domain event.
    *
-   * @throws IllegalStateException if session is already in a terminal state
+   * @throws CheckoutNotModifiableException if the session is already in a terminal state
    */
   public void expire() {
     if (!status.isModifiable()) {
-      throw new IllegalStateException("Cannot expire checkout with status: " + status);
+      throw new CheckoutNotModifiableException(this.id, status);
     }
 
     final CheckoutStep expiredAt = this.currentStep;
@@ -429,18 +438,18 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * Navigates back to a previous step.
    *
    * @param step the step to navigate back to
-   * @throws IllegalStateException if session is not modifiable
-   * @throws IllegalArgumentException if trying to go forward or to confirmation step
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   * @throws CheckoutStepNotNavigableException if the confirmation step is asked for
+   * @throws CheckoutStepOutOfOrderException if the step is ahead of the current one
    */
   public void goBackTo(final CheckoutStep step) {
     ensureModifiable();
 
     if (step == CheckoutStep.CONFIRMATION) {
-      throw new IllegalArgumentException("Cannot navigate directly to confirmation step");
+      throw new CheckoutStepNotNavigableException(this.id, step);
     }
     if (step.isAfter(currentStep)) {
-      throw new IllegalArgumentException(
-          "Cannot skip forward to step " + step + " from " + currentStep);
+      throw new CheckoutStepOutOfOrderException(this.id, step, currentStep);
     }
 
     this.currentStep = step;
@@ -483,13 +492,13 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
 
   private void ensureModifiable() {
     if (!status.isModifiable()) {
-      throw new IllegalStateException("Cannot modify checkout with status: " + status);
+      throw new CheckoutNotModifiableException(this.id, status);
     }
   }
 
   private void ensureStepCompleted(final CheckoutStep step) {
     if (!isStepCompleted(step)) {
-      throw new IllegalStateException("Step " + step + " must be completed first");
+      throw new CheckoutStepNotCompletedException(this.id, step);
     }
   }
 
@@ -497,20 +506,13 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     // Allow modifying current step or going back to modify previous steps
     // Cannot skip forward (e.g., submit payment before delivery)
     if (currentStep.isBefore(step)) {
-      throw new IllegalStateException(
-          "Cannot skip to step " + step + " - currently at " + currentStep);
+      throw new CheckoutStepOutOfOrderException(this.id, step, currentStep);
     }
   }
 
   private void ensureAllStepsCompleted() {
-    if (!isStepCompleted(CheckoutStep.BUYER_INFO)) {
-      throw new IllegalStateException("Buyer info not submitted");
-    }
-    if (!isStepCompleted(CheckoutStep.DELIVERY)) {
-      throw new IllegalStateException("Delivery not submitted");
-    }
-    if (!isStepCompleted(CheckoutStep.PAYMENT)) {
-      throw new IllegalStateException("Payment not submitted");
-    }
+    ensureStepCompleted(CheckoutStep.BUYER_INFO);
+    ensureStepCompleted(CheckoutStep.DELIVERY);
+    ensureStepCompleted(CheckoutStep.PAYMENT);
   }
 }

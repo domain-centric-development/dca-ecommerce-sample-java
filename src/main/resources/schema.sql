@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS carts (
   id VARCHAR(64) PRIMARY KEY,
   customer_id VARCHAR(64) NOT NULL,
   status VARCHAR(32) NOT NULL,
+  -- "At most one ACTIVE cart per customer" is uniqueness over a subset of the rows. H2 has no
+  -- partial index, so the value the index guards is computed instead: the customer while the cart
+  -- is active, NULL once it is completed or abandoned. A unique index counts NULLs as distinct, so
+  -- a customer keeps any number of finished carts and at most one open one.
+  active_customer_id VARCHAR(64) GENERATED ALWAYS AS (CASE WHEN status = 'ACTIVE' THEN customer_id END),
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
@@ -41,6 +46,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
   CONSTRAINT fk_cart_items_cart FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_carts_active_customer ON carts(active_customer_id);
 CREATE INDEX IF NOT EXISTS idx_carts_customer ON carts(customer_id);
 CREATE INDEX IF NOT EXISTS idx_carts_status ON carts(status);
 CREATE INDEX IF NOT EXISTS idx_items_cart ON cart_items(cart_id);

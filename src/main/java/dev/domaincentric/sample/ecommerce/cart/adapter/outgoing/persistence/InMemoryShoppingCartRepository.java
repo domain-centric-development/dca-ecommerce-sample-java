@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence;
 
+import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
@@ -73,23 +74,28 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
   }
 
   /**
-   * @throws IllegalStateException if the cart is active and the customer already has a different
-   *     active cart — the answer a unique index gives, so a caller written against this adapter
-   *     works unchanged against a relational one
+   * @throws ActiveCartAlreadyExistsException if the cart is active and the customer already has a
+   *     different active cart — the answer a unique index gives, so a caller written against this
+   *     adapter works unchanged against a relational one
    */
   @Override
   public ShoppingCart save(final ShoppingCart cart) {
+    // The cart is stored before the claim is published, and withdrawn again when the claim fails.
+    // A relational store makes both visible at one commit; here the two writes are separate, so
+    // publishing the claim first would let the request that lost the race read the winner's id out
+    // of the index and find nothing behind it.
+    carts.put(cart.id(), cart);
+
     if (cart.status() == CartStatus.ACTIVE) {
       final CartId claimed = activeCartByCustomer.putIfAbsent(cart.customerId(), cart.id());
       if (claimed != null && !claimed.equals(cart.id())) {
-        throw new IllegalStateException(
-            "Customer " + cart.customerId().value() + " already has an active cart");
+        carts.remove(cart.id(), cart);
+        throw new ActiveCartAlreadyExistsException(cart.customerId());
       }
     } else {
       activeCartByCustomer.remove(cart.customerId(), cart.id());
     }
 
-    carts.put(cart.id(), cart);
     return cart;
   }
 

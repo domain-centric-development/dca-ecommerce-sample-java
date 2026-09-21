@@ -57,7 +57,7 @@ public class CreateProductUseCase implements CreateProductInputPort {
 
     // Business rule: SKU must be unique
     if (productRepository.existsBySku(sku)) {
-      throw new IllegalArgumentException("Product with SKU already exists: " + sku.value());
+      throw new DuplicateSkuException(sku);
     }
 
     // Convert input to domain value objects

@@ -33,9 +33,9 @@ class HashedPasswordTest {
   void rejectsPasswordOneByteOverMaximum() {
     final String overLimit = passwordOfBytes(HashedPassword.MAX_BYTE_LENGTH + 1);
 
-    final IllegalArgumentException thrown =
+    final PasswordTooWeakException thrown =
         assertThrows(
-            IllegalArgumentException.class,
+            PasswordTooWeakException.class,
             () -> HashedPassword.validatePasswordStrength(overLimit));
     assertEquals(
         "Password must not be longer than "
@@ -54,7 +54,7 @@ class HashedPasswordTest {
     assertTrue(multiByte.length() < HashedPassword.MAX_BYTE_LENGTH, "fewer chars than the limit");
     assertTrue(utf8Length(multiByte) > HashedPassword.MAX_BYTE_LENGTH, "more bytes than the limit");
     assertThrows(
-        IllegalArgumentException.class,
+        PasswordTooWeakException.class,
         () -> HashedPassword.validatePasswordStrength(multiByte),
         "a password under the limit in characters but over it in bytes must be rejected");
   }
@@ -62,9 +62,9 @@ class HashedPasswordTest {
   @Test
   @DisplayName("rejects a password below the minimum length")
   void rejectsPasswordBelowMinimum() {
-    final IllegalArgumentException thrown =
+    final PasswordTooWeakException thrown =
         assertThrows(
-            IllegalArgumentException.class,
+            PasswordTooWeakException.class,
             () -> HashedPassword.validatePasswordStrength("Ab1cdef"));
     assertEquals(
         "Password must be at least " + HashedPassword.MIN_LENGTH + " characters long",
@@ -78,9 +78,9 @@ class HashedPasswordTest {
     // password would be reported as a missing-uppercase problem.
     final String overLimitAllLowercase = "a".repeat(HashedPassword.MAX_BYTE_LENGTH + 1);
 
-    final IllegalArgumentException thrown =
+    final PasswordTooWeakException thrown =
         assertThrows(
-            IllegalArgumentException.class,
+            PasswordTooWeakException.class,
             () -> HashedPassword.validatePasswordStrength(overLimitAllLowercase));
     assertTrue(
         thrown.getMessage().contains("must not be longer than"),

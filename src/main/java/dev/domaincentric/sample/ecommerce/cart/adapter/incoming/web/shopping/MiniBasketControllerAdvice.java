@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
+import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
@@ -9,6 +11,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +34,13 @@ import org.springframework.web.bind.annotation.ModelAttribute;
  *
  * <p>Errors are handled gracefully: if the cart cannot be loaded, the mini basket shows zero items
  * and an empty total.
+ *
+ * <p><b>Pages only.</b> A {@code @ControllerAdvice} without a selector reaches every controller of
+ * the application, the REST resources and the tool provider included — and this one does not merely
+ * read: {@code GetOrCreateActiveCart} opens a cart for the visitor. An API caller would get a cart
+ * they never asked for on every request, and {@code POST /api/carts} would then refuse its own work
+ * because the caller already has an open one. The model attributes only mean something where a view
+ * renders them, so the advice returns early for everything that is not a page.
  */
 @ControllerAdvice
 public class MiniBasketControllerAdvice {
@@ -50,9 +60,16 @@ public class MiniBasketControllerAdvice {
     this.identityProvider = identityProvider;
   }
 
-  /** Adds mini basket data and identity to the model for every request. */
+  /** Prefixes that answer with data rather than with a rendered page. */
+  private static final List<String> NON_PAGE_PREFIXES = List.of("/api", "/mcp", "/actuator");
+
+  /** Adds mini basket data and identity to the model of every page request. */
   @ModelAttribute
-  public void addMiniBasketAndIdentity(final Model model) {
+  public void addMiniBasketAndIdentity(final Model model, final HttpServletRequest request) {
+    if (isNotAPage(request)) {
+      return;
+    }
+
     final IdentityProvider.Identity identity;
     try {
       identity = identityProvider.getCurrentIdentity();
@@ -78,7 +95,9 @@ public class MiniBasketControllerAdvice {
         populateMiniBasket(model, cart);
         return;
       }
-    } catch (final Exception ex) {
+    } catch (final UseCaseException | DomainException ex) {
+      // The basket is decoration on every page: a cart the use case refuses to hand out leaves it
+      // empty rather than breaking the page. Anything else is a defect and keeps travelling.
       LOG.debug("Could not load mini basket data: {}", ex.getMessage());
     }
 
@@ -110,5 +129,11 @@ public class MiniBasketControllerAdvice {
 
     return new MiniBasketItemViewModel(
         item.currentArticle().name(), item.quantity().value(), formattedPrice);
+  }
+
+  /** Whether this request is answered with data rather than with a page. */
+  private static boolean isNotAPage(final HttpServletRequest request) {
+    final String path = request.getRequestURI();
+    return NON_PAGE_PREFIXES.stream().anyMatch(path::startsWith);
   }
 }

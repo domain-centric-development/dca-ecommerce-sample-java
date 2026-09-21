@@ -68,13 +68,8 @@ public class ProductResource {
             request.category(),
             request.stock());
 
-    try {
-      final CreateProductResult output = createProduct.execute(input);
-      return ResponseEntity.status(HttpStatus.CREATED).body(converter.toDto(output));
-    } catch (final IllegalArgumentException | IllegalStateException e) {
-      // A malformed SKU or a duplicate one is the caller's mistake, not the server's.
-      return ResponseEntity.badRequest().build();
-    }
+    final CreateProductResult output = createProduct.execute(input);
+    return ResponseEntity.status(HttpStatus.CREATED).body(converter.toDto(output));
   }
 
   @GetMapping

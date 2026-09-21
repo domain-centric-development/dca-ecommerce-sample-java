@@ -19,7 +19,8 @@ This document describes the architectural patterns and principles used in the AI
 6. [Layered Architecture](#layered-architecture)
 7. [Package Structure](#package-structure)
 8. [Bounded Contexts](#bounded-contexts)
-9. [Architectural Rules](#architectural-rules)
+9. [Error Handling](#error-handling)
+10. [Architectural Rules](#architectural-rules)
 
 ---
 
@@ -2210,6 +2211,95 @@ the file-location quick reference.
 - Does NOT access Product aggregate directly
 - Complete isolation enforced by ArchUnit tests
 - Uses `Price` from Shared Kernel for price snapshots
+
+---
+
+## Error Handling
+
+Three kinds of failure, three places they belong, and exactly one place where a failure becomes an answer.
+
+### The model refuses: `DomainException`
+
+A rule of the model raises a subtype of `DomainException` (from `dca-building-blocks`), declared in the domain
+package beside the type that raises it, and named the way a domain expert would name the failure.
+
+```java
+public void decreaseStock(final int amount) {
+    if (amount < 0) {
+        throw new IllegalArgumentException("Amount cannot be negative");   // argument guard
+    }
+    if (amount > this.availableQuantity.value()) {                          // business rule
+        throw new InsufficientStockException(this.productId, amount, this.availableQuantity.value());
+    }
+    ...
+}
+```
+
+Both lines refuse, and they are not the same kind of refusal. A negative amount is a malformed call — a defect in
+the caller, stated as an argument contract. A quantity the warehouse does not have is a legitimate request with a
+business answer, and it carries the facts the rule compared so the caller can say what happened.
+
+**The cut:** would a domain expert have a word for this failure? `InsufficientStock`, `CartAlreadyCompleted`,
+`PasswordTooWeak` — yes, so each is a domain exception with that word in its name. "Must not be null", "must be
+positive", "must not exceed 255 characters" — no, so those stay `IllegalArgumentException`.
+
+### The use case refuses: `UseCaseException`
+
+Failures about the *request* rather than about an invariant belong to the application layer: the addressed
+aggregate does not exist, it is not the caller's, a precondition on a second aggregate does not hold, a uniqueness
+rule that only the store can see is broken.
+
+```java
+if (productRepository.existsBySku(sku)) {
+    throw new DuplicateSkuException(sku);      // only the repository sees the whole catalog
+}
+```
+
+A failure the store itself detects is declared in the application layer too, beside the port whose contract it is
+(`ActiveCartAlreadyExistsException` next to `ShoppingCartRepository`), and raised by whichever adapter implements
+that port. That is what lets a use case react to a lost race without knowing which store it is talking to.
+
+### The adapter answers
+
+Neither base type carries a status code, a header or a message shape, and neither is annotated. The incoming
+adapter maps type to protocol answer, in one place per context:
+
+```java
+@RestControllerAdvice(basePackages = "...product.adapter.incoming.api")
+public class ProductApiExceptionHandler {
+
+    @ExceptionHandler(DuplicateSkuException.class)
+    public ProblemDetail handleDuplicateSku(final DuplicateSkuException exception) {
+        return problem(HttpStatus.CONFLICT, "Stock keeping unit already in use", exception.getMessage());
+    }
+    ...
+}
+```
+
+The status follows the failure, not the base type: `CartItemNotFoundException` is a rule of the model and still
+answers `404`, because what the caller has to do about it is ask for something that exists. Page controllers of
+the same context map the same types into form errors instead. One use case, several protocols, one decision site
+each.
+
+### When a result variant is the better channel
+
+Some outcomes are part of what a use case promises its caller, and then the caller should be made to handle them.
+`ChangePasswordResult.Outcome` and `ReduceStockResult` do exactly that (ADR-023): the outcome is a value, not an
+exception, and the compiler keeps the caller honest. The two channels live side by side on purpose — the model's
+refusals travel as exceptions, because an aggregate's behaviour method cannot return an outcome without polluting
+every call site, and the use case decides per operation. What the base types changed there is the *catch*: the use
+case now names the rule it converts (`catch (PasswordTooWeakException e)`) instead of a generic type that would
+also swallow a defect.
+
+### What the rules check
+
+`DCA-ERR-001` … `DCA-ERR-005` check that an exception declared in a domain or application package extends the base
+type of that layer, resides there, carries no framework annotation and names no transport concept (no `Error`,
+`Fault`, `Failure` suffix; no `Http`, `Status`, `Response` in the name). `DCA-ERR-006` is informational: a `throw`
+and a `catch` are not in the import model, so no rule can decide whether a specific refusal should have been a
+domain exception, or whether an adapter catches too widely. Those stay with review.
+
+ADR-044 records the decision.
 
 ---
 

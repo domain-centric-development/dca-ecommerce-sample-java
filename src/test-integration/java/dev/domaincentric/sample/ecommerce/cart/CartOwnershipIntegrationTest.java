@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.cart;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
@@ -11,6 +12,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotAvailableException;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsQuery;
@@ -61,7 +63,7 @@ class CartOwnershipIntegrationTest {
 
     assertThatThrownBy(
             () -> addItemToCart.execute(new AddItemToCartCommand(cartId, stranger, productId, 1)))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(CartNotFoundException.class)
         .hasMessageContaining("Cart not found");
 
     // The owner is unaffected
@@ -80,7 +82,7 @@ class CartOwnershipIntegrationTest {
     addItemToCart.execute(new AddItemToCartCommand(cartId, owner, anyProductId(), 1));
 
     assertThatThrownBy(() -> startCheckout.execute(new StartCheckoutCommand(cartId, stranger)))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(CartNotAvailableException.class)
         .hasMessageContaining("Cart not found");
 
     // and the owner can still start theirs

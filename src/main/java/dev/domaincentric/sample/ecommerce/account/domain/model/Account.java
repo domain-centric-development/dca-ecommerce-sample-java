@@ -236,11 +236,11 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
    *
    * <p>Updates the last login timestamp.
    *
-   * @throws IllegalStateException if the account cannot login
+   * @throws AccountNotAccessibleException if the account's status does not allow signing in
    */
   public void recordLogin() {
     if (!status.canLogin()) {
-      throw new IllegalStateException("Cannot login with account status: " + status);
+      throw new AccountNotAccessibleException(this.id, status);
     }
     this.lastLoginAt = Instant.now();
     registerEvent(AccountLoggedIn.now(this.id));
@@ -252,12 +252,12 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
    *
    * @param newPlainPassword the new plaintext password
    * @param passwordHasher the password hashing domain gateway
-   * @throws IllegalStateException if the account is closed
-   * @throws IllegalArgumentException if the password doesn't meet strength requirements
+   * @throws AccountClosedException if the account is closed
+   * @throws PasswordTooWeakException if the password does not meet the strength rules
    */
   public void changePassword(final String newPlainPassword, final PasswordHasher passwordHasher) {
     if (status.isTerminal()) {
-      throw new IllegalStateException("Cannot change password on closed account");
+      throw new AccountClosedException(this.id);
     }
     this.password = HashedPassword.fromPlaintext(newPlainPassword, passwordHasher);
     registerEvent(AccountPasswordChanged.now(this.id));
@@ -270,11 +270,11 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
    * Uniqueness across accounts is decided outside the aggregate.
    *
    * @param newEmail the new email address
-   * @throws IllegalStateException if the account is closed
+   * @throws AccountClosedException if the account is closed
    */
   public void changeEmail(final Email newEmail) {
     if (status.isTerminal()) {
-      throw new IllegalStateException("Cannot change email on closed account");
+      throw new AccountClosedException(this.id);
     }
     if (email.equals(newEmail)) {
       return;
@@ -292,12 +292,12 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
    * AccountOwnerDateOfBirthChanged} only when the new date differs from the stored one.
    *
    * @param newDateOfBirth the corrected date of birth
-   * @throws IllegalStateException if the account is closed
+   * @throws AccountClosedException if the account is closed
    * @throws IllegalArgumentException if the date lies in the future
    */
   public void changeOwnerDateOfBirth(final LocalDate newDateOfBirth) {
     if (status.isTerminal()) {
-      throw new IllegalStateException("Cannot change the date of birth on closed account");
+      throw new AccountClosedException(this.id);
     }
     if (owner.dateOfBirth().equals(newDateOfBirth)) {
       return;
@@ -310,11 +310,11 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
   /**
    * Suspends the account.
    *
-   * @throws IllegalStateException if the account is already closed
+   * @throws AccountClosedException if the account is already closed
    */
   public void suspend() {
     if (status.isTerminal()) {
-      throw new IllegalStateException("Cannot suspend closed account");
+      throw new AccountClosedException(this.id);
     }
     this.status = AccountStatus.SUSPENDED;
     registerEvent(AccountSuspended.now(this.id));
@@ -323,11 +323,11 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
   /**
    * Reactivates a suspended account.
    *
-   * @throws IllegalStateException if the account is not suspended
+   * @throws AccountNotSuspendedException if the account is not suspended
    */
   public void reactivate() {
     if (status != AccountStatus.SUSPENDED) {
-      throw new IllegalStateException("Can only reactivate suspended accounts");
+      throw new AccountNotSuspendedException(this.id, status);
     }
     this.status = AccountStatus.ACTIVE;
     registerEvent(AccountReactivated.now(this.id));
@@ -336,11 +336,11 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
   /**
    * Closes the account permanently.
    *
-   * @throws IllegalStateException if the account is already closed
+   * @throws AccountClosedException if the account is already closed
    */
   public void close() {
     if (status.isTerminal()) {
-      throw new IllegalStateException("Account is already closed");
+      throw new AccountClosedException(this.id);
     }
     this.status = AccountStatus.CLOSED;
     registerEvent(AccountClosed.now(this.id));

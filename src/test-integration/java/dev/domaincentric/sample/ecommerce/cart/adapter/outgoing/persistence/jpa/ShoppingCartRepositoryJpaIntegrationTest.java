@@ -50,13 +50,16 @@ class ShoppingCartRepositoryJpaIntegrationTest {
 
   @Test
   void findBy_spec_withMinTotal_andActive_paginatesAndFilters() {
-    // given: two carts for same customer, only one meeting min total
-    CustomerId customerId = CustomerId.of("it-customer-2");
+    // given: two open carts, only one meeting min total. They belong to different customers
+    // because a customer has at most one open cart and the store claims that (ADR-045); the
+    // specification under test filters by status and total, not by customer.
+    CustomerId oneCustomer = CustomerId.of("it-customer-2-a");
+    CustomerId anotherCustomer = CustomerId.of("it-customer-2-b");
 
-    ShoppingCart small = new ShoppingCart(CartId.generate(), customerId);
+    ShoppingCart small = new ShoppingCart(CartId.generate(), oneCustomer);
     small.addItem(ProductId.of("P1"), Quantity.of(1), Price.of(Money.euro(10.00)));
 
-    ShoppingCart big = new ShoppingCart(CartId.generate(), customerId);
+    ShoppingCart big = new ShoppingCart(CartId.generate(), anotherCustomer);
     big.addItem(ProductId.of("P2"), Quantity.of(3), Price.of(Money.euro(25.00))); // total 75 EUR
 
     shoppingCartRepository.save(small);

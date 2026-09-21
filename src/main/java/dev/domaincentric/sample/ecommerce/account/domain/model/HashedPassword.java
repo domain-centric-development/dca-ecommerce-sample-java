@@ -58,7 +58,7 @@ public record HashedPassword(String hash) implements Value {
    * @param plaintext the plaintext password
    * @param hasher the password hashing domain gateway
    * @return a HashedPassword wrapping the generated hash
-   * @throws IllegalArgumentException if password doesn't meet strength requirements
+   * @throws PasswordTooWeakException if the password does not meet the strength rules
    */
   public static HashedPassword fromPlaintext(final String plaintext, final PasswordHasher hasher) {
     validatePasswordStrength(plaintext);
@@ -110,15 +110,15 @@ public record HashedPassword(String hash) implements Value {
    * </ul>
    *
    * @param plaintext the password to validate
-   * @throws IllegalArgumentException if requirements are not met
+   * @throws PasswordTooWeakException if the strength rules are not met
    */
   public static void validatePasswordStrength(final String plaintext) {
     if (plaintext == null || plaintext.length() < MIN_LENGTH) {
-      throw new IllegalArgumentException(
+      throw new PasswordTooWeakException(
           "Password must be at least " + MIN_LENGTH + " characters long");
     }
     if (plaintext.getBytes(StandardCharsets.UTF_8).length > MAX_BYTE_LENGTH) {
-      throw new IllegalArgumentException(
+      throw new PasswordTooWeakException(
           "Password must not be longer than " + MAX_BYTE_LENGTH + " bytes (UTF-8 encoded)");
     }
 
@@ -133,13 +133,13 @@ public record HashedPassword(String hash) implements Value {
     }
 
     if (!hasUpper) {
-      throw new IllegalArgumentException("Password must contain at least one uppercase letter");
+      throw new PasswordTooWeakException("Password must contain at least one uppercase letter");
     }
     if (!hasLower) {
-      throw new IllegalArgumentException("Password must contain at least one lowercase letter");
+      throw new PasswordTooWeakException("Password must contain at least one lowercase letter");
     }
     if (!hasDigit) {
-      throw new IllegalArgumentException("Password must contain at least one digit");
+      throw new PasswordTooWeakException("Password must contain at least one digit");
     }
   }
 

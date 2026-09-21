@@ -121,19 +121,15 @@ public final class StockLevel extends BaseAggregateRoot<StockLevel, StockLevelId
    * <p>Use this when shipping stock out of inventory.
    *
    * @param amount the amount to subtract from available stock
-   * @throws IllegalArgumentException if amount is negative or exceeds available quantity
+   * @throws IllegalArgumentException if amount is negative
+   * @throws InsufficientStockException if amount exceeds the available quantity
    */
   public void decreaseStock(final int amount) {
     if (amount < 0) {
       throw new IllegalArgumentException("Amount cannot be negative");
     }
     if (amount > this.availableQuantity.value()) {
-      throw new IllegalArgumentException(
-          "Cannot decrease stock by "
-              + amount
-              + ", only "
-              + this.availableQuantity.value()
-              + " available");
+      throw new InsufficientStockException(this.productId, amount, this.availableQuantity.value());
     }
 
     final StockQuantity removedQuantity = StockQuantity.of(amount);
@@ -154,7 +150,8 @@ public final class StockLevel extends BaseAggregateRoot<StockLevel, StockLevelId
    * <p>Reserved stock remains in available quantity but is earmarked and cannot be reserved again.
    *
    * @param amount the amount to reserve
-   * @throws IllegalArgumentException if amount is negative or exceeds unreserved stock
+   * @throws IllegalArgumentException if amount is negative
+   * @throws InsufficientUnreservedStockException if amount exceeds the unreserved stock
    */
   public void reserve(final int amount) {
     if (amount < 0) {
@@ -163,8 +160,7 @@ public final class StockLevel extends BaseAggregateRoot<StockLevel, StockLevelId
 
     final int unreserved = this.availableQuantity.value() - this.reservedQuantity.value();
     if (amount > unreserved) {
-      throw new IllegalArgumentException(
-          "Cannot reserve " + amount + ", only " + unreserved + " unreserved stock available");
+      throw new InsufficientUnreservedStockException(this.productId, amount, unreserved);
     }
 
     final StockQuantity reservedAmount = StockQuantity.of(amount);
@@ -179,15 +175,16 @@ public final class StockLevel extends BaseAggregateRoot<StockLevel, StockLevelId
    * <p>Use this when an order is cancelled and reserved stock should be made available again.
    *
    * @param amount the amount to release from reservation
-   * @throws IllegalArgumentException if amount is negative or exceeds reserved quantity
+   * @throws IllegalArgumentException if amount is negative
+   * @throws InsufficientReservedStockException if amount exceeds the reserved quantity
    */
   public void release(final int amount) {
     if (amount < 0) {
       throw new IllegalArgumentException("Amount cannot be negative");
     }
     if (amount > this.reservedQuantity.value()) {
-      throw new IllegalArgumentException(
-          "Cannot release " + amount + ", only " + this.reservedQuantity.value() + " reserved");
+      throw new InsufficientReservedStockException(
+          this.productId, amount, this.reservedQuantity.value());
     }
 
     final StockQuantity releasedQuantity = StockQuantity.of(amount);

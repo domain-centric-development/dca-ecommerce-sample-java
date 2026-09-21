@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.jpa;
 
+import dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.ActiveCartClaim;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.*;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -13,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
@@ -77,13 +80,27 @@ public class JpaShoppingCartRepository implements ShoppingCartRepository {
         page.getContent(), page.getTotalElements(), pageQuery.pageNumber(), pageQuery.pageSize());
   }
 
+  /**
+   * @throws ActiveCartAlreadyExistsException if the cart is active and the customer already has a
+   *     different active cart — the unique index over the generated {@code active_customer_id}
+   *     column refuses the row (ADR-042, ADR-045)
+   */
   @Override
   @Transactional
   public ShoppingCart save(final ShoppingCart cart) {
     final CartEntity entity = toEntity(cart);
     entity.setUpdatedAt(Instant.now());
-    final CartEntity saved = cartRepo.saveAndFlush(entity);
-    return toDomain(saved);
+    try {
+      final CartEntity saved = cartRepo.saveAndFlush(entity);
+      return toDomain(saved);
+    } catch (final DataIntegrityViolationException violation) {
+      // Only the active-cart index becomes the port's failure; every other constraint keeps
+      // travelling as what it is (ADR-045).
+      if (!ActiveCartClaim.wasRefused(violation)) {
+        throw violation;
+      }
+      throw new ActiveCartAlreadyExistsException(cart.customerId());
+    }
   }
 
   @Override

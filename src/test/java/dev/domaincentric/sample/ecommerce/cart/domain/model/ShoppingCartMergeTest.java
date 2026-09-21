@@ -221,7 +221,7 @@ class ShoppingCartMergeTest {
 
       sourceCart.addItem(productId, Quantity.of(1), price);
 
-      assertThrows(IllegalStateException.class, () -> targetCart.merge(sourceCart));
+      assertThrows(CartNotModifiableException.class, () -> targetCart.merge(sourceCart));
     }
 
     @Test

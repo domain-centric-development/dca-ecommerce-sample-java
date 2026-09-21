@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
+import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountCommand;
@@ -125,7 +127,9 @@ public class RegisterPageController {
       }
       return "redirect:/";
 
-    } catch (final IllegalArgumentException e) {
+    } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
+      // The context's own refusals, plus the argument exception a form field still reaches a value
+      // object with.
       return renderError(model, submission, e.getMessage());
     }
   }

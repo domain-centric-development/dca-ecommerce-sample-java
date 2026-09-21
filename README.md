@@ -716,6 +716,27 @@ stated by each resource, not by the filter chain: the JWT filter gives every req
 | `POST /api/carts`, `GET /api/carts/{id}`, `POST /{id}/items`, `DELETE /{id}/items/{productId}`, `POST /{id}/checkout`, `GET /api/carts/customer/{id}/active` | the caller, on their own cart — a stranger's cart answers `404`, never `403` |
 | `POST /api/auth/{login,register,logout}` | anyone; the token comes back in the body, no cookie is set |
 
+### How a refusal reads
+
+Every refused request answers with an RFC 9457 problem document (`application/problem+json`), built by the
+context's own `*ApiExceptionHandler`. The status follows what went wrong, not which layer noticed it:
+
+| Status | When |
+|---|---|
+| `404` | the addressed thing is not there, or not the caller's — a cart, a session, an article, a position in a cart |
+| `409` | a conflict with existing state — a stock keeping unit already in use, a second active cart, a cart that no longer takes changes |
+| `422` | the request was understood and a rule refused it — a password below the strength rules, a checkout step that has no data yet |
+| `400` | a value the model does not accept at all — a malformed stock keeping unit, a blank name |
+
+```json
+{ "type": "about:blank", "title": "Stock keeping unit already in use", "status": 409,
+  "detail": "Product with SKU already exists: API-42" }
+```
+
+The failures themselves are types, not status codes: the use cases and the model raise
+`DuplicateSkuException`, `CartNotFoundException`, `InsufficientStockException` and their kin, and only the
+adapter decides what a caller is told (ADR-044). `ApiProblemDetailIntegrationTest` holds that mapping.
+
 ### Authentication
 
 ```bash

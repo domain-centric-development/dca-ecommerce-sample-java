@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
@@ -38,7 +39,7 @@ public class CompleteCartUseCase implements CompleteCartInputPort {
     final ShoppingCart cart =
         shoppingCartRepository
             .findById(cartId)
-            .orElseThrow(() -> new IllegalArgumentException("Cart not found: " + input.cartId()));
+            .orElseThrow(() -> new CartNotFoundException(cartId));
 
     // Complete cart (business logic validates status)
     cart.reconcileCheckout(input.sessionId(), input.purchasedPositions());

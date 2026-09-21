@@ -308,3 +308,39 @@ business before the model is consolidated:
 
 4. **Arithmetic on `StockQuantity`** is currently done in the aggregate.
    Candidate for moving `plus`/`minus` operations into the value object.
+
+---
+
+## Failures
+
+Named refusals of the model. Each carries the figures the rule compared; an incoming adapter maps the type to its
+own answer. A negative quantity is not among them — that is a malformed call and stays an argument guard.
+
+### InsufficientStock
+
+**Definition:** More stock would be taken out than the stock keeping unit holds.
+
+**Type:** Domain failure (`DomainException`)
+
+**Related terms:** Available quantity, `StockLevel.decreaseStock`
+
+---
+
+### InsufficientUnreservedStock
+
+**Definition:** More stock would be reserved than is still promisable.
+
+**Type:** Domain failure (`DomainException`)
+
+**Related terms:** Unreserved quantity (available-to-promise), `StockLevel.reserve`
+
+---
+
+### InsufficientReservedStock
+
+**Definition:** More stock would be released than was ever reserved.
+
+**Type:** Domain failure (`DomainException`)
+
+**Related terms:** Reserved quantity, `StockLevel.release`
+
