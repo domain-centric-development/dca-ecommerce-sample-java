@@ -80,16 +80,22 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
    */
   @Override
   public ShoppingCart save(final ShoppingCart cart) {
+    // The cart is stored before the claim is published, and withdrawn again when the claim fails.
+    // A relational store makes both visible at one commit; here the two writes are separate, so
+    // publishing the claim first would let the request that lost the race read the winner's id out
+    // of the index and find nothing behind it.
+    carts.put(cart.id(), cart);
+
     if (cart.status() == CartStatus.ACTIVE) {
       final CartId claimed = activeCartByCustomer.putIfAbsent(cart.customerId(), cart.id());
       if (claimed != null && !claimed.equals(cart.id())) {
+        carts.remove(cart.id(), cart);
         throw new ActiveCartAlreadyExistsException(cart.customerId());
       }
     } else {
       activeCartByCustomer.remove(cart.customerId(), cart.id());
     }
 
-    carts.put(cart.id(), cart);
     return cart;
   }
 

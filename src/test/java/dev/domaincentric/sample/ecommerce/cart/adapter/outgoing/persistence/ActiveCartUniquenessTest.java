@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.dca.spring.InMemoryTransactionBoundary;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartUseCase;
@@ -72,7 +73,8 @@ class ActiveCartUniquenessTest {
     for (int round = 0; round < ROUNDS; round++) {
       final InMemoryShoppingCartRepository carts = new InMemoryShoppingCartRepository();
       final GetOrCreateActiveCartUseCase useCase =
-          new GetOrCreateActiveCartUseCase(carts, new SilentEventPublisher());
+          new GetOrCreateActiveCartUseCase(
+              carts, new SilentEventPublisher(), new InMemoryTransactionBoundary());
       final String customer = "customer-" + System.nanoTime();
 
       final Set<String> answered =

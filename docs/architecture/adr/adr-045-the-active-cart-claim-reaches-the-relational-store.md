@@ -45,4 +45,14 @@ one implementation honours and two ignore is not a contract.
 - A translation that matches on the index name is string matching against a database message. It is narrow on
   purpose — the alternative, translating every integrity violation, is what would actually mislead — but it is a
   place to check when the schema is renamed. The name is a constant in `ActiveCartClaim`.
+- **The recovery had to move out of the transaction, and that is not a detail.** A relational store that
+  refuses a write mid-transaction leaves it unusable: with JPA the failed insert stays in the persistence
+  context, so a catch that carried on would read the winner, answer, and then fail at commit with the original
+  violation. `GetOrCreateActiveCartUseCase` therefore carries no transactional annotation any more; it claims
+  inside `TransactionBoundary.inTransaction` and reads again after that boundary has rolled back.
+  `ActiveCartRaceIntegrationTest` drives eight simultaneous callers through the wired store and is what proved
+  it — the sequential tests were all green while this was broken.
+- **The in-memory adapter stores the cart before it publishes the claim**, and withdraws it when the claim
+  fails. A relational store makes both visible at one commit; two separate map writes do not, and the request
+  that lost the race could read the winner's id out of the index with nothing behind it yet.
 - This closes the open half ADR-042 recorded. ADR-042 itself stands as written.
