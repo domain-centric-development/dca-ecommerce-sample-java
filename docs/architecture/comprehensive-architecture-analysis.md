@@ -146,7 +146,7 @@ public final class Product extends BaseAggregateRoot<Product, ProductId> {
 ```groovy
 // DddTacticalPatternsArchUnitTest.groovy:45-91
 def "Aggregate Roots must not have fields with other Aggregate Root types"() {
-  // Enforces Vernon's Rule #2: "Reference other Aggregates by Identity"
+  // Enforces Vernon's Rule 3: "Reference other Aggregates by Identity"
   // Checks that aggregates don't hold direct references to other aggregates
   // Only IDs allowed - maintains transaction consistency
 }

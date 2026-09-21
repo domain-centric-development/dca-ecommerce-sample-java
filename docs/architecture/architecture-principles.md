@@ -2343,7 +2343,7 @@ class holds the forbidden type outright.
 4. **Value Objects** must implement `Value` interface
 5. **Repositories** must be interfaces in the application layer (output ports, see ADR-008)
 6. **Repository implementations** must be in outgoing adapters
-7. **Aggregates reference other aggregates by ID only** (Vernon's Rule #2)
+7. **Aggregates reference other aggregates by ID only** (Vernon's Rule 3)
 8. **Aggregates must not hold references to repositories or output ports** - dependencies are passed as method parameters
 9. **Domain model classes must not have public setters** - state changes go through intention-revealing methods
 10. **Repository methods must not expose a non-root Entity** - checked recursively through type
