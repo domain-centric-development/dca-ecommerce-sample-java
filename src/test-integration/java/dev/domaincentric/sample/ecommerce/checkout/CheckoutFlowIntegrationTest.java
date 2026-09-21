@@ -25,6 +25,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.EmptyCartException;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.shared.ProductRepository;
 import dev.domaincentric.sample.ecommerce.product.domain.model.Product;
@@ -186,7 +187,7 @@ class CheckoutFlowIntegrationTest {
 
     // Try to start checkout with empty cart - should fail
     assertThrows(
-        IllegalArgumentException.class,
+        EmptyCartException.class,
         () -> startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)),
         "Should reject checkout of empty cart");
   }

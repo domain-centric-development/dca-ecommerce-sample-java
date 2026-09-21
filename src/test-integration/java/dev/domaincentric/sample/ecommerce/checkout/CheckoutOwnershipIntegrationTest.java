@@ -17,6 +17,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsQuery;
@@ -73,7 +74,7 @@ class CheckoutOwnershipIntegrationTest {
                 submitBuyerInfo.execute(
                     new SubmitBuyerInfoCommand(
                         sessionId, stranger, "eve@example.com", "Eve", "Adams", "+1-555-0199")))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(CheckoutSessionNotFoundException.class)
         .hasMessageContaining("Session not found");
 
     // The owner is unaffected
@@ -95,12 +96,12 @@ class CheckoutOwnershipIntegrationTest {
 
     assertThatThrownBy(
             () -> submitPayment.execute(new SubmitPaymentCommand(sessionId, stranger, "mock")))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(CheckoutSessionNotFoundException.class)
         .hasMessageContaining("Session not found");
 
     assertThatThrownBy(
             () -> confirmCheckout.execute(new ConfirmCheckoutCommand(sessionId, stranger)))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(CheckoutSessionNotFoundException.class)
         .hasMessageContaining("Session not found");
   }
 

@@ -434,3 +434,61 @@ snapshot naming scheme (`CartSnapshot` / `CartItemSnapshot`).
 Price wraps strictly positive Money; Money is ISO 4217, non-negative, two decimals half-up, maximum 999999999999.99.
 Default quantities must be rejected before mutation/reconstitution. ProductCreated is raised by aggregate creation;
 product-created v1 exposes only eventId, occurredOn, productId, amount, currency and initialStock.
+
+---
+
+## Failures
+
+Named refusals. The session states its own rules; the use case states what it could not get hold of.
+
+### CheckoutNotModifiable / CheckoutNotConfirmed
+
+**Definition:** A session that is no longer open would be changed, or one that was never confirmed would be
+completed.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `CheckoutSessionStatus`
+
+---
+
+### CheckoutStepNotCompleted / CheckoutStepOutOfOrder / CheckoutStepNotNavigable
+
+**Definition:** A step is missing the data a later one needs; a step ahead of the current one was asked for; the
+confirmation step was navigated to directly.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `CheckoutStep`
+
+---
+
+### EmptyCheckout / NothingToPay
+
+**Definition:** A session would start without line items, or a payment would be arranged for a total of zero.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `CheckoutLineItem`, `CheckoutTotals`
+
+---
+
+### CheckoutValidation
+
+**Definition:** At confirmation time a line item no longer passes validation — price moved, stock ran out. Carries
+the per-item result.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `CheckoutValidationResult`
+
+---
+
+### CheckoutSessionNotFound · CartNotAvailable · CartNotActive · EmptyCart · ArticleNotAvailable · CheckoutItemsUnavailable
+
+**Definition:** What the use case could not get hold of before a session exists, or could not address afterwards.
+Session and cart lookups are scoped to the caller, so "not yours" reads as "not found" (ADR-036).
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `CartDataPort`, `CheckoutArticleDataPort`
+
+---
+
+### PaymentProviderNotFound · PaymentProviderUnavailable · PaymentInitiationFailed
+
+**Definition:** The selected provider is unknown to the shop, known but not taking payments right now, or refused
+to open a payment. The provider's own reason travels through unchanged.
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `PaymentProviderRegistry`, `PaymentProvider`
+

@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompleti
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutArticleDataPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticle;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticlePriceResolver;
@@ -94,7 +95,6 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
       final CheckoutSessionId sessionId, final ConfirmCheckoutCommand command) {
     return checkoutSessionRepository
         .findByIdForCustomer(sessionId, CustomerId.of(command.customerId()))
-        .orElseThrow(
-            () -> new IllegalArgumentException("Session not found: " + command.sessionId()));
+        .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
   }
 }

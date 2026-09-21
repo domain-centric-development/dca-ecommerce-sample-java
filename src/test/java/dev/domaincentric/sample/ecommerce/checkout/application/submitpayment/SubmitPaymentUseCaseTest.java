@@ -17,8 +17,10 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.BuyerInfo;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItemId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.DeliveryAddress;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
@@ -60,7 +62,7 @@ class SubmitPaymentUseCaseTest {
     final CheckoutSession session = sessionWithBuyerInfoOnly();
 
     assertThrows(
-        IllegalStateException.class,
+        CheckoutStepNotCompletedException.class,
         () -> useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock")));
 
     assertTrue(
@@ -82,7 +84,7 @@ class SubmitPaymentUseCaseTest {
         };
 
     assertThrows(
-        IllegalStateException.class,
+        CheckoutNotModifiableException.class,
         () -> useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock")));
 
     assertEquals(1, provider.initiations.size(), "the intent was created before the session moved");

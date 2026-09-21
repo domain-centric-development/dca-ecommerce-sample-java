@@ -282,3 +282,60 @@ at the time of adding or the current one? Clarify the business policy.
 Price wraps strictly positive Money; Money is ISO 4217, non-negative, two decimals half-up, maximum 999999999999.99.
 Default quantities must be rejected before mutation/reconstitution. ProductCreated is raised by aggregate creation;
 product-created v1 exposes only eventId, occurredOn, productId, amount, currency and initialStock.
+
+---
+
+## Failures
+
+Named refusals. The first three are rules of the cart itself; the last two are failures of a request, raised by
+the use case or by the store that sees every cart of a customer.
+
+### CartNotModifiable
+
+**Definition:** A cart that is no longer active would be changed.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `CartStatus`, `ShoppingCart.addItem`, merge
+
+---
+
+### CartAlreadyCompleted / AbandonedCartCannotBeCompleted
+
+**Definition:** Completion was asked for twice, or asked for on a cart the customer abandoned.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `ShoppingCart.complete`, `CartCompleted`
+
+---
+
+### CartItemNotFound
+
+**Definition:** A position the caller names — by position identity or by product — is not in this cart.
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `CartItem`, `ShoppingCart.removeItem`
+
+---
+
+### CartNotFound
+
+**Definition:** The addressed cart is not available to the asking customer. Deliberately one failure for "does not
+exist" and "belongs to somebody else" (ADR-036).
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ShoppingCartRepository.findByIdForCustomer`
+
+---
+
+### ActiveCartAlreadyExists
+
+**Definition:** A second active cart would be stored for a customer who already has one. Part of the repository's
+contract: only the store sees every cart at once.
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ShoppingCartRepository.save` (ADR-042)
+
+---
+
+### ArticleNotAvailable / InsufficientArticleStock
+
+**Definition:** The article facts a position needs are missing for a product, or do not cover the quantity asked
+for. Read through the cart's own port, so a statement about the request rather than about the cart.
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ArticleDataPort`, `CartArticle`
+

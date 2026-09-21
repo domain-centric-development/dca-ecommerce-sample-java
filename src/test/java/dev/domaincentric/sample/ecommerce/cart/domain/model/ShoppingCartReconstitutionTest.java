@@ -104,7 +104,7 @@ class ShoppingCartReconstitutionTest {
     final ShoppingCart cart = reconstituted(CartStatus.COMPLETED, List.of());
 
     assertThrows(
-        IllegalStateException.class, () -> cart.addItem(PRODUCT_ID, Quantity.of(1), PRICE));
+        CartNotModifiableException.class, () -> cart.addItem(PRODUCT_ID, Quantity.of(1), PRICE));
   }
 
   @Test

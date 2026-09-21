@@ -2,10 +2,15 @@ package dev.domaincentric.sample.ecommerce.checkout.application.session.startche
 
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.ArticleNotAvailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartData;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartDataPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotActiveException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotAvailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutArticleDataPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutItemsUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.EmptyCartException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticle;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutCart;
@@ -87,12 +92,12 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
     final CartData cart =
         cartDataPort
             .findById(cartId, CustomerId.of(command.customerId()))
-            .orElseThrow(() -> new IllegalArgumentException("Cart not found: " + command.cartId()));
+            .orElseThrow(() -> new CartNotAvailableException(cartId));
     if (!cart.active()) {
-      throw new IllegalArgumentException("Cart is not active: " + command.cartId());
+      throw new CartNotActiveException(cartId);
     }
     if (cart.items().isEmpty()) {
-      throw new IllegalArgumentException("Cannot checkout empty cart: " + command.cartId());
+      throw new EmptyCartException(cartId);
     }
     final List<ProductId> productIds =
         cart.items().stream().map(CartData.CartItemData::productId).toList();
@@ -102,7 +107,7 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
     for (final CartData.CartItemData cartItem : cart.items()) {
       final CheckoutArticle article = articleDataMap.get(cartItem.productId());
       if (article == null) {
-        throw new IllegalArgumentException("Product not found: " + cartItem.productId().value());
+        throw new ArticleNotAvailableException(cartItem.productId());
       }
       lineItems.add(
           new CheckoutLineItem(
@@ -120,10 +125,8 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
     final CheckoutCart checkoutCart =
         checkoutCartFactory.create(cart.cartId(), cart.customerId(), lineItems, articleDataMap);
     if (!checkoutCart.isValidForCheckout()) {
-      throw new IllegalStateException(
-          "Cannot start checkout, "
-              + checkoutCart.invalidItems().size()
-              + " item(s) unavailable or out of stock");
+      throw new CheckoutItemsUnavailableException(
+          checkoutCart.invalidItems().stream().map(item -> item.lineItem().productId()).toList());
     }
     final Money total = checkoutCart.calculateCurrentSubtotal();
 

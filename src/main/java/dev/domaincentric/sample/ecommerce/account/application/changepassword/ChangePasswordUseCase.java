@@ -5,6 +5,7 @@ import dev.domaincentric.sample.ecommerce.account.application.shared.AccountRepo
 import dev.domaincentric.sample.ecommerce.account.domain.gateway.PasswordHasher;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Account;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordTooWeakException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -80,13 +81,13 @@ public class ChangePasswordUseCase implements ChangePasswordInputPort {
       return ChangePasswordResult.currentPasswordInvalid(CURRENT_PASSWORD_INVALID);
     }
 
-    // Only the strength decision may become NEW_PASSWORD_REJECTED. Wrapping the whole of
-    // changePassword would also catch IllegalArgumentException from the hasher (BCrypt rejects
-    // inputs over 72 bytes) or from the HashedPassword constructor (blank hash), and the controller
-    // renders that message to the user verbatim — mislabelling an adapter fault as a password rule.
+    // Only the strength decision may become NEW_PASSWORD_REJECTED. The rule has its own type, so
+    // a malformed call inside the hasher or the HashedPassword constructor - which would arrive as
+    // the platform's argument exception - is no longer caught here and rendered to the user as if
+    // it were a password rule.
     try {
       HashedPassword.validatePasswordStrength(command.newPassword());
-    } catch (final IllegalArgumentException e) {
+    } catch (final PasswordTooWeakException e) {
       LOG.debug("Password change rejected for {}: {}", command.userId(), e.getMessage());
       return ChangePasswordResult.newPasswordRejected(e.getMessage());
     }

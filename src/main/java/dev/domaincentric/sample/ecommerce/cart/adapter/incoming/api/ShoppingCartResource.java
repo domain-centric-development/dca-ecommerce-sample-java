@@ -133,16 +133,8 @@ public class ShoppingCartResource {
         new AddItemToCartCommand(
             cartId, currentCustomerId(), request.productId(), request.quantity());
 
-    try {
-      final AddItemToCartResult output = addItemToCart.execute(input);
-      return ResponseEntity.ok(converter.toDto(output));
-    } catch (IllegalArgumentException ex) {
-      final String msg = ex.getMessage() != null ? ex.getMessage() : "Invalid request";
-      if (msg.startsWith("Product not found")) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-      }
-      return ResponseEntity.badRequest().build();
-    }
+    final AddItemToCartResult output = addItemToCart.execute(input);
+    return ResponseEntity.ok(converter.toDto(output));
   }
 
   @DeleteMapping("/{cartId}/items/{productId}")

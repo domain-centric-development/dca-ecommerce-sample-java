@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartUseCase;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
@@ -45,7 +46,7 @@ class ActiveCartUniquenessTest {
     carts.save(new ShoppingCart(CartId.generate(), customer));
 
     assertThrows(
-        IllegalStateException.class,
+        ActiveCartAlreadyExistsException.class,
         () -> carts.save(new ShoppingCart(CartId.generate(), customer)));
   }
 

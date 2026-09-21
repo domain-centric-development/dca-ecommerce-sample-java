@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
@@ -53,7 +54,7 @@ public class GetOrCreateActiveCartUseCase implements GetOrCreateActiveCartInputP
     final ShoppingCart newCart = new ShoppingCart(newCartId, customerId);
     try {
       shoppingCartRepository.save(newCart);
-    } catch (final IllegalStateException alreadyActive) {
+    } catch (final ActiveCartAlreadyExistsException alreadyActive) {
       final ShoppingCart winner =
           shoppingCartRepository
               .findActiveCartByCustomerId(customerId)

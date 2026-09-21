@@ -159,7 +159,7 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * @param productId the product to add
    * @param quantity the quantity to add
    * @param price the current price of the product
-   * @throws IllegalStateException if cart is checked out
+   * @throws CartNotModifiableException if the cart is no longer active
    */
   public void addItem(final ProductId productId, final Quantity quantity, final Price price) {
     ensureCartIsActive();
@@ -185,16 +185,14 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * Removes an item from the cart.
    *
    * @param itemId the ID of the item to remove
-   * @throws IllegalStateException if cart is checked out
-   * @throws IllegalArgumentException if item not found
+   * @throws CartNotModifiableException if the cart is no longer active
+   * @throws CartItemNotFoundException if the position is not in the cart
    */
   public void removeItem(final CartItemId itemId) {
     ensureCartIsActive();
 
     final CartItem item =
-        findItemById(itemId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("Cart item not found: " + itemId.value()));
+        findItemById(itemId).orElseThrow(() -> CartItemNotFoundException.forItem(itemId));
 
     final ProductId productId = item.productId();
     items.remove(item);
@@ -209,14 +207,14 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * <p>Raises a {@link ProductRemovedFromCart} domain event.
    *
    * @param productId the product ID
-   * @throws IllegalStateException if cart is checked out
+   * @throws CartNotModifiableException if the cart is no longer active
    */
   public void removeItemByProductId(final ProductId productId) {
     ensureCartIsActive();
 
     final boolean removed = items.removeIf(item -> item.productId().equals(productId));
     if (!removed) {
-      throw new IllegalArgumentException("Product not found in cart: " + productId.value());
+      throw CartItemNotFoundException.forProduct(productId);
     }
 
     // Raise domain event
@@ -230,16 +228,14 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    *
    * @param itemId the item ID
    * @param newQuantity the new quantity
-   * @throws IllegalStateException if cart is checked out
-   * @throws IllegalArgumentException if item not found
+   * @throws CartNotModifiableException if the cart is no longer active
+   * @throws CartItemNotFoundException if the position is not in the cart
    */
   public void updateItemQuantity(final CartItemId itemId, final Quantity newQuantity) {
     ensureCartIsActive();
 
     final CartItem item =
-        findItemById(itemId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("Cart item not found: " + itemId.value()));
+        findItemById(itemId).orElseThrow(() -> CartItemNotFoundException.forItem(itemId));
 
     final Quantity oldQuantity = item.quantity();
     item.updateQuantity(newQuantity);
@@ -253,15 +249,13 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * Increases the quantity of a cart item by 1.
    *
    * @param itemId the item ID
-   * @throws IllegalStateException if cart is checked out
+   * @throws CartNotModifiableException if the cart is no longer active
    */
   public void increaseItemQuantity(final CartItemId itemId) {
     ensureCartIsActive();
 
     final CartItem item =
-        findItemById(itemId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("Cart item not found: " + itemId.value()));
+        findItemById(itemId).orElseThrow(() -> CartItemNotFoundException.forItem(itemId));
 
     final Quantity oldQuantity = item.quantity();
     item.increaseQuantity();
@@ -276,15 +270,13 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    * Decreases the quantity of a cart item by 1.
    *
    * @param itemId the item ID
-   * @throws IllegalStateException if cart is checked out
+   * @throws CartNotModifiableException if the cart is no longer active
    */
   public void decreaseItemQuantity(final CartItemId itemId) {
     ensureCartIsActive();
 
     final CartItem item =
-        findItemById(itemId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("Cart item not found: " + itemId.value()));
+        findItemById(itemId).orElseThrow(() -> CartItemNotFoundException.forItem(itemId));
 
     final Quantity oldQuantity = item.quantity();
     item.decreaseQuantity();
@@ -300,7 +292,7 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    *
    * <p>Raises a {@link CartCleared} domain event.
    *
-   * @throws IllegalStateException if cart is checked out
+   * @throws CartNotModifiableException if the cart is no longer active
    */
   public void clear() {
     ensureCartIsActive();
@@ -329,14 +321,15 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    *
    * <p>Raises a {@link CartCompleted} domain event.
    *
-   * @throws IllegalStateException if cart is already completed or abandoned
+   * @throws CartAlreadyCompletedException if the cart is already completed
+   * @throws AbandonedCartCannotBeCompletedException if the cart was abandoned
    */
   public void complete() {
     if (status == CartStatus.COMPLETED) {
-      throw new IllegalStateException("Cart is already completed");
+      throw new CartAlreadyCompletedException(this.id);
     }
     if (status == CartStatus.ABANDONED) {
-      throw new IllegalStateException("Cannot complete an abandoned cart");
+      throw new AbandonedCartCannotBeCompletedException(this.id);
     }
     this.status = CartStatus.COMPLETED;
     registerEvent(CartCompleted.now(this.id));
@@ -450,7 +443,7 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
    *
    * @param sourceCart the cart to merge items from
    * @return the number of items merged (added or quantity increased)
-   * @throws IllegalStateException if this cart is not active
+   * @throws CartNotModifiableException if this cart is no longer active
    * @throws IllegalArgumentException if sourceCart is null
    */
   public int merge(final ShoppingCart sourceCart) {
@@ -488,7 +481,7 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
 
   private void ensureCartIsActive() {
     if (status != CartStatus.ACTIVE) {
-      throw new IllegalStateException("Cannot modify cart with status: " + status);
+      throw new CartNotModifiableException(this.id, status);
     }
   }
 }

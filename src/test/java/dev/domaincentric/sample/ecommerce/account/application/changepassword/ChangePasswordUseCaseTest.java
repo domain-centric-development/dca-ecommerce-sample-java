@@ -21,6 +21,7 @@ import dev.domaincentric.sample.ecommerce.account.domain.event.AccountPasswordCh
 import dev.domaincentric.sample.ecommerce.account.domain.model.Account;
 import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordTooWeakException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
@@ -302,7 +303,7 @@ class ChangePasswordUseCaseTest {
   private static String domainRejectionMessage(final String weakPassword) {
     try {
       HashedPassword.validatePasswordStrength(weakPassword);
-    } catch (final IllegalArgumentException e) {
+    } catch (final PasswordTooWeakException e) {
       return e.getMessage();
     }
     throw new AssertionError("Expected '" + weakPassword + "' to be rejected by the domain");

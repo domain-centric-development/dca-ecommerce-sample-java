@@ -124,7 +124,7 @@ class AccountTest {
   void closedAccountRefusesEmailChange() {
     final Account account = accountWith(AccountStatus.CLOSED);
 
-    assertThrows(IllegalStateException.class, () -> account.changeEmail(Email.of(NEW_EMAIL)));
+    assertThrows(AccountClosedException.class, () -> account.changeEmail(Email.of(NEW_EMAIL)));
     assertEquals(Email.of(EMAIL), account.email(), "the refused change must store nothing");
   }
 
@@ -184,7 +184,8 @@ class AccountTest {
     final Account account = accountWith(AccountStatus.CLOSED);
 
     assertThrows(
-        IllegalStateException.class, () -> account.changeOwnerDateOfBirth(CORRECTED_DATE_OF_BIRTH));
+        AccountClosedException.class,
+        () -> account.changeOwnerDateOfBirth(CORRECTED_DATE_OF_BIRTH));
     assertEquals(
         DATE_OF_BIRTH, account.owner().dateOfBirth(), "the refused change must store nothing");
   }

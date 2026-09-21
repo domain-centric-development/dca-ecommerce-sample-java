@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
+import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
@@ -78,7 +80,9 @@ public class MiniBasketControllerAdvice {
         populateMiniBasket(model, cart);
         return;
       }
-    } catch (final Exception ex) {
+    } catch (final UseCaseException | DomainException ex) {
+      // The basket is decoration on every page: a cart the use case refuses to hand out leaves it
+      // empty rather than breaking the page. Anything else is a defect and keeps travelling.
       LOG.debug("Could not load mini basket data: {}", ex.getMessage());
     }
 

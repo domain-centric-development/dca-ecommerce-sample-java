@@ -56,14 +56,14 @@ public class RegisterAccountUseCase implements RegisterAccountInputPort {
 
     // Check if email is already registered
     if (accountRepository.existsByEmail(email)) {
-      throw new IllegalArgumentException("Email is already registered: " + email.value());
+      throw new EmailAlreadyRegisteredException(email);
     }
 
     final UserId currentUserId = UserId.of(command.currentUserId());
 
     // Check if this user already has an account
     if (accountRepository.findByLinkedUserId(currentUserId).isPresent()) {
-      throw new IllegalStateException("User already has an account");
+      throw new AccountAlreadyExistsException(currentUserId);
     }
 
     // Create the account (password validation and hashing done by aggregate via gateway)

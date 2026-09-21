@@ -47,14 +47,14 @@ public record Money(BigDecimal amount, Currency currency) implements Value {
 
   public Money add(final Money other) {
     if (!this.currency.equals(other.currency)) {
-      throw new IllegalArgumentException("Cannot add money with different currencies");
+      throw new CurrencyMismatchException("add", this.currency, other.currency);
     }
     return new Money(this.amount.add(other.amount), this.currency);
   }
 
   public Money subtract(final Money other) {
     if (!this.currency.equals(other.currency)) {
-      throw new IllegalArgumentException("Cannot subtract money with different currencies");
+      throw new CurrencyMismatchException("subtract", this.currency, other.currency);
     }
     return new Money(this.amount.subtract(other.amount), this.currency);
   }
@@ -78,7 +78,7 @@ public record Money(BigDecimal amount, Currency currency) implements Value {
 
   public boolean isGreaterThan(final Money other) {
     if (!this.currency.equals(other.currency)) {
-      throw new IllegalArgumentException("Cannot compare money with different currencies");
+      throw new CurrencyMismatchException("compare", this.currency, other.currency);
     }
     return this.amount.compareTo(other.amount) > 0;
   }

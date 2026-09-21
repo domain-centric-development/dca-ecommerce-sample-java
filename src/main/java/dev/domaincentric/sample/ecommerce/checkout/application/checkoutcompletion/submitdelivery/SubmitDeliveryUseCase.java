@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
@@ -52,8 +53,7 @@ public class SubmitDeliveryUseCase implements SubmitDeliveryInputPort {
     final CheckoutSession session =
         checkoutSessionRepository
             .findByIdForCustomer(sessionId, CustomerId.of(command.customerId()))
-            .orElseThrow(
-                () -> new IllegalArgumentException("Session not found: " + command.sessionId()));
+            .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
 
     // Create delivery address value object
     final DeliveryAddress address =

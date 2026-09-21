@@ -90,19 +90,14 @@ public class AuthResource {
             request.lastName(),
             request.dateOfBirth());
 
-    try {
-      final RegisterAccountResult result = registerAccountUseCase.execute(command);
+    final RegisterAccountResult result = registerAccountUseCase.execute(command);
 
-      final String token =
-          tokenService.generateRegisteredToken(
-              UserId.of(result.userId()), result.email(), result.roles());
+    final String token =
+        tokenService.generateRegisteredToken(
+            UserId.of(result.userId()), result.email(), result.roles());
 
-      return ResponseEntity.status(HttpStatus.CREATED)
-          .body(RegisterResponse.success(token, result.email()));
-
-    } catch (final IllegalArgumentException e) {
-      return ResponseEntity.badRequest().body(RegisterResponse.failure(e.getMessage()));
-    }
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(RegisterResponse.success(token, result.email()));
   }
 
   /**
