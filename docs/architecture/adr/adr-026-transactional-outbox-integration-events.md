@@ -52,13 +52,13 @@ The outbox persistence port is modelled as a `Store` (operational data, no aggre
 - Translator: a synchronous in-process listener on the domain event that maps to the integration event and saves the outbox row in the publishing transaction.
 - Relay: claims pending rows with a concurrency-safe lock (e.g. `SELECT ... FOR UPDATE SKIP LOCKED`), sends via a transport-agnostic outbound port, marks processed; failures retry with backoff, then terminal `FAILED`. Triggered by a scheduled poll (safety net) and an after-commit hook (fast path). Stuck in-flight rows are reclaimed after a timeout; processed rows are cleaned up after a retention window.
 - **Framework option**: Spring Modulith's event publication registry with event externalization is a transactional outbox with a payload-mapping hook and is the recommended default when its constraints fit; the hand-rolled table is warranted only for full control over payload shape and retry policy. Either way, what crosses the boundary is the integration event.
-- **Status in this sample**: the internal publication registry is implemented (read-only view in the `backoffice` context); the external broker outbox described here is the documented target pattern, not yet built in the sample. See [Complete Cross-Context Event Flow](https://github.com/domain-centric-development/dca-guide/blob/main/README.md#complete-cross-context-event-flow) in the guide.
+- **Status in this sample**: the internal publication registry is implemented (read-only view in the `backoffice` context); the external broker outbox described here is the documented target pattern, not yet built in the sample. See [Complete Cross-Context Event Flow](https://github.com/domain-centric-development/dca-guide/blob/main/architecture/dependency-structure.md#complete-cross-context-event-flow) in the guide.
 
 ## References
 
 - Chris Richardson, *Microservices Patterns* — Transactional Outbox, Polling Publisher, Transaction Log Tailing
 - Vaughn Vernon, *Implementing Domain-Driven Design* — domain vs integration events, autonomy via messaging
-- [Complete Cross-Context Event Flow](https://github.com/domain-centric-development/dca-guide/blob/main/README.md#complete-cross-context-event-flow) in the guide — domain event to integration event across contexts
+- [Complete Cross-Context Event Flow](https://github.com/domain-centric-development/dca-guide/blob/main/architecture/dependency-structure.md#complete-cross-context-event-flow) in the guide — domain event to integration event across contexts
 
 ### Related ADRs
 
