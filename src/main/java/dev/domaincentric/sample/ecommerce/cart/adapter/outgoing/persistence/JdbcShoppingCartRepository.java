@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence;
 
 import dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.jdbc.CartSpecToJdbc;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.*;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.sql.DataSource;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -89,15 +91,31 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
     return toDomain(rows);
   }
 
+  /**
+   * @throws ActiveCartAlreadyExistsException if the cart is active and the customer already has a
+   *     different active cart — the unique index over the generated {@code active_customer_id}
+   *     column refuses the row, and the caller is told the same thing the in-memory adapter tells
+   *     it (ADR-042, ADR-045)
+   */
   @Override
   @Transactional
   public ShoppingCart save(final ShoppingCart cart) {
     // Upsert cart
-    jdbcTemplate.update(
-        "MERGE INTO carts (id, customer_id, status, updated_at) KEY(id) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
-        cart.id().value(),
-        cart.customerId().value(),
-        cart.status().name());
+    try {
+      jdbcTemplate.update(
+          "MERGE INTO carts (id, customer_id, status, updated_at) KEY(id) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+          cart.id().value(),
+          cart.customerId().value(),
+          cart.status().name());
+    } catch (final DuplicateKeyException violation) {
+      // The database states the rule; this adapter only translates its answer into the failure the
+      // port declares - and only that one: any other constraint it might ever refuse keeps
+      // travelling as what it is, rather than being reported as a cart that already exists.
+      if (!ActiveCartClaim.wasRefused(violation)) {
+        throw violation;
+      }
+      throw new ActiveCartAlreadyExistsException(cart.customerId());
+    }
 
     // Replace items
     jdbcTemplate.update("DELETE FROM cart_items WHERE cart_id = ?", cart.id().value());

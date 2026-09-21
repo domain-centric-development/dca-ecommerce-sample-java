@@ -54,6 +54,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-042](adr-042-uniqueness-is-claimed-in-the-store.md) | Uniqueness that spans aggregates is claimed in the store, not checked before it | Accepted |
 | [ADR-043](adr-043-development-defaults-fail-closed.md) | A committed default must not start a real deployment | Accepted |
 | [ADR-044](adr-044-exception-layers-and-problem-details.md) | A failure carries its own type, and only the adapter turns it into an answer | Accepted |
+| [ADR-045](adr-045-the-active-cart-claim-reaches-the-relational-store.md) | The active-cart claim reaches the relational store | Accepted |
 
 ### Proposed 🟡
 
