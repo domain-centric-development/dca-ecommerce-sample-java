@@ -175,7 +175,7 @@ When creating or updating documentation:
 ✅ **Concise Documentation:**
 - Direct topic headings
 - One clear example per concept
-- References to related docs: "See [architecture-principles.md](architecture-principles.md) for DDD patterns"
+- References to related docs: "See [architecture-principles.md](architecture/architecture-principles.md) for DDD patterns"
 - Minimal but complete - all necessary info, nothing more
 
 **Template for Integration Documentation:**

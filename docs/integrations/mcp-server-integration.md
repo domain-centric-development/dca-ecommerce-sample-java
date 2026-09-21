@@ -378,8 +378,8 @@ This project uses `@McpTool` for explicit MCP server integration.
 ### Architecture Decision Records
 
 Related ADRs:
-- [ADR-007: Hexagonal Architecture](architecture/adr/adr-007-hexagonal-architecture.md) - Primary/Secondary adapters
-- [ADR-002: Framework-Independent Domain](architecture/adr/adr-002-framework-independent-domain.md) - Why domain doesn't know about Spring AI
+- [ADR-007: Hexagonal Architecture](../architecture/adr/adr-007-hexagonal-architecture.md) - Primary/Secondary adapters
+- [ADR-002: Framework-Independent Domain](../architecture/adr/adr-002-framework-independent-domain.md) - Why domain doesn't know about Spring AI
 
 ---
 
@@ -398,5 +398,5 @@ Related ADRs:
 - **Client Config:** `.mcp.json`
 
 ### Related Docs
-- [Architecture Principles](architecture/architecture-principles.md)
-- [Hexagonal Architecture](architecture/adr/adr-007-hexagonal-architecture.md)
+- [Architecture Principles](../architecture/architecture-principles.md)
+- [Hexagonal Architecture](../architecture/adr/adr-007-hexagonal-architecture.md)
