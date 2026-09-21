@@ -74,7 +74,7 @@ class CheckoutSpecificationTest {
         var next = f.start();
         assertNotEquals(session.id(), next.id());
         assertEquals(CheckoutSessionStatus.SUPERSEDED, session.status());
-        assertThrows(IllegalStateException.class, () -> f.confirm(session));
+        assertThrows(CheckoutNotModifiableException.class, () -> f.confirm(session));
         assertTrue(session.domainEvents().isEmpty());
       }
       case "checkout.abandon.preserves-cart" -> {
@@ -142,7 +142,7 @@ class CheckoutSpecificationTest {
         assertEquals(CheckoutSessionStatus.CONFIRMED, session.status());
       } else {
         assertInstanceOf(
-            IllegalStateException.class,
+            CheckoutNotModifiableException.class,
             assertThrows(ExecutionException.class, () -> second.get(5, TimeUnit.SECONDS))
                 .getCause());
         assertEquals(CheckoutSessionStatus.SUPERSEDED, session.status());
