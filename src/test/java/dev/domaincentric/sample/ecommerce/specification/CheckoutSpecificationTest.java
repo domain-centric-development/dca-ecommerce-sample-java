@@ -24,6 +24,8 @@ import org.junit.jupiter.api.*;
     matches = ".+",
     disabledReason = "shared specification not supplied (-Pspecification.path)")
 class CheckoutSpecificationTest {
+  private static final java.util.Currency EUR = java.util.Currency.getInstance("EUR");
+
   @TestFactory
   Stream<DynamicTest> vectors() throws Exception {
     var tests = new ArrayList<DynamicTest>();
@@ -38,12 +40,12 @@ class CheckoutSpecificationTest {
   }
 
   void run(String id, com.fasterxml.jackson.databind.JsonNode vector) throws Exception {
-    // Every number the vector states is read from it; nothing about the case is repeated here. What
-    // stays in the adapter is how this stack expresses the case, not what the case is.
-    var given = vector.path("given");
-    var when = vector.path("when");
-    var then = vector.path("then");
-    var f = new Fixture(given);
+    // A vector carries values where the case is a function of values — the repricing and total
+    // cases
+    // below. The behaviour cases carry an id only: a transition or a race is not a number, and a
+    // flag
+    // standing in for one would say less than it looks like. Their fixture uses the defaults.
+    var f = new Fixture(vector);
     var session = f.start();
     ready(session);
     session.clearDomainEvents();
@@ -53,8 +55,7 @@ class CheckoutSpecificationTest {
         var snapshot = List.copyOf(session.lineItems());
         f.cart.addItem(
             f.product,
-            dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity.of(
-                when.path("cartAdds").asInt()),
+            dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity.of(3),
             Price.of(f.price));
         var sync =
             new SyncCheckoutWithCartUseCase(
@@ -99,12 +100,17 @@ class CheckoutSpecificationTest {
       case "checkout.confirm.price-changed", "checkout.confirm.out-of-stock" -> {
         var totals = session.totals();
         int events = f.events.published.size();
-        if (when.has("unitPrice")) f.price = Money.euro(when.path("unitPrice").asDouble());
-        if (when.has("stock")) f.stock = when.path("stock").asInt();
+        if (vector.hasNonNull("newUnitPrice")) {
+          f.price = Money.of(new java.math.BigDecimal(vector.path("newUnitPrice").asText()), EUR);
+        }
+        if (vector.hasNonNull("newStock")) {
+          f.stock = vector.path("newStock").asInt();
+        }
         var failure = assertThrows(CheckoutValidationException.class, () -> f.confirm(session));
         assertEquals(f.product, failure.validation().errors().get(0).productId());
-        assertEquals(then.path("errors").asInt(), failure.validation().errors().size());
-        assertEquals(CheckoutSessionStatus.valueOf(then.path("status").asText()), session.status());
+        assertFalse(vector.path("accept").asBoolean());
+        assertEquals(vector.path("errors").asInt(), failure.validation().errors().size());
+        assertEquals(CheckoutSessionStatus.ACTIVE, session.status());
         assertEquals(totals, session.totals());
         assertTrue(session.domainEvents().isEmpty());
         assertEquals(events, f.events.published.size());
@@ -112,7 +118,10 @@ class CheckoutSpecificationTest {
       case "checkout.confirm.unchanged", "checkout.confirmed-event.total" -> {
         f.confirm(session);
         var confirmed = (CheckoutConfirmed) f.events.published.getLast();
-        assertEquals(Money.euro(then.path("total").asDouble()), session.totals().total());
+        assertTrue(vector.path("accept").asBoolean());
+        assertEquals(
+            Money.of(new java.math.BigDecimal(vector.path("total").asText()), EUR),
+            session.totals().total());
         assertEquals(session.totals().total(), confirmed.totalAmount());
       }
       case "checkout.replacement.confirmation-wins" -> race(f, session, true);
@@ -177,13 +186,16 @@ class CheckoutSpecificationTest {
     Money price;
     int stock;
 
-    Fixture(com.fasterxml.jackson.databind.JsonNode given) {
-      this.price = Money.euro(given.path("unitPrice").asDouble());
-      this.stock = given.path("stock").isMissingNode() ? 100 : given.path("stock").asInt();
+    Fixture(com.fasterxml.jackson.databind.JsonNode vector) {
+      this.price =
+          vector.hasNonNull("unitPrice")
+              ? Money.of(new java.math.BigDecimal(vector.path("unitPrice").asText()), EUR)
+              : Money.euro(10);
+      this.stock = vector.hasNonNull("stock") ? vector.path("stock").asInt() : 100;
       cart.addItem(
           product,
           dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity.of(
-              given.path("quantity").asInt()),
+              vector.hasNonNull("quantity") ? vector.path("quantity").asInt() : 2),
           Price.of(price));
     }
 

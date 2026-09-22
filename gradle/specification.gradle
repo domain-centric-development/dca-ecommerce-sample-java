@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.PathSensitivity
+
 // The shared sample specification (../dca-sample-specification) is an optional, local-only check: it is not part
 // of the build and nothing is downloaded. Pass -Pspecification.path=<checkout> to run the specification tests;
 // without the property those tests are skipped and every other test runs as usual.
@@ -28,6 +30,12 @@ tasks.register('materializeSpecification', Sync) {
 tasks.withType(Test).configureEach {
   if (localSpec.isPresent()) {
     dependsOn tasks.named('materializeSpecification')
+    // The materialised vectors are an input of the test run: without this, editing the specification
+    // changes nothing Gradle can see, the task stays up-to-date and a changed expectation is silently
+    // not verified — the specification would only bite when some code changed as well.
+    inputs.dir(destination)
+        .withPropertyName('sharedSpecification')
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     systemProperty 'specification.path', destination.get().asFile.absolutePath
   }
 }
