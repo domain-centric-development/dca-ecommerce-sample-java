@@ -38,36 +38,55 @@ the identity port `IdentityProvider`, which Account implements.
 
 ## Relationships
 
-| Upstream | Downstream | Pattern | Realised via |
-|---|---|---|---|
-| `pricing` | `product` | Customer/Supplier (OHS) | `pricing.api.PricingService` → `product/adapter/outgoing/pricing/PricingDataAdapter` |
-| `inventory` | `product` | Customer/Supplier (OHS) | `inventory.api.InventoryService` → `product/adapter/outgoing/inventory/InventoryStockDataAdapter` |
-| `product` | `cart` | Customer/Supplier (OHS) | `product.api.ProductCatalogService` → `cart/adapter/outgoing/product/CompositeArticleDataAdapter` |
-| `pricing` | `cart` | Customer/Supplier (OHS) | `pricing.api.PricingService` (via `CompositeArticleDataAdapter`) |
-| `inventory` | `cart` | Customer/Supplier (OHS) | `inventory.api.InventoryService` (via `CompositeArticleDataAdapter`) |
-| `product` | `checkout` | Customer/Supplier (OHS) | `product.api.ProductCatalogService` → `checkout/adapter/outgoing/product/*Adapter` |
-| `pricing` | `checkout` | Customer/Supplier (OHS) | `pricing.api.PricingService` |
-| `inventory` | `checkout` | Customer/Supplier (OHS) | `inventory.api.InventoryService` |
-| `cart` | `checkout` | Published Language (events) | `cart.events.CartContentsChangedEvent` → `checkout/adapter/incoming/event/cartsync/CartChangeEventConsumer` |
-| `cart` | `checkout` | Customer/Supplier (OHS) | `cart.api.CartService` (lookups) |
-| `checkout` | `cart` | Published Language — Interface Inversion | `checkout.events.CheckoutConfirmedEvent` *implements* `cart.events.CartCompletionTrigger`; consumer in `cart/adapter/incoming/event/cartcheckout/CartCompletionEventConsumer` |
-| `checkout` | `inventory` | Published Language — Interface Inversion | `checkout.events.CheckoutConfirmedEvent` *implements* `inventory.events.StockReductionTrigger`; consumer in `inventory/adapter/incoming/event/StockReductionEventConsumer` |
-| `product` | `pricing` | Published Language — Interface Inversion | `product.events.ProductCreatedEvent` *implements* `pricing.events.PriceInitializationTrigger`; consumer in `pricing/adapter/incoming/event/PriceInitializationEventConsumer` |
-| `product` | `inventory` | Published Language — Interface Inversion | `product.events.ProductCreatedEvent` *implements* `inventory.events.StockInitializationTrigger`; consumer in `inventory/adapter/incoming/event/StockInitializationEventConsumer` |
-| `account` | `cart`, `checkout`, `product` | Customer/Supplier via the shared kernel's identity port | `sharedkernel.application.shared.IdentityProvider` is implemented only in `account/adapter/outgoing/security`; the incoming adapters of Cart, Checkout and Product resolve the caller through that port and hand the customer to their use cases as a command or query field. The dependency is invisible to `allowedDependencies` — it runs through the shared kernel — which is why it is stated here. Account itself depends on no other context |
-| `portal` | (all) | Separate Ways | Aggregation happens client-side; no Java cross-context imports |
-| `backoffice` | (all) | Separate Ways | Consumes only Spring Modulith infrastructure (`JdbcEventPublicationLogStore`) |
+Three axes, and only the first two are in the code. **Declared** is what
+`@Upstream(translation, via)` states: how *this* context protects its model —
+`ACL` or `Conformist`. **Published by the upstream** is what `@OpenHostService`
+and the `api`/`events` packages state. **Organisational** is the team
+relationship, which no annotation carries and which therefore lives only here.
+A relationship is normally all three at once: the catalog consumes pricing
+through an OHS, translates it with an ACL, and the two teams work as
+Customer/Supplier — those are three answers, not three competing names.
+
+| Upstream | Downstream | Declared (`translation` / `via`) | Organisational | Realised via |
+|---|---|---|---|---|
+| `pricing` | `product` | ACL / api | Partnership | `pricing.api.PricingService` → `product/adapter/outgoing/pricing/PricingDataAdapter` |
+| `inventory` | `product` | ACL / api | Partnership | `inventory.api.InventoryService` → `product/adapter/outgoing/inventory/InventoryStockDataAdapter` |
+| `product` | `cart` | ACL / api | Customer/Supplier | `product.api.ProductCatalogService` → `cart/adapter/outgoing/product/CompositeArticleDataAdapter` |
+| `pricing` | `cart` | ACL / api | Customer/Supplier | `pricing.api.PricingService` (via `CompositeArticleDataAdapter`) |
+| `inventory` | `cart` | ACL / api | Customer/Supplier | `inventory.api.InventoryService` (via `CompositeArticleDataAdapter`) |
+| `product` | `checkout` | ACL / api | Customer/Supplier | `product.api.ProductCatalogService` → `checkout/adapter/outgoing/product/*Adapter` |
+| `pricing` | `checkout` | ACL / api | Customer/Supplier | `pricing.api.PricingService` |
+| `inventory` | `checkout` | ACL / api | Partnership | `inventory.api.InventoryService` |
+| `cart` | `checkout` | ACL / api | Partnership | `cart.api.CartService` (lookups) |
+| `cart` | `checkout` | Conformist / events | Partnership | `cart.events.CartContentsChangedEvent` → `checkout/adapter/incoming/event/cartsync/CartChangeEventConsumer` |
+| `checkout` | `cart` | Conformist / events | Partnership | `checkout.events.CheckoutConfirmedEvent` *implements* `cart.events.CartCompletionTrigger`; consumer in `cart/adapter/incoming/event/cartcheckout/CartCompletionEventConsumer` |
+| `checkout` | `inventory` | Conformist / events | Partnership | `checkout.events.CheckoutConfirmedEvent` *implements* `inventory.events.StockReductionTrigger`; consumer in `inventory/adapter/incoming/event/StockReductionEventConsumer` |
+| `product` | `pricing` | Conformist / events | Partnership | `product.events.ProductCreatedEvent` *implements* `pricing.events.PriceInitializationTrigger`; consumer in `pricing/adapter/incoming/event/PriceInitializationEventConsumer` |
+| `product` | `inventory` | Conformist / events | Partnership | `product.events.ProductCreatedEvent` *implements* `inventory.events.StockInitializationTrigger`; consumer in `inventory/adapter/incoming/event/StockInitializationEventConsumer` |
+| Payment Service Provider | `checkout` | ACL / REST (outbound), ACL / webhook (inbound, **planned**) | Conformist to the provider's contract | `@ExternalUpstream` on the checkout package; behind the caller-owned `PaymentProvider` port, with a mock adapter in place of a real gateway. No webhook adapter exists yet |
+| `account` | `cart`, `checkout`, `product` | not declared — the dependency runs through the shared kernel | Supplier of identity | `sharedkernel.application.shared.IdentityProvider` is implemented only in `account/adapter/outgoing/security`; the incoming adapters of Cart, Checkout and Product resolve the caller through that port and hand the customer to their use cases as a command or query field. Invisible to `allowedDependencies`, which is why it is stated here. Account itself depends on no other context |
+| `portal` | (all) | not declared | Separate Ways | Aggregation happens client-side; no Java cross-context imports |
+| `backoffice` | (all) | not declared | Separate Ways | Consumes only Spring Modulith infrastructure (`JdbcEventPublicationLogStore`) |
+
+Every upstream in the first block publishes through `@OpenHostService` on its
+`api` type; the event contracts are the published language of their context.
+Partnerships are the pairs that declare `@Partnership` on both sides: `cart` ↔
+`checkout`, `checkout` ↔ `inventory`, `inventory` ↔ `product`, `pricing` ↔
+`product` — each of them owns a consumer-defined event contract the other
+implements, which is why the two evolve it together.
 
 ### Pattern notes
 
-- **Customer/Supplier (OHS):** The upstream context exposes a dedicated, narrow
-  API package (`<context>/api/`). Spring Modulith makes it visible to other
-  modules via `Type.OPEN`. The downstream context consumes the API only in its
-  *outgoing-adapter* layer and translates the API types into its own domain
-  model.
-- **Published Language:** Integration events live in `<context>/events/` and are
-  exposed under `<context> :: events`. Downstream consumers reside in
-  `adapter/incoming/event/`.
+- **Open Host Service (upstream) + ACL (downstream):** The upstream context
+  exposes a dedicated, narrow API package (`<context>/api/`) carrying
+  `@OpenHostService`; Spring Modulith makes it visible to other modules via
+  `Type.OPEN`. The downstream consumes it only in its *outgoing-adapter* layer
+  and translates the API types into its own domain model — that translation is
+  what `translation = ANTI_CORRUPTION_LAYER` declares.
+- **Published Language (upstream) + Conformist (downstream):** Integration
+  events live in `<context>/events/` and are exposed under
+  `<context> :: events`. The consumer takes them as published — declared as
+  `translation = CONFORMIST` — with its consumers in `adapter/incoming/event/`.
 - **Interface Inversion (a variant of Published Language):** The *consuming*
   context defines the event interface (e.g. `CartCompletionTrigger`); the
   *publishing* context implements that interface on its integration event
