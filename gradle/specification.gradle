@@ -1,20 +1,33 @@
 // The shared sample specification (../dca-sample-specification) is an optional, local-only check: it is not part
 // of the build and nothing is downloaded. Pass -Pspecification.path=<checkout> to run the specification tests;
 // without the property those tests are skipped and every other test runs as usual.
+//
+// A Sync task rather than a doLast that calls project.sync: the latter is incompatible with the configuration
+// cache, and because every Test task depended on it, Gradle discarded the cache entry on *every* run —
+// including the ordinary ones that never materialise anything. The dependency is now declared only when the
+// property is there, so the normal build keeps its cached task graph.
 def localSpec = providers.gradleProperty('specification.path')
 def destination = layout.buildDirectory.dir('specification')
-tasks.register('materializeSpecification') {
-  notCompatibleWithConfigurationCache('Materializes an explicit local specification checkout')
+def specSource = localSpec.map { layout.projectDirectory.dir(it) }
+
+tasks.register('materializeSpecification', Sync) {
   onlyIf { localSpec.isPresent() }
-  outputs.dir(destination)
-  outputs.upToDateWhen { false }
-  doLast {
-    File source = file(localSpec.get())
-    if (!new File(source, 'vectors').isDirectory()) throw new GradleException("Specification vectors are missing under ${source}")
-    project.sync { spec -> spec.from(source); spec.include('**/*.json', '**/*.md'); spec.into(destination) }
+  from(specSource) {
+    include '**/*.json'
+    include '**/*.md'
+  }
+  into destination
+  doFirst {
+    File source = specSource.get().asFile
+    if (!new File(source, 'vectors').isDirectory()) {
+      throw new GradleException("Specification vectors are missing under ${source}")
+    }
   }
 }
+
 tasks.withType(Test).configureEach {
-  dependsOn tasks.named('materializeSpecification')
-  if (localSpec.isPresent()) systemProperty 'specification.path', destination.get().asFile.absolutePath
+  if (localSpec.isPresent()) {
+    dependsOn tasks.named('materializeSpecification')
+    systemProperty 'specification.path', destination.get().asFile.absolutePath
+  }
 }
