@@ -1,7 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid;
 
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
-import dev.domaincentric.sample.ecommerce.cart.domain.service.CartTotalCalculator;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 
 /**
@@ -16,12 +15,12 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 public record CartTotals(
     Money currentSubtotal, Money originalSubtotal, Money difference, Money containedTax) {
 
-  public static CartTotals from(final EnrichedCart cart, final CartTotalCalculator calculator) {
+  public static CartTotals from(final EnrichedCart cart) {
     final Money current = cart.calculateCurrentSubtotal();
     return new CartTotals(
         current,
         cart.calculateOriginalSubtotal(),
         cart.totalPriceDifference(),
-        calculator.containedTax(current));
+        cart.containedTax());
   }
 }

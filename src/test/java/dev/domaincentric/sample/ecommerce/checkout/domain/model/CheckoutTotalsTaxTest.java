@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.checkout.domain.service;
+package dev.domaincentric.sample.ecommerce.checkout.domain.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -9,12 +9,10 @@ import java.util.Currency;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("TaxCalculator")
-class TaxCalculatorTest {
+@DisplayName("CheckoutTotals: the tax contained in gross amounts")
+class CheckoutTotalsTaxTest {
 
   private static final Currency EUR = Currency.getInstance("EUR");
-
-  private final TaxCalculator calculator = new TaxCalculator();
 
   private static Money euro(final String amount) {
     return Money.of(new BigDecimal(amount), EUR);
@@ -23,7 +21,7 @@ class TaxCalculatorTest {
   @Test
   @DisplayName("extracts the VAT contained in a gross amount instead of adding it")
   void extractsContainedTax() {
-    assertEquals(euro("19.00"), calculator.containedTax(euro("119.00")));
+    assertEquals(euro("19.00"), CheckoutTotals.containedTax(euro("119.00")));
   }
 
   @Test
@@ -31,7 +29,7 @@ class TaxCalculatorTest {
   void containedTaxAndNetAddUpToGross() {
     final Money gross = euro("249.95");
 
-    final Money tax = calculator.containedTax(gross);
+    final Money tax = CheckoutTotals.containedTax(gross);
 
     assertEquals(gross, gross.subtract(tax).add(tax));
   }
@@ -39,13 +37,14 @@ class TaxCalculatorTest {
   @Test
   @DisplayName("a zero amount contains no tax")
   void zeroContainsNoTax() {
-    assertEquals(euro("0.00"), calculator.containedTax(euro("0.00")));
+    assertEquals(euro("0.00"), CheckoutTotals.containedTax(euro("0.00")));
   }
 
   @Test
   @DisplayName("honours an explicit rate")
   void honoursExplicitRate() {
-    assertEquals(euro("7.00"), calculator.containedTax(euro("107.00"), BigDecimal.valueOf(0.07)));
+    assertEquals(
+        euro("7.00"), CheckoutTotals.containedTax(euro("107.00"), BigDecimal.valueOf(0.07)));
   }
 
   @Test
@@ -53,6 +52,6 @@ class TaxCalculatorTest {
   void rejectsNegativeRate() {
     assertThrows(
         IllegalArgumentException.class,
-        () -> calculator.containedTax(euro("100.00"), BigDecimal.valueOf(-0.19)));
+        () -> CheckoutTotals.containedTax(euro("100.00"), BigDecimal.valueOf(-0.19)));
   }
 }

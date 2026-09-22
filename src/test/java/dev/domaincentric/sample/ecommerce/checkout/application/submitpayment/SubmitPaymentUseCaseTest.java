@@ -25,7 +25,6 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.DeliveryAddress;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ShippingOption;
-import dev.domaincentric.sample.ecommerce.checkout.domain.service.TaxCalculator;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.ArrayList;
@@ -129,8 +128,7 @@ class SubmitPaymentUseCaseTest {
     final CheckoutSession session = sessionWithBuyerInfoOnly();
     session.submitDelivery(
         DeliveryAddress.of("123 Main Street", "Springfield", "12345", "United States"),
-        ShippingOption.of("STANDARD", "Standard Shipping", "5-7 days", Money.euro(5)),
-        new TaxCalculator());
+        ShippingOption.of("STANDARD", "Standard Shipping", "5-7 days", Money.euro(5)));
     return sessions.save(session);
   }
 
@@ -139,11 +137,7 @@ class SubmitPaymentUseCaseTest {
         CheckoutLineItem.of(
             CheckoutLineItemId.generate(), ProductId.generate(), "Thing", Money.euro(10), 1, null);
     return CheckoutSession.start(
-        CartId.generate(),
-        CustomerId.of(CUSTOMER),
-        List.of(item),
-        Money.euro(10),
-        new TaxCalculator());
+        CartId.generate(), CustomerId.of(CUSTOMER), List.of(item), Money.euro(10));
   }
 
   /** A provider that remembers what it was asked to do. */

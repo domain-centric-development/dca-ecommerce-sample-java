@@ -2,6 +2,8 @@ package dev.domaincentric.sample.ecommerce.checkout.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.Value;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Currency;
 
 /**
@@ -14,6 +16,9 @@ import java.util.Currency;
  */
 public record CheckoutTotals(Money subtotal, Money shipping, Money tax, Money total)
     implements Value {
+
+  /** VAT contained in the gross amounts this context works with. */
+  private static final BigDecimal RATE = BigDecimal.valueOf(0.19);
 
   public CheckoutTotals {
     if (subtotal == null) {
@@ -41,13 +46,42 @@ public record CheckoutTotals(Money subtotal, Money shipping, Money tax, Money to
     return new CheckoutTotals(subtotal, shipping, tax, total);
   }
 
+  /**
+   * Totals for goods and shipping, with the contained tax derived from them at the context's rate.
+   *
+   * <p>The rate lives here because the rule is the checkout's own: prices are gross, so the tax is
+   * <em>contained</em> in the amount rather than added to it, and the grand total does not change
+   * when it is worked out. A context that taxes a different basis — the cart taxes goods only —
+   * states its own rule in its own type instead of sharing this one.
+   */
+  public static CheckoutTotals calculate(final Money subtotal, final Money shipping) {
+    return calculate(subtotal, shipping, containedTax(subtotal.add(shipping)));
+  }
+
+  /** The tax contained in a gross amount at the checkout's rate. */
+  public static Money containedTax(final Money grossAmount) {
+    return containedTax(grossAmount, RATE);
+  }
+
+  /** The tax contained in a gross amount at the given rate. */
+  public static Money containedTax(final Money grossAmount, final BigDecimal taxRate) {
+    if (taxRate.compareTo(BigDecimal.ZERO) < 0) {
+      throw new IllegalArgumentException("Tax rate cannot be negative");
+    }
+    final BigDecimal net =
+        grossAmount.amount().divide(BigDecimal.ONE.add(taxRate), 10, RoundingMode.HALF_UP);
+    final BigDecimal tax = grossAmount.amount().subtract(net);
+    return Money.of(tax.setScale(2, RoundingMode.HALF_UP), grossAmount.currency());
+  }
+
   public static CheckoutTotals zero(final Currency currency) {
     var zero = Money.zero(currency);
     return new CheckoutTotals(zero, zero, zero, zero);
   }
 
+  /** Shipping changes the basis, so the contained tax is worked out again. */
   public CheckoutTotals withShipping(final Money newShipping) {
-    return CheckoutTotals.calculate(this.subtotal, newShipping, this.tax);
+    return CheckoutTotals.calculate(this.subtotal, newShipping);
   }
 
   public CheckoutTotals withTax(final Money newTax) {

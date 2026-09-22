@@ -2,6 +2,8 @@ package dev.domaincentric.sample.ecommerce.cart.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.Value;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Currency;
 import java.util.List;
 
@@ -24,6 +26,9 @@ public record EnrichedCart(
     implements Value {
 
   private static final Currency DEFAULT_CURRENCY = Currency.getInstance("EUR");
+
+  /** VAT contained in the gross prices this context works with. */
+  private static final BigDecimal RATE = BigDecimal.valueOf(0.19);
 
   public EnrichedCart {
     if (cartId == null) {
@@ -64,6 +69,29 @@ public record EnrichedCart(
    *
    * @return the sum of all current line totals
    */
+  /**
+   * The tax contained in the cart's current subtotal, at the cart's rate.
+   *
+   * <p>Prices are gross, so the tax is <em>contained</em> in the amount rather than added to it.
+   * The rule is the cart's own: it taxes goods, while the checkout taxes goods and shipping, so the
+   * two contexts state it separately rather than sharing one type.
+   */
+  public Money containedTax() {
+    return containedTax(RATE);
+  }
+
+  /** The tax contained in the current subtotal at the given rate. */
+  public Money containedTax(final BigDecimal taxRate) {
+    if (taxRate.compareTo(BigDecimal.ZERO) < 0) {
+      throw new IllegalArgumentException("Tax rate cannot be negative");
+    }
+    final Money gross = calculateCurrentSubtotal();
+    final BigDecimal net =
+        gross.amount().divide(BigDecimal.ONE.add(taxRate), 10, RoundingMode.HALF_UP);
+    return Money.of(
+        gross.amount().subtract(net).setScale(2, RoundingMode.HALF_UP), gross.currency());
+  }
+
   public Money calculateCurrentSubtotal() {
     return items.stream()
         .map(EnrichedCartItem::currentLineTotal)

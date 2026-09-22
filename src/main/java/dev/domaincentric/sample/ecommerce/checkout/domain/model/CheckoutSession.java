@@ -9,7 +9,6 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutExpired;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutSessionStarted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.DeliverySubmitted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.PaymentSubmitted;
-import dev.domaincentric.sample.ecommerce.checkout.domain.service.TaxCalculator;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.ArrayList;
@@ -70,15 +69,12 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
       final CartId cartId,
       final CustomerId customerId,
       final List<CheckoutLineItem> lineItems,
-      final Money subtotal,
-      final TaxCalculator taxCalculator) {
+      final Money subtotal) {
     this.id = id;
     this.cartId = cartId;
     this.customerId = customerId;
     this.lineItems = new ArrayList<>(lineItems);
-    this.totals =
-        CheckoutTotals.calculate(
-            subtotal, Money.zero(subtotal.currency()), taxCalculator.containedTax(subtotal));
+    this.totals = CheckoutTotals.calculate(subtotal, Money.zero(subtotal.currency()));
     this.currentStep = CheckoutStep.BUYER_INFO;
     this.status = CheckoutSessionStatus.ACTIVE;
   }
@@ -92,7 +88,6 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * @param customerId the customer ID (may be guest)
    * @param lineItems the line items from the cart
    * @param subtotal the subtotal of all line items
-   * @param taxCalculator resolves the tax contained in the totals
    * @return a new checkout session
    * @throws EmptyCheckoutException if lineItems is empty
    */
@@ -100,15 +95,14 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
       final CartId cartId,
       final CustomerId customerId,
       final List<CheckoutLineItem> lineItems,
-      final Money subtotal,
-      final TaxCalculator taxCalculator) {
+      final Money subtotal) {
     if (lineItems == null || lineItems.isEmpty()) {
       throw new EmptyCheckoutException(cartId);
     }
 
     final CheckoutSessionId sessionId = CheckoutSessionId.generate();
     final CheckoutSession session =
-        new CheckoutSession(sessionId, cartId, customerId, lineItems, subtotal, taxCalculator);
+        new CheckoutSession(sessionId, cartId, customerId, lineItems, subtotal);
 
     session.registerEvent(
         CheckoutSessionStarted.now(sessionId, cartId, customerId, subtotal, lineItems.size()));
@@ -185,14 +179,10 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    *
    * @param newLineItems the updated line items from the cart
    * @param newSubtotal the new subtotal calculated from the cart
-   * @param taxCalculator resolves the tax contained in the totals
    * @throws UnsupportedOperationException always — this is not an operation the model has, which is
    *     a statement about the model and not a rule a caller can satisfy
    */
-  public void syncLineItems(
-      final List<CheckoutLineItem> newLineItems,
-      final Money newSubtotal,
-      final TaxCalculator taxCalculator) {
+  public void syncLineItems(final List<CheckoutLineItem> newLineItems, final Money newSubtotal) {
     throw new UnsupportedOperationException(
         "Checkout snapshots are immutable; start a new session");
   }
@@ -227,14 +217,10 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    *
    * @param address the delivery address
    * @param shippingOption the selected shipping option
-   * @param taxCalculator resolves the tax contained in the totals
    * @throws CheckoutNotModifiableException if the session no longer takes changes
    * @throws CheckoutStepOutOfOrderException if the step is ahead of the current one
    */
-  public void submitDelivery(
-      final DeliveryAddress address,
-      final ShippingOption shippingOption,
-      final TaxCalculator taxCalculator) {
+  public void submitDelivery(final DeliveryAddress address, final ShippingOption shippingOption) {
     ensureModifiable();
     ensureStepCompleted(CheckoutStep.BUYER_INFO);
     ensureAtOrBeforeStep(CheckoutStep.DELIVERY);
@@ -243,10 +229,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     this.shippingOption = shippingOption;
 
     // Update totals with shipping cost; the tax contained in them moves with it
-    final CheckoutTotals withShipping = this.totals.withShipping(shippingOption.cost());
-    this.totals =
-        withShipping.withTax(
-            taxCalculator.containedTax(withShipping.subtotal().add(withShipping.shipping())));
+    this.totals = this.totals.withShipping(shippingOption.cost());
 
     // Advance to next step if currently at delivery step
     if (currentStep == CheckoutStep.DELIVERY) {
@@ -366,11 +349,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     }
 
     final var recomputed = calculateOrderTotal(facts);
-    this.totals =
-        CheckoutTotals.calculate(
-            recomputed,
-            totals.shipping(),
-            new TaxCalculator().containedTax(recomputed.add(totals.shipping())));
+    this.totals = CheckoutTotals.calculate(recomputed, totals.shipping());
     this.status = CheckoutSessionStatus.CONFIRMED;
     this.currentStep = CheckoutStep.CONFIRMATION;
 

@@ -326,8 +326,7 @@ class CheckoutStepValidatorTest {
         CartId.generate(),
         CustomerId.of(UUID.randomUUID().toString()),
         List.of(createLineItem()),
-        Money.of(BigDecimal.valueOf(100), EUR),
-        new TaxCalculator());
+        Money.of(BigDecimal.valueOf(100), EUR));
   }
 
   private CheckoutSession createSessionAtDelivery() {
@@ -338,7 +337,7 @@ class CheckoutStepValidatorTest {
 
   private CheckoutSession createSessionAtPayment() {
     CheckoutSession session = createSessionAtDelivery();
-    session.submitDelivery(createDeliveryAddress(), createShippingOption(), new TaxCalculator());
+    session.submitDelivery(createDeliveryAddress(), createShippingOption());
     return session;
   }
 

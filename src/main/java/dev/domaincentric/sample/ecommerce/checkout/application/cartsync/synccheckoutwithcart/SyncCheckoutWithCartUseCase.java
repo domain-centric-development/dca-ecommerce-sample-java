@@ -5,7 +5,6 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublis
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartDataPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.ProductInfoPort;
-import dev.domaincentric.sample.ecommerce.checkout.domain.service.TaxCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,7 +20,6 @@ public class SyncCheckoutWithCartUseCase implements SyncCheckoutWithCartInputPor
 
   private final CheckoutSessionRepository checkoutSessionRepository;
   private final CartDataPort cartDataPort;
-  private final TaxCalculator taxCalculator;
   private final ProductInfoPort productInfoPort;
   private final DomainEventPublisher eventPublisher;
   private final TransactionBoundary transactionBoundary;
@@ -29,13 +27,11 @@ public class SyncCheckoutWithCartUseCase implements SyncCheckoutWithCartInputPor
   public SyncCheckoutWithCartUseCase(
       final CheckoutSessionRepository checkoutSessionRepository,
       final CartDataPort cartDataPort,
-      final TaxCalculator taxCalculator,
       final ProductInfoPort productInfoPort,
       final DomainEventPublisher eventPublisher,
       final TransactionBoundary transactionBoundary) {
     this.checkoutSessionRepository = checkoutSessionRepository;
     this.cartDataPort = cartDataPort;
-    this.taxCalculator = taxCalculator;
     this.productInfoPort = productInfoPort;
     this.eventPublisher = eventPublisher;
     this.transactionBoundary = transactionBoundary;

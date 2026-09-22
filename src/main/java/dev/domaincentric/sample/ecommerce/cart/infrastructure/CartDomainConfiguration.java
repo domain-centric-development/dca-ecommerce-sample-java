@@ -1,7 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.infrastructure;
 
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartFactory;
-import dev.domaincentric.sample.ecommerce.cart.domain.service.CartTotalCalculator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,11 +12,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class CartDomainConfiguration {
-
-  @Bean
-  public CartTotalCalculator cartTotalCalculator() {
-    return new CartTotalCalculator();
-  }
 
   @Bean
   public EnrichedCartFactory enrichedCartFactory() {

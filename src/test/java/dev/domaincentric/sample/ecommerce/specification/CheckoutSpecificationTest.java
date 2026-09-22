@@ -53,7 +53,6 @@ class CheckoutSpecificationTest {
             new SyncCheckoutWithCartUseCase(
                 f.repository,
                 f,
-                new TaxCalculator(),
                 new ProductInfoPort() {
                   public Optional<String> getProductName(ProductId id) {
                     return Optional.of("Thing");
@@ -156,8 +155,7 @@ class CheckoutSpecificationTest {
     s.submitBuyerInfo(new BuyerInfo("a@b.de", "Ada", "Lovelace", "123"));
     s.submitDelivery(
         DeliveryAddress.of("Street 1", "Town", "12345", "DE"),
-        new ShippingOption("free", "Free", "Tomorrow", Money.euro(0)),
-        new TaxCalculator());
+        new ShippingOption("free", "Free", "Tomorrow", Money.euro(0)));
     s.submitPayment(PaymentSelection.of(PaymentProviderId.of("invoice")));
   }
 
@@ -183,7 +181,6 @@ class CheckoutSpecificationTest {
       var result =
           new StartCheckoutUseCase(
                   this,
-                  new TaxCalculator(),
                   new CheckoutCartFactory(),
                   this,
                   repository,
