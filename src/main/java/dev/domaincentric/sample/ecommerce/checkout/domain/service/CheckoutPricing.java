@@ -8,9 +8,10 @@ import java.util.*;
 
 public final class CheckoutPricing implements DomainService {
   public Money calculateOrderTotal(
-      java.util.List<CheckoutLineItem> lines,
-      java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts,
-      java.util.Currency currency) {
+      final CheckoutSession session,
+      final java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+    final var lines = session.lineItems();
+    final var currency = session.totals().subtotal().currency();
     Money total = Money.zero(currency);
     for (final CheckoutLineItem item : lines) {
       final CheckoutArticlePriceResolver.ArticlePrice articlePrice = facts.get(item.productId());
@@ -21,9 +22,9 @@ public final class CheckoutPricing implements DomainService {
   }
 
   public CheckoutValidationResult validateItems(
-      java.util.List<CheckoutLineItem> lines,
-      java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts,
-      java.util.Currency currency) {
+      final CheckoutSession session,
+      final java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+    final var lines = session.lineItems();
     final List<ValidationError> errors = new ArrayList<>();
     for (final CheckoutLineItem item : lines) {
       final CheckoutArticlePriceResolver.ArticlePrice articlePrice = facts.get(item.productId());

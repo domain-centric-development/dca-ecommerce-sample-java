@@ -349,7 +349,7 @@ class CheckoutStepValidatorTest {
 
   private CheckoutSession createConfirmedSession() {
     CheckoutSession session = createSessionAtReview();
-    session.confirm(
+    final var facts =
         session.lineItems().stream()
             .collect(
                 java.util.stream.Collectors.toMap(
@@ -357,7 +357,11 @@ class CheckoutStepValidatorTest {
                     item ->
                         new dev.domaincentric.sample.ecommerce.checkout.domain.model
                             .CheckoutArticlePriceResolver.ArticlePrice(
-                            item.unitPrice(), true, item.quantity()))));
+                            item.unitPrice(), true, item.quantity())));
+    final var pricing =
+        new dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing();
+    session.confirm(
+        pricing.validateItems(session, facts), pricing.calculateOrderTotal(session, facts));
     return session;
   }
 

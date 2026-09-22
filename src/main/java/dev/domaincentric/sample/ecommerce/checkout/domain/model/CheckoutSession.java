@@ -10,7 +10,6 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutSessionS
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.DeliverySubmitted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.PaymentSubmitted;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -288,54 +287,23 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
-   * Calculates the order total using fresh pricing data from the resolver.
+   * Confirms the checkout order once the checkout pricing has judged the current line items.
    *
-   * <p>Iterates through all line items and resolves current prices to compute the sum of (current
-   * price × quantity) for each item.
-   *
-   * @param facts the facts providing current pricing information
-   * @return the calculated order total
-   */
-  public Money calculateOrderTotal(
-      java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
-    return new dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing()
-        .calculateOrderTotal(lineItems, facts, totals.subtotal().currency());
-  }
-
-  /**
-   * Validates checkout items against current pricing and availability data.
-   *
-   * <p>Checks each line item for:
-   *
-   * <ul>
-   *   <li>Product availability
-   *   <li>Sufficient stock for the requested quantity
-   * </ul>
-   *
-   * @param facts the facts providing current pricing and availability information
-   * @return a validation result containing any errors found
-   */
-  public CheckoutValidationResult validateItems(
-      java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
-    return new dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing()
-        .validateItems(lineItems, facts, totals.subtotal().currency());
-  }
-
-  /**
-   * Confirms the checkout order after validating items with fresh pricing data.
-   *
-   * <p>Validates all items using the resolver before confirming. If validation fails, an exception
-   * is thrown with details about the validation errors.
+   * <p>The verdict and the recomputed subtotal are handed in by the use case: deciding them needs
+   * article facts the session does not own, so the domain service works them out and the session
+   * refuses to confirm an invalid one.
    *
    * <p>Raises a {@link CheckoutConfirmed} domain event on success.
    *
-   * @param facts the resolver for validating current pricing and availability
+   * @param validationResult the checkout pricing's verdict on the current line items
+   * @param recomputedSubtotal the subtotal at current prices
    * @throws CheckoutNotModifiableException if the session no longer takes changes
    * @throws CheckoutStepNotCompletedException if a step is still missing its data
    * @throws CheckoutStepOutOfOrderException if the session does not stand at the review step
    * @throws CheckoutValidationException if a line item no longer passes validation
    */
-  public void confirm(java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+  public void confirm(
+      final CheckoutValidationResult validationResult, final Money recomputedSubtotal) {
     ensureModifiable();
     ensureAllStepsCompleted();
 
@@ -343,13 +311,11 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
       throw new CheckoutStepOutOfOrderException(this.id, CheckoutStep.REVIEW, currentStep);
     }
 
-    final CheckoutValidationResult validationResult = validateItems(facts);
     if (!validationResult.isValid()) {
       throw new CheckoutValidationException(validationResult);
     }
 
-    final var recomputed = calculateOrderTotal(facts);
-    this.totals = CheckoutTotals.calculate(recomputed, totals.shipping());
+    this.totals = CheckoutTotals.calculate(recomputedSubtotal, totals.shipping());
     this.status = CheckoutSessionStatus.CONFIRMED;
     this.currentStep = CheckoutStep.CONFIRMATION;
 

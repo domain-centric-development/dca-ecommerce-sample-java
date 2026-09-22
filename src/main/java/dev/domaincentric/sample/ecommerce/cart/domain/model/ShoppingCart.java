@@ -356,34 +356,6 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
   }
 
   /**
-   * Calculates the total value of all items in the cart using fresh pricing from the resolver.
-   *
-   * <p>This method iterates through all cart items and uses the resolver to fetch current pricing
-   * for each product, ensuring accurate totals at checkout time.
-   *
-   * @param facts the resolver to fetch current pricing
-   * @return the total money value based on current prices
-   */
-  public Money calculateTotal(java.util.Map<ProductId, ArticlePrice> facts) {
-    return new dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing()
-        .calculateTotal(pricingLines(), facts);
-  }
-
-  /**
-   * Validates the cart for checkout using fresh pricing and availability data.
-   *
-   * <p>This method checks each item in the cart against current availability and stock levels to
-   * ensure the cart can proceed to checkout.
-   *
-   * @param facts the resolver to fetch current pricing and availability
-   * @return a CartValidationResult containing any validation errors
-   */
-  public CartValidationResult validateForCheckout(java.util.Map<ProductId, ArticlePrice> facts) {
-    return new dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing()
-        .validateForCheckout(pricingLines(), facts);
-  }
-
-  /**
    * Gets the total number of items in the cart.
    *
    * @return the count of items
@@ -459,16 +431,6 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
     }
 
     return mergedCount;
-  }
-
-  private List<dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing.Line>
-      pricingLines() {
-    return items.stream()
-        .map(
-            i ->
-                new dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing.Line(
-                    i.productId(), i.quantity()))
-        .toList();
   }
 
   private Optional<CartItem> findItemById(final CartItemId itemId) {

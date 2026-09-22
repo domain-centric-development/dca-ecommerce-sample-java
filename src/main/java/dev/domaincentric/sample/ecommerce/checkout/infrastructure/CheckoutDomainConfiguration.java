@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.infrastructure;
 
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutCartFactory;
+import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing;
 import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutStepValidator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +14,11 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class CheckoutDomainConfiguration {
+
+  @Bean
+  public CheckoutPricing checkoutPricing() {
+    return new CheckoutPricing();
+  }
 
   @Bean
   public CheckoutStepValidator checkoutStepValidator() {

@@ -10,6 +10,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticleP
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
 import java.util.Map;
@@ -40,16 +41,19 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
 
   private final CheckoutSessionRepository checkoutSessionRepository;
   private final CheckoutArticleDataPort checkoutArticleDataPort;
+  private final CheckoutPricing checkoutPricing;
   private final DomainEventPublisher domainEventPublisher;
   private final TransactionBoundary transactionBoundary;
 
   public ConfirmCheckoutUseCase(
       final CheckoutSessionRepository checkoutSessionRepository,
       final CheckoutArticleDataPort checkoutArticleDataPort,
+      final CheckoutPricing checkoutPricing,
       final DomainEventPublisher domainEventPublisher,
       final TransactionBoundary transactionBoundary) {
     this.checkoutSessionRepository = checkoutSessionRepository;
     this.checkoutArticleDataPort = checkoutArticleDataPort;
+    this.checkoutPricing = checkoutPricing;
     this.domainEventPublisher = domainEventPublisher;
     this.transactionBoundary = transactionBoundary;
   }
@@ -83,7 +87,9 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
             transactionBoundary.inTransaction(
                 () -> {
                   final CheckoutSession session = loadSession(sessionId, command);
-                  session.confirm(facts);
+                  session.confirm(
+                      checkoutPricing.validateItems(session, facts),
+                      checkoutPricing.calculateOrderTotal(session, facts));
                   checkoutSessionRepository.save(session);
                   domainEventPublisher.publishAndClearEvents(session);
                   return ConfirmCheckoutResult.from(session);

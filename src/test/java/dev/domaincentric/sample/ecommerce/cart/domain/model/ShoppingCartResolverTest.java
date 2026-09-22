@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.cart.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.domaincentric.sample.ecommerce.cart.domain.service.CartPricing;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
@@ -22,6 +23,8 @@ import org.junit.jupiter.api.Test;
  */
 @DisplayName("ShoppingCart Resolver Methods")
 class ShoppingCartResolverTest {
+
+  private final CartPricing pricing = new CartPricing();
 
   private static final Currency EUR = Currency.getInstance("EUR");
   private ShoppingCart cart;
@@ -49,7 +52,7 @@ class ShoppingCartResolverTest {
     @Test
     @DisplayName("returns zero for empty cart")
     void returnsZeroForEmptyCart() {
-      Money total = cart.calculateTotal(facts());
+      Money total = pricing.calculateTotal(cart, facts());
 
       assertEquals(Money.euro(0.0), total);
     }
@@ -69,7 +72,7 @@ class ShoppingCartResolverTest {
       priceResolver.setPrice(product1, Money.of(BigDecimal.valueOf(15.00), EUR), true, 100);
       priceResolver.setPrice(product2, Money.of(BigDecimal.valueOf(25.00), EUR), true, 100);
 
-      Money total = cart.calculateTotal(facts());
+      Money total = pricing.calculateTotal(cart, facts());
 
       // Expected: 2 * 15 + 3 * 25 = 30 + 75 = 105
       assertEquals(Money.of(BigDecimal.valueOf(105.00), EUR), total);
@@ -78,7 +81,7 @@ class ShoppingCartResolverTest {
     @Test
     @DisplayName("throws exception when resolver is null")
     void throwsExceptionWhenResolverIsNull() {
-      assertThrows(IllegalArgumentException.class, () -> cart.calculateTotal(null));
+      assertThrows(IllegalArgumentException.class, () -> pricing.calculateTotal(cart, null));
     }
 
     @Test
@@ -92,7 +95,7 @@ class ShoppingCartResolverTest {
       // Resolver returns different price
       priceResolver.setPrice(productId, Money.of(BigDecimal.valueOf(50.00), EUR), true, 100);
 
-      Money total = cart.calculateTotal(facts());
+      Money total = pricing.calculateTotal(cart, facts());
 
       // Should use resolver price (50), not original price (10)
       assertEquals(Money.of(BigDecimal.valueOf(100.00), EUR), total);
@@ -106,7 +109,7 @@ class ShoppingCartResolverTest {
     @Test
     @DisplayName("returns valid for empty cart")
     void returnsValidForEmptyCart() {
-      CartValidationResult outcome = cart.validateForCheckout(facts());
+      CartValidationResult outcome = pricing.validateForCheckout(cart, facts());
 
       assertTrue(outcome.isValid());
       assertTrue(outcome.errors().isEmpty());
@@ -125,7 +128,7 @@ class ShoppingCartResolverTest {
       priceResolver.setPrice(product1, Money.of(BigDecimal.valueOf(10.00), EUR), true, 10);
       priceResolver.setPrice(product2, Money.of(BigDecimal.valueOf(10.00), EUR), true, 10);
 
-      CartValidationResult outcome = cart.validateForCheckout(facts());
+      CartValidationResult outcome = pricing.validateForCheckout(cart, facts());
 
       assertTrue(outcome.isValid());
     }
@@ -139,7 +142,7 @@ class ShoppingCartResolverTest {
       cart.addItem(productId, Quantity.of(1), price);
       priceResolver.setPrice(productId, Money.of(BigDecimal.valueOf(10.00), EUR), false, 0);
 
-      CartValidationResult outcome = cart.validateForCheckout(facts());
+      CartValidationResult outcome = pricing.validateForCheckout(cart, facts());
 
       assertFalse(outcome.isValid());
       assertEquals(1, outcome.errors().size());
@@ -157,7 +160,7 @@ class ShoppingCartResolverTest {
       cart.addItem(productId, Quantity.of(5), price);
       priceResolver.setPrice(productId, Money.of(BigDecimal.valueOf(10.00), EUR), true, 3);
 
-      CartValidationResult outcome = cart.validateForCheckout(facts());
+      CartValidationResult outcome = pricing.validateForCheckout(cart, facts());
 
       assertFalse(outcome.isValid());
       assertEquals(1, outcome.errors().size());
@@ -180,7 +183,7 @@ class ShoppingCartResolverTest {
           unavailableProduct, Money.of(BigDecimal.valueOf(10.00), EUR), false, 0);
       priceResolver.setPrice(lowStockProduct, Money.of(BigDecimal.valueOf(10.00), EUR), true, 5);
 
-      CartValidationResult outcome = cart.validateForCheckout(facts());
+      CartValidationResult outcome = pricing.validateForCheckout(cart, facts());
 
       assertFalse(outcome.isValid());
       assertEquals(2, outcome.errors().size());
@@ -189,7 +192,7 @@ class ShoppingCartResolverTest {
     @Test
     @DisplayName("throws exception when resolver is null")
     void throwsExceptionWhenResolverIsNull() {
-      assertThrows(IllegalArgumentException.class, () -> cart.validateForCheckout(null));
+      assertThrows(IllegalArgumentException.class, () -> pricing.validateForCheckout(cart, null));
     }
 
     @Test
@@ -201,7 +204,7 @@ class ShoppingCartResolverTest {
       cart.addItem(productId, Quantity.of(5), price);
       priceResolver.setPrice(productId, Money.of(BigDecimal.valueOf(10.00), EUR), true, 5);
 
-      CartValidationResult outcome = cart.validateForCheckout(facts());
+      CartValidationResult outcome = pricing.validateForCheckout(cart, facts());
 
       assertTrue(outcome.isValid());
     }

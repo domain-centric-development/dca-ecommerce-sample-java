@@ -191,7 +191,8 @@ class CheckoutSpecificationTest {
     }
 
     void confirm(CheckoutSession session) {
-      new ConfirmCheckoutUseCase(repository, this, events, new InMemoryTransactionBoundary())
+      new ConfirmCheckoutUseCase(
+              repository, this, new CheckoutPricing(), events, new InMemoryTransactionBoundary())
           .execute(new ConfirmCheckoutCommand(session.id().value(), session.customerId().value()));
     }
 
