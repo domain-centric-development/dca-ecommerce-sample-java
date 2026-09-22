@@ -39,22 +39,22 @@ graph LR
   pricing["Pricing<br/><i>api · events</i>"]
   product["Product Catalog<br/><i>api · events</i>"]
 
-  cart -->|"ACL / api"| product
-  cart -->|"ACL / api"| pricing
   cart -->|"ACL / api"| inventory
-  checkout -->|"ACL / api"| product
-  checkout -->|"ACL / api"| pricing
-  checkout -->|"ACL / api"| inventory
-  checkout -.->|"Conformist / events"| inventory
+  cart -->|"ACL / api"| pricing
+  cart -->|"ACL / api"| product
   checkout -->|"ACL / api"| cart
   checkout -.->|"Conformist / events"| cart
-  product -->|"ACL / api"| pricing
+  checkout -->|"ACL / api"| inventory
+  checkout -.->|"Conformist / events"| inventory
+  checkout -->|"ACL / api"| pricing
+  checkout -->|"ACL / api"| product
   product -->|"ACL / api"| inventory
-  product -.->|"Conformist / events"| pricing
   product -.->|"Conformist / events"| inventory
+  product -->|"ACL / api"| pricing
+  product -.->|"Conformist / events"| pricing
   ext_payment_service_provider[["Payment Service Provider"]]
-  checkout -->|"ACL / REST"| ext_payment_service_provider
   checkout -.->|"ACL / webhook / planned"| ext_payment_service_provider
+  checkout -->|"ACL / REST"| ext_payment_service_provider
   cart ---|"Partnership"| checkout
   checkout ---|"Partnership"| inventory
   inventory ---|"Partnership"| product
@@ -71,26 +71,26 @@ Edges labeled `planned` are declared intent without a code dependency yet.
 
 | Downstream | Upstream | Channel | Translation | Status | Rationale |
 |---|---|---|---|---|---|
-| cart | product | api | ACL | implemented | Cart works with its own article snapshot; the catalog model must not leak into cart invariants |
-| cart | pricing | api | ACL | implemented | Price lookups are translated into the cart's own price representation |
 | cart | inventory | api | ACL | implemented | Stock availability is translated into the cart's own article data |
-| checkout | product | api | ACL | implemented | Product data is translated into checkout's own article and product info types |
-| checkout | pricing | api | ACL | implemented | Prices are translated into checkout's own line item amounts |
-| checkout | inventory | api | ACL | implemented | Stock availability is translated into checkout's own article data |
-| checkout | inventory | events | Conformist | implemented | CheckoutConfirmedEvent implements inventory's consumer-defined StockReductionTrigger contract as-is |
+| cart | pricing | api | ACL | implemented | Price lookups are translated into the cart's own price representation |
+| cart | product | api | ACL | implemented | Cart works with its own article snapshot; the catalog model must not leak into cart invariants |
 | checkout | cart | api | ACL | implemented | Cart snapshots are translated into checkout's own CartData |
 | checkout | cart | events | Conformist | implemented | CheckoutConfirmedEvent implements cart's consumer-defined CartCompletionTrigger contract as-is; cart change events are consumed directly |
-| product | pricing | api | ACL | implemented | Prices are translated into the catalog's own product presentation data |
+| checkout | inventory | api | ACL | implemented | Stock availability is translated into checkout's own article data |
+| checkout | inventory | events | Conformist | implemented | CheckoutConfirmedEvent implements inventory's consumer-defined StockReductionTrigger contract as-is |
+| checkout | pricing | api | ACL | implemented | Prices are translated into checkout's own line item amounts |
+| checkout | product | api | ACL | implemented | Product data is translated into checkout's own article and product info types |
 | product | inventory | api | ACL | implemented | Stock levels are translated into the catalog's own availability data |
-| product | pricing | events | Conformist | implemented | ProductCreatedEvent implements pricing's consumer-defined PriceInitializationTrigger contract as-is |
 | product | inventory | events | Conformist | implemented | ProductCreatedEvent implements inventory's consumer-defined StockInitializationTrigger contract as-is |
+| product | pricing | api | ACL | implemented | Prices are translated into the catalog's own product presentation data |
+| product | pricing | events | Conformist | implemented | ProductCreatedEvent implements pricing's consumer-defined PriceInitializationTrigger contract as-is |
 
 ## External systems
 
 | Consumer | External system | Interaction | Protocol | Exchanges | Translation | Status | Rationale |
 |---|---|---|---|---|---|---|---|
-| checkout | Payment Service Provider | outbound | REST | payment operations (initiate, confirm, refund) | ACL | implemented | Behind the caller-owned PaymentProvider port; the sample ships a mock adapter in place of a real gateway |
 | checkout | Payment Service Provider | inbound | webhook | payment confirmation (payment id, status) | ACL | planned | Will trigger order fulfillment; the payload is the provider's contract, to be translated into a local command at the incoming adapter — no webhook adapter exists yet |
+| checkout | Payment Service Provider | outbound | REST | payment operations (initiate, confirm, refund) | ACL | implemented | Behind the caller-owned PaymentProvider port; the sample ships a mock adapter in place of a real gateway |
 
 ## Partnerships
 
