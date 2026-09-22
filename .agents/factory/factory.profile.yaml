@@ -26,4 +26,4 @@ review.boundaries: review-boundaries
 review.craft: review-craft
 
 # Where the project keeps its map; glossaries are the per-context glossary.md files.
-contextMap: docs/context-map.md
+contextMap: docs/architecture/context-map.md
