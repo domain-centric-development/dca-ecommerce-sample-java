@@ -183,15 +183,17 @@ an inactivity threshold). Final state.
 
 ## Domain Services
 
-### CartTotalCalculator
+### Contained tax
 
-**Definition:** Extracts the value-added tax contained in a cart's gross amounts (default
-19% VAT) and derives the net amount; the subtotal itself does not change.
+**Definition:** The value-added tax contained in the cart's gross amounts (default 19% VAT); the
+subtotal itself does not change when it is worked out.
 
-**Type:** Domain Service
+**Type:** Behaviour of `EnrichedCart`
 
-**Notes:** Invoked by the `GetCartById` use case, which puts the contained tax into its result; the cart page
-adapter only formats that value.
+**Notes:** `EnrichedCart.containedTax()` answers it, because the read model holds the amounts the rule
+decides on and needs no second aggregate — which is what makes it behaviour of the model rather than a
+domain service. The cart taxes goods; the checkout taxes goods and shipping, and states that rule in its
+own type. The `GetCartById` use case puts the value into its result; the cart page adapter only formats it.
 
 ## Specifications
 

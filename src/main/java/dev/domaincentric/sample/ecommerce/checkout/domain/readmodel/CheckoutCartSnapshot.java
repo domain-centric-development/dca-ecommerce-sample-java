@@ -12,6 +12,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.DeliveryAddress;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentSelection;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ShippingOption;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -223,5 +224,104 @@ public record CheckoutCartSnapshot(
    */
   public boolean isConfirmed() {
     return status == CheckoutSessionStatus.CONFIRMED;
+  }
+
+  /**
+   * Whether this snapshot may be shown at the requested step, and where to send the customer
+   * instead.
+   *
+   * <p>The rule is the checkout's own business logic, not a presentation concern: it holds whether
+   * the user interface shows one page or five. It decides on the snapshot alone, so a read does not
+   * have to load the session aggregate.
+   */
+  public StepAccess accessTo(final CheckoutStep targetStep) {
+
+    // Rule 2: Terminal states handling (COMPLETED, ABANDONED, EXPIRED)
+    if (status().isTerminal()) {
+      return handleTerminalState(targetStep);
+    }
+
+    // Rule 3: CONFIRMED state - can only access CONFIRMATION
+    if (status().canComplete()) {
+      return handleConfirmedState(targetStep);
+    }
+
+    // Rule 4: CONFIRMATION step is only accessible after checkout is confirmed or completed
+    if (targetStep == CheckoutStep.CONFIRMATION) {
+      return handleConfirmationAccess();
+    }
+
+    // Rule 5: Cannot skip ahead - must complete prior steps
+    if (isSkippingAhead(targetStep)) {
+      return StepAccess.redirectTo(step());
+    }
+
+    return StepAccess.grant();
+  }
+
+  private StepAccess handleTerminalState(final CheckoutStep targetStep) {
+
+    return switch (status()) {
+      case COMPLETED -> {
+        // Completed sessions can only access CONFIRMATION
+        if (targetStep == CheckoutStep.CONFIRMATION) {
+          yield StepAccess.grant();
+        }
+        yield StepAccess.redirectTo(CheckoutStep.CONFIRMATION);
+      }
+      case ABANDONED, EXPIRED -> {
+        // Abandoned/expired sessions send the customer back to the cart to start fresh
+        yield StepAccess.backToCart();
+      }
+      // CONFIRMED is not terminal - handled separately by handleConfirmedState
+      // ACTIVE is not terminal - handled by normal flow
+      default -> StepAccess.grant();
+    };
+  }
+
+  private StepAccess handleConfirmedState(final CheckoutStep targetStep) {
+    // CONFIRMED sessions can only access CONFIRMATION step
+    if (targetStep == CheckoutStep.CONFIRMATION) {
+      return StepAccess.grant();
+    }
+    return StepAccess.redirectTo(CheckoutStep.CONFIRMATION);
+  }
+
+  private StepAccess handleConfirmationAccess() {
+    // CONFIRMATION is only accessible when status is CONFIRMED or COMPLETED
+    if (isConfirmed() || isCompleted()) {
+      return StepAccess.grant();
+    }
+
+    // Back to the current step if trying to access CONFIRMATION prematurely
+    return StepAccess.redirectTo(step());
+  }
+
+  private boolean isSkippingAhead(final CheckoutStep targetStep) {
+    // Check if user is trying to access a step beyond their current progress
+    final CheckoutStep currentStep = step();
+
+    // Cannot go to a step that comes after the current step
+    if (targetStep.isAfter(currentStep)) {
+      return true;
+    }
+
+    // For steps before or equal to current, also verify prerequisites are met
+    // (going back is allowed, but going to a step whose prerequisites aren't met is not)
+    return !arePrerequisitesMet(targetStep);
+  }
+
+  private boolean arePrerequisitesMet(final CheckoutStep targetStep) {
+    return switch (targetStep) {
+      case BUYER_INFO -> true; // First step, no prerequisites
+      case DELIVERY -> isStepCompleted(CheckoutStep.BUYER_INFO);
+      case PAYMENT ->
+          isStepCompleted(CheckoutStep.BUYER_INFO) && isStepCompleted(CheckoutStep.DELIVERY);
+      case REVIEW ->
+          isStepCompleted(CheckoutStep.BUYER_INFO)
+              && isStepCompleted(CheckoutStep.DELIVERY)
+              && isStepCompleted(CheckoutStep.PAYMENT);
+      case CONFIRMATION -> isCompleted();
+    };
   }
 }

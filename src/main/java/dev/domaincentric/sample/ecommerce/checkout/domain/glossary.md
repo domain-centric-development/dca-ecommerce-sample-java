@@ -209,7 +209,7 @@ another step, or back to the cart (no usable session).
 
 **Type:** Value Object
 
-**Related terms:** `CheckoutStep`, `CheckoutStepValidator`.
+**Related terms:** `CheckoutStep`, step access on `CheckoutCartSnapshot`.
 
 **Operations:** `grant()`, `redirectTo(step)`, `backToCart()`, `granted()`, `isBackToCart()`.
 
@@ -353,14 +353,18 @@ purposes.
 
 ## Domain Services
 
-### CheckoutStepValidator
+### Step access
 
-**Definition:** Enforces navigation rules between the checkout steps: no session sends the customer
-back to the cart, terminal and confirmed sessions only reach the confirmation, and a step whose
-prerequisites are unfulfilled sends them to the step they are actually on. Going back to a completed
-step is allowed.
+**Definition:** Whether a checkout may be shown at a requested step, and where the customer goes
+instead: terminal and confirmed sessions only reach the confirmation, and a step whose prerequisites are
+unfulfilled sends them to the step they are actually on. Going back to a completed step is allowed. A
+session that is not there at all sends them back to the cart — the one part the model cannot answer,
+because there is no snapshot to ask; the `GetCheckoutSession` use case answers that.
 
-**Type:** Domain Service
+**Type:** Behaviour of `CheckoutCartSnapshot`
+
+**Notes:** Business logic, not presentation: it holds whether the user interface shows one page or five.
+It decides on the snapshot alone, so a read does not load the session aggregate.
 
 **Related terms:** `CheckoutSession`, `CheckoutCartSnapshot`, `CheckoutStep`, `StepAccess`.
 
