@@ -31,13 +31,19 @@ class CheckoutSpecificationTest {
         SharedSpecificationTest.JSON.readTree(
             SharedSpecificationTest.ROOT.resolve("vectors/checkout.json").toFile())) {
       String id = v.path("id").asText();
-      tests.add(DynamicTest.dynamicTest(id, () -> run(id)));
+      var vector = v;
+      tests.add(DynamicTest.dynamicTest(id, () -> run(id, vector)));
     }
     return tests.stream();
   }
 
-  void run(String id) throws Exception {
-    var f = new Fixture();
+  void run(String id, com.fasterxml.jackson.databind.JsonNode vector) throws Exception {
+    // Every number the vector states is read from it; nothing about the case is repeated here. What
+    // stays in the adapter is how this stack expresses the case, not what the case is.
+    var given = vector.path("given");
+    var when = vector.path("when");
+    var then = vector.path("then");
+    var f = new Fixture(given);
     var session = f.start();
     ready(session);
     session.clearDomainEvents();
@@ -47,8 +53,9 @@ class CheckoutSpecificationTest {
         var snapshot = List.copyOf(session.lineItems());
         f.cart.addItem(
             f.product,
-            dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity.of(3),
-            Price.of(Money.euro(10)));
+            dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity.of(
+                when.path("cartAdds").asInt()),
+            Price.of(f.price));
         var sync =
             new SyncCheckoutWithCartUseCase(
                 f.repository,
@@ -92,12 +99,12 @@ class CheckoutSpecificationTest {
       case "checkout.confirm.price-changed", "checkout.confirm.out-of-stock" -> {
         var totals = session.totals();
         int events = f.events.published.size();
-        if (id.endsWith("price-changed")) f.price = Money.euro(11);
-        else f.stock = 1;
+        if (when.has("unitPrice")) f.price = Money.euro(when.path("unitPrice").asDouble());
+        if (when.has("stock")) f.stock = when.path("stock").asInt();
         var failure = assertThrows(CheckoutValidationException.class, () -> f.confirm(session));
         assertEquals(f.product, failure.validation().errors().get(0).productId());
-        assertEquals(1, failure.validation().errors().size());
-        assertEquals(CheckoutSessionStatus.ACTIVE, session.status());
+        assertEquals(then.path("errors").asInt(), failure.validation().errors().size());
+        assertEquals(CheckoutSessionStatus.valueOf(then.path("status").asText()), session.status());
         assertEquals(totals, session.totals());
         assertTrue(session.domainEvents().isEmpty());
         assertEquals(events, f.events.published.size());
@@ -105,7 +112,7 @@ class CheckoutSpecificationTest {
       case "checkout.confirm.unchanged", "checkout.confirmed-event.total" -> {
         f.confirm(session);
         var confirmed = (CheckoutConfirmed) f.events.published.getLast();
-        assertEquals(Money.euro(20), session.totals().total());
+        assertEquals(Money.euro(then.path("total").asDouble()), session.totals().total());
         assertEquals(session.totals().total(), confirmed.totalAmount());
       }
       case "checkout.replacement.confirmation-wins" -> race(f, session, true);
@@ -167,13 +174,16 @@ class CheckoutSpecificationTest {
             dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId.of("specification"));
     final InMemoryCheckoutSessionRepository repository = new InMemoryCheckoutSessionRepository();
     final Publisher events = new Publisher();
-    Money price = Money.euro(10);
-    int stock = 100;
+    Money price;
+    int stock;
 
-    Fixture() {
+    Fixture(com.fasterxml.jackson.databind.JsonNode given) {
+      this.price = Money.euro(given.path("unitPrice").asDouble());
+      this.stock = given.path("stock").isMissingNode() ? 100 : given.path("stock").asInt();
       cart.addItem(
           product,
-          dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity.of(2),
+          dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity.of(
+              given.path("quantity").asInt()),
           Price.of(price));
     }
 
