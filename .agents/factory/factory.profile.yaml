@@ -1,13 +1,13 @@
-contract: 1
+contract: 3
 # Stack profile — the only place in the pipeline that knows how this project builds and tests.
 # The gate and the pre-commit hook read it; a command that is not declared is skipped and named.
 
 compile: ./gradlew testClasses
-test: ./gradlew test
+test: ./gradlew test --rerun
 e2eTest: ./gradlew test-e2e
 # One more test source set: the gate picks the command that covers the file a mapped test
 # lives in, so `src/test-integration/java` needs its own entry.
-test.integration: ./gradlew test-integration
+test.integration: ./gradlew test-integration --rerun
 filterFlag: --tests
 filterFormat: "{class}.{method}"
 architecture: ./gradlew test-architecture
@@ -27,3 +27,8 @@ review.craft: review-craft
 
 # Where the project keeps its map; glossaries are the per-context glossary.md files.
 contextMap: docs/architecture/context-map.md
+# What must hold for any change (story-gate.py --change, the commit hook, CI). The end-user suite
+# needs a running shop, so it stays out of it.
+# `--rerun` on the two required suites: an up-to-date Gradle task writes no new report, and the
+# change check only counts a test that a report from this run shows as executed.
+required: compile test test.integration architecture format
