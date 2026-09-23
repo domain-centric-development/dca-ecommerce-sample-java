@@ -7,6 +7,8 @@ what a stage may not decide for itself. Exit code 0 means the stage may proceed.
     story-gate.py --story <id> --stage <plan|test|build|tidy|document> [options]
     story-gate.py --list-decisions [--story <id>]      the decision inbox, one line per record
     story-gate.py --schedule                           every story's state and the next one to run
+    story-gate.py --usage [--story <id>] [--total]     tokens per story and stage, from the journals
+    story-gate.py --status                             what runs, what waits, every story, the cost
     story-gate.py --change [--staged] [--checks <c>]   the profile's checks outside a story; --staged
                                                        checks what the commit contains (the hook, CI)
     story-gate.py --parity <config>                    every implementation's reports prove every
@@ -92,8 +94,8 @@ SELECTOR = re.compile(r"^([\w.]+)#([\w]+)$")
 #: so a project can be governed by a release older than the pipeline it was installed from without
 #: anything being incompatible. That is an update to offer, never a reason to refuse, and only the
 #: installer can see it — it is the one place that holds both files.
-CONTRACT = 4
-VERSION = "0.14.0"
+CONTRACT = 5
+VERSION = "0.18.0"
 
 
 # --- tiny readers (no third-party dependencies) ------------------------------
@@ -1912,6 +1914,465 @@ def parity(result, config_path):
             result.note(name, f"not proven here (bound to another configuration): {', '.join(unproven)}")
 
 
+# --- usage ------------------------------------------------------------------------
+
+# What a stage cost, as the tool itself reports it. The runner saves each invocation's raw output and
+# asks this script to read it; the numbers land in the story's journal next to the stage's start and
+# end, so they survive restarts, second sessions and new runs like everything else there. A tool that
+# reports nothing is `unknown` — never zero, because a zero would look like a cheap stage.
+USAGE_FIELDS = ("input", "cache_read", "cache_write", "output")
+
+
+def parse_usage(fmt, path):
+    """({model, input, cache_read, cache_write, output, cost} or None, the final message text)."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            raw = handle.read()
+    except OSError:
+        return None, ""
+    if fmt == "claude-json":
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return None, raw
+        models = data.get("modelUsage") or {}
+        if not models:
+            return None, str(data.get("result", ""))
+        usage = {"model": ",".join(sorted(models)),
+                 "input": sum(int(m.get("inputTokens", 0)) for m in models.values()),
+                 "cache_read": sum(int(m.get("cacheReadInputTokens", 0)) for m in models.values()),
+                 "cache_write": sum(int(m.get("cacheCreationInputTokens", 0)) for m in models.values()),
+                 "output": sum(int(m.get("outputTokens", 0)) for m in models.values())}
+        if data.get("total_cost_usd") is not None:
+            usage["cost"] = f"{float(data['total_cost_usd']):.4f}"
+        return usage, str(data.get("result", ""))
+    if fmt == "codex-jsonl":
+        usage, seen, text = {k: 0 for k in USAGE_FIELDS}, False, ""
+        for line in raw.splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if event.get("type") == "turn.completed" and isinstance(event.get("usage"), dict):
+                seen = True
+                u = event["usage"]
+                cached = int(u.get("cached_input_tokens", 0))
+                usage["input"] += int(u.get("input_tokens", 0)) - cached       # input counts the cached part
+                usage["cache_read"] += cached
+                usage["cache_write"] += int(u.get("cache_write_input_tokens", 0))
+                usage["output"] += int(u.get("output_tokens", 0))
+            item = event.get("item") or {}
+            if event.get("type") == "item.completed" and item.get("type") in ("agent_message", "assistant_message"):
+                text = str(item.get("text", text))
+        return (usage if seen else None), text
+    return None, raw
+
+
+# --- usage from a session log: a stage run inside an interactive session -----------------------------
+
+# In a session there is no process per stage to ask for its output. What there is, is the tool's own
+# log of the session: Claude Code writes every model response with its usage (the same response once
+# per content block, so it is counted once per message id), Codex writes running totals. A stage is
+# the time between two marks the orchestrator sets. Both formats are the tools' internal ones and not
+# a documented interface: whatever this cannot read is reported as unknown, never guessed.
+from datetime import datetime, timezone
+
+
+def parse_time(text):
+    text = str(text or "").strip()
+    if not text:
+        return None
+    try:
+        stamp = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return stamp if stamp.tzinfo else stamp.replace(tzinfo=timezone.utc)
+
+
+def claude_session_logs(session_id=None):
+    """The session's log and its subagents' logs, for CLAUDE_CODE_SESSION_ID or the given id."""
+    session_id = session_id or os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+    if not session_id:
+        return []
+    home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    main = glob.glob(os.path.join(home, "projects", "*", f"{session_id}.jsonl"))
+    if not main:
+        return []
+    return main[:1] + sorted(glob.glob(os.path.join(os.path.dirname(main[0]), session_id, "subagents", "*.jsonl")))
+
+
+def codex_session_log(session_id=None):
+    """The Codex session log of CODEX_SESSION_ID (or the given id) — found by its file name, which ends
+    in the id, so no other session's log is opened."""
+    session_id = session_id or os.environ.get("CODEX_SESSION_ID") or os.environ.get("CODEX_THREAD_ID", "")
+    if not session_id or not re.fullmatch(r"[\w-]+", session_id):
+        return None
+    home = os.environ.get("CODEX_HOME") or os.path.join(os.path.expanduser("~"), ".codex")
+    found = glob.glob(os.path.join(home, "sessions", "**", f"rollout-*{session_id}.jsonl"), recursive=True)
+    return found[0] if found else None
+
+
+def session_usage_allowed(cwd):
+    """Reading a tool's session log can be switched off: per person (FACTORY_SESSION_USAGE=off) or for
+    the project (`sessionUsage: off` in the stack profile). In-session stages are then unknown."""
+    if os.environ.get("FACTORY_SESSION_USAGE", "").strip().lower() in ("off", "0", "no", "false"):
+        return False
+    profile = read_profile(resolve_profile(None, cwd))
+    return str(profile.get("sessionUsage", "on")).strip().lower() not in ("off", "0", "no", "false")
+
+
+def session_usage(kind, paths, start=None, end=None):
+    """{model, input, cache_read, cache_write, output} over the window, or None when nothing is read."""
+    def inside(stamp):
+        return stamp is not None and (start is None or stamp >= start) and (end is None or stamp <= end)
+    if kind == "claude-session":
+        seen, models, usage = set(), set(), {k: 0 for k in USAGE_FIELDS}
+        for path in paths:
+            try:
+                handle = open(path, encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            with handle:
+                for line in handle:
+                    try:
+                        entry = json.loads(line)
+                    except ValueError:
+                        continue
+                    message = entry.get("message")
+                    if not isinstance(message, dict) or not isinstance(message.get("usage"), dict) \
+                            or str(message.get("model", "")).startswith("<"):   # `<synthetic>`: no model call
+                        continue
+                    key = message.get("id") or entry.get("requestId") or entry.get("uuid")
+                    if key in seen or not inside(parse_time(entry.get("timestamp"))):
+                        continue
+                    seen.add(key)
+                    u = message["usage"]
+                    usage["input"] += int(u.get("input_tokens", 0) or 0)
+                    usage["cache_read"] += int(u.get("cache_read_input_tokens", 0) or 0)
+                    usage["cache_write"] += int(u.get("cache_creation_input_tokens", 0) or 0)
+                    usage["output"] += int(u.get("output_tokens", 0) or 0)
+                    if message.get("model"):
+                        models.add(str(message["model"]))
+        if not seen:
+            return None
+        usage["model"] = ",".join(sorted(models)) or "unknown"
+        return usage
+    if kind == "codex-session":
+        before, after, models = None, None, set()
+        for path in paths:
+            try:
+                handle = open(path, encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            with handle:
+                for line in handle:
+                    try:
+                        entry = json.loads(line)
+                    except ValueError:
+                        continue
+                    payload = entry.get("payload") or {}
+                    if entry.get("type") == "turn_context" and isinstance(payload, dict) and payload.get("model"):
+                        models.add(str(payload["model"]))
+                    if entry.get("type") != "event_msg" or not isinstance(payload, dict) \
+                            or payload.get("type") != "token_count" or not payload.get("info"):
+                        continue
+                    total = (payload["info"] or {}).get("total_token_usage") or {}
+                    stamp = parse_time(entry.get("timestamp"))
+                    if start is not None and stamp is not None and stamp < start:
+                        before = total
+                    elif inside(stamp):
+                        after = total
+        if after is None:
+            return None
+        base = before or {}
+        diff = lambda k: int(after.get(k, 0) or 0) - int(base.get(k, 0) or 0)
+        return {"model": ",".join(sorted(models)) or "unknown",
+                "input": diff("input_tokens") - diff("cached_input_tokens"),
+                "cache_read": diff("cached_input_tokens"), "cache_write": diff("cache_write_input_tokens"),
+                "output": diff("output_tokens")}
+    return None
+
+
+def usage_fields(usage):
+    return "\t".join(f"{k}={usage[k]}" for k in ("model",) + USAGE_FIELDS + (("cost",) if "cost" in usage else ()))
+
+
+def current_session():
+    """(kind, id) of the session this command runs in, from the tool's own environment variable."""
+    if os.environ.get("CLAUDE_CODE_SESSION_ID"):
+        return "claude-session", os.environ["CLAUDE_CODE_SESSION_ID"]
+    codex = os.environ.get("CODEX_SESSION_ID") or os.environ.get("CODEX_THREAD_ID")
+    if codex:
+        return "codex-session", codex
+    return "in-session", ""
+
+
+def mark_stage(cwd, tasks, story_id, stage, edge, session_log=None):
+    """`--stage-start`/`--stage-end` for a stage run inside a session: the same journal the runner writes."""
+    journal = os.path.join(tasks, story_id, ".verify", "journal.tsv")
+    os.makedirs(os.path.dirname(journal), exist_ok=True)
+    freeze_windows(journal)                   # the earlier stages' logs have caught up by now
+    now = datetime.now(timezone.utc)
+    stamp = now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
+    kind, session_id = current_session()
+    if session_log:
+        kind = "claude-session" if "/.claude/" in session_log.replace(os.sep, "/") else "codex-session"
+    allowed = session_usage_allowed(cwd)
+    with open(journal, "a", encoding="utf-8") as handle:
+        if edge == "start":
+            handle.write(f"{stamp}\tstage-start\t{stage}\ttool={kind}\n")
+            print(f"usage: stage {stage} of {story_id} started ({kind})")
+            return 0
+        started = None
+        for line in read_text(journal).splitlines():
+            parts = line.split("\t")
+            if len(parts) >= 3 and parts[1] == "stage-start" and parts[2] == stage:
+                started = parse_time(parts[0])
+        # The window is recorded, not summed: a session log lags behind the session — Claude Code writes
+        # a response after the tool call it made returns, so the response running this very command is
+        # not in the log yet. `--usage` reads the window when the log has caught up.
+        # Only the session's id goes into the journal, never a path: the journal is committed with the
+        # project, and a path names the machine and the person. The log is found again when it is read.
+        source = f"log={session_log}" if session_log else \
+            f"session={kind.split('-')[0]}:{session_id}" if session_id and kind != "in-session" else ""
+        handle.write(f"{stamp}\tstage-end\t{stage}\texit=0\n")
+        if not allowed:
+            handle.write(f"{stamp}\tusage\t{stage}\ttool={kind}\tunknown\n")
+            print(f"usage: stage {stage} of {story_id} — unknown (session usage is switched off)")
+        elif started and source:
+            begun = started.strftime("%Y-%m-%dT%H:%M:%S.") + f"{started.microsecond // 1000:03d}Z"
+            handle.write(f"{stamp}\tusage\t{stage}\ttool={kind}\twindow={begun}/{stamp}\t{source}\n")
+            print(f"usage: stage {stage} of {story_id} ended — its usage is read from the session log by --usage")
+        else:
+            handle.write(f"{stamp}\tusage\t{stage}\ttool={kind}\tunknown\n")
+            print(f"usage: stage {stage} of {story_id} — unknown (no stage start, or no session log this tool writes)")
+    return 0
+
+
+def freeze_windows(journal):
+    """Write the numbers of every session window that can be read now into the journal itself.
+
+    The window points at a session log on this machine, which a clone does not have and the tool
+    deletes after a while. Once read, the journal carries the numbers and no path, so the history
+    stays with the project."""
+    if not os.path.isfile(journal):
+        return
+    lines, changed = read_text(journal).splitlines(), False
+    for i, line in enumerate(lines):
+        parts = line.split("\t")
+        if len(parts) < 4 or parts[1] != "usage" or not any(p.startswith("window=") for p in parts):
+            continue
+        fields = dict(p.split("=", 1) for p in parts[3:] if "=" in p)
+        read = resolve_window(fields)
+        if read is None:
+            continue
+        lines[i] = "\t".join(parts[:3] + [f"tool={fields.get('tool', '')}", usage_fields(read),
+                                            f"window={fields['window']}"])
+        changed = True
+    if changed:
+        with open(journal, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+
+
+def resolve_window(fields):
+    """A recorded session window, read now: {usage fields} or None."""
+    if not session_usage_allowed(os.getcwd()):
+        return None
+    kind = fields.get("tool", "")
+    start, _, end = fields.get("window", "").partition("/")
+    paths = [p for p in fields.get("log", "").split(",") if p]
+    tool, _, session_id = fields.get("session", "").partition(":")
+    if session_id and tool == "claude":
+        paths = claude_session_logs(session_id)
+    elif session_id and tool == "codex":
+        paths = [p for p in [codex_session_log(session_id)] if p]
+    return session_usage(kind, paths, parse_time(start), parse_time(end)) if paths else None
+
+
+def usage_from(fmt, path, model=None):
+    if fmt in ("claude-session", "codex-session"):
+        usage = session_usage(fmt, [path])
+        print(usage_fields(usage) if usage else "unknown")
+        return 0
+    usage, text = parse_usage(fmt, path)
+    if usage is None:
+        print("unknown")
+    else:
+        if model and not usage.get("model"):
+            usage["model"] = model
+        usage.setdefault("model", "unknown")
+        print("\t".join(f"{k}={usage[k]}" for k in ("model",) + USAGE_FIELDS + (("cost",) if "cost" in usage else ())))
+    if text.strip():
+        print(text.strip())
+    return 0
+
+
+def journal_usage(tasks, story_id):
+    """{stage: {invocations, measured, input, cache_read, cache_write, output, cost}} from the journal."""
+    journal = os.path.join(tasks, story_id, ".verify", "journal.tsv")
+    stages = {}
+    if not os.path.isfile(journal):
+        return stages
+    # A journal merged with `merge=union` can hold one session window twice — read on one branch,
+    # still pending on the other. A window is one stage run, so it is counted once, the read one first.
+    counted_windows = set()
+    lines = sorted(read_text(journal).splitlines(), key=lambda l: ("log=" in l, l))
+    for line in lines:
+        parts = line.split("\t")
+        if len(parts) < 3:
+            continue
+        window = next((p for p in parts if p.startswith("window=")), None)
+        if parts[1] == "usage" and window:
+            if (parts[2], window) in counted_windows:
+                continue
+            counted_windows.add((parts[2], window))
+        entry = stages.setdefault(parts[2], {"invocations": 0, "measured": 0, "cost": 0.0, "priced": 0,
+                                             **{k: 0 for k in USAGE_FIELDS}})
+        if parts[1] == "stage-start":
+            entry["invocations"] += 1
+        elif parts[1] == "usage" and "unknown" not in parts[3:]:
+            fields = dict(p.split("=", 1) for p in parts[3:] if "=" in p)
+            if "window" in fields and ("log" in fields or "session" in fields):
+                read = resolve_window(fields)
+                if read is None:
+                    continue
+                fields.update({k: str(v) for k, v in read.items()})
+            entry["measured"] += 1
+            for k in USAGE_FIELDS:
+                entry[k] += int(fields.get(k, 0) or 0)
+            if fields.get("cost"):
+                entry["cost"] += float(fields["cost"])
+                entry["priced"] += 1
+    return {s: e for s, e in stages.items() if e["invocations"] or e["measured"]}
+
+
+def tokens_of(entry):
+    return sum(entry[k] for k in USAGE_FIELDS)
+
+
+def money(entry):
+    """The cost where the tool reported one — a session log has none, and that is not free."""
+    if not entry["priced"]:
+        return "—"
+    return f"{entry['cost']:.2f}" + ("" if entry["priced"] == entry["measured"] else "+")
+
+
+def usage_report(tasks, story_filter=None, total_only=False):
+    stories = sorted(d for d in os.listdir(tasks) if os.path.isdir(os.path.join(tasks, d))) \
+        if os.path.isdir(tasks) else []
+    if story_filter:
+        stories = [s for s in stories if s == story_filter]
+    for story in stories:
+        freeze_windows(os.path.join(tasks, story, ".verify", "journal.tsv"))
+    if total_only:
+        print(sum(tokens_of(e) for s in stories for e in journal_usage(tasks, s).values()))
+        return 0
+    print(f"{'story/stage':<24} {'runs':>4} {'measured':>8} {'input':>9} {'cache read':>11} "
+          f"{'cache write':>11} {'output':>8} {'cost $':>8}")
+    grand = None
+    for story in stories:
+        stages = journal_usage(tasks, story)
+        if not stages:
+            continue
+        order = sorted(stages, key=lambda s: STAGE_ORDER.index(s) if s in STAGE_ORDER else 99)
+        total = {"invocations": 0, "measured": 0, "cost": 0.0, "priced": 0, **{k: 0 for k in USAGE_FIELDS}}
+        for stage in order:
+            e = stages[stage]
+            for k in total:
+                total[k] += e[k]
+            print(f"{story + '/' + stage:<24} {e['invocations']:>4} {e['measured']:>8} {e['input']:>9} "
+                  f"{e['cache_read']:>11} {e['cache_write']:>11} {e['output']:>8} {money(e):>8}")
+        print(f"{story + ' total':<24} {total['invocations']:>4} {total['measured']:>8} {total['input']:>9} "
+              f"{total['cache_read']:>11} {total['cache_write']:>11} {total['output']:>8} {money(total):>8}")
+        unknown = total["invocations"] - total["measured"]
+        if unknown > 0:
+            print(f"{'':<24} {unknown} invocation(s) without a usage report — not counted, not zero")
+        grand = total if grand is None else {k: grand[k] + total[k] for k in grand}
+    if grand is None:
+        print("usage: no stage invocation recorded — an in-session run writes no journal")
+    return 0
+
+
+# --- status: one look at the whole pipeline -----------------------------------------
+
+def running_stages(tasks):
+    """[(story, stage, started)] for every stage whose journal shows a start and no end yet.
+
+    The journal knows that a stage began, not whether its process is still alive: a stage whose
+    runner was killed reads the same, which is why the start time is shown with it."""
+    found = []
+    if not os.path.isdir(tasks):
+        return found
+    for story in sorted(os.listdir(tasks)):
+        journal = os.path.join(tasks, story, ".verify", "journal.tsv")
+        if not os.path.isfile(journal):
+            continue
+        open_stage = None
+        # By time, not by position: a union merge interleaves two branches' lines.
+        for line in sorted(read_text(journal).splitlines(), key=lambda l: parse_time(l.split("\t")[0])
+                           or datetime.min.replace(tzinfo=timezone.utc)):
+            parts = line.split("\t")
+            if len(parts) < 3:
+                continue
+            if parts[1] == "stage-start":
+                open_stage = (parts[2], parts[0])
+            elif parts[1] == "stage-end" and open_stage and parts[2] == open_stage[0]:
+                open_stage = None
+        if open_stage:
+            found.append((story, open_stage[0], open_stage[1]))
+    return found
+
+
+def status(cwd, backlog, tasks):
+    now = datetime.now(timezone.utc)
+    print("== running")
+    running = running_stages(tasks)
+    for story, stage, started in running:
+        since = parse_time(started)
+        minutes = int((now - since).total_seconds() // 60) if since else None
+        print(f"{story}  stage {stage}  since {started}" + (f"  ({minutes} min)" if minutes is not None else ""))
+    if not running:
+        print("nothing — no stage has a start without an end in any journal")
+    print("\n== waiting for a human")
+    store = os.path.join(cwd, DECISIONS_DIR)
+    waiting = 0
+    if os.path.isdir(store):
+        for name in sorted(os.listdir(store)):
+            if not name.endswith(".md"):
+                continue
+            try:
+                front, body = read_front_matter(os.path.join(store, name))
+            except GateError as error:
+                print(f"{name[:-3]}  unreadable — {error}")
+                waiting += 1
+                continue
+            state, _answer = decision_state(body)
+            if state in ("open", "draft"):
+                waiting += 1
+                question = (body.strip().splitlines() or ["(no title)"])[0].lstrip("# ").strip()
+                print(f"{front.get('id', name[:-3])}  {state}  {front.get('story', '?')}/{front.get('stage', '?')}  "
+                      f"{question}")
+    if not waiting:
+        print("nothing — no open decision record")
+    print("\n== stories")
+    schedule(cwd, backlog, tasks)
+    print("\n== cost")
+    stories = sorted(d for d in os.listdir(tasks) if os.path.isdir(os.path.join(tasks, d))) if os.path.isdir(tasks) else []
+    tokens = runs = measured = priced = 0
+    cost = 0.0
+    for story in stories:
+        for entry in journal_usage(tasks, story).values():
+            tokens += tokens_of(entry)
+            runs += entry["invocations"]
+            measured += entry["measured"]
+            priced += entry["priced"]
+            cost += entry["cost"]
+    print(f"{runs} stage invocation(s), {measured} measured, {tokens:,} tokens"
+          + (f", ${cost:.2f} where the tool named a price" if priced else "")
+          + " — per stage: --usage")
+    return 0
+
+
 # --- schedule -----------------------------------------------------------------
 
 # Several stories are a loop over one story run, and the loop needs to know what comes next without
@@ -2106,8 +2567,10 @@ def schedule(cwd, backlog, tasks):
         journal = os.path.join(tasks, story_id, ".verify", "journal.tsv")
         spent = ""
         if os.path.isfile(journal):
-            count = sum(1 for line in read_text(journal).splitlines() if "\tstage-start\t" in line)
-            spent = f" · {count} stage invocation(s)" if count else ""
+            used = journal_usage(tasks, story_id)
+            count = sum(e["invocations"] for e in used.values())
+            tokens = sum(tokens_of(e) for e in used.values())
+            spent = (f" · {count} stage invocation(s)" + (f", {tokens:,} tokens" if tokens else "")) if count else ""
         print(f"{story_id}  {story['state']:<11} {start:<13} {story['detail']}{spent}".rstrip())
     counts = {}
     for story in stories.values():
@@ -2201,6 +2664,18 @@ def main(argv):
     parser.add_argument("--checks", help="with --change: only these checks (compile test architecture format)")
     parser.add_argument("--parity", metavar="CONFIG",
                         help="check every implementation's reports against a scenario contract and exit")
+    parser.add_argument("--status", action="store_true",
+                        help="print what runs, what waits for a human, every story's state and the cost")
+    parser.add_argument("--usage", action="store_true",
+                        help="print the tokens each story and stage used, from the runner's journals")
+    parser.add_argument("--total", action="store_true", help="with --usage: print only the token total")
+    parser.add_argument("--usage-from", nargs=2, metavar=("FORMAT", "FILE"),
+                        help="read one invocation's usage from a tool's raw output (claude-json, codex-jsonl)")
+    parser.add_argument("--usage-model", help="with --usage-from: the model, where the output does not name it")
+    parser.add_argument("--stage-start", metavar="STAGE", help="mark a stage's start inside a session (with --story)")
+    parser.add_argument("--stage-end", metavar="STAGE",
+                        help="mark its end and record what it used, read from the session's own log")
+    parser.add_argument("--session-log", help="with --stage-end: the session log to read, where it is not found")
     parser.add_argument("--schedule", action="store_true",
                         help="print every story's state and the next one to run, and exit")
     parser.add_argument("--backlog", default="backlog")
@@ -2216,6 +2691,17 @@ def main(argv):
         return list_decisions(cwd, args.story)
     if args.schedule:
         return schedule(cwd, args.backlog, args.tasks)
+    if args.status:
+        return status(cwd, args.backlog, args.tasks)
+    if args.stage_start or args.stage_end:
+        if not args.story:
+            parser.error("--stage-start/--stage-end need --story")
+        return mark_stage(cwd, args.tasks, args.story, args.stage_start or args.stage_end,
+                          "start" if args.stage_start else "end", args.session_log)
+    if args.usage_from:
+        return usage_from(args.usage_from[0], args.usage_from[1], args.usage_model)
+    if args.usage:
+        return usage_report(args.tasks, args.story, args.total)
     if args.change or args.parity:
         result, label = Result(), "change" if args.change else "parity"
         try:

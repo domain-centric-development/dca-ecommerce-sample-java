@@ -1,0 +1,1 @@
+tasks/**/.verify/journal.tsv merge=union
