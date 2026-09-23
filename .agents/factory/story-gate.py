@@ -39,6 +39,8 @@ Checks by stage:
            (or, with --staged, the Git index — refused when the working tree differs from it). A test
            command passes only when its reports show executed cases. The profile's `required:` line
            makes checks mandatory: a required check that is not declared, not run or ran nothing fails
+    test, build, tidy  a test file that existed before the story (recorded by the plan gate) still
+           holds every line it had; a changed or removed one needs an answered decision of stage test
     every stage  the story's decision records under .agents/factory/decisions/: a `## needs-human`
            section names one, an open one stops the story, an answered one is applied by the
            stage that asked and then stamped `## Applied` here
@@ -91,7 +93,7 @@ SELECTOR = re.compile(r"^([\w.]+)#([\w]+)$")
 #: anything being incompatible. That is an update to offer, never a reason to refuse, and only the
 #: installer can see it — it is the one place that holds both files.
 CONTRACT = 3
-VERSION = "0.10.1"
+VERSION = "0.13.0"
 
 
 # --- tiny readers (no third-party dependencies) ------------------------------
@@ -1056,6 +1058,10 @@ def check_test_state(result, profile, cwd, mapping, expected, located=None, task
     have_ledger = bool(ledger) and os.path.isfile(ledger)
     was_red = read_red_ledger(tasks, story)
     now_red = set()
+    # An expectation that changes on a human's decision: the test was recorded red before the code
+    # existed, the decision changed what it expects, and the code now meets it. Only that combination
+    # lets a green test through the red check — without the decision it is the refusal below.
+    changed_on = answered_decisions(cwd, story, "test") if expected == "red" else []
     control = {}                              # one control run per command, not per selector
     for key, selectors in sorted(mapping.items()):
         for selector in selectors:
@@ -1165,6 +1171,11 @@ def check_test_state(result, profile, cwd, mapping, expected, located=None, task
                     f"({key!r}) — a test that never failed proves nothing, and a run that "
                     f"matched no test passes too. Run `--stage test` before the build stage.",
                 )
+                continue
+            if expected == "red" and passed and selector in was_red and changed_on:
+                now_red.add(selector)
+                result.ok("tests-red", f"{selector} is green now and was recorded red before; its "
+                                       f"expectation changed on decision {', '.join(changed_on)} ({key})")
                 continue
             if expected == "red" and passed:
                 result.fail(
@@ -1295,6 +1306,16 @@ def read_decisions(store, story_id):
         state, answer = decision_state(body)
         records.append((path, front, body, state, answer))
     return records
+
+
+def answered_decisions(cwd, story_id, stage):
+    """Ids of this story's answered or applied records whose `stage:` is the given stage."""
+    try:
+        records = read_decisions(os.path.join(cwd, DECISIONS_DIR), story_id)
+    except GateError:
+        return []
+    return [str(front["id"]).strip() for _p, front, _b, state, _a in records
+            if state in ("answered", "applied") and str(front.get("stage", "")).strip() == stage]
 
 
 def needs_human_ids(text):
@@ -1523,6 +1544,130 @@ def run_test_command(result, cwd, profile, key, command, required, strict=False)
         message = (f"`{command}` ({key}) exited 0, but no report written by this run shows an "
                    f"executed test — a runner that matched nothing exits 0 too")
         (result.fail if required else result.note if strict else result.skip)("test", message)
+
+
+# --- existing tests keep their expectations -------------------------------------
+
+# A story may add tests and add cases to a test file; it may not change what a test that existed
+# before it expects, unless a human decided that. The plan gate runs before any stage of the story
+# touches a test, so it records the test files as git blobs; later gates compare against them.
+TESTS_BASELINE = ".tests-baseline"
+TEST_FILE = re.compile(
+    r"(^test_.*\.py$|_test\.(py|go|rb|exs?)$|Tests?\.(java|kt|cs|scala|groovy)$|IT\.(java|kt)$"
+    r"|Spec\.(scala|groovy|kt)$|\.(test|spec)\.(js|jsx|ts|tsx|mjs)$|_spec\.rb$)")
+SKIP_DIRS = {".git", "build", "target", "bin", "obj", "node_modules", "dist", ".gradle", "tasks",
+             ".agents", ".claude", ".codex", ".opencode", "__pycache__", ".venv", "venv"}
+
+
+def test_files(cwd):
+    found = []
+    for root, dirs, files in os.walk(cwd):
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS and not d.startswith("."))
+        for name in sorted(files):
+            if TEST_FILE.search(name):
+                found.append(os.path.relpath(os.path.join(root, name), cwd).replace(os.sep, "/"))
+    return found
+
+
+def record_tests_baseline(cwd, tasks, story_id):
+    """Write the baseline once per story; a later plan gate must not launder a change into it."""
+    path = os.path.join(tasks, story_id, TESTS_BASELINE)
+    if os.path.isfile(path) or git(cwd, "rev-parse", "--git-dir")[0]:
+        return
+    files = test_files(cwd)
+    blobs = []
+    for rel in files:
+        code, blob = git(cwd, "hash-object", "-w", "--", rel)
+        if code == 0:
+            blobs.append(f"{blob}  {rel}")
+    write_mark(tasks, story_id, TESTS_BASELINE, "\n".join(blobs))
+
+
+def changed_tests_in_plan(tasks, story_id):
+    """{test file: backed-by cell} from the plan's `## Changed tests` table."""
+    path = os.path.join(tasks, story_id, "plan.md")
+    rows = {}
+    if not os.path.isfile(path):
+        return rows
+    for line in section_of(read_text(path), "changed tests") or []:
+        cells = row_cells(line.strip())
+        if len(cells) < 2 or cells[0].lower() in ("test file", "file") or set(cells[0]) <= {"-", " "}:
+            continue
+        name = cells[0].strip("`").strip()
+        if name.lower() not in NOTHING:
+            rows[bare_path(name).replace(os.sep, "/")] = cells[-1]
+    return rows
+
+
+def check_existing_tests(result, cwd, tasks, story_id, story_body=""):
+    path = os.path.join(tasks, story_id, TESTS_BASELINE)
+    if not os.path.isfile(path):
+        result.skip("tests-kept", "no baseline of the tests that existed before this story "
+                                  "(the plan gate records one in a git repository)")
+        return
+    changed = []
+    for line in read_text(path).splitlines():
+        if "  " not in line:
+            continue
+        blob, rel = line.split("  ", 1)
+        full = os.path.join(cwd, rel)
+        if not os.path.isfile(full):
+            changed.append(f"{rel} (removed)")
+            continue
+        code, before = git(cwd, "cat-file", "blob", blob)
+        if code:
+            continue
+        with open(full, encoding="utf-8", errors="replace") as handle:
+            now = handle.read().splitlines()
+        # Additions only: every line the test had is still there, in the same order.
+        remaining = iter(now)
+        if not all(any(old == new for new in remaining) for old in before.splitlines()):
+            changed.append(rel)
+    if not changed:
+        result.ok("tests-kept", "no test that existed before this story changed what it expects")
+        return
+    decided = answered_decisions(cwd, story_id, "test")
+    if decided:
+        result.ok("tests-kept", f"{', '.join(changed)} changed on decision {', '.join(decided)}")
+        return
+    # The story may say itself that behaviour changes (`## Changed expectations`); the plan names the
+    # tests that change with it (`## Changed tests`), each backed by that section or by a decision a
+    # human answered. Nobody has to know which story wrote a test — or whether a story did at all.
+    story_says = [l for l in (section_of(story_body, "changed expectations") or [])
+                  if l.strip().lstrip("-").strip() and l.strip().lstrip("-").strip().lower() not in NOTHING]
+    try:
+        answered = {str(front["id"]).strip() for _p, front, _b, state, _a in
+                    read_decisions(os.path.join(cwd, DECISIONS_DIR), story_id) if state in ("answered", "applied")}
+    except GateError:
+        answered = set()
+    listed = changed_tests_in_plan(tasks, story_id)
+    backed, unbacked, unlisted = [], [], []
+    for entry in changed:
+        rel = entry.replace(" (removed)", "")
+        if rel not in listed:
+            unlisted.append(entry)
+        elif story_says or any(rid in listed[rel] for rid in answered):
+            backed.append(entry)
+        else:
+            unbacked.append(entry)
+    if backed and not unbacked and not unlisted:
+        result.ok("tests-kept", f"{', '.join(backed)} changed as the plan lists, backed by "
+                                + ("the story's `## Changed expectations`" if story_says else "an answered decision"))
+        return
+    if unlisted:
+        result.fail(
+            "tests-kept",
+            f"{', '.join(unlisted)} existed before this story and no longer expects what it did, and the "
+            f"plan's `## Changed tests` does not list it. Keep the old lines and add a case — or, where the "
+            f"story changes that behaviour, the plan lists the test with what backs the change.",
+        )
+    if unbacked:
+        result.fail(
+            "tests-kept",
+            f"{', '.join(unbacked)} is listed under the plan's `## Changed tests`, but nothing a human "
+            f"wrote backs it: the story has no `## Changed expectations`, and the row cites no answered "
+            f"decision. The plan stage asks (one record listing the tests), and the row cites its id.",
+        )
 
 
 def check_required_suites(result, profile, cwd):
@@ -1779,11 +1924,15 @@ def story_state(cwd, tasks, story_id, front, story_path=None):
                if state in ("open", "draft")]
     if waiting:
         return "waiting", None, "decision " + ", ".join(waiting)
-    answered = {}
+    answered, resolved = {}, {}
     for _path, front_, _body, state, _answer in records:
         rid, asked_by = str(front_["id"]).strip(), str(front_.get("stage", "")).strip()
         text = texts.get(asked_by)
-        if state == "answered" and (text is None or rid in (needs_human_ids(text) or [])):
+        if state in ("answered", "applied"):
+            resolved[rid] = asked_by
+        # The record's `stage:` applies the answer — usually the stage that asked, for a judge's
+        # story conflict the stage the answer lands in. Until that stage's file cites the id, it is next.
+        if state == "answered" and (text is None or rid in (needs_human_ids(text) or []) or rid not in text):
             answered.setdefault(asked_by, rid)
     if answered:
         stage = min(answered, key=lambda s: STAGE_ORDER.index(s) if s in STAGE_ORDER else 0)
@@ -1794,8 +1943,19 @@ def story_state(cwd, tasks, story_id, front, story_path=None):
         return "stopped", None, f"{MAX_ROUNDS} rounds did not converge"
     if os.path.isfile(os.path.join(folder, ".gate-plan.txt")):
         return "stopped", None, "the plan gate refused the story — the backlog needs a fix"
+    conflict = needs_human_ids(texts.get("judge", "")) or []
+    if verdict_in(texts.get("judge", "")) == "story-conflict" and conflict and all(i in resolved for i in conflict):
+        applied_at = max((resolved[i] for i in conflict),
+                         key=lambda s: STAGE_ORDER.index(s) if s in STAGE_ORDER else 0)
+        after = STAGE_ORDER[min(STAGE_ORDER.index(applied_at) + 1, len(STAGE_ORDER) - 1)] \
+            if applied_at in STAGE_ORDER else "build"
+        return "in-progress", after, (f"the story conflict was answered and applied at {applied_at} — "
+                                      f"the stages after it run again")
     for stage, text in texts.items():
-        if needs_human_ids(text) is not None:
+        ids = needs_human_ids(text)
+        if ids and all(i in resolved for i in ids):
+            continue
+        if ids is not None:
             return "stopped", None, f"{STAGE_FILES[stage]} ends in `## needs-human` without an open record"
     if verdict_in(texts.get("judge", "")) == "story-conflict":
         return "stopped", None, "the judge found a story conflict"
@@ -2064,12 +2224,14 @@ def main(argv):
             )
             if args.stage in ("build", "tidy"):
                 check_required_suites(result, profile, cwd)
+            check_existing_tests(result, cwd, args.tasks, story_id, body)
             check_stage_commands(result, profile, cwd, args.stage)
     except GateError as error:
         result.fail("gate", str(error))
         return result.report(args.story, args.stage, args.json)
     if not result.failed and args.stage == "plan":
         write_mark(args.tasks, story_id, STORY_DIGEST, file_digest(story_path))
+        record_tests_baseline(cwd, args.tasks, story_id)
     if not result.failed and args.stage == "document":
         write_mark(args.tasks, story_id, DELIVERED, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     return result.report(story_id, args.stage, args.json)
