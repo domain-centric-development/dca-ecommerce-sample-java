@@ -1,4 +1,4 @@
-contract: 7
+contract: 8
 # Stack profile — the only place in the pipeline that knows how this project builds and tests.
 # The gate and the pre-commit hook read it; a command that is not declared is skipped and named.
 
@@ -39,3 +39,5 @@ contextMap: docs/architecture/context-map.md
 # `--rerun` on the two required suites: an up-to-date Gradle task writes no new report, and the
 # change check only counts a test that a report from this run shows as executed.
 required: compile test test.integration architecture format
+acceptance: pages
+run: ./gradlew bootRun

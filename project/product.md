@@ -34,6 +34,15 @@ Plain, readable storefront pages with one shared stylesheet, a default theme and
 the shopper can pick, and smooth page transitions where the browser supports them. English only. Forms are usable
 with the keyboard, and every element a test addresses carries a stable `data-test` attribute.
 
+The pages are designed for four sizes; a story names the size, never a pixel value:
+
+| Size | Up to | Typical device |
+|---|---|---|
+| s | 480 px | phones upright |
+| m | 768 px | small tablets upright, phones on their side |
+| l | 1180 px | tablets either way up |
+| xl | — | laptops and desktops |
+
 ## Qualities
 
 - Authentication by a signed token, in a cookie for the pages and in the header for the API; every
