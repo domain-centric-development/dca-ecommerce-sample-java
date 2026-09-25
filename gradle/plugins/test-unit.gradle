@@ -4,6 +4,8 @@ addCommonTestDependencies('testImplementation')
 dependencies {
   // HTML parsing for rendered-markup assertions on Pug templates
   testImplementation 'org.jsoup:jsoup:1.18.3'
+  // an external system in integration and end-user tests: a real HTTP server on a free port
+  testImplementation 'org.wiremock:wiremock-standalone:3.13.2'
 
   // The JDBC adapters run their contract test against the production schema on H2 (ADR-031).
   // Runtime only: the tests reach the driver through spring-jdbc, never through the H2 API.

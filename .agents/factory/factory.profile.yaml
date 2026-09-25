@@ -1,4 +1,4 @@
-contract: 8
+contract: 9
 # Stack profile — the only place in the pipeline that knows how this project builds and tests.
 # The gate and the pre-commit hook read it; a command that is not declared is skipped and named.
 
@@ -9,6 +9,7 @@ browser: playwright
 # One more test source set: the gate picks the command that covers the file a mapped test
 # lives in, so `src/test-integration/java` needs its own entry.
 test.integration: ./gradlew test-integration --rerun
+http.stub: wiremock
 filterFlag: --tests
 filterFormat: "{class}.{method}"
 architecture: ./gradlew test-architecture
