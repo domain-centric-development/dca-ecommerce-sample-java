@@ -95,6 +95,9 @@ if [ -z "$PY" ]; then
   done
   PY=${PY:-python3}                            # named in the error the first call then produces
 fi
+# Every Python this runner starts writes UTF-8 — the gate's and the setup's lines carry `—` and `→`,
+# and a Windows console's code page (cp1252) cannot encode them: the print raises and the step dies.
+export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
 
 # Whether `ln -s` in this shell makes a symlink. On Windows (Git Bash, MSYS2) it needs developer
 # mode or an administrator *and* `MSYS=winsymlinks:nativestrict`; without those it silently makes
@@ -700,9 +703,14 @@ install_project() {                         # install_project <tool> <skill fold
         previous=$(for skill in "$source_abs"/*; do [ -d "$skill" ] && basename "$skill"; done)
       fi
       : > "$manifest.new"
-      for skill in "$source_abs"/*; do
+      # The same set a link install gives this tool: for a tool without a plugin mechanism the craft
+      # of the method plugins beside the pipeline, not only the carriers the profile already names.
+      local copy_dirs="$source_abs"
+      [ "$target" != ".claude/skills" ] && copy_dirs=$(printf '%s\n%s' "$source_abs" "$(method_skill_dirs "$source_abs" | tr ' ' '\n')")
+      while IFS= read -r skill; do
         [ -d "$skill" ] || continue
         name=$(basename "$skill")
+        grep -qx "$name" "$manifest.new" && continue         # the pipeline's own wins a name clash
         if { [ -e "$target/$name" ] || [ -L "$target/$name" ]; } && ! printf '%s\n' "$previous" | grep -qx "$name"; then
           echo "factory: kept the project's own $target/$name — the pipeline's $name was not copied" >&2
           kept=$((kept + 1))
@@ -712,9 +720,9 @@ install_project() {                         # install_project <tool> <skill fold
         must "copy $name into $target" cp -R "$skill" "$target/$name"
         echo "$name" >> "$manifest.new"
         copied=$((copied + 1))
-      done
+      done < <(printf '%s\n' "$copy_dirs" | while IFS= read -r dir; do [ -n "$dir" ] && printf '%s\n' "$dir"/*; done)
       for name in $previous; do
-        [ -d "$source_abs/$name" ] && continue
+        grep -qx "$name" "$manifest.new" && continue            # copied again just now
         # A carrier the profile names is not the pipeline's skill but one it copied beside it: it
         # stays, on the list, for install_named_carriers to refresh — never removed as outdated.
         if printf '%s\n' $(named_carriers) | grep -qx "$name" && [ -d "$target/$name" ]; then
@@ -1187,16 +1195,34 @@ elif mode == "check":
             print(f"factory: profile — detection finds {', '.join(k for k, _ in missing)} the profile does not declare "
                   "(factory.sh setup --check)")
         raise SystemExit(0)
-    print(f"factory: detected {', '.join(applied) or 'nothing a preset knows'}")
+    # The same view as the status: a table, marks, and what to do in an agent and in a shell.
+    import os, shutil, textwrap
+    colour = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+    paint = lambda text, code: f"\x1b[{code}m{text}\x1b[0m" if colour else text
+    width = shutil.get_terminal_size((120, 24)).columns if sys.stdout.isatty() else 120
+    title = f"Profile — {os.path.basename(os.getcwd())}"
+    print("\n" + paint(title, "1") + "\n" + "═" * len(title) + "\n")
+    print(f"  detected   {', '.join(applied) or 'nothing a preset knows'}\n")
+    label = lambda text: paint(text.ljust(12), "2")
     for key, value in missing:
-        print(f"factory:   add   {key}: {value}" + (f"   → {switch(key)}" if switch(key) else ""))
+        print("    " + paint(f"? {key}", "33") + "   missing" + (f" — {switch(key)}" if switch(key) else ""))
+        print(f"        {label('detected')}   {norm(value)}\n")
     for key, have, value in differing:
-        print(f"factory:   note  {key}: the profile says `{norm(have)}`, detection `{norm(value)}` — kept, a person's "
-              f"decision (setup --write --replace {key} takes the detected one)")
+        print("    " + paint(f"· {key}", "2") + "   differs — kept: the profile's value is a person's decision")
+        print(f"        {label('the profile')}   {norm(have)}")
+        print(f"        {label('detected')}   {norm(value)}")
+        print(f"        {label('to take it')}   bash .agents/factory/factory.sh setup --write --replace {key}\n")
+    if not missing and not differing:
+        print("    The profile declares everything detection finds.\n")
+    print("─" * 72)
     if missing:
-        print(f"factory: {len(missing)} detected key(s) missing — `factory.sh setup --write` adds them")
+        print(f"  {paint('Next', '1')}   add the {len(missing)} missing key(s).")
+        print(f"         {paint('agent'.ljust(10), '2')}   {paint('/factory-setup', '36')}")
+        print(f"         {paint('shell'.ljust(10), '2')}   bash .agents/factory/factory.sh setup --write")
+        print()
         raise SystemExit(1)
-    print("factory: the profile declares everything detection finds")
+    print(f"  {paint('Next', '1')}   Nothing to add." + (" The notes are yours to keep." if differing else ""))
+    print()
 elif mode == "write":
     path, replace = rest[0], (rest[1] if len(rest) > 1 else "")
     if replace and replace not in values:
@@ -1841,7 +1867,7 @@ setup_write() {                             # setup_write [<key>]
 [ $# -ge 1 ] || usage
 command=$1; shift
 story=""; tool=""; from="plan"; dry=""; source_dir=""; copy_mode=""; watch=""; interval=60
-setup_mode=""; replace_key=""; want_usage=""; want_brief=""; session_start=""
+setup_mode=""; replace_key=""; want_usage=""; want_brief=""; session_start=""; live=""; view=()
 
 # The reading commands are the gate's; the runner passes them on, so a project calls one script.
 read_command() {                            # read_command <gate flags…>
@@ -1856,6 +1882,8 @@ case "$command" in
         --usage) want_usage=1; shift ;;
         --brief) want_brief=1; shift ;;
         --session-start) session_start=1; shift ;;
+        --format|--color) [ $# -ge 2 ] || usage; view+=("$1" "$2"); shift 2 ;;
+        --live) live=1; view+=("--live"); shift ;;
         *) usage ;;
       esac
     done
@@ -1865,13 +1893,15 @@ case "$command" in
       read_command --status --brief ${session_start:+--session-start}
     fi
     [ -n "$want_usage" ] && read_command --usage ${story:+--story "$story"}
-    check_gate_freshness
-    read_command --status ${story:+--story "$story"} ;;
+    # Which pipeline this machine has is not the project's state: said with --live only, so the same
+    # files give the same view everywhere.
+    [ -n "${live:-}" ] && check_gate_freshness
+    read_command --status ${story:+--story "$story"} ${view[@]+"${view[@]}"} ;;
   backlog)
-    case "$*" in
-      "") read_command --schedule ;;
+    # The person's view of the backlog; the runner reads the schedule's lines from the gate itself.
+    case "${1:-}" in
       --check) read_command --check-backlog ;;
-      *) usage ;;
+      *) read_command --status --part backlog "$@" ;;
     esac ;;
   decisions) read_command --list-decisions "$@" ;;
   check)
