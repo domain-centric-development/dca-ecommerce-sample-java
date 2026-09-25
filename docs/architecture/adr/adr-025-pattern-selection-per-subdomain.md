@@ -27,7 +27,7 @@ Established DDD guidance (Vernon, Khononov, Millett/Tune) agrees: tactical DDD b
 
 All eight contexts in this sample use the rich domain-model style — deliberately, because the sample's purpose is to *demonstrate* the full pattern set. In a real system, contexts like `backoffice` or `portal` would be supporting-subdomain candidates for a simpler style.
 
-| Context | Subdomain Type (see [context map](../../context-map.md)) | Pattern Style |
+| Context | Subdomain Type (see [context map](../../../project/domain.md)) | Pattern Style |
 |---|---|---|
 | product, cart, checkout | Core | Domain model (full rule set) |
 | pricing, inventory, account | Supporting | Domain model here (didactic); transaction script legitimate in production |

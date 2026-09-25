@@ -1,10 +1,11 @@
-contract: 5
+contract: 7
 # Stack profile — the only place in the pipeline that knows how this project builds and tests.
 # The gate and the pre-commit hook read it; a command that is not declared is skipped and named.
 
 compile: ./gradlew testClasses
 test: ./gradlew test --rerun
 e2eTest: ./gradlew test-e2e
+browser: playwright
 # One more test source set: the gate picks the command that covers the file a mapped test
 # lives in, so `src/test-integration/java` needs its own entry.
 test.integration: ./gradlew test-integration --rerun
@@ -12,6 +13,7 @@ filterFlag: --tests
 filterFormat: "{class}.{method}"
 architecture: ./gradlew test-architecture
 format: ./gradlew spotlessCheck
+formatFix: ./gradlew spotlessApply
 
 # The one source a stage may treat as an authority. Generated from the same sources as the
 # building blocks and the rule catalog this project consumes.
@@ -19,11 +21,16 @@ knowledge: dca-knowledge
 
 # Who carries a stage's craft and a review perspective. A skill works in every agent tool; an
 # agent only where the tool has agents, and the stage then falls back to its own description.
-carrier.build: ddd-modelling
+carrier.build: dca-modelling
+carrier.guard: dca-discipline
+carrier.glossary: ubiquitous-language
+carrier.domain: context-map
 carrier.test: e2e-testing
-review.domain: review-domain
-review.boundaries: review-boundaries
-review.craft: review-craft
+review.ddd: review-ddd
+review.hexagonal: review-hexagonal
+review.clean-code: review-clean-code
+reviews: dca
+review.dca: dca-review
 
 # Where the project keeps its map; glossaries are the per-context glossary.md files.
 contextMap: docs/architecture/context-map.md

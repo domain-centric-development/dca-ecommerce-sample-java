@@ -177,29 +177,58 @@ Rule changes belong in `dca-java`, not here.
 ## Delivery pipeline
 
 New work runs through the factory pipeline from `dca-marketplace/plugins/dca-factory`, installed
-into this repository (not vendored — `.claude/skills/` is gitignored, re-install with
-`factory.sh install`):
+into this repository (the skill links in `.claude/`, `.codex/`, `.opencode/` are gitignored; a clone
+gets them with `factory.sh update`). The pipeline's own instructions are in its section at the end of
+this file; what is to be built is in the project description below it.
 
-- `backlog/<epic>/<story>.md` — new stories; `tasks/prd.json` keeps the delivered 146 as history
+- `project/product.md`, `project/tech.md`, `project/domain.md` — the project description: the product,
+  the technical decisions, the designed context map (the generated one is
+  `docs/architecture/context-map.md`)
+- `project/backlog/<epic>/<story>.md` — new stories; `tasks/prd.json` keeps the delivered 146 as history
 - `.agents/factory/factory.profile.yaml` — the only file that tells the pipeline how this project
-  builds: `./gradlew testClasses|test|test-e2e|test-architecture|spotlessCheck`, plus the knowledge
-  source (`dca-knowledge`), the stage carriers and the review perspectives
+  builds: `./gradlew testClasses|test|test-e2e|test-architecture|spotlessCheck|spotlessApply`, plus
+  the knowledge source (`dca-knowledge`), the carriers and the review perspectives
 - `.agents/factory/story-gate.py` — the gate between the stages
-  (`--story <id> --stage plan|test|build|document`)
-- `.githooks/pre-commit` — the same profile commands on every commit
+  (`--story <id> --stage plan|test|build|tidy|document`)
+- `.githooks/pre-commit` — `factory.sh check --staged` on every commit
   (`git config core.hooksPath .githooks`); narrow it with
   `FACTORY_PRECOMMIT_CHECKS="compile architecture"` when the full suite is too slow to wait for
 
 Run one story with `/factory-run <story id>`. The pipeline owns the process; the architecture comes
-from `dca-core` (`/dca-bootstrap` once, then `/ddd-modelling`, `/review-*`, `/dca-knowledge`).
-
-## Related Documentation
-- [Link to related doc 1]
-- [Link to related doc 2]
-```
+from `dca-core` (`/dca-init` once, then `/dca-modelling`, `/dca-review`, `/dca-knowledge`) and the
+craft from `dca-craft` (`/ubiquitous-language`, `/context-map`, `/review-ddd`, `/review-hexagonal`,
+`/review-clean-code`, `/e2e-testing`).
 
 ### Design Decisions
 
-For significant architectural decisions, create an Architecture Decision Record (ADR) in `docs/architecture/design-decisions.md`:
+For significant architectural decisions, create an Architecture Decision Record (ADR) in
+`docs/architecture/adr/` from `docs/architecture/adr/adr-template.md`.
 
-```markdown
+<!-- dca-describe: start -->
+## Project description
+
+What is to be built is described in three files. Read them before any implementation — in a
+delivery pipeline or by hand — and treat a contradiction between them and a change as a finding,
+not as something to fix in the code:
+
+- product: `project/product.md` — what is built, for whom, surfaces, how it works, how it looks,
+  qualities, what it is not
+- tech: `project/tech.md` — stack, frontend approach, persistence, runtime, integrations,
+  version policy
+- domain: `project/domain.md` — the designed bounded contexts, their subdomain types and
+  relationships; the map generated from the code shows what was built
+<!-- dca-describe: end -->
+
+<!-- dca-factory: start -->
+## Delivery pipeline
+
+This project delivers stories through the dca-factory pipeline. At the start of a session, unless the
+person names a task right away, run `python3 .agents/factory/story-gate.py --status --brief`, show
+its lines, and ask what they want to do: write or release a story (`/factory-backlog`), answer a
+waiting question (`/factory-decisions`), work the backlog (`/factory-run`; to keep listening, a tool
+that repeats a prompt runs it again — in Claude Code `/loop /factory-run`), or look closer (`/factory-status`).
+A session never runs `factory.sh run` — it starts a tool process per stage. One worker per checkout: a
+managing session writes backlog and decision files only. Every change — by a stage or by hand in a
+session — passes `bash .agents/factory/factory.sh check` before it is committed; the commit hook runs it
+on what is staged.
+<!-- dca-factory: end -->

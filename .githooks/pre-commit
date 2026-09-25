@@ -2,41 +2,35 @@
 # The enforcement boundary. Tool hooks and deny rules do not port between agent tools —
 # but every tool commits through git, so this is where the guard belongs. A tool-specific
 # hook stays a fast feedback loop; it is never the boundary. A hook can be bypassed
-# (--no-verify), so CI runs the same command on its checkout: `story-gate.py --change`.
+# (--no-verify), so CI runs the same command on its checkout: `factory.sh check`.
 #
 # Install once per clone:  git config core.hooksPath .githooks
 #
 # One command, the gate's change check, against what the commit contains: the Git index, and
 # refused when the working tree differs from it — tests that pass against an unstaged fix
 # certify nothing about the commit. The stack profile declares the commands and, in its
-# `required:` line, which of them must hold; without that line the check is report-only.
+# `required:` line, which of them must hold; without that line nothing is mandatory, and a
+# declared command that runs red still refuses the commit.
 
 set -uo pipefail
 
-GATE=".agents/factory/story-gate.py"
+RUNNER=".agents/factory/factory.sh"
 # Which checks run before a commit. Keep it to what a developer will wait for: a hook that takes
 # minutes gets bypassed with --no-verify, and then it guards nothing. On a slow stack, narrow it
 # (FACTORY_PRECOMMIT_CHECKS="compile architecture"); a required check left out is reported as not
 # run in this scope, never as passed, and CI has to run it.
 CHECKS="${FACTORY_PRECOMMIT_CHECKS:-}"
 
-if [ ! -f "$GATE" ]; then
-  echo "pre-commit: no gate at $GATE — nothing to check (run 'factory.sh install')." >&2
+if [ ! -f "$RUNNER" ] || [ ! -f .agents/factory/story-gate.py ]; then
+  echo "pre-commit: no pipeline in .agents/factory — nothing to check (run 'factory.sh setup')." >&2
   exit 0
 fi
 
-PY="${FACTORY_PYTHON:-}"
-if [ -z "$PY" ]; then
-  if command -v python3 >/dev/null 2>&1; then PY=python3
-  elif command -v python >/dev/null 2>&1; then PY=python
-  else PY=python3; fi
-fi
-
-args=(--change --staged)
+args=(check --staged)
 [ -n "$CHECKS" ] && args+=(--checks "$CHECKS")
 [ -n "${FACTORY_PROFILE:-}" ] && args+=(--profile "$FACTORY_PROFILE")
 
-"$PY" "$GATE" "${args[@]}" >&2
+bash "$RUNNER" "${args[@]}" >&2
 code=$?
 if [ "$code" -ne 0 ]; then
   echo "pre-commit: commit refused. Fix the above, or commit with --no-verify and say why." >&2

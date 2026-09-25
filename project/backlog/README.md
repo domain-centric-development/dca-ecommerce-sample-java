@@ -3,13 +3,13 @@
 New work is written as markdown with front matter, one file per item:
 
 ```
-backlog/<epic>/epic.md        intent, goal, metric (an outcome event), domain_contact
-backlog/<epic>/<story>.md     status, context, acceptance criteria with named keys, assumptions
+project/backlog/<epic>/epic.md        intent, goal, metric (an outcome event), domain_contact
+project/backlog/<epic>/<story>.md     status, context, acceptance criteria with named keys, assumptions
 ```
 
 The contract and the field meanings live with the pipeline, in the `factory-run` skill's
 `reference/backlog-contract.md`. The story gate refuses a story whose epic is incomplete, whose
-context is not on the context map, or which is still `status: draft`.
+context is not on the designed map (`project/domain.md`), or which is still `status: draft`.
 
 ## The delivered work stays where it is
 

@@ -263,7 +263,7 @@ stored on `StockLevel`.
 low. Reserved quantity does not enter the answer; the measure is *Available
 quantity* as defined above, so a product with everything on hand reserved is
 not reported as low. Whether that is the measure the business wants is an open
-question of `backlog/stock-oversight/STORY-P1.md`.
+question of `project/backlog/stock-oversight/STORY-P1.md`.
 
 ---
 
