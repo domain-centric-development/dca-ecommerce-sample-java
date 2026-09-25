@@ -19,6 +19,19 @@ an outcome event and a domain contact that nobody stated at the time, and every 
 would then fail the gate for good reason. The contract applies to **new** stories — the same
 brownfield rule the pipeline states for any project it enters.
 
+## The shop's behaviour, described once
+
+What the shop does today is described in the current contract elsewhere: the shared specification
+carries a **replay backlog** — 11 epics and 62 stories that, delivered in order on an empty project in
+any language, produce the shop as it behaves now. It is not a migration of the PRDs above. It was
+written from the shop's tests, pages and interfaces, and every epic's intent, goal, metric and contact
+was stated by the product owner when it was written, not reconstructed from a ticket.
+
+In this shop those stories are not built again. They are taken over as **adopted**: each scenario
+mapped to a test that exists here and is green. A scenario without such a test is an open finding, not a
+story to deliver. Until the pipeline supports adoption, the replay backlog stays in the specification,
+and this folder holds only new work.
+
 The one story that never shipped, `US-146` ("Decide the Anti-Corruption Layer's fate"), is not a
 story either: it asks a question rather than describing behaviour a user can observe. It belongs to
 a scoping step, not to a delivery run, and stays in `tasks/prd.json` until that step exists.
