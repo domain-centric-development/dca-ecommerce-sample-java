@@ -37,7 +37,7 @@ This project showcases best practices for structuring a Spring Boot application 
 **Strategic Patterns:**
 - **Bounded Contexts**: Product Catalog, Shopping Cart, Checkout, Account, Portal, Inventory, Pricing, Backoffice (the last a generic subdomain — operating the application itself)
 - **Shared Kernel**: Cross-context value objects (Money, Price, ProductId, UserId)
-- **Context Mapping**: Declared as `@Upstream`/`@Partnership` package annotations, enforced by ArchUnit, and rendered as a generated [context map](docs/architecture/context-map.md) (see [ADR-032](docs/architecture/adr/adr-032-executable-context-map.md))
+- **Context Mapping**: Declared as `@Upstream`/`@Partnership` package annotations, enforced by ArchUnit, and rendered as a generated [context map](docs/architecture/context-map.md) (see [ADR-032](docs/architecture/adr/adr-032-executable-context-map.md)); the designed map, the strategic reading kept by hand, is [project/domain.md](project/domain.md)
 - **Open Host Service**: ProductCatalogService, InventoryService, PricingService, and CartService provide cross-context APIs
 
 **Tactical Patterns:**
@@ -663,6 +663,15 @@ src/main/java/dev/domaincentric/sample/ecommerce/
     └── support/                          # Framework support components
         └── AsyncInitializationProcessor.java
 ```
+
+## What is built, and how it is delivered
+
+What the shop is and how it is built is decided in [`project/`](project/): the product
+([product.md](project/product.md) — surfaces, how it works, look and feel with the page sizes s, m, l
+and xl), the technical decisions ([tech.md](project/tech.md)), the designed domain
+([domain.md](project/domain.md)) and the backlog under `project/backlog/`. Stories are delivered by a
+gated pipeline under `.agents/factory/` — plan, test, build, tidy, judge, document — and a story with
+a page waits for a human's acceptance before it counts as delivered.
 
 ## Getting Started
 

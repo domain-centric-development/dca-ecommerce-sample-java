@@ -24,7 +24,7 @@ bin
 # Gastown PRD Integration
 tasks/.bead-map.json
 
-# Factory: per-tool copies of the pipeline skills (installed by factory.sh install)
+# Factory: per-tool copies of the pipeline skills (installed by factory.sh setup)
 # The pipeline's skill folder, installed per tool. A link to the source, not a copy —
 # so the pattern has to match the link itself, not only a directory of that name.
 .claude/skills
