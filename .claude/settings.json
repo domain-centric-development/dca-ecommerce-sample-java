@@ -20,9 +20,26 @@
       "Edit(scripts/**)",
       "Bash(rm src/**)",
       "Bash(python3 .agents/factory/story-gate.py:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(bash .agents/factory/factory.sh status:*)",
+      "Bash(bash .agents/factory/factory.sh decisions:*)",
+      "Bash(bash .agents/factory/factory.sh backlog:*)",
+      "Bash(bash .agents/factory/factory.sh setup --check:*)",
+      "Bash(bash .agents/factory/factory.sh verify:*)"
     ],
     "deny": [],
     "ask": []
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .agents/factory/story-gate.py --status --brief --session-start"
+          }
+        ]
+      }
+    ]
   }
 }
