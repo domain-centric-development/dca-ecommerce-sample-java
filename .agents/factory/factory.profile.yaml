@@ -4,7 +4,7 @@ contract: 7
 
 compile: ./gradlew testClasses
 test: ./gradlew test --rerun
-e2eTest: ./gradlew test-e2e
+e2eTest: ./gradlew test-e2e --rerun
 browser: playwright
 # One more test source set: the gate picks the command that covers the file a mapped test
 # lives in, so `src/test-integration/java` needs its own entry.
