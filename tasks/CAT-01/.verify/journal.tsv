@@ -1,0 +1,28 @@
+2026-09-25T22:25:47Z	gate	plan	exit=0
+2026-09-25T22:25:47Z	stage-start	plan	tool=claude
+2026-09-25T22:27:32Z	usage	plan	tool=claude	model=claude-opus-5-5	input=34	cache_read=718696	cache_write=59943	output=9852	cost=0.8205	seconds=104
+2026-09-25T22:27:32Z	stage-end	plan	exit=0
+2026-09-25T22:27:33Z	stage-start	test	tool=claude
+2026-09-25T22:31:23Z	usage	test	tool=claude	model=claude-opus-5-5	input=56	cache_read=1208918	cache_write=54389	output=18723	cost=1.0516	seconds=229
+2026-09-25T22:31:23Z	stage-end	test	exit=0
+2026-09-25T22:32:47Z	gate	test	exit=1
+2026-09-25T22:32:48Z	stage-start	test	tool=claude
+2026-09-25T22:34:58Z	usage	test	tool=claude	model=claude-opus-5-5	input=46	cache_read=850116	cache_write=42899	output=7043	cost=0.6543	seconds=128
+2026-09-25T22:34:58Z	stage-end	test	exit=0
+2026-09-26T06:09:30Z	stage-start	test	tool=claude
+2026-09-26T06:10:21Z	usage	test	tool=claude	model=claude-opus-5-5	input=12	cache_read=150748	cache_write=32227	output=2702	cost=0.3421	seconds=49
+2026-09-26T06:10:21Z	stage-end	test	exit=0
+2026-09-26T06:11:25Z	gate	test	exit=0
+2026-09-26T06:11:25Z	stage-start	judge	tool=claude
+2026-09-26T06:13:05Z	usage	judge	tool=claude	model=claude-opus-5-5	input=26	cache_read=480331	cache_write=50677	output=8929	cost=0.6802	seconds=98
+2026-09-26T06:13:05Z	stage-end	judge	exit=0
+2026-09-26T06:14:59Z	gate	adopt	exit=1
+2026-09-26T06:15:00Z	stage-start	test	tool=claude
+2026-09-26T06:18:06Z	usage	test	tool=claude	model=claude-opus-5-5	input=44	cache_read=788005	cache_write=44869	output=9251	cost=0.7017	seconds=185
+2026-09-26T06:18:07Z	stage-end	test	exit=0
+2026-09-26T06:19:24Z	gate	test	exit=0
+2026-09-26T06:19:24Z	stage-start	judge	tool=claude
+2026-09-26T06:20:53Z	usage	judge	tool=claude	model=claude-opus-5-5	input=18	cache_read=288393	cache_write=45449	output=8380	cost=0.5889	seconds=87
+2026-09-26T06:20:53Z	stage-end	judge	exit=0
+2026-09-26T06:22:39Z	gate	adopt	exit=1
+2026-09-26T06:36:21Z	gate	adopt	exit=0

@@ -1,0 +1,12 @@
+gate:pass story — CAT-02 in context product with 5 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.0)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:note decisions — no decision record for this story
+gate:skip happy-path — an adopted story tests nothing new — the levels are the existing tests'
+gate:pass context-map — context 'product' is on project/domain.md
+gate:pass instruction-size — AGENTS.md is 12141 bytes, within a tool's budget
+gate:pass product — project/product.md fills all 6 headings of the product description
+gate:pass tech — project/tech.md fills all 6 headings of the technical description
+gate:note stage plan ran without happy-path — a green run here does not cover them
+gate:pass story CAT-02 stage plan

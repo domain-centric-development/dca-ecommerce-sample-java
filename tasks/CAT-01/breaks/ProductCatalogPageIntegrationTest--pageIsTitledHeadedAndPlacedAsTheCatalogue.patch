@@ -1,0 +1,12 @@
+diff --git a/src/main/resources/templates/product/catalog.pug b/src/main/resources/templates/product/catalog.pug
+--- a/src/main/resources/templates/product/catalog.pug
++++ b/src/main/resources/templates/product/catalog.pug
+@@ -6,7 +6,7 @@
+     span.breadcrumb__separator /
+     span.breadcrumb__current Products
+
+-  h1 Our Products
++  h1 Products
+
+   if productCatalog.totalProducts() > 0
+     .product-grid(data-test="product-grid")

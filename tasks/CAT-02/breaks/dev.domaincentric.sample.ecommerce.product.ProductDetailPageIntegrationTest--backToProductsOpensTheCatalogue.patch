@@ -1,0 +1,9 @@
+diff --git a/src/main/resources/templates/product/detail.pug b/src/main/resources/templates/product/detail.pug
+--- a/src/main/resources/templates/product/detail.pug
++++ b/src/main/resources/templates/product/detail.pug
+@@ -51,4 +51,4 @@ block content
+           input(type="hidden" name="productId" value=productDetail.productId())
+           input(type="hidden" name="quantity" value="1")
+           button.btn.btn--accent.btn--lg(type="submit" data-test="product-add-to-cart-button") Add to Cart
+-      a.btn.btn--ghost(href="/products" data-test="product-back-link") Back to Products
++      a.btn.btn--ghost(href="/" data-test="product-back-link") Back to Products

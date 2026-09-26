@@ -57,6 +57,26 @@ public class ProductCatalogPage extends BasePage {
   }
 
   /**
+   * Clicks "View Details" on the card of the named product.
+   *
+   * @param name the product name as its card shows it
+   * @return the ProductDetailPage for that product
+   */
+  public ProductDetailPage viewProductNamed(String name) {
+    page.locator("[data-test='" + PRODUCT_CARD + "']")
+        .filter(
+            new com.microsoft.playwright.Locator.FilterOptions()
+                .setHas(
+                    page.locator(
+                        "[data-test='" + PRODUCT_TITLE + "']",
+                        new Page.LocatorOptions().setHasText(name))))
+        .first()
+        .locator("[data-test='" + VIEW_DETAILS_LINK + "']")
+        .click();
+    return new ProductDetailPage(page);
+  }
+
+  /**
    * Checks if product cards are displayed.
    *
    * @return true if at least one product card exists

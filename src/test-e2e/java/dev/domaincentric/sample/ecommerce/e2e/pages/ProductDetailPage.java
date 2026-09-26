@@ -58,6 +58,15 @@ public class ProductDetailPage extends BasePage {
   }
 
   /**
+   * The heading of the product page.
+   *
+   * @return the heading text, trimmed
+   */
+  public String heading() {
+    return page.locator("[data-test='" + PRODUCT_DETAIL + "'] h1").textContent().trim();
+  }
+
+  /**
    * Checks if the product detail section is displayed.
    *
    * @return true if product detail is visible

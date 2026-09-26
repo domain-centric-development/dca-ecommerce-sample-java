@@ -1,0 +1,21 @@
+gate:pass story — CAT-02 in context product with 5 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.0)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:note decisions — no decision record for this story
+gate:pass tests-mapped — 5 test(s) mapped to 5 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#backToProductsOpensTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (back-to-products-returns-to-the-catalogue, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#breadcrumbLeadsFromHomeThroughTheCatalogueToTheProduct found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-breadcrumb, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#showsTheProductsImageDescriptionAndCategory found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-shows-image-description-and-category, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#tabIsTitledWithTheProductsName found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-title-is-the-product-name, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest#viewDetailsOpensTheProductsPageHeadedWithItsName found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java (view-details-opens-the-product-page, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#backToProductsOpensTheCatalogue passes — a journey guards what is delivered (back-to-products-returns-to-the-catalogue)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#breadcrumbLeadsFromHomeThroughTheCatalogueToTheProduct passes — a journey guards what is delivered (product-page-breadcrumb)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#showsTheProductsImageDescriptionAndCategory passes — a journey guards what is delivered (product-page-shows-image-description-and-category)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#tabIsTitledWithTheProductsName passes — a journey guards what is delivered (product-page-title-is-the-product-name)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest#viewDetailsOpensTheProductsPageHeadedWithItsName passes — a journey guards what is delivered (view-details-opens-the-product-page)
+gate:note files-listed — listed but not changed by this stage: src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java, src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductCatalogPage.java, src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java, src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java, tasks/CAT-02/breaks/dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest--viewDetailsOpensTheProductsPageHeadedWithItsName.patch
+gate:pass files-listed — tests.md lists the 0 file(s) the stage changed
+gate:fail tests-kept — src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java existed before this story and no longer expects what it did, and the plan's `## Changed tests` does not list it. Keep the old lines and add a case — or, where the story changes that behaviour, the plan lists the test with what backs the change.
+gate:fail story CAT-02 stage test

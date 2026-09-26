@@ -1,0 +1,12 @@
+diff --git a/src/main/resources/templates/product/catalog.pug b/src/main/resources/templates/product/catalog.pug
+--- a/src/main/resources/templates/product/catalog.pug
++++ b/src/main/resources/templates/product/catalog.pug
+@@ -27,7 +27,7 @@
+                 span.product-card__badge.product-card__badge--available In Stock
+               else
+                 span.product-card__badge.product-card__badge--out-of-stock Out of Stock
+-              a.product-card__action(href="/products/" + product.productId() data-test="view-product") View Details
++              a.product-card__action(href="/products/" + product.productId() data-test="view-product") View
+   else
+     .empty-state
+       p.empty-state__title No products available

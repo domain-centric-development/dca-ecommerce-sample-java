@@ -1,0 +1,49 @@
+gate:pass story — CAT-01 in context product with 5 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.0)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:note decisions — no decision record for this story
+gate:pass tests-mapped — 5 test(s) mapped to 5 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#everyCardOffersAViewDetailsLinkToThatProductsPage found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java (card-leads-to-the-product, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#cardShowsTheProductsNameDescriptionAndImage found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java (card-shows-name-description-and-image, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#listsTheCardTitlesInOrdinalNameOrder found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java (catalogue-is-in-name-order, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.SeededCatalogE2ETest#catalogListsTheSeededProductsInNameOrder found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/SeededCatalogE2ETest.java (catalogue-lists-the-seeded-range, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#pageIsTitledHeadedAndPlacedAsTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java (catalogue-page-heading, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#everyCardOffersAViewDetailsLinkToThatProductsPage passes — a journey guards what is delivered (card-leads-to-the-product)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#cardShowsTheProductsNameDescriptionAndImage passes — a journey guards what is delivered (card-shows-name-description-and-image)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#listsTheCardTitlesInOrdinalNameOrder passes — a journey guards what is delivered (catalogue-is-in-name-order)
+gate:fail tests-green — dev.domaincentric.sample.ecommerce.e2e.SeededCatalogE2ETest#catalogListsTheSeededProductsInNameOrder fails, so criterion 'catalogue-lists-the-seeded-range' is not met:
+com.microsoft.playwright.impl.Connection.processOneMessage(Connection.java:229)
+            at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:145)
+            ... 9 more
+
+> Task :test-e2e FAILED
+
+[Incubating] Problems report is available at: file:///Users/christoph/Privat/samples/wp68-java/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+4 actionable tasks: 2 executed, 2 up-to-date
+Configuration cache entry stored.
+
+1 test completed, 1 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test-e2e'.
+> There were failing tests. See the report at: file:///Users/christoph/Privat/samples/wp68-java/build/reports/test-e2e/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 33s
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#pageIsTitledHeadedAndPlacedAsTheCatalogue passes — a journey guards what is delivered (catalogue-page-heading)
+gate:note files-listed — listed but not changed by this stage: tasks/CAT-01/breaks/ProductCatalogPageIntegrationTest--cardShowsTheProductsNameDescriptionAndImage.patch, tasks/CAT-01/breaks/ProductCatalogPageIntegrationTest--everyCardOffersAViewDetailsLinkToThatProductsPage.patch, tasks/CAT-01/breaks/ProductCatalogPageIntegrationTest--listsTheCardTitlesInOrdinalNameOrder.patch, tasks/CAT-01/breaks/ProductCatalogPageIntegrationTest--pageIsTitledHeadedAndPlacedAsTheCatalogue.patch
+gate:pass files-listed — tests.md lists the 1 file(s) the stage changed
+gate:pass tests-kept — no test that existed before this story changed what it expects
+gate:fail story CAT-01 stage test

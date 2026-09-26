@@ -1,0 +1,10 @@
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/outgoing/persistence/InMemoryProductRepository.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/outgoing/persistence/InMemoryProductRepository.java
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/outgoing/persistence/InMemoryProductRepository.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/outgoing/persistence/InMemoryProductRepository.java
+@@ -38,5 +38,5 @@
+   private static final Logger logger = LoggerFactory.getLogger(InMemoryProductRepository.class);
+
+   private static final Comparator<Product> BY_NAME =
+-      Comparator.comparing(product -> product.name().value());
++      Comparator.comparing((Product product) -> product.name().value()).reversed();
+
