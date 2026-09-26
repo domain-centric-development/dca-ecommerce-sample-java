@@ -29,13 +29,12 @@ dependencies {
 
 // Register dedicated E2E test task
 tasks.register('test-e2e', Test) {
-  description = 'Runs E2E tests using Playwright (requires running application)'
+  description = 'Runs E2E tests using Playwright against the shop the suite starts itself on a free port'
   group = 'verification'
   testClassesDirs = sourceSets.testE2e.output.classesDirs
   classpath = sourceSets.testE2e.runtimeClasspath
 
-  // E2E tests should not run as part of normal build
-  // They require a running application instance
+  // Not part of the normal build: the suite starts a browser and the shop, which takes its time
   shouldRunAfter 'test', 'test-integration'
 }
 
@@ -47,8 +46,10 @@ tasks.named('test-e2e').configure {
   // Increase timeout for E2E tests (browser operations can be slow)
   systemProperty 'junit.jupiter.execution.timeout.default', '5m'
 
-  // Base URL for the application under test (can be overridden)
-  systemProperty 'e2e.baseUrl', System.getProperty('e2e.baseUrl', 'http://localhost:8080')
+  // A shop started elsewhere (the compose e2e service); without it the suite starts the shop itself
+  if (System.getProperty('e2e.baseUrl')) {
+    systemProperty 'e2e.baseUrl', System.getProperty('e2e.baseUrl')
+  }
 
   // Browser configuration (chromium, firefox, webkit)
   systemProperty 'e2e.browser', System.getProperty('e2e.browser', 'chromium')
@@ -71,6 +72,6 @@ tasks.named('test-e2e').configure {
   }
 }
 
-// Note: E2E tests are NOT added to check task
-// They require manual execution with a running application:
-//   ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080
+// Note: E2E tests are NOT added to the check task. They start the shop themselves:
+//   ./gradlew test-e2e                                        (the suite starts the shop on a free port)
+//   ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080    (against a shop started elsewhere)

@@ -964,11 +964,16 @@ These tests verify:
 
 ### End-to-End Tests
 
-`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors) and needs a
-running instance:
+`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors). The suite
+starts the shop itself, once per run, in the test process and on a free port — nothing has to run beforehand:
 
 ```bash
-./gradlew bootRun &
+./gradlew test-e2e
+```
+
+Against a shop started elsewhere, name its address:
+
+```bash
 ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080
 ```
 
