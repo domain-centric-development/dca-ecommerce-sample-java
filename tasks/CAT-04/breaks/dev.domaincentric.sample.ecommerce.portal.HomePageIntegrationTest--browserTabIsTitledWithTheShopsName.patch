@@ -1,0 +1,13 @@
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/portal/adapter/incoming/web/HomePageController.java b/src/main/java/dev/domaincentric/sample/ecommerce/portal/adapter/incoming/web/HomePageController.java
+index d201983..ceca3bb 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/portal/adapter/incoming/web/HomePageController.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/portal/adapter/incoming/web/HomePageController.java
+@@ -28,7 +28,7 @@ public class HomePageController {
+    */
+   @GetMapping("/")
+   public String showHomePage(final Model model) {
+-    model.addAttribute("title", "domaincentric.commerce");
++    model.addAttribute("title", "Home");
+ 
+     return "home/index";
+   }

@@ -31,7 +31,7 @@ In this shop those stories are not built again. They are taken over as **adopted
 the pipeline maps each scenario to a test that exists here and is green, writes a characterization test
 where none does — shown to work by a break that turns it red — and a fresh judge reads every test against
 its scenario. Adoption is incremental: the replay's epics come into this folder as the next new story
-needs them. `browse-catalogue` is the first — CAT-01 and CAT-02 adopted.
+needs them. `browse-catalogue` is the first, adopted whole — CAT-01 to CAT-05.
 
 The one story that never shipped, `US-146` ("Decide the Anti-Corruption Layer's fate"), is not a
 story either: it asks a question rather than describing behaviour a user can observe. It belongs to

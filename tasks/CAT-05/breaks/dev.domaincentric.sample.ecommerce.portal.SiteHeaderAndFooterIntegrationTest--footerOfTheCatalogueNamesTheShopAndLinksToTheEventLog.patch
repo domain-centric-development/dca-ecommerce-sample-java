@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/templates/layout.pug b/src/main/resources/templates/layout.pug
+index eb2fdca..2b26e78 100644
+--- a/src/main/resources/templates/layout.pug
++++ b/src/main/resources/templates/layout.pug
+@@ -75,7 +75,7 @@ html(lang="en")
+ 
+     footer.site-footer(data-test="site-footer")
+       .site-footer__inner
+-        .site-footer__text domaincentric.commerce &mdash; Built with Domain-Centric Architecture
++        .site-footer__text domaincentric.commerce &mdash; Made with Domain-Centric Architecture
+         .site-footer__links
+           a.site-footer__link(href="/backoffice/events" data-test="footer-event-log-link") Event Log
+         .theme-switcher(data-test="theme-switcher")

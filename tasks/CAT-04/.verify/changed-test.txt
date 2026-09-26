@@ -1,0 +1,1 @@
+modified	src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java

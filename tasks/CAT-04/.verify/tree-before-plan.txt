@@ -1,0 +1,10 @@
+7053506630046558ebce0e1028ae162991de21802515b028ed6e5167670b143f  project/backlog/browse-catalogue/CAT-03.md
+98553bc0f8e1017387715e20c14fcb8641dc4ed98def71ebf9253534f9cbdb5a  project/backlog/browse-catalogue/CAT-04.md
+119e6b7bcdd9f6b8ce620eae4c5fd1b5f10b02898f23498c09c512d96c7fb856  project/backlog/browse-catalogue/CAT-05.md
+e42d241908059a3f89442364c383a8fedd60f68541e6ddbe4ff22680aaa9b6ab  tasks/CAT-04/.story-digest
+98553bc0f8e1017387715e20c14fcb8641dc4ed98def71ebf9253534f9cbdb5a  tasks/CAT-04/.story-planned
+037e148333c93db0a34d568ad036579c2ec28b0171c834f918f6b67b4d9220ef  tasks/CAT-04/.tests-baseline
+1ad0d3f44830e64c707196576c80530c8460ae2c46ec434096ba4ea0892bf880  tasks/CAT-04/.verify/base-tree
+ebc566cae5be66daf39be6e0bc5eb1e13828dc15bd877b915b7f68fd7607b72b  tasks/CAT-04/.verify/gate-plan.102232.txt
+f8f007121c964e8e3504c9e260a93f8ab7234f5c957d0e8ba45530777a6c7343  tasks/CAT-04/.verify/journal.tsv
+680bc1167ed40de10c5f123af6ce98368f331f10d7287c6970a852063c790de7  tasks/CAT-04/.verify/tree-before-plan.txt

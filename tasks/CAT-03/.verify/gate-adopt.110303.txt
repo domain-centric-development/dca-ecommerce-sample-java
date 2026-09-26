@@ -1,0 +1,21 @@
+gate:pass story — CAT-03 in context product with 4 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.8)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:note decisions — no decision record for this story
+gate:pass tests-mapped — 4 test(s) mapped to 4 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#browseAllProductsOpensTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductNotFoundPageIntegrationTest.java (browse-all-products-leads-to-the-catalogue, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#goToHomepageOpensTheHomePage found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductNotFoundPageIntegrationTest.java (go-to-homepage-leads-to-the-home-page, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#browserTabOfTheNotFoundPageIsTitledWithTheShopsName found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductNotFoundPageIntegrationTest.java (not-found-page-has-the-shop-title, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.ProductNotFoundE2ETest#unknownProductAddressShowsTheNotFoundPage found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductNotFoundE2ETest.java (unknown-product-shows-the-not-found-page, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#browseAllProductsOpensTheCatalogue passes — a journey guards what is delivered (browse-all-products-leads-to-the-catalogue)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#goToHomepageOpensTheHomePage passes — a journey guards what is delivered (go-to-homepage-leads-to-the-home-page)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#browserTabOfTheNotFoundPageIsTitledWithTheShopsName passes — a journey guards what is delivered (not-found-page-has-the-shop-title)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.ProductNotFoundE2ETest#unknownProductAddressShowsTheNotFoundPage passes — a journey guards what is delivered (unknown-product-shows-the-not-found-page)
+gate:pass adopt-judged — the judge confirmed that the tests prove the scenarios
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.e2e.ProductNotFoundE2ETest#unknownProductAddressShowsTheNotFoundPage (unknown-product-shows-the-not-found-page): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#browserTabOfTheNotFoundPageIsTitledWithTheShopsName (not-found-page-has-the-shop-title): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#browseAllProductsOpensTheCatalogue (browse-all-products-leads-to-the-catalogue): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductNotFoundPageIntegrationTest#goToHomepageOpensTheHomePage (go-to-homepage-leads-to-the-home-page): red under its break, on a scratch copy
+gate:pass story CAT-03 stage adopt

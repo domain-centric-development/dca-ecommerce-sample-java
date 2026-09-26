@@ -1,0 +1,3 @@
+added	src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductNotFoundE2ETest.java
+added	src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/NotFoundPage.java
+added	src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductNotFoundPageIntegrationTest.java

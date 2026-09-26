@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/templates/home/index.pug b/src/main/resources/templates/home/index.pug
+index ddc15ce..530aa3f 100644
+--- a/src/main/resources/templates/home/index.pug
++++ b/src/main/resources/templates/home/index.pug
+@@ -38,7 +38,7 @@ block content
+     h2.section__title Popular Categories
+     .highlight-grid
+       .highlight-card
+-        span.highlight-card__title Books
++        a.highlight-card__title(href="/products") Books
+         p.highlight-card__description The works this architecture was synthesized from — Evans, Vernon, Cockburn, Fowler, Martin.
+ 
+       .highlight-card

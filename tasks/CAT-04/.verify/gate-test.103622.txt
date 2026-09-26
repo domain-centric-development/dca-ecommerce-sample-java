@@ -1,0 +1,26 @@
+gate:pass story — CAT-04 in context portal with 7 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.8)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:pass rounds — round 2 of at most 3
+gate:note decisions — no decision record for this story
+gate:pass tests-mapped — 7 test(s) mapped to 7 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#browseProductsOpensTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java (browse-products-opens-the-catalogue, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#browserTabIsTitledWithTheShopsName found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java (home-page-title, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.HomePageE2ETest#homePageWelcomesTheVisitorWithWhatTheShopSells found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomePageE2ETest.java (home-page-welcomes-the-visitor, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#popularCategoriesAreShownAsTextNotAsLinks found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java (popular-categories, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#shopNowBelowTheCallToShopOpensTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java (shop-now-opens-the-catalogue, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#sectionBelowTheHeadingOffersAViewCartLinkToTheCart found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java (view-cart-links-to-the-cart, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#whyShopWithUsShowsFourFeatures found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java (why-shop-with-us, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#browseProductsOpensTheCatalogue passes — a journey guards what is delivered (browse-products-opens-the-catalogue)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#browserTabIsTitledWithTheShopsName passes — a journey guards what is delivered (home-page-title)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.HomePageE2ETest#homePageWelcomesTheVisitorWithWhatTheShopSells passes — a journey guards what is delivered (home-page-welcomes-the-visitor)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#popularCategoriesAreShownAsTextNotAsLinks passes — a journey guards what is delivered (popular-categories)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#shopNowBelowTheCallToShopOpensTheCatalogue passes — a journey guards what is delivered (shop-now-opens-the-catalogue)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#sectionBelowTheHeadingOffersAViewCartLinkToTheCart passes — a journey guards what is delivered (view-cart-links-to-the-cart)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest#whyShopWithUsShowsFourFeatures passes — a journey guards what is delivered (why-shop-with-us)
+gate:note files-listed — listed but not changed by this stage: src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomePageE2ETest.java, src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/HomePage.java, tasks/CAT-04/breaks/dev.domaincentric.sample.ecommerce.e2e.HomePageE2ETest--homePageWelcomesTheVisitorWithWhatTheShopSells.patch, tasks/CAT-04/breaks/dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest--browseProductsOpensTheCatalogue.patch, tasks/CAT-04/breaks/dev.domaincentric.sample.ecommerce.portal.HomePageIntegrationTest--browserTabIsTitledWithTheShopsName.patch
+gate:pass files-listed — tests.md lists the 1 file(s) the stage changed
+gate:pass tests-kept — no test that existed before this story changed what it expects
+gate:pass story CAT-04 stage test

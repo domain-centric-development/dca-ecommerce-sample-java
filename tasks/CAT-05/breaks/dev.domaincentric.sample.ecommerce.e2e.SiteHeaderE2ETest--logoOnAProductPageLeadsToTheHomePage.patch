@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/templates/layout.pug b/src/main/resources/templates/layout.pug
+index eb2fdca..0a2a3bf 100644
+--- a/src/main/resources/templates/layout.pug
++++ b/src/main/resources/templates/layout.pug
+@@ -18,7 +18,7 @@ html(lang="en")
+       span.stack-ribbon__label(title="Java reference implementation — Spring Boot") Java
+     header.site-header(data-test="site-header")
+       .site-header__inner
+-        a.site-header__logo(href="/" data-test="site-logo")
++        a.site-header__logo(href="/products" data-test="site-logo")
+           svg.site-header__mark(viewBox="17.4 12 85.2 96" fill="none" aria-hidden="true" focusable="false")
+             polygon(points="60,20 94.6,40 94.6,80 60,100 25.4,80 25.4,40" stroke="currentColor" stroke-width="7" stroke-linejoin="round")
+             circle(cx="60" cy="20" r="8" fill="currentColor")

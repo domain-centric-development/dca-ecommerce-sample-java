@@ -1,0 +1,11 @@
+diff --git a/src/main/resources/templates/error/404.pug b/src/main/resources/templates/error/404.pug
+index 472a481..6c2e067 100644
+--- a/src/main/resources/templates/error/404.pug
++++ b/src/main/resources/templates/error/404.pug
+@@ -8,5 +8,5 @@ block content
+       The page you're looking for doesn't exist or has been removed.
+       Perhaps you were looking for one of our products?
+     .error-page__action
+-      a.btn.btn--accent(href="/products" data-test="error-browse-link") Browse All Products
++      a.btn.btn--accent(href="/products" data-test="error-browse-link") Browse Products
+       a.btn.btn--secondary(href="/" data-test="error-home-link") Go to Homepage

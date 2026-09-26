@@ -1,0 +1,10 @@
+diff --git a/src/main/resources/templates/error/404.pug b/src/main/resources/templates/error/404.pug
+index 472a481..58790c7 100644
+--- a/src/main/resources/templates/error/404.pug
++++ b/src/main/resources/templates/error/404.pug
+@@ -9,4 +9,4 @@ block content
+       Perhaps you were looking for one of our products?
+     .error-page__action
+       a.btn.btn--accent(href="/products" data-test="error-browse-link") Browse All Products
+-      a.btn.btn--secondary(href="/" data-test="error-home-link") Go to Homepage
++      a.btn.btn--secondary(href="/" data-test="error-home-link") Go Home

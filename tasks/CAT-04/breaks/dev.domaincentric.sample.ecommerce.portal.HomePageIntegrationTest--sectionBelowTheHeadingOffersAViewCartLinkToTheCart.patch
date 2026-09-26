@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/templates/home/index.pug b/src/main/resources/templates/home/index.pug
+index ddc15ce..d3668b6 100644
+--- a/src/main/resources/templates/home/index.pug
++++ b/src/main/resources/templates/home/index.pug
+@@ -9,7 +9,7 @@ block content
+     p.hero__description Everything this architecture is made of: the books it grew out of, the supplies a design workshop runs on, and hexagons for your desk.
+     .hero__actions
+       a.hero__cta.hero__cta--primary(href="/products" data-test="browse-products-link") Browse Products
+-      a.hero__cta.hero__cta--secondary(href="/cart" data-test="view-cart-link") View Cart
++      a.hero__cta.hero__cta--secondary(href="/basket" data-test="view-cart-link") View Cart
+ 
+   section.section(data-test="features")
+     h2.section__title Why Shop With Us

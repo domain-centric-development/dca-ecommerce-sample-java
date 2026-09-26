@@ -1,0 +1,10 @@
+diff --git a/src/main/resources/templates/home/index.pug b/src/main/resources/templates/home/index.pug
+index ddc15ce..5a55c3e 100644
+--- a/src/main/resources/templates/home/index.pug
++++ b/src/main/resources/templates/home/index.pug
+@@ -62,4 +62,4 @@ block content
+       h2.hero__title Ready to Draw Some Boundaries?
+       p.hero__subtitle Browse the full catalog: the books, the modelling supplies, and the hexagons.
+       .hero__actions
+-        a.hero__cta.hero__cta--primary(href="/products" data-test="shop-now-link") Shop Now
++        a.hero__cta.hero__cta--primary(href="/" data-test="shop-now-link") Shop Now

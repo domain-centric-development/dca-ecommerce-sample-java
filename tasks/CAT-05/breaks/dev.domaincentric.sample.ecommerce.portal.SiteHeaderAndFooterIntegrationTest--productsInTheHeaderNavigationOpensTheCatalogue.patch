@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/templates/layout.pug b/src/main/resources/templates/layout.pug
+index eb2fdca..992192a 100644
+--- a/src/main/resources/templates/layout.pug
++++ b/src/main/resources/templates/layout.pug
+@@ -36,7 +36,7 @@ html(lang="en")
+             li.nav__item
+               a.nav__link(href="/" data-test="nav-home-link") Home
+             li.nav__item
+-              a.nav__link(href="/products" data-test="nav-products-link") Products
++              a.nav__link(href="/" data-test="nav-products-link") Products
+         .site-header__actions
+           if identity != null && !identity.isAnonymous()
+             a.nav__link(href="/account" data-test="nav-my-account-link") My Account

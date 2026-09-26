@@ -1,0 +1,307 @@
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomePageE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomePageE2ETest.java
+new file mode 100644
+index 0000000..0e1303b
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomePageE2ETest.java
+@@ -0,0 +1,27 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++
++import dev.domaincentric.sample.ecommerce.e2e.pages.HomePage;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++
++/** The home page a visitor sees on arriving at the shop's address. */
++@DisplayName("Home Page E2E Tests")
++class HomePageE2ETest extends BaseE2ETest {
++
++  @Test
++  @DisplayName("Home page welcomes the visitor")
++  void homePageWelcomesTheVisitorWithWhatTheShopSells() {
++    HomePage home = HomePage.navigateTo(page);
++
++    assertEquals("Welcome to domaincentric.commerce", home.heading());
++    assertEquals(
++        "Books, modelling supplies and hexagon merchandise for people who draw boundaries",
++        home.subtitle());
++    assertEquals(
++        "Everything this architecture is made of: the books it grew out of, the supplies a design"
++            + " workshop runs on, and hexagons for your desk.",
++        home.description());
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/HomePage.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/HomePage.java
+new file mode 100644
+index 0000000..708e926
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/HomePage.java
+@@ -0,0 +1,67 @@
++package dev.domaincentric.sample.ecommerce.e2e.pages;
++
++import com.microsoft.playwright.Page;
++
++/**
++ * Page object for the home page at {@code /}.
++ *
++ * <p>Reads the welcome the hero section shows.
++ */
++public class HomePage extends BasePage {
++
++  private static final String URL_PATTERN = "/";
++  private static final String HERO = "hero";
++
++  /**
++   * Creates a new HomePage and waits for its hero section.
++   *
++   * @param page the Playwright page instance
++   */
++  public HomePage(Page page) {
++    super(page, URL_PATTERN);
++    waitFor(HERO);
++  }
++
++  /**
++   * Navigates to the home page and creates a page object.
++   *
++   * @param page the Playwright page instance
++   * @return a new HomePage
++   */
++  public static HomePage navigateTo(Page page) {
++    page.navigate(BASE_URL + URL_PATTERN);
++    return new HomePage(page);
++  }
++
++  /**
++   * The hero's heading as the visitor reads it.
++   *
++   * @return the heading text
++   */
++  public String heading() {
++    return heroText("h1");
++  }
++
++  /**
++   * The line under the heading.
++   *
++   * @return the subtitle text
++   */
++  public String subtitle() {
++    return heroText(".hero__subtitle");
++  }
++
++  /**
++   * The text below the subtitle.
++   *
++   * @return the description text
++   */
++  public String description() {
++    return heroText(".hero__description");
++  }
++
++  // The text as written, not as CSS transforms it: the subtitle is styled in capitals.
++  private String heroText(String selector) {
++    return page.locator("[data-test='" + HERO + "'] " + selector).textContent().strip();
++  }
++}
+diff --git a/src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java b/src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java
+new file mode 100644
+index 0000000..a4d421e
+--- /dev/null
++++ b/src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/HomePageIntegrationTest.java
+@@ -0,0 +1,195 @@
++package dev.domaincentric.sample.ecommerce.portal;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.regex.Matcher;
++import java.util.regex.Pattern;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
++import org.springframework.test.web.servlet.MockMvc;
++import org.springframework.web.util.HtmlUtils;
++
++/**
++ * The home page a visitor opens at {@code /}, rendered by the wired application: its tab title, the
++ * links that lead on, and the sections that say why to shop here.
++ */
++@SpringBootTest(classes = EcommerceSampleApplication.class)
++@AutoConfigureMockMvc
++@DisplayName("Home page")
++class HomePageIntegrationTest {
++
++  private static final Pattern PAGE_TITLE = Pattern.compile("<title>([^<]*)</title>");
++  private static final Pattern H1 = Pattern.compile("<h1[^>]*>([^<]*)</h1>");
++  private static final Pattern H2 = Pattern.compile("<h2[^>]*>([^<]*)</h2>");
++  private static final Pattern FEATURE =
++      Pattern.compile(
++          "class=\"feature-card__title\">([^<]*)</h3>"
++              + "\\s*<p class=\"feature-card__description\">([^<]*)</p>");
++  private static final Pattern CATEGORY =
++      Pattern.compile(
++          "class=\"highlight-card__title\">([^<]*)</span>"
++              + "\\s*<p class=\"highlight-card__description\">([^<]*)</p>");
++
++  @Autowired private MockMvc mockMvc;
++
++  @Test
++  @DisplayName("Home page title")
++  void browserTabIsTitledWithTheShopsName() throws Exception {
++    assertThat(text(PAGE_TITLE, homePage())).isEqualTo("domaincentric.commerce");
++  }
++
++  @Test
++  @DisplayName("Browse products opens the catalogue")
++  void browseProductsOpensTheCatalogue() throws Exception {
++    final String hero = section(homePage(), "hero");
++
++    assertThat(linkLabel(hero, "browse-products-link")).isEqualTo("Browse Products");
++
++    assertThat(text(H1, open(linkTarget(hero, "browse-products-link")))).isEqualTo("Our Products");
++  }
++
++  @Test
++  @DisplayName("View cart links to the cart")
++  void sectionBelowTheHeadingOffersAViewCartLinkToTheCart() throws Exception {
++    final String hero = section(homePage(), "hero");
++    final String belowTheHeading = hero.substring(hero.indexOf("</h1>"));
++
++    assertThat(linkLabel(belowTheHeading, "view-cart-link")).isEqualTo("View Cart");
++    assertThat(linkTarget(belowTheHeading, "view-cart-link")).isEqualTo("/cart");
++  }
++
++  @Test
++  @DisplayName("Why shop with us")
++  void whyShopWithUsShowsFourFeatures() throws Exception {
++    final String features = section(homePage(), "features");
++
++    assertThat(text(H2, features)).isEqualTo("Why Shop With Us");
++    assertThat(pairs(FEATURE, features))
++        .containsExactly(
++            List.of(
++                "Free Shipping",
++                "Books ship cushioned, posters rolled in a tube, hexagons in a fitted box. Free"
++                    + " over €50."),
++            List.of(
++                "Secure Payments",
++                "Card or invoice, encrypted end to end. Your payment details never touch our"
++                    + " order history."),
++            List.of(
++                "Built to Last",
++                "Beech and oiled oak, hard enamel, heavyweight cotton. Objects that survive a"
++                    + " decade of workshops."),
++            List.of(
++                "Easy Returns",
++                "Not the hexagon you pictured? Send any item back within 30 days for a full"
++                    + " refund."));
++  }
++
++  @Test
++  @DisplayName("Popular categories")
++  void popularCategoriesAreShownAsTextNotAsLinks() throws Exception {
++    final String categories = section(homePage(), "categories");
++
++    assertThat(text(H2, categories)).isEqualTo("Popular Categories");
++    assertThat(pairs(CATEGORY, categories))
++        .containsExactly(
++            List.of(
++                "Books",
++                "The works this architecture was synthesized from — Evans, Vernon, Cockburn,"
++                    + " Fowler, Martin."),
++            List.of(
++                "Modeling",
++                "Sticky notes, hexagon magnets, posters and card decks for your next design"
++                    + " workshop."),
++            List.of(
++                "Apparel",
++                "Shirts, hoodies and caps that explain your architecture before you open your"
++                    + " laptop."),
++            List.of(
++                "Desk & Office",
++                "Mugs, coasters, a hex-grid notebook, and the wooden hexagon for your desk."),
++            List.of(
++                "Stickers & Pins",
++                "Small enough for a laptop lid, loud enough for a conference hallway."));
++    assertThat(categories).as("the categories section holds no link").doesNotContain("<a ");
++  }
++
++  @Test
++  @DisplayName("Shop now opens the catalogue")
++  void shopNowBelowTheCallToShopOpensTheCatalogue() throws Exception {
++    final String banner = section(homePage(), "cta-section");
++
++    assertThat(text(H2, banner)).isEqualTo("Ready to Draw Some Boundaries?");
++    assertThat(HtmlUtils.htmlUnescape(banner))
++        .contains("Browse the full catalog: the books, the modelling supplies, and the hexagons.");
++    assertThat(linkLabel(banner, "shop-now-link")).isEqualTo("Shop Now");
++
++    assertThat(text(H1, open(linkTarget(banner, "shop-now-link")))).isEqualTo("Our Products");
++  }
++
++  private String homePage() throws Exception {
++    return open("/");
++  }
++
++  private String open(final String path) throws Exception {
++    return mockMvc
++        .perform(get(path))
++        .andExpect(status().isOk())
++        .andReturn()
++        .getResponse()
++        .getContentAsString();
++  }
++
++  /** The {@code section} element marked with the given {@code data-test} value. */
++  private static String section(final String page, final String dataTest) {
++    final Matcher matcher =
++        Pattern.compile(
++                "<section[^>]*data-test=\"" + dataTest + "\"[^>]*>(.*?)</section>", Pattern.DOTALL)
++            .matcher(page);
++    assertThat(matcher.find()).as("section %s in the rendered page", dataTest).isTrue();
++    return matcher.group(1);
++  }
++
++  private static String linkTarget(final String html, final String dataTest) {
++    return link(html, dataTest).group(1);
++  }
++
++  private static String linkLabel(final String html, final String dataTest) {
++    return HtmlUtils.htmlUnescape(link(html, dataTest).group(2)).strip();
++  }
++
++  private static Matcher link(final String html, final String dataTest) {
++    final Matcher matcher =
++        Pattern.compile(
++                "<a[^>]*\\bhref=\"([^\"]*)\"[^>]*data-test=\"" + dataTest + "\"[^>]*>([^<]*)</a>")
++            .matcher(html);
++    assertThat(matcher.find()).as("link %s", dataTest).isTrue();
++    return matcher;
++  }
++
++  private static String text(final Pattern pattern, final String html) {
++    final Matcher matcher = pattern.matcher(html);
++    assertThat(matcher.find()).as("%s in the rendered page", pattern).isTrue();
++    return HtmlUtils.htmlUnescape(matcher.group(1)).strip();
++  }
++
++  /** Each title with its text, in page order. */
++  private static List<List<String>> pairs(final Pattern pattern, final String html) {
++    final List<List<String>> pairs = new ArrayList<>();
++    final Matcher matcher = pattern.matcher(html);
++    while (matcher.find()) {
++      pairs.add(
++          List.of(
++              HtmlUtils.htmlUnescape(matcher.group(1)).strip(),
++              HtmlUtils.htmlUnescape(matcher.group(2)).strip()));
++    }
++    return pairs;
++  }
++}

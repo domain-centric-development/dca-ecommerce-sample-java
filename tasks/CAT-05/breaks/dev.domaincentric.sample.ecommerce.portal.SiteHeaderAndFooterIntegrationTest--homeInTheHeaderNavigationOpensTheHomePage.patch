@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/templates/layout.pug b/src/main/resources/templates/layout.pug
+index eb2fdca..19517f2 100644
+--- a/src/main/resources/templates/layout.pug
++++ b/src/main/resources/templates/layout.pug
+@@ -34,7 +34,7 @@ html(lang="en")
+         nav.nav(aria-label="Main navigation")
+           ul.nav__list
+             li.nav__item
+-              a.nav__link(href="/" data-test="nav-home-link") Home
++              a.nav__link(href="/products" data-test="nav-home-link") Home
+             li.nav__item
+               a.nav__link(href="/products" data-test="nav-products-link") Products
+         .site-header__actions

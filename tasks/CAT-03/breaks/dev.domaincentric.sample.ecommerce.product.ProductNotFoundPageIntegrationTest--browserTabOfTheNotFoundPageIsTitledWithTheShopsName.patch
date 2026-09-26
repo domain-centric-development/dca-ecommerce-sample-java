@@ -1,0 +1,12 @@
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductPageController.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductPageController.java
+index 3e5ba2f..c4690f6 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductPageController.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductPageController.java
+@@ -88,6 +88,7 @@ public class ProductPageController {
+     final GetProductByIdResult result = getProductByIdUseCase.execute(new GetProductByIdQuery(id));
+ 
+     if (!result.found()) {
++      model.addAttribute("title", "Not Found");
+       return "error/404";
+     }
+ 

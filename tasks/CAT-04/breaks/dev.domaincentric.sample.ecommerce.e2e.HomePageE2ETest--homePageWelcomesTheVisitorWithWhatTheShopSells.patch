@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/templates/home/index.pug b/src/main/resources/templates/home/index.pug
+index ddc15ce..ef056a7 100644
+--- a/src/main/resources/templates/home/index.pug
++++ b/src/main/resources/templates/home/index.pug
+@@ -5,7 +5,7 @@ block content
+     h1.hero__title
+       | Welcome to domaincentric
+       span.brand-tld .commerce
+-    p.hero__subtitle Books, modelling supplies and hexagon merchandise for people who draw boundaries
++    p.hero__subtitle Books and merchandise
+     p.hero__description Everything this architecture is made of: the books it grew out of, the supplies a design workshop runs on, and hexagons for your desk.
+     .hero__actions
+       a.hero__cta.hero__cta--primary(href="/products" data-test="browse-products-link") Browse Products

@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/templates/home/index.pug b/src/main/resources/templates/home/index.pug
+index ddc15ce..bc1c89f 100644
+--- a/src/main/resources/templates/home/index.pug
++++ b/src/main/resources/templates/home/index.pug
+@@ -31,7 +31,7 @@ block content
+ 
+       .feature-card
+         span.feature-card__icon &#8635;
+-        h3.feature-card__title Easy Returns
++        h3.feature-card__title Returns
+         p.feature-card__description Not the hexagon you pictured? Send any item back within 30 days for a full refund.
+ 
+   section.section.section--muted(data-test="categories")

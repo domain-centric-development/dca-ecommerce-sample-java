@@ -1,0 +1,21 @@
+gate:pass story — CAT-05 in context portal with 5 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.8)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:note decisions — no decision record for this story
+gate:pass tests-mapped — 5 test(s) mapped to 5 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#footerOfTheCatalogueNamesTheShopAndLinksToTheEventLog found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/SiteHeaderAndFooterIntegrationTest.java (footer-names-the-shop, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homePageShowsTheSameHeaderAndFooterAsTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/SiteHeaderAndFooterIntegrationTest.java (header-and-footer-on-the-home-page, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.SiteHeaderE2ETest#logoOnAProductPageLeadsToTheHomePage found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/SiteHeaderE2ETest.java (logo-leads-home, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homeInTheHeaderNavigationOpensTheHomePage found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/SiteHeaderAndFooterIntegrationTest.java (nav-home-opens-the-home-page, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#productsInTheHeaderNavigationOpensTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/SiteHeaderAndFooterIntegrationTest.java (nav-products-opens-the-catalogue, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#footerOfTheCatalogueNamesTheShopAndLinksToTheEventLog passes — a journey guards what is delivered (footer-names-the-shop)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homePageShowsTheSameHeaderAndFooterAsTheCatalogue passes — a journey guards what is delivered (header-and-footer-on-the-home-page)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.SiteHeaderE2ETest#logoOnAProductPageLeadsToTheHomePage passes — a journey guards what is delivered (logo-leads-home)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homeInTheHeaderNavigationOpensTheHomePage passes — a journey guards what is delivered (nav-home-opens-the-home-page)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#productsInTheHeaderNavigationOpensTheCatalogue passes — a journey guards what is delivered (nav-products-opens-the-catalogue)
+gate:note files-listed — listed but not changed by this stage: tasks/CAT-05/breaks/dev.domaincentric.sample.ecommerce.e2e.SiteHeaderE2ETest--logoOnAProductPageLeadsToTheHomePage.patch, tasks/CAT-05/breaks/dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest--footerOfTheCatalogueNamesTheShopAndLinksToTheEventLog.patch, tasks/CAT-05/breaks/dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest--homeInTheHeaderNavigationOpensTheHomePage.patch, tasks/CAT-05/breaks/dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest--homePageShowsTheSameHeaderAndFooterAsTheCatalogue.patch, tasks/CAT-05/breaks/dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest--productsInTheHeaderNavigationOpensTheCatalogue.patch
+gate:pass files-listed — tests.md lists the 3 file(s) the stage changed
+gate:pass tests-kept — no test that existed before this story changed what it expects
+gate:pass story CAT-05 stage test

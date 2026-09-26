@@ -1,0 +1,24 @@
+gate:pass story — CAT-05 in context portal with 5 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.8)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:note decisions — no decision record for this story
+gate:pass tests-mapped — 5 test(s) mapped to 5 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#footerOfTheCatalogueNamesTheShopAndLinksToTheEventLog found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/SiteHeaderAndFooterIntegrationTest.java (footer-names-the-shop, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homePageShowsTheSameHeaderAndFooterAsTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/SiteHeaderAndFooterIntegrationTest.java (header-and-footer-on-the-home-page, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.SiteHeaderE2ETest#logoOnAProductPageLeadsToTheHomePage found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/SiteHeaderE2ETest.java (logo-leads-home, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homeInTheHeaderNavigationOpensTheHomePage found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/SiteHeaderAndFooterIntegrationTest.java (nav-home-opens-the-home-page, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#productsInTheHeaderNavigationOpensTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/portal/SiteHeaderAndFooterIntegrationTest.java (nav-products-opens-the-catalogue, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#footerOfTheCatalogueNamesTheShopAndLinksToTheEventLog passes — a journey guards what is delivered (footer-names-the-shop)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homePageShowsTheSameHeaderAndFooterAsTheCatalogue passes — a journey guards what is delivered (header-and-footer-on-the-home-page)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.SiteHeaderE2ETest#logoOnAProductPageLeadsToTheHomePage passes — a journey guards what is delivered (logo-leads-home)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homeInTheHeaderNavigationOpensTheHomePage passes — a journey guards what is delivered (nav-home-opens-the-home-page)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#productsInTheHeaderNavigationOpensTheCatalogue passes — a journey guards what is delivered (nav-products-opens-the-catalogue)
+gate:pass adopt-judged — the judge confirmed that the tests prove the scenarios
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.e2e.SiteHeaderE2ETest#logoOnAProductPageLeadsToTheHomePage (logo-leads-home): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homeInTheHeaderNavigationOpensTheHomePage (nav-home-opens-the-home-page): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#productsInTheHeaderNavigationOpensTheCatalogue (nav-products-opens-the-catalogue): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#footerOfTheCatalogueNamesTheShopAndLinksToTheEventLog (footer-names-the-shop): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homePageShowsTheSameHeaderAndFooterAsTheCatalogue (header-and-footer-on-the-home-page): red under its break, on a scratch copy
+gate:pass story CAT-05 stage adopt
