@@ -1,0 +1,9 @@
+{
+  "request": { "method": "POST", "urlPath": "/payments" },
+  "response": {
+    "status": 201,
+    "fixedDelayMilliseconds": 5000,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": { "reference": "stub-slow" }
+  }
+}

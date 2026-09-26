@@ -704,6 +704,16 @@ within 2 seconds as an unavailable provider (contract: `project/tech.md`, `## In
 ./gradlew bootRun --args='--checkout.payment-provider.base-url=https://psp.example.com'
 ```
 
+To see the payment provider on this machine, start its stub and point the shop at it. `PAYMENT_STUB` picks how it
+answers — `authorize` (default), `refuse` or `slow` (`stubs/payment-provider/README.md`):
+
+```bash
+PAYMENT_STUB=refuse docker compose --profile provider-stub up -d payment-provider   # WireMock on localhost:8089
+CHECKOUT_PAYMENTPROVIDER_BASEURL=http://localhost:8089 ./gradlew bootRun
+```
+
+Another answer is the same command with another `PAYMENT_STUB` and `--force-recreate`; the shop keeps running.
+
 ### Running with Docker
 
 No local JDK needed — the `Dockerfile` builds the jar and runs it on a JRE:

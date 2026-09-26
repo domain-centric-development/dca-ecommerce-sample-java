@@ -1,0 +1,4 @@
+{
+  "request": { "method": "POST", "urlPath": "/payments" },
+  "response": { "status": 402, "headers": { "Content-Type": "application/json" }, "jsonBody": { "error": "refused" } }
+}

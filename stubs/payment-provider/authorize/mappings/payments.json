@@ -1,0 +1,9 @@
+{
+  "request": { "method": "POST", "urlPath": "/payments" },
+  "response": {
+    "status": 201,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": { "reference": "stub-{{randomValue type='UUID'}}" },
+    "transformers": ["response-template"]
+  }
+}
