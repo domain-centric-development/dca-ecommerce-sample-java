@@ -46,10 +46,10 @@
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
     interaction = ExternalUpstream.Interaction.OUTBOUND,
     protocol = "REST",
-    exchanges = "payment operations (initiate, confirm, refund)",
+    exchanges = "payment request (amount, currency) and its answer (authorized, refused)",
     rationale =
-        "Behind the caller-owned PaymentProvider port; the sample ships a mock adapter in place"
-            + " of a real gateway")
+        "Behind the caller-owned PaymentProvider port; a REST adapter translates the provider's"
+            + " answers where its address is configured, a stand-in takes payments otherwise")
 @ExternalUpstream(
     name = "Payment Service Provider",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,

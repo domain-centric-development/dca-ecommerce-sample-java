@@ -48,7 +48,7 @@ The pages are designed for four sizes; a story names the size, never a pixel val
 - Authentication by a signed token, in a cookie for the pages and in the header for the API; every
   resource states who may use it, and a shopper only ever reaches their own cart and account.
 - Passwords are stored hashed; no payment data is stored — payment is handed to a provider (a stand-in
-  in the sample).
+  in the sample, unless a provider address is configured).
 - Performance and availability are those of a demonstration: one instance, no scaling promise.
 - The architecture rules run with every build and fail it on a violation.
 

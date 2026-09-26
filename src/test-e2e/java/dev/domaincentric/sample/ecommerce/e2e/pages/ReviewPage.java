@@ -11,6 +11,7 @@ public class ReviewPage extends BasePage {
 
   private static final String URL_PATTERN = "/checkout/review";
   private static final String PLACE_ORDER_BUTTON = "review-place-order-button";
+  private static final String TOTAL = "review-total";
 
   /**
    * Creates a new ReviewPage and waits for it to load.
@@ -39,6 +40,15 @@ public class ReviewPage extends BasePage {
    */
   public boolean showsAddress(String address) {
     return pageContains(address);
+  }
+
+  /**
+   * Reads the checkout session's total as the page shows it.
+   *
+   * @return the amount and the currency code, e.g. {@code "45.98 EUR"}
+   */
+  public String total() {
+    return page.locator("[data-test='" + TOTAL + "']").textContent().trim();
   }
 
   /**

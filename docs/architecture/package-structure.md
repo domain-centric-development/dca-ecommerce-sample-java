@@ -269,6 +269,7 @@ dev.domaincentric.sample.ecommerce
 │           │   ├── CompositeCheckoutArticleDataAdapter
 │           │   └── ProductInfoAdapter
 │           └── payment/
+│               ├── RestPaymentProvider, PaymentProviderProperties
 │               ├── MockPaymentProvider
 │               └── InMemoryPaymentProviderRegistry
 │

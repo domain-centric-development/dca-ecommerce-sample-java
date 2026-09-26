@@ -417,6 +417,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── ProductInfoPort.java
 │   │       ├── PaymentProvider.java
 │   │       └── PaymentProviderRegistry.java
+│   ├── infrastructure/                   # Per-context infrastructure
+│   │   ├── CheckoutDomainConfiguration.java
+│   │   └── CheckoutPaymentConfiguration.java  # Binds the payment provider's address
 │   └── adapter/                          # Adapters
 │       ├── incoming/                     # Incoming adapters
 │       │   ├── web/                      # Protocol first, feature below it
@@ -447,7 +450,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           │   ├── CompositeCheckoutArticleDataAdapter.java  # Composite adapter
 │           │   └── ProductInfoAdapter.java
 │           └── payment/
-│               ├── MockPaymentProvider.java
+│               ├── RestPaymentProvider.java      # ACL to the provider's REST contract, where its address is set
+│               ├── PaymentProviderProperties.java  # checkout.payment-provider.base-url
+│               ├── MockPaymentProvider.java      # The stand-in, where no address is set
 │               └── InMemoryPaymentProviderRegistry.java
 │
 ├── account/                              # Account bounded context
@@ -690,6 +695,14 @@ a page waits for a human's acceptance before it counts as delivered.
 ```
 
 The application will start on `http://localhost:8080`
+
+Payments go to a stand-in inside the shop that authorizes every payment. To pay through a payment
+provider instead, give its address; the shop then sends `POST /payments` there and treats no answer
+within 2 seconds as an unavailable provider (contract: `project/tech.md`, `## Integrations`):
+
+```bash
+./gradlew bootRun --args='--checkout.payment-provider.base-url=https://psp.example.com'
+```
 
 ### Running with Docker
 

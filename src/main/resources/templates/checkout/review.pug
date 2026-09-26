@@ -99,7 +99,7 @@ block content
               span #{orderReview.totals().tax()} #{orderReview.totals().currencyCode()}
           .order-summary__total
             span Total
-            span #{orderReview.totals().total()} #{orderReview.totals().currencyCode()}
+            span(data-test="review-total") #{orderReview.totals().total()} #{orderReview.totals().currencyCode()}
 
     .review__actions
       a.btn.btn--secondary(href="/checkout/payment" data-test="review-back-link") Back

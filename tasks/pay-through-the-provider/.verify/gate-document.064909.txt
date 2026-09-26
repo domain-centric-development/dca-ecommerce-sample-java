@@ -1,0 +1,10 @@
+gate:pass story — pay-through-the-provider in context checkout with 3 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.38.3)
+gate:pass approved — story is approved
+gate:pass epic — epic 'provider-payment' complete (intent, goal, metric, domain_contact)
+gate:pass rounds — round 2 of at most 3
+gate:pass decisions — pay-through-the-provider-01 applied ("The end-user suite starts the shop itself, in the test process and on a free port (done in this sample's e2e base since 2026-09-26). The payment provider's stub belongs to the suite: it starts with the shop, the shop's provider address points at it, and each test arranges the stub's answers. The story no longer names 20.00 EUR: the provider receives one payment request for the checkout session's total." by Christoph Bloemer)
+gate:fail documented — tasks/pay-through-the-provider/document.md: names things that do not exist: checkout/package-info.java — a documented path that does not resolve sends the next reader nowhere. Write every path as it resolves from the project root, not as a package- or namespace-relative shorthand.
+gate:pass glossary — 5 proposed term(s) accounted for
+gate:pass architecture — `./gradlew test-architecture` succeeded
+gate:fail story pay-through-the-provider stage document

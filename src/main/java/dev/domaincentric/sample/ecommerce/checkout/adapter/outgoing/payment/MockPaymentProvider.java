@@ -5,6 +5,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionI
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,8 +17,13 @@ import org.springframework.stereotype.Component;
  *
  * <p>The provider generates mock transaction references in the format "mock-{uuid}" to simulate
  * real provider behavior.
+ *
+ * <p>It stands in only where no provider address is configured ({@code
+ * checkout.payment-provider.base-url}); with an address, {@link RestPaymentProvider} takes its
+ * place, so running the shop locally needs no provider.
  */
 @Component
+@ConditionalOnExpression("'${checkout.payment-provider.base-url:}'.isBlank()")
 public class MockPaymentProvider implements PaymentProvider {
 
   public static final PaymentProviderId PROVIDER_ID = PaymentProviderId.of("mock");

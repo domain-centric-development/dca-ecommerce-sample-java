@@ -90,7 +90,7 @@ Edges labeled `planned` are declared intent without a code dependency yet.
 | Consumer | External system | Interaction | Protocol | Exchanges | Translation | Status | Rationale |
 |---|---|---|---|---|---|---|---|
 | checkout | Payment Service Provider | inbound | webhook | payment confirmation (payment id, status) | ACL | planned | Will trigger order fulfillment; the payload is the provider's contract, to be translated into a local command at the incoming adapter — no webhook adapter exists yet |
-| checkout | Payment Service Provider | outbound | REST | payment operations (initiate, confirm, refund) | ACL | implemented | Behind the caller-owned PaymentProvider port; the sample ships a mock adapter in place of a real gateway |
+| checkout | Payment Service Provider | outbound | REST | payment request (amount, currency) and its answer (authorized, refused) | ACL | implemented | Behind the caller-owned PaymentProvider port; a REST adapter translates the provider's answers where its address is configured, a stand-in takes payments otherwise |
 
 ## Partnerships
 

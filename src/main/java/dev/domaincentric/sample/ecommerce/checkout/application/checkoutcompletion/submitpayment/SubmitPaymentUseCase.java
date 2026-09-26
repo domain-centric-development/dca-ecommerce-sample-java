@@ -83,6 +83,9 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
     final Money amount = snapshot.totals().total();
 
     final PaymentProvider.PaymentResult initiation = provider.initiatePayment(sessionId, amount);
+    if (initiation.outcome() == PaymentProvider.PaymentResult.Outcome.UNAVAILABLE) {
+      throw new PaymentProviderUnavailableException(command.providerId());
+    }
     if (!initiation.success()) {
       throw new PaymentInitiationFailedException(command.providerId(), initiation.errorMessage());
     }
