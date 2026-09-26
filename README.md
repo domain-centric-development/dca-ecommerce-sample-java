@@ -417,6 +417,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── ProductInfoPort.java
 │   │       ├── PaymentProvider.java
 │   │       └── PaymentProviderRegistry.java
+│   ├── infrastructure/                   # Per-context infrastructure
+│   │   ├── CheckoutDomainConfiguration.java
+│   │   └── CheckoutPaymentConfiguration.java  # Binds the payment provider's address
 │   └── adapter/                          # Adapters
 │       ├── incoming/                     # Incoming adapters
 │       │   ├── web/                      # Protocol first, feature below it
@@ -447,7 +450,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           │   ├── CompositeCheckoutArticleDataAdapter.java  # Composite adapter
 │           │   └── ProductInfoAdapter.java
 │           └── payment/
-│               ├── MockPaymentProvider.java
+│               ├── RestPaymentProvider.java      # ACL to the provider's REST contract, where its address is set
+│               ├── PaymentProviderProperties.java  # checkout.payment-provider.base-url
+│               ├── MockPaymentProvider.java      # The stand-in, where no address is set
 │               └── InMemoryPaymentProviderRegistry.java
 │
 ├── account/                              # Account bounded context
@@ -690,6 +695,27 @@ a page waits for a human's acceptance before it counts as delivered.
 ```
 
 The application will start on `http://localhost:8080`
+
+Payments go to a stand-in inside the shop that authorizes every payment. To pay through a payment
+provider instead, give its address; the shop then sends `POST /payments` there and treats no answer
+within 2 seconds as an unavailable provider (contract: `project/tech.md`, `## Integrations`):
+
+```bash
+./gradlew bootRun --args='--checkout.payment-provider.base-url=https://psp.example.com'
+```
+
+To see the payment provider on this machine, run the shop against its stub — WireMock on `localhost:8089`, which
+answers `authorize` (default), `refuse` or `slow` (`stubs/payment-provider/README.md`). The `justfile` wraps it
+(`brew install just`; `just` lists the recipes):
+
+```bash
+just run-with-provider refuse        # the stub, then the shop paying through it; the stub stops with the shop
+just run-with-provider authorize 8090  # another answer, another port
+just stub slow                       # only the stub — another answer while the shop keeps running
+```
+
+Without `just`: `PAYMENT_STUB=refuse docker compose --profile provider-stub up -d payment-provider`, then
+`CHECKOUT_PAYMENTPROVIDER_BASEURL=http://localhost:8089 ./gradlew bootRun`.
 
 ### Running with Docker
 
@@ -964,11 +990,16 @@ These tests verify:
 
 ### End-to-End Tests
 
-`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors) and needs a
-running instance:
+`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors). The suite
+starts the shop itself, once per run, in the test process and on a free port — nothing has to run beforehand:
 
 ```bash
-./gradlew bootRun &
+./gradlew test-e2e
+```
+
+Against a shop started elsewhere, name its address:
+
+```bash
 ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080
 ```
 

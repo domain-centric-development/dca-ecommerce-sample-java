@@ -25,8 +25,12 @@ One Spring Boot process on port 8080, started with `./gradlew bootRun` or as a c
 
 ## Integrations
 
-A payment provider (a stand-in inside the sample). MCP clients reach the catalogue
-over streamable HTTP. Nothing else.
+A payment provider over REST, outbound. A payment is `POST /payments` with the body
+`{"amount": "17.98", "currency": "EUR"}` — the amount a decimal string with two places, never a JSON number,
+which would pass through binary floating point — and the currency an ISO 4217 code;
+`201` with a payment reference authorizes it, `402` refuses it, and no answer within 2 seconds counts
+as unavailable. Where the provider's address is not configured, a stand-in inside the sample takes
+payments. MCP clients reach the catalogue over streamable HTTP. Nothing else.
 
 ## Version policy
 

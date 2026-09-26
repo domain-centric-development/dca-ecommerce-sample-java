@@ -1,0 +1,12 @@
+diff --git a/src/main/resources/templates/product/detail.pug b/src/main/resources/templates/product/detail.pug
+--- a/src/main/resources/templates/product/detail.pug
++++ b/src/main/resources/templates/product/detail.pug
+@@ -4,7 +4,7 @@ block content
+   .breadcrumb(data-test="breadcrumb")
+     a.breadcrumb__link(href="/") Home
+     span.breadcrumb__separator /
+-    a.breadcrumb__link(href="/products") Products
++    a.breadcrumb__link(href="/products") Catalogue
+     span.breadcrumb__separator /
+     span.breadcrumb__current #{productDetail.name()}
+

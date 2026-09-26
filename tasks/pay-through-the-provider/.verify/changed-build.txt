@@ -1,0 +1,10 @@
+modified	docs/architecture/context-map.md
+modified	src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/incoming/web/checkoutcompletion/PaymentPageController.java
+modified	src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/MockPaymentProvider.java
+added	src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/PaymentProviderProperties.java
+added	src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/RestPaymentProvider.java
+modified	src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/checkoutcompletion/submitpayment/SubmitPaymentUseCase.java
+modified	src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentProvider.java
+added	src/main/java/dev/domaincentric/sample/ecommerce/checkout/infrastructure/CheckoutPaymentConfiguration.java
+modified	src/main/java/dev/domaincentric/sample/ecommerce/checkout/package-info.java
+modified	src/main/resources/templates/checkout/review.pug

@@ -29,7 +29,8 @@ import org.junit.jupiter.api.extension.TestWatcher;
  * <p>Configuration properties:
  *
  * <ul>
- *   <li>{@code e2e.baseUrl} - Base URL for the application (default: http://localhost:8080)
+ *   <li>{@code e2e.baseUrl} - Base URL of a shop started elsewhere (default: the suite starts the
+ *       shop itself, in this process, on a free port)
  *   <li>{@code e2e.browser} - Browser to use: chromium, firefox, webkit (default: chromium)
  *   <li>{@code e2e.headless} - Run in headless mode (default: true)
  * </ul>
@@ -37,13 +38,12 @@ import org.junit.jupiter.api.extension.TestWatcher;
  * <p>Usage example:
  *
  * <pre>{@code
- * ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080 -De2e.headless=false
+ * ./gradlew test-e2e -De2e.headless=false
  * }</pre>
  */
 public abstract class BaseE2ETest {
 
-  protected static final String BASE_URL =
-      System.getProperty("e2e.baseUrl", "http://localhost:8080");
+  protected static final String BASE_URL = ShopUnderTest.baseUrl();
   protected static final String BROWSER_TYPE = System.getProperty("e2e.browser", "chromium");
   protected static final boolean HEADLESS =
       Boolean.parseBoolean(System.getProperty("e2e.headless", "true"));

@@ -14,6 +14,8 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getactive
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
@@ -42,6 +44,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/checkout")
 public class PaymentPageController {
+
+  private static final String PAYMENT_REFUSED =
+      "The payment was refused. Please choose another way to pay.";
+  private static final String PROVIDER_UNAVAILABLE =
+      "The payment provider is not available right now. Please try again later.";
 
   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
@@ -149,6 +156,12 @@ public class PaymentPageController {
 
       return "redirect:/checkout/review";
 
+    } catch (PaymentInitiationFailedException e) {
+      redirectAttributes.addFlashAttribute("error", PAYMENT_REFUSED);
+      return "redirect:/checkout/payment";
+    } catch (PaymentProviderUnavailableException e) {
+      redirectAttributes.addFlashAttribute("error", PROVIDER_UNAVAILABLE);
+      return "redirect:/checkout/payment";
     } catch (UseCaseException | DomainException | IllegalArgumentException e) {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each

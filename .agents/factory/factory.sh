@@ -13,6 +13,8 @@
 #                    one story, or without --story the whole backlog in the schedule's order
 #   factory.sh status [--story <id>] [--usage] [--brief]   what runs, what waits, every story, the cost
 #   factory.sh decisions [--story <id>]      the decision inbox
+#   factory.sh help [--format text|md|json]  the factory explained: the flow and where this project stands,
+#                                            every command in its agent and its shell form, the marks, the files
 #   factory.sh update [--from <skill folder>]   the newest pipeline found, same tools, links or copies
 #   factory.sh verify --story <id> | --fixtures   observe a delivered story | check the machinery
 #   factory.sh check [--staged] [--checks "<c> …"] | --parity <config>   for the commit hook and CI
@@ -960,7 +962,7 @@ presets() {                                 # presets <dir> <mode> [args…]
 import os, re, sys
 
 directory, python, conventions, mode, rest = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:]
-KINDS = ("stack", "browser", "format", "governance")
+KINDS = ("stack", "browser", "format", "governance", "stub")
 #: Folders no detection looks into: build output, dependencies, tool state. Bounded in depth as well,
 #: so a detection never walks a whole disk from a mistaken directory.
 PRUNED = {".git", ".gradle", ".idea", ".vs", "build", "bin", "obj", "target", "dist", "out",
@@ -1276,7 +1278,15 @@ This project delivers stories through the dca-factory pipeline. At the start of 
 person names a task right away, run `python3 .agents/factory/story-gate.py --status --brief`, show
 its lines, and ask what they want to do: write or release a story (`/factory-backlog`), answer a
 waiting question (`/factory-decisions`), work the backlog (`/factory-run`; to keep listening, a tool
-that repeats a prompt runs it again — in Claude Code `/loop /factory-run`), or look closer (`/factory-status`).
+that repeats a prompt runs it again — in Claude Code `/loop /factory-run`), look closer (`/factory-status`), or
+learn how the factory works (`/factory-help`).
+
+An instruction that changes what an actor can see or do is a user story. Before any code, ask once, in
+these words: "As a story through the factory — to an existing epic, a new epic — or directly by hand?"
+For the factory, run `/factory-run` with the person's words: it writes the story through
+`/factory-backlog` and runs it once it is released. A fix, a refactoring, documentation, tooling or a
+question is done directly.
+
 A session never runs `factory.sh run` — it starts a tool process per stage. One worker per checkout: a
 managing session writes backlog and decision files only. Every change — by a stage or by hand in a
 session — passes `bash .agents/factory/factory.sh check` before it is committed; the commit hook runs it
@@ -1377,7 +1387,9 @@ asks_human() {                              # asks_human <file>
 stopped_for_human() {                       # stopped_for_human <artefact> <stage> <story>
   local artefact=$1 stage=$2 story=$3 ids id applies
   echo "factory: stage '$stage' ends with a needs-human section — the run stops here." >&2
-  ids=$(sed -n '/^## needs-human/,/^## /p' "$artefact" | sed -n 's/^[[:space:]-]*decision:[[:space:]]*//p')
+  # the id alone: a stage may go on writing after it on the same line ("decision: s-01. The browser …")
+  ids=$(sed -n '/^## needs-human/,/^## /p' "$artefact" \
+    | sed -n 's/^[[:space:]-]*decision:[[:space:]]*`\{0,1\}\([A-Za-z0-9][A-Za-z0-9_-]*\).*/\1/p')
   if [ -z "$ids" ]; then
     echo "factory:   the section names no 'decision: <id>' — the stage has to write the question as" >&2
     echo "factory:   $DECISIONS/<story>-<nn>.md; the next gate refuses a question nobody was asked." >&2
@@ -1589,6 +1601,24 @@ open_decisions() {                          # open_decisions <story>
   done
 }
 
+# The adopt gate: every scenario on a green test, the judge's pass, a break for every test the adoption
+# wrote. Passed, it delivers the story; refused, the test stage runs again, one round counted.
+adopt_gate() {                              # adopt_gate <story> <tool> <dry>
+  echo "── gate adopt"
+  [ -n "$3" ] && return 0
+  if gate adopt "$1"; then
+    echo "factory: story $1 is adopted."
+    return 0
+  fi
+  local rounds; rounds=$(bump_rounds "$1")
+  if [ "$rounds" -ge 3 ]; then
+    echo "factory: gate 'adopt' refused in round $rounds — three rounds did not converge. needs-human." >&2
+    return 1
+  fi
+  echo "factory: gate 'adopt' refused — round $rounds runs the test stage again with the gate's report." >&2
+  run_story "$1" "$2" test "$3"
+}
+
 run_story() {
   local story=$1 tool=$2 from=${3:-plan} dry=${4:-}
   local started=0 ran="" waiting built=""
@@ -1599,9 +1629,25 @@ run_story() {
     echo "factory:   answer under '## Answer' with answer:, by: and at:, then run the stage that asked (--from <stage>)." >&2
     return 3
   fi
+  local kind; kind=$("$PY" "$GATE" --story "$story" --kind 2>/dev/null || echo story)
+  # An adopted story whose judge passed: only the adopt gate is left, and it delivers the story.
+  if [ "$from" = adopt ]; then
+    adopt_gate "$story" "$tool" "$dry"
+    return $?
+  fi
   for stage in "${STAGES[@]}"; do
     [ "$stage" = "$from" ] && started=1
     [ "$started" = 1 ] || continue
+    # A journey walks what is delivered: nothing to build, nothing to tidy.
+    if [ "$kind" = journey ] && { [ "$stage" = build ] || [ "$stage" = tidy ]; }; then
+      echo "── stage $stage  (skipped: a journey builds nothing)"
+      continue
+    fi
+    # An adoption builds nothing and documents nothing: plan, test, judge, then the adopt gate.
+    if [ "$kind" = adopt ] && { [ "$stage" = build ] || [ "$stage" = tidy ] || [ "$stage" = document ]; }; then
+      echo "── stage $stage  (skipped: an adopted story is not built)"
+      continue
+    fi
 
     if [[ " ${PRE_GATED[*]} " == *" $stage "* ]]; then
       echo "── gate $stage"
@@ -1721,15 +1767,22 @@ run_story() {
       local verdict rounds
       verdict=$(verdict_of "$story")
       case "$verdict" in
-        pass) echo "factory: judge verdict 'pass'." ;;
+        pass)
+          echo "factory: judge verdict 'pass'."
+          if [ "$kind" = adopt ]; then
+            adopt_gate "$story" "$tool" "$dry"
+            return $?
+          fi
+          ;;
         changes-requested)
           rounds=$(bump_rounds "$story")
           if [ "$rounds" -ge 3 ]; then
             echo "factory: judge verdict 'changes-requested' in round $rounds — three rounds did not converge. needs-human." >&2
             return 1
           fi
-          echo "factory: judge verdict 'changes-requested' — round $rounds goes back to the build stage." >&2
-          run_story "$story" "$tool" build "$dry"
+          local back=build; { [ "$kind" = journey ] || [ "$kind" = adopt ]; } && back=test
+          echo "factory: judge verdict 'changes-requested' — round $rounds goes back to the $back stage." >&2
+          run_story "$story" "$tool" "$back" "$dry"
           return $?
           ;;
         story-conflict)
@@ -1904,6 +1957,11 @@ case "$command" in
       *) read_command --status --part backlog "$@" ;;
     esac ;;
   decisions) read_command --list-decisions "$@" ;;
+  help)
+    # The help works before the pipeline is installed too: then the plugin's gate explains it.
+    helper=$GATE
+    [ -f "$helper" ] || helper=$(plugin_gate) || { echo "factory: no gate found to explain the factory — FACTORY_PLUGIN_DIR names one" >&2; exit 2; }
+    exec "$PY" "$helper" --help-view "$@" ;;
   check)
     case "${1:-}" in
       --parity) [ $# -eq 2 ] || usage; read_command --parity "$2" ;;

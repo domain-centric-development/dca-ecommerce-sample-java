@@ -1,0 +1,554 @@
+diff --git a/README.md b/README.md
+index 9ee714c..5229509 100644
+--- a/README.md
++++ b/README.md
+@@ -964,11 +964,16 @@ These tests verify:
+ 
+ ### End-to-End Tests
+ 
+-`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors) and needs a
+-running instance:
++`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors). The suite
++starts the shop itself, once per run, in the test process and on a free port — nothing has to run beforehand:
++
++```bash
++./gradlew test-e2e
++```
++
++Against a shop started elsewhere, name its address:
+ 
+ ```bash
+-./gradlew bootRun &
+ ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080
+ ```
+ 
+diff --git a/gradle/plugins/test-e2e.gradle b/gradle/plugins/test-e2e.gradle
+index 35185de..226c063 100644
+--- a/gradle/plugins/test-e2e.gradle
++++ b/gradle/plugins/test-e2e.gradle
+@@ -29,13 +29,12 @@ dependencies {
+ 
+ // Register dedicated E2E test task
+ tasks.register('test-e2e', Test) {
+-  description = 'Runs E2E tests using Playwright (requires running application)'
++  description = 'Runs E2E tests using Playwright against the shop the suite starts itself on a free port'
+   group = 'verification'
+   testClassesDirs = sourceSets.testE2e.output.classesDirs
+   classpath = sourceSets.testE2e.runtimeClasspath
+ 
+-  // E2E tests should not run as part of normal build
+-  // They require a running application instance
++  // Not part of the normal build: the suite starts a browser and the shop, which takes its time
+   shouldRunAfter 'test', 'test-integration'
+ }
+ 
+@@ -47,8 +46,10 @@ tasks.named('test-e2e').configure {
+   // Increase timeout for E2E tests (browser operations can be slow)
+   systemProperty 'junit.jupiter.execution.timeout.default', '5m'
+ 
+-  // Base URL for the application under test (can be overridden)
+-  systemProperty 'e2e.baseUrl', System.getProperty('e2e.baseUrl', 'http://localhost:8080')
++  // A shop started elsewhere (the compose e2e service); without it the suite starts the shop itself
++  if (System.getProperty('e2e.baseUrl')) {
++    systemProperty 'e2e.baseUrl', System.getProperty('e2e.baseUrl')
++  }
+ 
+   // Browser configuration (chromium, firefox, webkit)
+   systemProperty 'e2e.browser', System.getProperty('e2e.browser', 'chromium')
+@@ -71,6 +72,6 @@ tasks.named('test-e2e').configure {
+   }
+ }
+ 
+-// Note: E2E tests are NOT added to check task
+-// They require manual execution with a running application:
+-//   ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080
++// Note: E2E tests are NOT added to the check task. They start the shop themselves:
++//   ./gradlew test-e2e                                        (the suite starts the shop on a free port)
++//   ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080    (against a shop started elsewhere)
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java
+index a447d6c..3b7e0df 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java
+@@ -29,7 +29,8 @@ import org.junit.jupiter.api.extension.TestWatcher;
+  * <p>Configuration properties:
+  *
+  * <ul>
+- *   <li>{@code e2e.baseUrl} - Base URL for the application (default: http://localhost:8080)
++ *   <li>{@code e2e.baseUrl} - Base URL of a shop started elsewhere (default: the suite starts the
++ *       shop itself, in this process, on a free port)
+  *   <li>{@code e2e.browser} - Browser to use: chromium, firefox, webkit (default: chromium)
+  *   <li>{@code e2e.headless} - Run in headless mode (default: true)
+  * </ul>
+@@ -37,13 +38,12 @@ import org.junit.jupiter.api.extension.TestWatcher;
+  * <p>Usage example:
+  *
+  * <pre>{@code
+- * ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080 -De2e.headless=false
++ * ./gradlew test-e2e -De2e.headless=false
+  * }</pre>
+  */
+ public abstract class BaseE2ETest {
+ 
+-  protected static final String BASE_URL =
+-      System.getProperty("e2e.baseUrl", "http://localhost:8080");
++  protected static final String BASE_URL = ShopUnderTest.baseUrl();
+   protected static final String BROWSER_TYPE = System.getProperty("e2e.browser", "chromium");
+   protected static final boolean HEADLESS =
+       Boolean.parseBoolean(System.getProperty("e2e.headless", "true"));
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java
+new file mode 100644
+index 0000000..61e8aea
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java
+@@ -0,0 +1,27 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++import dev.domaincentric.sample.ecommerce.e2e.pages.ProductCatalogPage;
++import dev.domaincentric.sample.ecommerce.e2e.pages.ProductDetailPage;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++
++/** The product page a visitor reaches from a card of the seeded catalogue. */
++@DisplayName("Product Page E2E Tests")
++class ProductPageE2ETest extends BaseE2ETest {
++
++  @Test
++  @DisplayName("View Details on a card opens that product's page, headed with its name")
++  void viewDetailsOpensTheProductsPageHeadedWithItsName() {
++    ProductDetailPage productPage =
++        ProductCatalogPage.navigateTo(page).viewProductNamed("Domain-Driven Design");
++
++    assertTrue(
++        getCurrentPath().matches("/products/[0-9a-f-]{36}"),
++        "A product page is open: " + getCurrentPath());
++    assertTrue(productPage.isDisplayed(), "The product page renders its details");
++    assertEquals("Domain-Driven Design", productPage.heading());
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java
+new file mode 100644
+index 0000000..d5305c0
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java
+@@ -0,0 +1,31 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
++import org.springframework.boot.SpringApplication;
++import org.springframework.context.ConfigurableApplicationContext;
++
++/**
++ * The shop the browser suite drives: started once per test JVM, in this process, on a free port.
++ *
++ * <p>With {@code -De2e.baseUrl=<url>} the suite drives a shop started elsewhere instead (the
++ * compose {@code e2e} service does that); without it, nothing has to run beforehand and every
++ * dependency the shop needs in its default profile starts with it.
++ */
++public final class ShopUnderTest {
++
++  private static ConfigurableApplicationContext shop;
++
++  private ShopUnderTest() {}
++
++  public static synchronized String baseUrl() {
++    String given = System.getProperty("e2e.baseUrl", "");
++    if (!given.isBlank()) {
++      return given;
++    }
++    if (shop == null) {
++      shop = SpringApplication.run(EcommerceSampleApplication.class, "--server.port=0");
++      Runtime.getRuntime().addShutdownHook(new Thread(shop::close));
++    }
++    return "http://localhost:" + shop.getEnvironment().getProperty("local.server.port");
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java
+index eb05ed8..c72dc5c 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java
+@@ -1,6 +1,7 @@
+ package dev.domaincentric.sample.ecommerce.e2e.pages;
+ 
+ import com.microsoft.playwright.Page;
++import dev.domaincentric.sample.ecommerce.e2e.ShopUnderTest;
+ 
+ /**
+  * Base class for all page objects, providing common methods for page interactions.
+@@ -15,8 +16,7 @@ import com.microsoft.playwright.Page;
+  */
+ public abstract class BasePage {
+ 
+-  protected static final String BASE_URL =
+-      System.getProperty("e2e.baseUrl", "http://localhost:8080");
++  protected static final String BASE_URL = ShopUnderTest.baseUrl();
+   protected final Page page;
+ 
+   /**
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductCatalogPage.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductCatalogPage.java
+index 3fa03a9..be07553 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductCatalogPage.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductCatalogPage.java
+@@ -56,6 +56,26 @@ public class ProductCatalogPage extends BasePage {
+     return new ProductDetailPage(page);
+   }
+ 
++  /**
++   * Clicks "View Details" on the card of the named product.
++   *
++   * @param name the product name as its card shows it
++   * @return the ProductDetailPage for that product
++   */
++  public ProductDetailPage viewProductNamed(String name) {
++    page.locator("[data-test='" + PRODUCT_CARD + "']")
++        .filter(
++            new com.microsoft.playwright.Locator.FilterOptions()
++                .setHas(
++                    page.locator(
++                        "[data-test='" + PRODUCT_TITLE + "']",
++                        new Page.LocatorOptions().setHasText(name))))
++        .first()
++        .locator("[data-test='" + VIEW_DETAILS_LINK + "']")
++        .click();
++    return new ProductDetailPage(page);
++  }
++
+   /**
+    * Checks if product cards are displayed.
+    *
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java
+index ba5d38e..658dde4 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java
+@@ -57,6 +57,15 @@ public class ProductDetailPage extends BasePage {
+     return new ProductCatalogPage(page);
+   }
+ 
++  /**
++   * The heading of the product page.
++   *
++   * @return the heading text, trimmed
++   */
++  public String heading() {
++    return page.locator("[data-test='" + PRODUCT_DETAIL + "'] h1").textContent().trim();
++  }
++
+   /**
+    * Checks if the product detail section is displayed.
+    *
+diff --git a/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java b/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java
+new file mode 100644
+index 0000000..75491db
+--- /dev/null
++++ b/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java
+@@ -0,0 +1,143 @@
++package dev.domaincentric.sample.ecommerce.product;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
++import java.util.Arrays;
++import java.util.List;
++import java.util.regex.Matcher;
++import java.util.regex.Pattern;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
++import org.springframework.test.web.servlet.MockMvc;
++import org.springframework.web.util.HtmlUtils;
++
++/**
++ * The catalogue page a visitor opens, rendered by the wired application from the sample catalogue
++ * the shop seeds at start-up: what the page and each of its cards show.
++ */
++// A context of its own: another test class that adds a product to a shared context would change
++// the seeded range this class asserts.
++@SpringBootTest(
++    classes = EcommerceSampleApplication.class,
++    properties =
++        "spring.datasource.url=jdbc:h2:mem:catalogue_page_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
++@AutoConfigureMockMvc
++@DisplayName("Product catalogue page")
++class ProductCatalogPageIntegrationTest {
++
++  private static final String CARD = "data-test=\"product-card\"";
++  private static final Pattern TITLE = Pattern.compile("data-test=\"product-card-title\">([^<]*)<");
++  private static final Pattern DESCRIPTION =
++      Pattern.compile("class=\"product-card__description\">([^<]*)<");
++  private static final Pattern IMAGE = Pattern.compile("<img[^>]*\\bsrc=\"([^\"]*)\"");
++  private static final Pattern VIEW_LINK =
++      Pattern.compile(
++          "<a[^>]*\\bhref=\"([^\"]*)\"[^>]*data-test=\"view-product\"[^>]*>([^<]*)</a>");
++  private static final Pattern PAGE_TITLE = Pattern.compile("<title>([^<]*)</title>");
++  private static final Pattern HEADING = Pattern.compile("<h1[^>]*>([^<]*)</h1>");
++  private static final Pattern BREADCRUMB =
++      Pattern.compile("data-test=\"breadcrumb\">(.*?)</div>", Pattern.DOTALL);
++  private static final Pattern PRODUCT_PAGE = Pattern.compile("/products/[0-9a-f-]{36}");
++
++  private static final String DDD_DESCRIPTION =
++      "The seminal work by Eric Evans that introduced the software industry to Domain-Driven"
++          + " Design. This essential guide teaches you how to tackle complexity in the heart of"
++          + " software by connecting implementation to an evolving model of the business domain.";
++
++  @Autowired private MockMvc mockMvc;
++
++  @Test
++  @DisplayName("The card titles are in ordinal order of the product name")
++  void listsTheCardTitlesInOrdinalNameOrder() throws Exception {
++    final List<String> titles =
++        cards(catalogPage()).stream().map(card -> text(TITLE, card)).toList();
++
++    assertThat(titles).isEqualTo(titles.stream().sorted().toList());
++    assertThat(titles.getFirst()).isEqualTo("\"Bounded Context\" Enamel Pin");
++  }
++
++  @Test
++  @DisplayName("A card shows the product's name, description and image")
++  void cardShowsTheProductsNameDescriptionAndImage() throws Exception {
++    final String card =
++        cards(catalogPage()).stream()
++            .filter(c -> "Domain-Driven Design".equals(text(TITLE, c)))
++            .findFirst()
++            .orElseThrow(() -> new AssertionError("no card titled Domain-Driven Design"));
++
++    assertThat(text(TITLE, card)).isEqualTo("Domain-Driven Design");
++    assertThat(text(DESCRIPTION, card)).isEqualTo(DDD_DESCRIPTION);
++    assertThat(text(IMAGE, card)).isEqualTo("/images/products/ddd-book.webp");
++  }
++
++  @Test
++  @DisplayName("Every card offers a View Details link to that product's page")
++  void everyCardOffersAViewDetailsLinkToThatProductsPage() throws Exception {
++    final List<String> cards = cards(catalogPage());
++    assertThat(cards).isNotEmpty();
++
++    for (final String card : cards) {
++      final String title = text(TITLE, card);
++      final Matcher link = VIEW_LINK.matcher(card);
++      assertThat(link.find()).as("card %s has a view link", title).isTrue();
++      assertThat(link.group(2).strip()).as("label on %s", title).isEqualTo("View Details");
++      assertThat(link.group(1)).as("target of %s", title).matches(PRODUCT_PAGE);
++
++      final String productPage =
++          mockMvc
++              .perform(get(link.group(1)))
++              .andExpect(status().isOk())
++              .andReturn()
++              .getResponse()
++              .getContentAsString();
++      assertThat(HtmlUtils.htmlUnescape(productPage)).as("page behind %s", title).contains(title);
++    }
++  }
++
++  @Test
++  @DisplayName("The page is titled Product Catalog, headed Our Products, under Home / Products")
++  void pageIsTitledHeadedAndPlacedAsTheCatalogue() throws Exception {
++    final String page = catalogPage();
++
++    assertThat(text(PAGE_TITLE, page)).isEqualTo("Product Catalog");
++    assertThat(text(HEADING, page)).isEqualTo("Our Products");
++    assertThat(breadcrumb(page)).isEqualTo("Home / Products");
++  }
++
++  private String catalogPage() throws Exception {
++    return mockMvc
++        .perform(get("/products"))
++        .andExpect(status().isOk())
++        .andReturn()
++        .getResponse()
++        .getContentAsString();
++  }
++
++  private static List<String> cards(final String page) {
++    final List<String> parts = Arrays.asList(page.split(Pattern.quote(CARD)));
++    return parts.subList(1, parts.size());
++  }
++
++  private static String text(final Pattern pattern, final String html) {
++    final Matcher matcher = pattern.matcher(html);
++    assertThat(matcher.find()).as("%s in the rendered page", pattern).isTrue();
++    return HtmlUtils.htmlUnescape(matcher.group(1)).strip();
++  }
++
++  /** The breadcrumb's visible parts, one space between each. */
++  private static String breadcrumb(final String page) {
++    final String inner = text(BREADCRUMB, page);
++    return String.join(
++        " ",
++        Arrays.stream(inner.split("<[^>]+>"))
++            .map(String::strip)
++            .filter(s -> !s.isEmpty())
++            .toList());
++  }
++}
+diff --git a/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java b/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java
+new file mode 100644
+index 0000000..1ecab39
+--- /dev/null
++++ b/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java
+@@ -0,0 +1,159 @@
++package dev.domaincentric.sample.ecommerce.product;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
++import java.util.Arrays;
++import java.util.regex.Matcher;
++import java.util.regex.Pattern;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
++import org.springframework.test.web.servlet.MockMvc;
++import org.springframework.web.util.HtmlUtils;
++
++/**
++ * The product page a visitor opens from a catalogue card, rendered by the wired application from
++ * the sample catalogue the shop seeds at start-up: what the page shows and where it leads.
++ */
++// A context of its own, like the catalogue page's test: the seeded products stay as seeded.
++@SpringBootTest(
++    classes = EcommerceSampleApplication.class,
++    properties =
++        "spring.datasource.url=jdbc:h2:mem:product_page_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
++@AutoConfigureMockMvc
++@DisplayName("Product page")
++class ProductDetailPageIntegrationTest {
++
++  private static final String CARD = "data-test=\"product-card\"";
++  private static final Pattern CARD_TITLE =
++      Pattern.compile("data-test=\"product-card-title\">([^<]*)<");
++  private static final Pattern VIEW_LINK =
++      Pattern.compile("<a[^>]*\\bhref=\"([^\"]*)\"[^>]*data-test=\"view-product\"");
++  private static final Pattern PAGE_TITLE = Pattern.compile("<title>([^<]*)</title>");
++  private static final Pattern HEADING = Pattern.compile("<h1[^>]*>([^<]*)</h1>");
++  private static final Pattern IMAGE =
++      Pattern.compile(
++          "class=\"product-detail__image\"[^>]*>\\s*<img[^>]*\\bsrc=\"([^\"]*)\"", Pattern.DOTALL);
++  private static final Pattern DESCRIPTION =
++      Pattern.compile("class=\"product-detail__description\">\\s*<p>([^<]*)</p>", Pattern.DOTALL);
++  private static final Pattern META_ITEM =
++      Pattern.compile(
++          "class=\"product-detail__meta-label\">([^<]*)</span>\\s*"
++              + "<span class=\"product-detail__meta-value[^\"]*\">([^<]*)</span>",
++          Pattern.DOTALL);
++  private static final Pattern BREADCRUMB =
++      Pattern.compile("data-test=\"breadcrumb\">(.*?)</div>", Pattern.DOTALL);
++  private static final Pattern LINK =
++      Pattern.compile("<a[^>]*\\bhref=\"([^\"]*)\"[^>]*>([^<]*)</a>");
++  private static final Pattern BACK_LINK =
++      Pattern.compile(
++          "<a[^>]*\\bhref=\"([^\"]*)\"[^>]*data-test=\"product-back-link\"[^>]*>([^<]*)</a>");
++
++  private static final String DDD_DESCRIPTION =
++      "The seminal work by Eric Evans that introduced the software industry to Domain-Driven"
++          + " Design. This essential guide teaches you how to tackle complexity in the heart of"
++          + " software by connecting implementation to an evolving model of the business domain.";
++
++  @Autowired private MockMvc mockMvc;
++
++  @Test
++  @DisplayName("The page shows the product's image, description and category")
++  void showsTheProductsImageDescriptionAndCategory() throws Exception {
++    final String page = productPageOf("Domain-Driven Design");
++
++    assertThat(text(IMAGE, page)).isEqualTo("/images/products/ddd-book.webp");
++    assertThat(text(DESCRIPTION, page)).isEqualTo(DDD_DESCRIPTION);
++    assertThat(metaValue(page, "Category")).isEqualTo("Books");
++  }
++
++  @Test
++  @DisplayName("The browser tab is titled with the product's name")
++  void tabIsTitledWithTheProductsName() throws Exception {
++    final String page = productPageOf("Clean Architecture");
++
++    assertThat(text(PAGE_TITLE, page)).isEqualTo("Clean Architecture");
++  }
++
++  @Test
++  @DisplayName("The breadcrumb reads Home / Products / the product, linking home and catalogue")
++  void breadcrumbLeadsFromHomeThroughTheCatalogueToTheProduct() throws Exception {
++    final String breadcrumb = text(BREADCRUMB, productPageOf("Clean Architecture"));
++
++    assertThat(visibleParts(breadcrumb)).isEqualTo("Home / Products / Clean Architecture");
++    assertThat(linkTarget(breadcrumb, "Home")).isEqualTo("/");
++    assertThat(linkTarget(breadcrumb, "Products")).isEqualTo("/products");
++  }
++
++  @Test
++  @DisplayName("Back to Products opens the catalogue page Our Products")
++  void backToProductsOpensTheCatalogue() throws Exception {
++    final Matcher back = BACK_LINK.matcher(productPageOf("Team Topologies"));
++    assertThat(back.find()).as("the product page has a back link").isTrue();
++    assertThat(HtmlUtils.htmlUnescape(back.group(2)).strip()).isEqualTo("Back to Products");
++
++    final String catalogue = render(back.group(1));
++
++    assertThat(text(HEADING, catalogue)).isEqualTo("Our Products");
++  }
++
++  /** Follows the "View Details" link on the catalogue card of the named product. */
++  private String productPageOf(final String name) throws Exception {
++    final String card =
++        Arrays.stream(render("/products").split(Pattern.quote(CARD)))
++            .skip(1)
++            .filter(c -> name.equals(text(CARD_TITLE, c)))
++            .findFirst()
++            .orElseThrow(() -> new AssertionError("no card titled " + name));
++    return render(text(VIEW_LINK, card));
++  }
++
++  private String render(final String path) throws Exception {
++    return mockMvc
++        .perform(get(path))
++        .andExpect(status().isOk())
++        .andReturn()
++        .getResponse()
++        .getContentAsString();
++  }
++
++  private static String text(final Pattern pattern, final String html) {
++    final Matcher matcher = pattern.matcher(html);
++    assertThat(matcher.find()).as("%s in the rendered page", pattern).isTrue();
++    return HtmlUtils.htmlUnescape(matcher.group(1)).strip();
++  }
++
++  private static String metaValue(final String page, final String label) {
++    final Matcher item = META_ITEM.matcher(page);
++    while (item.find()) {
++      if (label.equals(HtmlUtils.htmlUnescape(item.group(1)).strip())) {
++        return HtmlUtils.htmlUnescape(item.group(2)).strip();
++      }
++    }
++    throw new AssertionError("no meta item labelled " + label);
++  }
++
++  private static String linkTarget(final String html, final String label) {
++    final Matcher link = LINK.matcher(html);
++    while (link.find()) {
++      if (label.equals(HtmlUtils.htmlUnescape(link.group(2)).strip())) {
++        return link.group(1);
++      }
++    }
++    throw new AssertionError("no link labelled " + label);
++  }
++
++  /** The visible parts of a fragment, one space between each. */
++  private static String visibleParts(final String html) {
++    return String.join(
++        " ",
++        Arrays.stream(html.split("<[^>]+>"))
++            .map(s -> HtmlUtils.htmlUnescape(s).strip())
++            .filter(s -> !s.isEmpty())
++            .toList());
++  }
++}

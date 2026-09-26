@@ -27,10 +27,11 @@ any language, produce the shop as it behaves now. It is not a migration of the P
 written from the shop's tests, pages and interfaces, and every epic's intent, goal, metric and contact
 was stated by the product owner when it was written, not reconstructed from a ticket.
 
-In this shop those stories are not built again. They are taken over as **adopted**: each scenario
-mapped to a test that exists here and is green. A scenario without such a test is an open finding, not a
-story to deliver. Until the pipeline supports adoption, the replay backlog stays in the specification,
-and this folder holds only new work.
+In this shop those stories are not built again. They are taken over as **adopted** (`status: adopted`):
+the pipeline maps each scenario to a test that exists here and is green, writes a characterization test
+where none does — shown to work by a break that turns it red — and a fresh judge reads every test against
+its scenario. Adoption is incremental: the replay's epics come into this folder as the next new story
+needs them. `browse-catalogue` is the first — CAT-01 and CAT-02 adopted.
 
 The one story that never shipped, `US-146` ("Decide the Anti-Corruption Layer's fate"), is not a
 story either: it asks a question rather than describing behaviour a user can observe. It belongs to

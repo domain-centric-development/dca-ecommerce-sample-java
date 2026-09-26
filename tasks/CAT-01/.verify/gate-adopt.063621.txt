@@ -1,0 +1,23 @@
+gate:pass story — CAT-01 in context product with 5 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.4)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:pass decisions — CAT-01-01 applied ('The end-user suite now starts the shop itself, in the test process and on a free port — nothing has to run beforehand. Run the test stage again; the end-user tests run as they are.' by Christoph Bloemer)
+gate:pass tests-mapped — 5 test(s) mapped to 5 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#everyCardOffersAViewDetailsLinkToThatProductsPage found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java (card-leads-to-the-product, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#cardShowsTheProductsNameDescriptionAndImage found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java (card-shows-name-description-and-image, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#listsTheCardTitlesInOrdinalNameOrder found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java (catalogue-is-in-name-order, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.SeededCatalogE2ETest#catalogListsTheSeededProductsInNameOrder found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/SeededCatalogE2ETest.java (catalogue-lists-the-seeded-range, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#pageIsTitledHeadedAndPlacedAsTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java (catalogue-page-heading, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#everyCardOffersAViewDetailsLinkToThatProductsPage passes — a journey guards what is delivered (card-leads-to-the-product)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#cardShowsTheProductsNameDescriptionAndImage passes — a journey guards what is delivered (card-shows-name-description-and-image)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#listsTheCardTitlesInOrdinalNameOrder passes — a journey guards what is delivered (catalogue-is-in-name-order)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.SeededCatalogE2ETest#catalogListsTheSeededProductsInNameOrder passes — a journey guards what is delivered (catalogue-lists-the-seeded-range)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#pageIsTitledHeadedAndPlacedAsTheCatalogue passes — a journey guards what is delivered (catalogue-page-heading)
+gate:pass adopt-judged — the judge confirmed that the tests prove the scenarios
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#listsTheCardTitlesInOrdinalNameOrder (catalogue-is-in-name-order): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#cardShowsTheProductsNameDescriptionAndImage (card-shows-name-description-and-image): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#everyCardOffersAViewDetailsLinkToThatProductsPage (card-leads-to-the-product): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#pageIsTitledHeadedAndPlacedAsTheCatalogue (catalogue-page-heading): red under its break, on a scratch copy
+gate:pass story CAT-01 stage adopt

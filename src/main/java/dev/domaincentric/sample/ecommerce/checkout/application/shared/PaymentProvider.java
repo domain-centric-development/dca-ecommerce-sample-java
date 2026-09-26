@@ -74,18 +74,36 @@ public interface PaymentProvider extends OutputPort {
   /**
    * Result of a payment operation.
    *
-   * @param success whether the operation succeeded
+   * @param outcome whether the provider accepted, refused, or could not be reached
    * @param providerReference unique reference from the provider for tracking
-   * @param errorMessage error message if the operation failed, null otherwise
+   * @param errorMessage error message if the operation did not succeed, null otherwise
    */
-  record PaymentResult(boolean success, String providerReference, String errorMessage) {
+  record PaymentResult(Outcome outcome, String providerReference, String errorMessage) {
+
+    /** What the provider made of the operation. */
+    public enum Outcome {
+      /** The provider accepted the operation and gave a reference. */
+      SUCCEEDED,
+      /** The provider answered and refused the operation. */
+      REFUSED,
+      /** The provider did not answer in time, could not be reached, or answered unintelligibly. */
+      UNAVAILABLE
+    }
 
     public static PaymentResult success(final String providerReference) {
-      return new PaymentResult(true, providerReference, null);
+      return new PaymentResult(Outcome.SUCCEEDED, providerReference, null);
     }
 
     public static PaymentResult failure(final String errorMessage) {
-      return new PaymentResult(false, null, errorMessage);
+      return new PaymentResult(Outcome.REFUSED, null, errorMessage);
+    }
+
+    public static PaymentResult unavailable(final String errorMessage) {
+      return new PaymentResult(Outcome.UNAVAILABLE, null, errorMessage);
+    }
+
+    public boolean success() {
+      return outcome == Outcome.SUCCEEDED;
     }
   }
 }

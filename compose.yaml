@@ -26,6 +26,18 @@ services:
       JWT_SAME_SITE: ${JWT_SAME_SITE:-Lax}
       JWT_SECURE_COOKIES: ${JWT_SECURE_COOKIES:-false}
 
+  # The payment provider as a stub, for a shop started on this machine (`./gradlew bootRun`, `dotnet run`):
+  # WireMock on localhost:8089 with one set of answers per behaviour — PAYMENT_STUB=authorize|refuse|slow
+  # (stubs/payment-provider/README.md). `docker compose --profile provider-stub up payment-provider`.
+  payment-provider:
+    image: wiremock/wiremock:3.13.2
+    profiles: [provider-stub]
+    ports:
+      - "8089:8080"
+    command: ["--global-response-templating"]
+    volumes:
+      - ./stubs/payment-provider/${PAYMENT_STUB:-authorize}:/home/wiremock:ro
+
   gradle:
     image: eclipse-temurin:25-jdk
     profiles: [tools]

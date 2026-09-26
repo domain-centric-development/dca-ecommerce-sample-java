@@ -1,0 +1,16 @@
+76fb1658c9a84305494698d8121852fb37232e03152cc8c22a4f2e5442f7936f  .agents/factory/factory.sh
+d8b75ef0ec9b99c1ec9ae58bb1b642a21c0b2cbf88f387ebc693dc92a50535ce  .agents/factory/gate.installed
+62c42f8bee934f2dd58cc7f72588e4f92f9c31815d1e2e30748f1efb612b6080  .agents/factory/story-gate.py
+f9d4341a714f4281d23196f1c2220e4e51f34a0ce986d782f39ba90f32a17a69  project/backlog/browse-catalogue/CAT-01.md
+72dd8c728ed86d175f331b9d669da04367dfc5f90bd50978ba5fad444b6bf047  project/backlog/browse-catalogue/CAT-02.md
+01c61035dc7842dc4aaaa8fd0b905a92f659846f8957989ea9811c448796a112  project/backlog/browse-catalogue/epic.md
+a8e666526f1ae7e39f8cc80d558596ed53bdcb317a5a3af1f69afe4c1999eaa9  tasks/CAT-01/.story-digest
+f9d4341a714f4281d23196f1c2220e4e51f34a0ce986d782f39ba90f32a17a69  tasks/CAT-01/.story-planned
+37e2060f046455b8ecaa3dbf3c921efa73b0434ac7027c6ce3da5e6670c9c4a1  tasks/CAT-01/.tests-baseline
+9de88027f876cf365bea82ba03e229f7eed700d3929f8decdf7d1159ba06dec1  tasks/CAT-01/.verify/base-tree
+6d26fd76571d02809360b49b2c7553765239843b6bb4e9774b6b5bf902744e38  tasks/CAT-01/.verify/gate-plan.222547.txt
+60e26d04ecb1dfff2a7069500251f8f2f3b7051dd201a6bb6ac54d0d153fcafe  tasks/CAT-01/.verify/journal.tsv
+5d3a8cf12b56202bbeeef217508bc8e491f862745ddb07601a0b0c233506ea54  tasks/CAT-01/.verify/plan.222548.out
+6d9177a43700afd1ec66846276fa2ef48d313ba24fcbfe6b39606e949a4d049c  tasks/CAT-01/.verify/tree-after-plan.txt
+12b841275e854bb3ab112ca105f3402918d956a02f7c9c1260f66bdd7800c11a  tasks/CAT-01/.verify/tree-before-plan.txt
+64f7294bec26ce60fc6afe93fe380d7996084809c41d9fe9ec29e7e3bc52dc94  tasks/CAT-01/plan.md

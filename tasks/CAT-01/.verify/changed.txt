@@ -1,0 +1,10 @@
+modified	README.md
+modified	gradle/plugins/test-e2e.gradle
+modified	src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java
+added	src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java
+added	src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java
+modified	src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java
+modified	src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductCatalogPage.java
+modified	src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java
+added	src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductCatalogPageIntegrationTest.java
+added	src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java

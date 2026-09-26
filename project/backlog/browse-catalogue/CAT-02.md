@@ -1,0 +1,70 @@
+---
+id: CAT-02
+epic: browse-catalogue
+status: adopted
+context: product
+title: The product page
+depends_on: [CAT-01]
+---
+
+# The product page
+
+## Story
+
+As a visitor I want to open a product from the catalogue and see everything the shop says about it on a page
+of its own, so that I can decide whether it is what I am looking for.
+
+## Acceptance criteria
+
+<!-- happy-path: view-details-opens-the-product-page -->
+
+### Rule: Every product has a page of its own, reached from its card
+
+#### view-details-opens-the-product-page
+Title: View Details on a catalogue card opens that product's page
+- Given the seeded product "Domain-Driven Design"
+- When a visitor follows the "View Details" link on its catalogue card
+- Then the product page of "Domain-Driven Design" opens
+- And its heading reads "Domain-Driven Design"
+
+### Rule: The page shows what the product is
+
+#### product-page-shows-image-description-and-category
+- Given the seeded product "Domain-Driven Design"
+- When a visitor opens its product page
+- Then the page shows the product's image, the description "The seminal work by Eric Evans that introduced the software industry to Domain-Driven Design. This essential guide teaches you how to tackle complexity in the heart of software by connecting implementation to an evolving model of the business domain."
+- And it shows "Category" with the value "Books"
+
+### Rule: The page is recognisable as that product's page
+
+#### product-page-title-is-the-product-name
+- Given the seeded product "Clean Architecture"
+- When a visitor opens its product page
+- Then the browser tab title is "Clean Architecture"
+
+#### product-page-breadcrumb
+- Given the seeded product "Clean Architecture"
+- When a visitor opens its product page
+- Then the breadcrumb reads "Home / Products / Clean Architecture"
+- And "Home" links to the home page and "Products" to the catalogue page
+
+### Rule: The visitor can always go back to the catalogue
+
+#### back-to-products-returns-to-the-catalogue
+- Given a visitor on the product page of "Team Topologies"
+- When they follow "Back to Products"
+- Then the catalogue page "Our Products" opens
+
+## Out of scope
+
+- The price and its label "Retail Price" — `PRC-01`, from the price owner.
+- The "In Stock" / "Out of Stock" badge, the availability line and the "Add to Cart" button — `AVL-01`.
+- What "Add to Cart" does — `CRT-01`.
+- A product id no product has — `CAT-03`.
+- The home page behind "Home" — `CAT-04`.
+- The initial shown for a product without an image, and "No description available." for a product without a
+  description: every seeded product has both; such a product can only be created through the API — `shop-api`.
+
+## Notes
+
+- Inventory: product P6 (breadcrumb, title, heading, image, description, category, tab title), P7 ("Back to Products").

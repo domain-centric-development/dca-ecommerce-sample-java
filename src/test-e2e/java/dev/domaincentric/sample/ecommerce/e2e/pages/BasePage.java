@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
 import com.microsoft.playwright.Page;
+import dev.domaincentric.sample.ecommerce.e2e.ShopUnderTest;
 
 /**
  * Base class for all page objects, providing common methods for page interactions.
@@ -15,8 +16,7 @@ import com.microsoft.playwright.Page;
  */
 public abstract class BasePage {
 
-  protected static final String BASE_URL =
-      System.getProperty("e2e.baseUrl", "http://localhost:8080");
+  protected static final String BASE_URL = ShopUnderTest.baseUrl();
   protected final Page page;
 
   /**

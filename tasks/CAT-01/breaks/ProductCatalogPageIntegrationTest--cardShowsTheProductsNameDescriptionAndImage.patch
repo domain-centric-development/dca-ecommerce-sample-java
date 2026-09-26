@@ -1,0 +1,11 @@
+diff --git a/src/main/resources/templates/product/catalog.pug b/src/main/resources/templates/product/catalog.pug
+--- a/src/main/resources/templates/product/catalog.pug
++++ b/src/main/resources/templates/product/catalog.pug
+@@ -20,6 +20,6 @@
+           .product-card__body
+             h3.product-card__title(data-test="product-card-title") #{product.name()}
+             if product.description() != null && product.description() != ''
+-              p.product-card__description #{product.description()}
++              p.product-card__description
+             .product-card__price #{product.priceAmount()} #{product.priceCurrency()}
+             .product-card__footer

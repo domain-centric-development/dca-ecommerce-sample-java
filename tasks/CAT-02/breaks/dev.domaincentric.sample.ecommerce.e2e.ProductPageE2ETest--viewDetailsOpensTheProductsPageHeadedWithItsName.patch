@@ -1,0 +1,12 @@
+diff --git a/src/main/resources/templates/product/detail.pug b/src/main/resources/templates/product/detail.pug
+--- a/src/main/resources/templates/product/detail.pug
++++ b/src/main/resources/templates/product/detail.pug
+@@ -10,7 +10,7 @@ block content
+
+   .product-detail(data-test="product-detail")
+     .product-detail__header
+-      h1.product-detail__title #{productDetail.name()}
++      h1.product-detail__title Product
+       if productDetail.isAvailable()
+         span.badge.badge--success In Stock
+       else

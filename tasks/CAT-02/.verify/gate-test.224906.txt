@@ -1,0 +1,48 @@
+gate:pass story — CAT-02 in context product with 5 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.0)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:pass rounds — round 3 of at most 3
+gate:note decisions — no decision record for this story
+gate:pass tests-mapped — 5 test(s) mapped to 5 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#backToProductsOpensTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (back-to-products-returns-to-the-catalogue, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#breadcrumbLeadsFromHomeThroughTheCatalogueToTheProduct found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-breadcrumb, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#showsTheProductsImageDescriptionAndCategory found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-shows-image-description-and-category, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#tabIsTitledWithTheProductsName found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-title-is-the-product-name, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest#viewDetailsOpensTheProductsPageHeadedWithItsName found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java (view-details-opens-the-product-page, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#backToProductsOpensTheCatalogue passes — a journey guards what is delivered (back-to-products-returns-to-the-catalogue)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#breadcrumbLeadsFromHomeThroughTheCatalogueToTheProduct passes — a journey guards what is delivered (product-page-breadcrumb)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#showsTheProductsImageDescriptionAndCategory passes — a journey guards what is delivered (product-page-shows-image-description-and-category)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#tabIsTitledWithTheProductsName passes — a journey guards what is delivered (product-page-title-is-the-product-name)
+gate:fail tests-green — dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest#viewDetailsOpensTheProductsPageHeadedWithItsName fails, so criterion 'view-details-opens-the-product-page' is not met:
+/private/var/folders/x3/r9qm16gn2g1b60z76vpfzl740000gn/T/playwright-java-2243220625381461710/package/lib/coreBundle.js:12135:32)
+            at DispatcherConnection.dispatch (/private/var/folders/x3/r9qm16gn2g1b60z76vpfzl740000gn/T/playwright-java-2243220625381461710/package/lib/coreBundle.js:18775:44)
+        }
+        Call log:
+        -   - waiting for locator("[data-test='product-card']").first() to be visible
+            at app//com.microsoft.playwright.impl.Connection.dispatch(Connection.java:273)
+            at app//com.microsoft.playwright.impl.Connection.processOneMessage(Connection.java:229)
+            at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:145)
+            ... 9 more
+
+> Task :test-e2e FAILED
+4 actionable tasks: 1 executed, 3 up-to-date
+Configuration cache entry reused.
+
+1 test completed, 1 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test-e2e'.
+> There were failing tests. See the report at: file:///Users/christoph/Privat/samples/wp68-java/build/reports/test-e2e/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 33s
+gate:note files-listed — listed but not changed by this stage: src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java, src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductCatalogPage.java, src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java, src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java, tasks/CAT-02/breaks/dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest--viewDetailsOpensTheProductsPageHeadedWithItsName.patch
+gate:pass files-listed — tests.md lists the 0 file(s) the stage changed
+gate:pass tests-kept — no test that existed before this story changed what it expects
+gate:fail story CAT-02 stage test

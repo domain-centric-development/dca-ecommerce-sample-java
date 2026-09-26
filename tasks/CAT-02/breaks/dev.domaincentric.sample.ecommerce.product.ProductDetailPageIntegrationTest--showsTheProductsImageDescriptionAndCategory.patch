@@ -1,0 +1,12 @@
+diff --git a/src/main/resources/templates/product/detail.pug b/src/main/resources/templates/product/detail.pug
+--- a/src/main/resources/templates/product/detail.pug
++++ b/src/main/resources/templates/product/detail.pug
+@@ -34,7 +34,7 @@ block content
+
+         .product-detail__meta
+           .product-detail__meta-item
+-            span.product-detail__meta-label Category
++            span.product-detail__meta-label Genre
+             span.product-detail__meta-value #{productDetail.category()}
+           .product-detail__meta-item
+             span.product-detail__meta-label Availability

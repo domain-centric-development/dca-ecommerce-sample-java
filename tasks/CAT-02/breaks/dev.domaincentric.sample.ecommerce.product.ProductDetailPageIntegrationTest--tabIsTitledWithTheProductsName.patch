@@ -1,0 +1,11 @@
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductDetailPageViewModel.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductDetailPageViewModel.java
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductDetailPageViewModel.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductDetailPageViewModel.java
+@@ -63,6 +63,6 @@ public record ProductDetailPageViewModel(
+         product.category(),
+         product.stockQuantity(),
+         product.isAvailable(),
+-        product.name());
++        "Product");
+   }
+ }

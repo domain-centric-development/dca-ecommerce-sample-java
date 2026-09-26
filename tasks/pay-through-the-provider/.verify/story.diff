@@ -1,0 +1,1074 @@
+diff --git a/README.md b/README.md
+index 9ee714c..7112a6d 100644
+--- a/README.md
++++ b/README.md
+@@ -417,6 +417,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
+ │   │       ├── ProductInfoPort.java
+ │   │       ├── PaymentProvider.java
+ │   │       └── PaymentProviderRegistry.java
++│   ├── infrastructure/                   # Per-context infrastructure
++│   │   ├── CheckoutDomainConfiguration.java
++│   │   └── CheckoutPaymentConfiguration.java  # Binds the payment provider's address
+ │   └── adapter/                          # Adapters
+ │       ├── incoming/                     # Incoming adapters
+ │       │   ├── web/                      # Protocol first, feature below it
+@@ -447,7 +450,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
+ │           │   ├── CompositeCheckoutArticleDataAdapter.java  # Composite adapter
+ │           │   └── ProductInfoAdapter.java
+ │           └── payment/
+-│               ├── MockPaymentProvider.java
++│               ├── RestPaymentProvider.java      # ACL to the provider's REST contract, where its address is set
++│               ├── PaymentProviderProperties.java  # checkout.payment-provider.base-url
++│               ├── MockPaymentProvider.java      # The stand-in, where no address is set
+ │               └── InMemoryPaymentProviderRegistry.java
+ │
+ ├── account/                              # Account bounded context
+@@ -691,6 +696,14 @@ a page waits for a human's acceptance before it counts as delivered.
+ 
+ The application will start on `http://localhost:8080`
+ 
++Payments go to a stand-in inside the shop that authorizes every payment. To pay through a payment
++provider instead, give its address; the shop then sends `POST /payments` there and treats no answer
++within 2 seconds as an unavailable provider (contract: `project/tech.md`, `## Integrations`):
++
++```bash
++./gradlew bootRun --args='--checkout.payment-provider.base-url=https://psp.example.com'
++```
++
+ ### Running with Docker
+ 
+ No local JDK needed — the `Dockerfile` builds the jar and runs it on a JRE:
+@@ -964,11 +977,16 @@ These tests verify:
+ 
+ ### End-to-End Tests
+ 
+-`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors) and needs a
+-running instance:
++`src/test-e2e` drives the shop through a real browser (Playwright, page objects, `data-test` selectors). The suite
++starts the shop itself, once per run, in the test process and on a free port — nothing has to run beforehand:
++
++```bash
++./gradlew test-e2e
++```
++
++Against a shop started elsewhere, name its address:
+ 
+ ```bash
+-./gradlew bootRun &
+ ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080
+ ```
+ 
+diff --git a/docs/architecture/context-map.md b/docs/architecture/context-map.md
+index e1f9443..323460d 100644
+--- a/docs/architecture/context-map.md
++++ b/docs/architecture/context-map.md
+@@ -90,7 +90,7 @@ Edges labeled `planned` are declared intent without a code dependency yet.
+ | Consumer | External system | Interaction | Protocol | Exchanges | Translation | Status | Rationale |
+ |---|---|---|---|---|---|---|---|
+ | checkout | Payment Service Provider | inbound | webhook | payment confirmation (payment id, status) | ACL | planned | Will trigger order fulfillment; the payload is the provider's contract, to be translated into a local command at the incoming adapter — no webhook adapter exists yet |
+-| checkout | Payment Service Provider | outbound | REST | payment operations (initiate, confirm, refund) | ACL | implemented | Behind the caller-owned PaymentProvider port; the sample ships a mock adapter in place of a real gateway |
++| checkout | Payment Service Provider | outbound | REST | payment request (amount, currency) and its answer (authorized, refused) | ACL | implemented | Behind the caller-owned PaymentProvider port; a REST adapter translates the provider's answers where its address is configured, a stand-in takes payments otherwise |
+ 
+ ## Partnerships
+ 
+diff --git a/docs/architecture/package-structure.md b/docs/architecture/package-structure.md
+index 103d2c4..770a520 100644
+--- a/docs/architecture/package-structure.md
++++ b/docs/architecture/package-structure.md
+@@ -269,6 +269,7 @@ dev.domaincentric.sample.ecommerce
+ │           │   ├── CompositeCheckoutArticleDataAdapter
+ │           │   └── ProductInfoAdapter
+ │           └── payment/
++│               ├── RestPaymentProvider, PaymentProviderProperties
+ │               ├── MockPaymentProvider
+ │               └── InMemoryPaymentProviderRegistry
+ │
+diff --git a/gradle/plugins/test-e2e.gradle b/gradle/plugins/test-e2e.gradle
+index 35185de..226c063 100644
+--- a/gradle/plugins/test-e2e.gradle
++++ b/gradle/plugins/test-e2e.gradle
+@@ -29,13 +29,12 @@ dependencies {
+ 
+ // Register dedicated E2E test task
+ tasks.register('test-e2e', Test) {
+-  description = 'Runs E2E tests using Playwright (requires running application)'
++  description = 'Runs E2E tests using Playwright against the shop the suite starts itself on a free port'
+   group = 'verification'
+   testClassesDirs = sourceSets.testE2e.output.classesDirs
+   classpath = sourceSets.testE2e.runtimeClasspath
+ 
+-  // E2E tests should not run as part of normal build
+-  // They require a running application instance
++  // Not part of the normal build: the suite starts a browser and the shop, which takes its time
+   shouldRunAfter 'test', 'test-integration'
+ }
+ 
+@@ -47,8 +46,10 @@ tasks.named('test-e2e').configure {
+   // Increase timeout for E2E tests (browser operations can be slow)
+   systemProperty 'junit.jupiter.execution.timeout.default', '5m'
+ 
+-  // Base URL for the application under test (can be overridden)
+-  systemProperty 'e2e.baseUrl', System.getProperty('e2e.baseUrl', 'http://localhost:8080')
++  // A shop started elsewhere (the compose e2e service); without it the suite starts the shop itself
++  if (System.getProperty('e2e.baseUrl')) {
++    systemProperty 'e2e.baseUrl', System.getProperty('e2e.baseUrl')
++  }
+ 
+   // Browser configuration (chromium, firefox, webkit)
+   systemProperty 'e2e.browser', System.getProperty('e2e.browser', 'chromium')
+@@ -71,6 +72,6 @@ tasks.named('test-e2e').configure {
+   }
+ }
+ 
+-// Note: E2E tests are NOT added to check task
+-// They require manual execution with a running application:
+-//   ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080
++// Note: E2E tests are NOT added to the check task. They start the shop themselves:
++//   ./gradlew test-e2e                                        (the suite starts the shop on a free port)
++//   ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080    (against a shop started elsewhere)
+diff --git a/project/backlog/provider-payment/pay-through-the-provider.md b/project/backlog/provider-payment/pay-through-the-provider.md
+index 464abc3..9b431b8 100644
+--- a/project/backlog/provider-payment/pay-through-the-provider.md
++++ b/project/backlog/provider-payment/pay-through-the-provider.md
+@@ -19,11 +19,11 @@ paid for real, and I learn at once when the provider refuses the payment or cann
+ ### Rule: A payment the provider authorizes moves the checkout on
+ 
+ #### authorized-payment-moves-to-review (happy path)
+-- Given a checkout session at the payment step with a total of 20.00 EUR
++- Given a checkout session at the payment step
+ - And the payment provider authorizes payments
+ - When the customer pays through the payment provider
+ - Then the checkout shows the review step
+-- And the payment provider received one payment request for 20.00 EUR
++- And the payment provider received one payment request for the checkout session's total
+ 
+ ### Rule: A refused payment keeps the customer at the payment step
+ 
+diff --git a/project/domain.md b/project/domain.md
+index a6cd762..f1a5d8a 100644
+--- a/project/domain.md
++++ b/project/domain.md
+@@ -65,7 +65,7 @@ Customer/Supplier — those are three answers, not three competing names.
+ | `checkout` | `inventory` | Conformist / events | Partnership | `checkout.events.CheckoutConfirmedEvent` *implements* `inventory.events.StockReductionTrigger`; consumer in `inventory/adapter/incoming/event/StockReductionEventConsumer` |
+ | `product` | `pricing` | Conformist / events | Partnership | `product.events.ProductCreatedEvent` *implements* `pricing.events.PriceInitializationTrigger`; consumer in `pricing/adapter/incoming/event/PriceInitializationEventConsumer` |
+ | `product` | `inventory` | Conformist / events | Partnership | `product.events.ProductCreatedEvent` *implements* `inventory.events.StockInitializationTrigger`; consumer in `inventory/adapter/incoming/event/StockInitializationEventConsumer` |
+-| Payment Service Provider | `checkout` | ACL / REST (outbound), ACL / webhook (inbound, **planned**) | Conformist to the provider's contract | `@ExternalUpstream` on the checkout package; behind the caller-owned `PaymentProvider` port, with a mock adapter in place of a real gateway. No webhook adapter exists yet |
++| Payment Service Provider | `checkout` | ACL / REST (outbound), ACL / webhook (inbound, **planned**) | Conformist to the provider's contract | `@ExternalUpstream` on the checkout package; behind the caller-owned `PaymentProvider` port; `RestPaymentProvider` translates the provider's answers where its address (`checkout.payment-provider.base-url`) is configured, the stand-in `MockPaymentProvider` takes payments otherwise. No webhook adapter exists yet |
+ | `account` | `cart`, `checkout`, `product` | not declared — the dependency runs through the shared kernel | Supplier of identity | `sharedkernel.application.shared.IdentityProvider` is implemented only in `account/adapter/outgoing/security`; the incoming adapters of Cart, Checkout and Product resolve the caller through that port and hand the customer to their use cases as a command or query field. Invisible to `allowedDependencies`, which is why it is stated here. Account itself depends on no other context |
+ | `portal` | (all) | not declared | Separate Ways | Aggregation happens client-side; no Java cross-context imports |
+ | `backoffice` | (all) | not declared | Separate Ways | Consumes only Spring Modulith infrastructure (`JdbcEventPublicationLogStore`) |
+diff --git a/project/product.md b/project/product.md
+index 4a1a9c0..0cce4c4 100644
+--- a/project/product.md
++++ b/project/product.md
+@@ -48,7 +48,7 @@ The pages are designed for four sizes; a story names the size, never a pixel val
+ - Authentication by a signed token, in a cookie for the pages and in the header for the API; every
+   resource states who may use it, and a shopper only ever reaches their own cart and account.
+ - Passwords are stored hashed; no payment data is stored — payment is handed to a provider (a stand-in
+-  in the sample).
++  in the sample, unless a provider address is configured).
+ - Performance and availability are those of a demonstration: one instance, no scaling promise.
+ - The architecture rules run with every build and fail it on a violation.
+ 
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/incoming/web/checkoutcompletion/PaymentPageController.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/incoming/web/checkoutcompletion/PaymentPageController.java
+index c452965..901e319 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/incoming/web/checkoutcompletion/PaymentPageController.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/incoming/web/checkoutcompletion/PaymentPageController.java
+@@ -14,6 +14,8 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getactive
+ import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
+ import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
+ import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
++import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
++import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
+ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+ import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+ import org.springframework.stereotype.Controller;
+@@ -43,6 +45,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+ @RequestMapping("/checkout")
+ public class PaymentPageController {
+ 
++  private static final String PAYMENT_REFUSED =
++      "The payment was refused. Please choose another way to pay.";
++  private static final String PROVIDER_UNAVAILABLE =
++      "The payment provider is not available right now. Please try again later.";
++
+   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
+   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
+   private final GetPaymentProvidersInputPort getPaymentProvidersInputPort;
+@@ -149,6 +156,12 @@ public class PaymentPageController {
+ 
+       return "redirect:/checkout/review";
+ 
++    } catch (PaymentInitiationFailedException e) {
++      redirectAttributes.addFlashAttribute("error", PAYMENT_REFUSED);
++      return "redirect:/checkout/payment";
++    } catch (PaymentProviderUnavailableException e) {
++      redirectAttributes.addFlashAttribute("error", PROVIDER_UNAVAILABLE);
++      return "redirect:/checkout/payment";
+     } catch (UseCaseException | DomainException | IllegalArgumentException e) {
+       // The two base types are the checkout's own refusals. IllegalArgumentException is still
+       // here because a form field the customer typed reaches a value object unvalidated; each
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/MockPaymentProvider.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/MockPaymentProvider.java
+index 42f5a8a..01c68fd 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/MockPaymentProvider.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/MockPaymentProvider.java
+@@ -5,6 +5,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionI
+ import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
+ import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+ import java.util.UUID;
++import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+ import org.springframework.stereotype.Component;
+ 
+ /**
+@@ -16,8 +17,13 @@ import org.springframework.stereotype.Component;
+  *
+  * <p>The provider generates mock transaction references in the format "mock-{uuid}" to simulate
+  * real provider behavior.
++ *
++ * <p>It stands in only where no provider address is configured ({@code
++ * checkout.payment-provider.base-url}); with an address, {@link RestPaymentProvider} takes its
++ * place, so running the shop locally needs no provider.
+  */
+ @Component
++@ConditionalOnExpression("'${checkout.payment-provider.base-url:}'.isBlank()")
+ public class MockPaymentProvider implements PaymentProvider {
+ 
+   public static final PaymentProviderId PROVIDER_ID = PaymentProviderId.of("mock");
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/PaymentProviderProperties.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/PaymentProviderProperties.java
+new file mode 100644
+index 0000000..e712062
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/PaymentProviderProperties.java
+@@ -0,0 +1,16 @@
++package dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.payment;
++
++import org.jspecify.annotations.Nullable;
++import org.springframework.boot.context.properties.ConfigurationProperties;
++
++/**
++ * Where the payment provider answers, bound from {@code checkout.payment-provider}.
++ *
++ * <p>The sample ships no address: without one the shop pays through {@link MockPaymentProvider},
++ * with one through {@link RestPaymentProvider}.
++ *
++ * @param baseUrl the provider's base address, e.g. {@code https://psp.example.com}; blank or absent
++ *     selects the stand-in
++ */
++@ConfigurationProperties(prefix = "checkout.payment-provider")
++public record PaymentProviderProperties(@Nullable String baseUrl) {}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/RestPaymentProvider.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/RestPaymentProvider.java
+new file mode 100644
+index 0000000..42a30f8
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/adapter/outgoing/payment/RestPaymentProvider.java
+@@ -0,0 +1,140 @@
++package dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.payment;
++
++import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProvider;
++import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
++import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
++import java.io.IOException;
++import java.net.http.HttpClient;
++import java.time.Duration;
++import java.util.Objects;
++import org.jspecify.annotations.Nullable;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.HttpStatusCode;
++import org.springframework.http.MediaType;
++import org.springframework.http.client.JdkClientHttpRequestFactory;
++import org.springframework.stereotype.Component;
++import org.springframework.web.client.RestClient;
++import org.springframework.web.client.RestClient.RequestHeadersSpec.ConvertibleClientHttpResponse;
++import org.springframework.web.client.RestClientException;
++
++/**
++ * The payment provider behind its REST contract — the anti-corruption layer between checkout and
++ * the Payment Service Provider.
++ *
++ * <p>A payment is {@code POST /payments} with the amount and the currency. {@code 201} with a
++ * payment reference means authorized, {@code 402} means refused. No answer within two seconds, no
++ * connection, or any other answer counts as unavailable. The provider's wire types stay in this
++ * class; the port sees only {@link PaymentResult}.
++ *
++ * <p>The contract knows no confirmation and no cancellation, so both answer with a refusal and call
++ * nothing.
++ *
++ * <p>Active only where a provider address is configured; otherwise {@link MockPaymentProvider}
++ * stands in.
++ */
++@Component
++@ConditionalOnExpression("!'${checkout.payment-provider.base-url:}'.isBlank()")
++public class RestPaymentProvider implements PaymentProvider {
++
++  public static final PaymentProviderId PROVIDER_ID = PaymentProviderId.of("provider");
++  private static final String DISPLAY_NAME = "Payment provider";
++  private static final Duration TIMEOUT = Duration.ofSeconds(2);
++  private static final Logger LOG = LoggerFactory.getLogger(RestPaymentProvider.class);
++  private static final String NOT_IN_CONTRACT = "The payment provider's contract has no %s";
++
++  private final RestClient restClient;
++
++  public RestPaymentProvider(final PaymentProviderProperties properties) {
++    final JdkClientHttpRequestFactory requestFactory =
++        new JdkClientHttpRequestFactory(
++            // HTTP/1.1: the contract needs nothing more, and an h2c upgrade a provider cancels
++            // mid-answer would turn its refusal into an unreachable provider
++            HttpClient.newBuilder()
++                .version(HttpClient.Version.HTTP_1_1)
++                .connectTimeout(TIMEOUT)
++                .build());
++    requestFactory.setReadTimeout(TIMEOUT);
++    this.restClient =
++        RestClient.builder()
++            .baseUrl(Objects.requireNonNull(properties.baseUrl()))
++            .requestFactory(requestFactory)
++            .build();
++  }
++
++  @Override
++  public PaymentProviderId providerId() {
++    return PROVIDER_ID;
++  }
++
++  @Override
++  public String displayName() {
++    return DISPLAY_NAME;
++  }
++
++  @Override
++  public PaymentResult initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
++    final PaymentRequest request =
++        new PaymentRequest(amount.amount().toPlainString(), amount.currency().getCurrencyCode());
++    try {
++      return restClient
++          .post()
++          .uri("/payments")
++          .contentType(MediaType.APPLICATION_JSON)
++          .body(request)
++          .exchange((httpRequest, response) -> translate(response, sessionId));
++    } catch (final RestClientException e) {
++      LOG.warn("Payment request for checkout session {} failed", sessionId, e);
++      return PaymentResult.unavailable("The payment provider could not be reached");
++    }
++  }
++
++  private static PaymentResult translate(
++      final ConvertibleClientHttpResponse response, final CheckoutSessionId sessionId)
++      throws IOException {
++    final HttpStatusCode status = response.getStatusCode();
++    if (status.isSameCodeAs(HttpStatus.PAYMENT_REQUIRED)) {
++      return PaymentResult.failure("The payment provider refused the payment");
++    }
++    if (!status.isSameCodeAs(HttpStatus.CREATED)) {
++      LOG.warn("Payment provider answered {} for checkout session {}", status, sessionId);
++      return PaymentResult.unavailable("The payment provider answered " + status);
++    }
++    final PaymentAuthorization authorization = response.bodyTo(PaymentAuthorization.class);
++    if (authorization == null
++        || authorization.reference() == null
++        || authorization.reference().isBlank()) {
++      return PaymentResult.unavailable(
++          "The payment provider authorized without a payment reference");
++    }
++    return PaymentResult.success(authorization.reference());
++  }
++
++  @Override
++  public PaymentResult confirmPayment(final String providerReference) {
++    return PaymentResult.failure(NOT_IN_CONTRACT.formatted("confirmation"));
++  }
++
++  @Override
++  public PaymentResult cancelPayment(final String providerReference) {
++    return PaymentResult.failure(NOT_IN_CONTRACT.formatted("cancellation"));
++  }
++
++  /**
++   * Always {@code true}: the contract has no availability query, so unavailability shows on the
++   * payment request itself.
++   */
++  @Override
++  public boolean isAvailable() {
++    return true;
++  }
++
++  /** The provider's payment request. */
++  record PaymentRequest(String amount, String currency) {}
++
++  /** The provider's answer to an authorized payment. */
++  record PaymentAuthorization(@Nullable String reference) {}
++}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/checkoutcompletion/submitpayment/SubmitPaymentUseCase.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/checkoutcompletion/submitpayment/SubmitPaymentUseCase.java
+index f495162..b6bc556 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/checkoutcompletion/submitpayment/SubmitPaymentUseCase.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/checkoutcompletion/submitpayment/SubmitPaymentUseCase.java
+@@ -83,6 +83,9 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
+     final Money amount = snapshot.totals().total();
+ 
+     final PaymentProvider.PaymentResult initiation = provider.initiatePayment(sessionId, amount);
++    if (initiation.outcome() == PaymentProvider.PaymentResult.Outcome.UNAVAILABLE) {
++      throw new PaymentProviderUnavailableException(command.providerId());
++    }
+     if (!initiation.success()) {
+       throw new PaymentInitiationFailedException(command.providerId(), initiation.errorMessage());
+     }
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentInitiationFailedException.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentInitiationFailedException.java
+index 6092e86..08d1257 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentInitiationFailedException.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentInitiationFailedException.java
+@@ -6,8 +6,8 @@ import java.io.Serial;
+ /**
+  * Raised when the payment provider refused to open a payment for this checkout.
+  *
+- * <p>The provider's own reason is carried through unchanged; the shop has no way to judge it and
+- * the customer needs to see what the provider said.
++ * <p>The provider's own reason is carried through unchanged for logs and callers; the shop has no
++ * way to judge it. The payment page shows the customer a fixed message of its own instead.
+  */
+ public final class PaymentInitiationFailedException extends UseCaseException {
+ 
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentProvider.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentProvider.java
+index 9410a39..d9f26d9 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentProvider.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/application/shared/PaymentProvider.java
+@@ -74,18 +74,36 @@ public interface PaymentProvider extends OutputPort {
+   /**
+    * Result of a payment operation.
+    *
+-   * @param success whether the operation succeeded
++   * @param outcome whether the provider accepted, refused, or could not be reached
+    * @param providerReference unique reference from the provider for tracking
+-   * @param errorMessage error message if the operation failed, null otherwise
++   * @param errorMessage error message if the operation did not succeed, null otherwise
+    */
+-  record PaymentResult(boolean success, String providerReference, String errorMessage) {
++  record PaymentResult(Outcome outcome, String providerReference, String errorMessage) {
++
++    /** What the provider made of the operation. */
++    public enum Outcome {
++      /** The provider accepted the operation and gave a reference. */
++      SUCCEEDED,
++      /** The provider answered and refused the operation. */
++      REFUSED,
++      /** The provider did not answer in time, could not be reached, or answered unintelligibly. */
++      UNAVAILABLE
++    }
+ 
+     public static PaymentResult success(final String providerReference) {
+-      return new PaymentResult(true, providerReference, null);
++      return new PaymentResult(Outcome.SUCCEEDED, providerReference, null);
+     }
+ 
+     public static PaymentResult failure(final String errorMessage) {
+-      return new PaymentResult(false, null, errorMessage);
++      return new PaymentResult(Outcome.REFUSED, null, errorMessage);
++    }
++
++    public static PaymentResult unavailable(final String errorMessage) {
++      return new PaymentResult(Outcome.UNAVAILABLE, null, errorMessage);
++    }
++
++    public boolean success() {
++      return outcome == Outcome.SUCCEEDED;
+     }
+   }
+ }
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/domain/glossary.md b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/domain/glossary.md
+index bd69ec4..da55340 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/domain/glossary.md
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/domain/glossary.md
+@@ -261,11 +261,14 @@ Kernel should be used here.
+ 
+ ### PaymentProviderId
+ 
+-**Definition:** Identifier of an external payment provider. The sample registers a single one,
+-`mock`, standing in for a real provider such as Stripe, PayPal or invoice.
++**Definition:** Identifier of an external payment provider. The shop registers a single one:
++`provider`, the payment provider behind its REST contract, where a provider address
++(`checkout.payment-provider.base-url`) is configured; `mock`, the payment stand-in, otherwise.
+ 
+ **Type:** Value Object (ID)
+ 
++**Related terms:** `PaymentResult`, `PaymentSelection`.
++
+ ### ArticlePrice
+ 
+ **Definition:** Bundle of current article price, availability, and stock level returned by the
+@@ -491,8 +494,33 @@ Session and cart lookups are scoped to the caller, so "not yours" reads as "not
+ 
+ ### PaymentProviderNotFound · PaymentProviderUnavailable · PaymentInitiationFailed
+ 
+-**Definition:** The selected provider is unknown to the shop, known but not taking payments right now, or refused
+-to open a payment. The provider's own reason travels through unchanged.
++**Definition:** The selected provider is unknown to the shop, known but not taking payments right now (an
++unavailable provider), or refused to open a payment (a refused payment). The provider's own reason travels
++through unchanged for logs and callers; the payment page shows the customer a fixed message of its own for a
++refused payment and for an unavailable provider.
++
++**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `PaymentProviderRegistry`, `PaymentProvider`,
++`PaymentResult`
++
++---
++
++### PaymentResult
++
++**Definition:** What the payment provider made of a payment operation, as checkout understands it. A payment
++request carries the checkout session's total amount and currency to the provider; its outcome is one of:
++
++- `SUCCEEDED` — an **authorized payment**: the provider accepted it and gave a payment reference. Only then
++  does the session record its `PaymentSelection` and publish `PaymentSubmitted`.
++- `REFUSED` — a **refused payment**: the provider answered and declined. The checkout stays at the payment
++  step (`PaymentInitiationFailed`).
++- `UNAVAILABLE` — an **unavailable provider**: no answer within 2 seconds, no connection, or an answer outside
++  the provider's contract. The checkout stays at the payment step (`PaymentProviderUnavailable`).
++
++**Type:** Concept (result of the `PaymentProvider` output port)
++
++**Related terms:** `PaymentProviderId`, `PaymentSelection`, `PaymentSubmitted`.
+ 
+-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `PaymentProviderRegistry`, `PaymentProvider`
++**Notes:** The **payment stand-in** (`MockPaymentProvider`, id `mock`) authorizes every payment and takes
++payments where no provider address is configured. The provider's contract has no confirmation or cancellation;
++the REST adapter answers both with `REFUSED` without asking the provider.
+ 
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/infrastructure/CheckoutPaymentConfiguration.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/infrastructure/CheckoutPaymentConfiguration.java
+new file mode 100644
+index 0000000..10c85d1
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/infrastructure/CheckoutPaymentConfiguration.java
+@@ -0,0 +1,12 @@
++package dev.domaincentric.sample.ecommerce.checkout.infrastructure;
++
++import dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.payment.PaymentProviderProperties;
++import org.springframework.boot.context.properties.EnableConfigurationProperties;
++import org.springframework.context.annotation.Configuration;
++
++/**
++ * Binds the payment provider's address, which decides between the REST adapter and the stand-in.
++ */
++@Configuration
++@EnableConfigurationProperties(PaymentProviderProperties.class)
++public class CheckoutPaymentConfiguration {}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/package-info.java b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/package-info.java
+index 47ef85a..14419bf 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/checkout/package-info.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/checkout/package-info.java
+@@ -46,10 +46,10 @@
+     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
+     interaction = ExternalUpstream.Interaction.OUTBOUND,
+     protocol = "REST",
+-    exchanges = "payment operations (initiate, confirm, refund)",
++    exchanges = "payment request (amount, currency) and its answer (authorized, refused)",
+     rationale =
+-        "Behind the caller-owned PaymentProvider port; the sample ships a mock adapter in place"
+-            + " of a real gateway")
++        "Behind the caller-owned PaymentProvider port; a REST adapter translates the provider's"
++            + " answers where its address is configured, a stand-in takes payments otherwise")
+ @ExternalUpstream(
+     name = "Payment Service Provider",
+     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
+diff --git a/src/main/resources/templates/checkout/review.pug b/src/main/resources/templates/checkout/review.pug
+index 2a49c0b..a52f0e7 100644
+--- a/src/main/resources/templates/checkout/review.pug
++++ b/src/main/resources/templates/checkout/review.pug
+@@ -99,7 +99,7 @@ block content
+               span #{orderReview.totals().tax()} #{orderReview.totals().currencyCode()}
+           .order-summary__total
+             span Total
+-            span #{orderReview.totals().total()} #{orderReview.totals().currencyCode()}
++            span(data-test="review-total") #{orderReview.totals().total()} #{orderReview.totals().currencyCode()}
+ 
+     .review__actions
+       a.btn.btn--secondary(href="/checkout/payment" data-test="review-back-link") Back
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java
+index a447d6c..3b7e0df 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java
+@@ -29,7 +29,8 @@ import org.junit.jupiter.api.extension.TestWatcher;
+  * <p>Configuration properties:
+  *
+  * <ul>
+- *   <li>{@code e2e.baseUrl} - Base URL for the application (default: http://localhost:8080)
++ *   <li>{@code e2e.baseUrl} - Base URL of a shop started elsewhere (default: the suite starts the
++ *       shop itself, in this process, on a free port)
+  *   <li>{@code e2e.browser} - Browser to use: chromium, firefox, webkit (default: chromium)
+  *   <li>{@code e2e.headless} - Run in headless mode (default: true)
+  * </ul>
+@@ -37,13 +38,12 @@ import org.junit.jupiter.api.extension.TestWatcher;
+  * <p>Usage example:
+  *
+  * <pre>{@code
+- * ./gradlew test-e2e -De2e.baseUrl=http://localhost:8080 -De2e.headless=false
++ * ./gradlew test-e2e -De2e.headless=false
+  * }</pre>
+  */
+ public abstract class BaseE2ETest {
+ 
+-  protected static final String BASE_URL =
+-      System.getProperty("e2e.baseUrl", "http://localhost:8080");
++  protected static final String BASE_URL = ShopUnderTest.baseUrl();
+   protected static final String BROWSER_TYPE = System.getProperty("e2e.browser", "chromium");
+   protected static final boolean HEADLESS =
+       Boolean.parseBoolean(System.getProperty("e2e.headless", "true"));
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProviderPaymentE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProviderPaymentE2ETest.java
+new file mode 100644
+index 0000000..6258227
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProviderPaymentE2ETest.java
+@@ -0,0 +1,67 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import static com.github.tomakehurst.wiremock.client.WireMock.post;
++import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
++import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++import static org.junit.jupiter.api.Assumptions.assumeTrue;
++
++import com.fasterxml.jackson.databind.JsonNode;
++import com.fasterxml.jackson.databind.ObjectMapper;
++import com.github.tomakehurst.wiremock.WireMockServer;
++import com.github.tomakehurst.wiremock.verification.LoggedRequest;
++import dev.domaincentric.sample.ecommerce.e2e.pages.*;
++import java.math.BigDecimal;
++import java.util.List;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++
++/** Paying at checkout through the payment provider the shop is pointed at. */
++@DisplayName("Provider Payment E2E Tests")
++class ProviderPaymentE2ETest extends BaseE2ETest {
++
++  private WireMockServer paymentProvider;
++
++  @BeforeEach
++  void takeThePaymentProvider() {
++    paymentProvider = ShopUnderTest.paymentProvider().orElse(null);
++    assumeTrue(
++        paymentProvider != null,
++        "the shop was started elsewhere (e2e.baseUrl): its payment provider is not the suite's");
++  }
++
++  @Test
++  @DisplayName("A payment the provider authorizes moves the checkout on to the review step")
++  void authorizedPaymentMovesTheCheckoutToReview() throws Exception {
++    PaymentPage payment = checkoutAtThePaymentStep();
++    paymentProvider.stubFor(post("/payments").willReturn(ShopUnderTest.authorized()));
++    paymentProvider.resetRequests();
++
++    ReviewPage review = payment.selectFirstPaymentProvider().continueToReview();
++
++    assertTrue(review.showsEmail("guest@example.com"), "the checkout shows the review step");
++    List<LoggedRequest> requests =
++        paymentProvider.findAll(postRequestedFor(urlEqualTo("/payments")));
++    assertEquals(1, requests.size(), "the payment provider received one payment request");
++    String[] total = review.total().split("\\s+");
++    JsonNode request = new ObjectMapper().readTree(requests.getFirst().getBodyAsString());
++    assertEquals(
++        0,
++        new BigDecimal(total[0]).compareTo(new BigDecimal(request.get("amount").asText())),
++        "the payment request is for the checkout session's total " + review.total());
++    assertEquals(total[1], request.get("currency").asText(), "the payment request's currency");
++  }
++
++  private PaymentPage checkoutAtThePaymentStep() {
++    ProductCatalogPage.navigateTo(page).viewFirstProduct().addToCart();
++    return CartPage.navigateTo(page)
++        .proceedToCheckout()
++        .fillBuyerInfo("guest@example.com", "Test", "Guest", "+1-555-0100")
++        .continueToDelivery()
++        .fillAddress("123 Main Street", "Springfield", "12345", "United States", "IL")
++        .selectFirstShippingOption()
++        .continueToPayment();
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java
+new file mode 100644
+index 0000000..ba54fae
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java
+@@ -0,0 +1,77 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
++import static com.github.tomakehurst.wiremock.client.WireMock.post;
++import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
++
++import com.github.tomakehurst.wiremock.WireMockServer;
++import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
++import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
++import java.util.Optional;
++import org.springframework.boot.SpringApplication;
++import org.springframework.context.ConfigurableApplicationContext;
++
++/**
++ * The shop the browser suite drives: started once per test JVM, in this process, on a free port.
++ *
++ * <p>With {@code -De2e.baseUrl=<url>} the suite drives a shop started elsewhere instead (the
++ * compose {@code e2e} service does that); without it, nothing has to run beforehand and every
++ * dependency the shop needs in its default profile starts with it — the payment provider included:
++ * a stub on a free port that authorizes every payment until a test arranges another answer.
++ */
++public final class ShopUnderTest {
++
++  private static ConfigurableApplicationContext shop;
++  private static WireMockServer paymentProvider;
++
++  private ShopUnderTest() {}
++
++  public static synchronized String baseUrl() {
++    String given = System.getProperty("e2e.baseUrl", "");
++    if (!given.isBlank()) {
++      return given;
++    }
++    if (shop == null) {
++      paymentProvider = authorizingPaymentProvider();
++      shop =
++          SpringApplication.run(
++              EcommerceSampleApplication.class,
++              "--server.port=0",
++              "--checkout.payment-provider.base-url=" + paymentProvider.baseUrl());
++      Runtime.getRuntime().addShutdownHook(new Thread(shop::close));
++      Runtime.getRuntime().addShutdownHook(new Thread(paymentProvider::stop));
++    }
++    return "http://localhost:" + shop.getEnvironment().getProperty("local.server.port");
++  }
++
++  /**
++   * The payment provider the shop pays through, for a test to arrange its answers and count its
++   * requests. Empty when the suite drives a shop started elsewhere: that shop's provider is not the
++   * suite's to control.
++   *
++   * @return the provider stub, or empty
++   */
++  public static synchronized Optional<WireMockServer> paymentProvider() {
++    baseUrl();
++    return Optional.ofNullable(paymentProvider);
++  }
++
++  private static WireMockServer authorizingPaymentProvider() {
++    WireMockServer provider = new WireMockServer(wireMockConfig().dynamicPort());
++    provider.start();
++    provider.stubFor(post("/payments").willReturn(authorized()));
++    return provider;
++  }
++
++  /**
++   * The provider's answer to a payment it authorizes: {@code 201} with a payment reference.
++   *
++   * @return the answer, for a test to arrange again
++   */
++  public static ResponseDefinitionBuilder authorized() {
++    return aResponse()
++        .withStatus(201)
++        .withHeader("Content-Type", "application/json")
++        .withBody("{\"reference\": \"pay-e2e\"}");
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java
+index eb05ed8..c72dc5c 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/BasePage.java
+@@ -1,6 +1,7 @@
+ package dev.domaincentric.sample.ecommerce.e2e.pages;
+ 
+ import com.microsoft.playwright.Page;
++import dev.domaincentric.sample.ecommerce.e2e.ShopUnderTest;
+ 
+ /**
+  * Base class for all page objects, providing common methods for page interactions.
+@@ -15,8 +16,7 @@ import com.microsoft.playwright.Page;
+  */
+ public abstract class BasePage {
+ 
+-  protected static final String BASE_URL =
+-      System.getProperty("e2e.baseUrl", "http://localhost:8080");
++  protected static final String BASE_URL = ShopUnderTest.baseUrl();
+   protected final Page page;
+ 
+   /**
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ReviewPage.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ReviewPage.java
+index 16b5dc7..21ac88d 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ReviewPage.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ReviewPage.java
+@@ -11,6 +11,7 @@ public class ReviewPage extends BasePage {
+ 
+   private static final String URL_PATTERN = "/checkout/review";
+   private static final String PLACE_ORDER_BUTTON = "review-place-order-button";
++  private static final String TOTAL = "review-total";
+ 
+   /**
+    * Creates a new ReviewPage and waits for it to load.
+@@ -41,6 +42,15 @@ public class ReviewPage extends BasePage {
+     return pageContains(address);
+   }
+ 
++  /**
++   * Reads the checkout session's total as the page shows it.
++   *
++   * @return the amount and the currency code, e.g. {@code "45.98 EUR"}
++   */
++  public String total() {
++    return page.locator("[data-test='" + TOTAL + "']").textContent().trim();
++  }
++
+   /**
+    * Clicks the place order button to complete the purchase.
+    *
+diff --git a/src/test-integration/java/dev/domaincentric/sample/ecommerce/checkout/ProviderPaymentIntegrationTest.java b/src/test-integration/java/dev/domaincentric/sample/ecommerce/checkout/ProviderPaymentIntegrationTest.java
+new file mode 100644
+index 0000000..1e1362d
+--- /dev/null
++++ b/src/test-integration/java/dev/domaincentric/sample/ecommerce/checkout/ProviderPaymentIntegrationTest.java
+@@ -0,0 +1,246 @@
++package dev.domaincentric.sample.ecommerce.checkout;
++
++import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
++import static com.github.tomakehurst.wiremock.client.WireMock.post;
++import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++
++import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
++import com.github.tomakehurst.wiremock.http.Fault;
++import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
++import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
++import jakarta.servlet.http.Cookie;
++import java.util.LinkedHashMap;
++import java.util.Map;
++import org.jsoup.Jsoup;
++import org.jsoup.nodes.Document;
++import org.jsoup.nodes.Element;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.extension.RegisterExtension;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
++import org.springframework.test.context.DynamicPropertyRegistry;
++import org.springframework.test.context.DynamicPropertySource;
++import org.springframework.test.web.servlet.MockMvc;
++import org.springframework.test.web.servlet.MvcResult;
++import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
++import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
++
++/**
++ * Paying on the payment page through the payment provider's REST contract ({@code POST /payments}:
++ * {@code 201} authorized, {@code 402} refused, no answer within 2 seconds unavailable). The
++ * provider is a stub on a free port; the shop's provider address points at it.
++ */
++// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
++// context — so this class gets a database of its own.
++@SpringBootTest(
++    classes = EcommerceSampleApplication.class,
++    properties =
++        "spring.datasource.url=jdbc:h2:mem:provider_payment;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
++@AutoConfigureMockMvc
++class ProviderPaymentIntegrationTest {
++
++  private static final String REFUSED =
++      "The payment was refused. Please choose another way to pay.";
++  private static final String UNAVAILABLE =
++      "The payment provider is not available right now. Please try again later.";
++
++  @RegisterExtension
++  static WireMockExtension paymentProvider =
++      WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
++
++  @DynamicPropertySource
++  static void pointTheShopAtTheProvider(final DynamicPropertyRegistry registry) {
++    registry.add("checkout.payment-provider.base-url", paymentProvider::baseUrl);
++  }
++
++  @Autowired private MockMvc mockMvc;
++
++  private final Map<String, Cookie> cookies = new LinkedHashMap<>();
++
++  @BeforeEach
++  void forgetTheVisitor() {
++    cookies.clear();
++  }
++
++  @Test
++  @DisplayName("A payment the provider refuses keeps the customer at the payment step")
++  void refusedPaymentKeepsTheCustomerAtThePaymentStep() throws Exception {
++    final String providerId = checkoutAtThePaymentStep();
++    providerAnswers(aResponse().withStatus(402));
++
++    final MvcResult payment = pay(providerId);
++
++    assertStaysAtThePaymentStep(payment);
++    assertThat(errorShownAfter(payment)).isEqualTo(REFUSED);
++  }
++
++  @Test
++  @DisplayName("A provider that answers only after 5 seconds counts as unavailable")
++  void slowProviderCountsAsUnavailable() throws Exception {
++    final String providerId = checkoutAtThePaymentStep();
++    providerAnswers(
++        aResponse()
++            .withStatus(201)
++            .withHeader("Content-Type", "application/json")
++            .withBody("{\"reference\": \"pay-slow\"}")
++            .withFixedDelay(5_000));
++
++    final MvcResult payment = pay(providerId);
++
++    assertStaysAtThePaymentStep(payment);
++    assertThat(errorShownAfter(payment)).isEqualTo(UNAVAILABLE);
++  }
++
++  @Test
++  @DisplayName("A provider answering with a server error counts as unavailable")
++  void providerServerErrorCountsAsUnavailable() throws Exception {
++    final String providerId = checkoutAtThePaymentStep();
++    providerAnswers(aResponse().withStatus(500));
++
++    final MvcResult payment = pay(providerId);
++
++    assertStaysAtThePaymentStep(payment);
++    assertThat(errorShownAfter(payment)).isEqualTo(UNAVAILABLE);
++  }
++
++  @Test
++  @DisplayName("A provider that drops the connection counts as unavailable")
++  void droppedConnectionCountsAsUnavailable() throws Exception {
++    final String providerId = checkoutAtThePaymentStep();
++    providerAnswers(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER));
++
++    final MvcResult payment = pay(providerId);
++
++    assertStaysAtThePaymentStep(payment);
++    assertThat(errorShownAfter(payment)).isEqualTo(UNAVAILABLE);
++  }
++
++  private void providerAnswers(final ResponseDefinitionBuilder answer) {
++    paymentProvider.stubFor(post("/payments").willReturn(answer));
++  }
++
++  private MvcResult pay(final String providerId) throws Exception {
++    return submit("/checkout/payment", page("/checkout/payment"), "providerId", providerId);
++  }
++
++  /** The form post went back to the payment page, and the review step is still closed. */
++  private void assertStaysAtThePaymentStep(final MvcResult payment) throws Exception {
++    assertThat(payment.getResponse().getRedirectedUrl()).isEqualTo("/checkout/payment");
++    assertThat(perform(get("/checkout/review")).getResponse().getRedirectedUrl())
++        .isEqualTo("/checkout/payment");
++  }
++
++  /** The payment page the redirect leads to, with the message the redirect carried. */
++  private String errorShownAfter(final MvcResult payment) throws Exception {
++    final MvcResult page = perform(get("/checkout/payment").flashAttrs(payment.getFlashMap()));
++    final Element error =
++        Jsoup.parse(page.getResponse().getContentAsString())
++            .selectFirst("[data-test=payment-error-message]");
++    assertThat(error).as("the payment page shows an error").isNotNull();
++    return error.text();
++  }
++
++  /**
++   * A guest's checkout at the payment step: a product in the cart, checkout started, buyer and
++   * delivery filled in — all through the pages, so the session is the visitor's own.
++   *
++   * @return the id of the first payment provider the payment page offers
++   */
++  private String checkoutAtThePaymentStep() throws Exception {
++    final String productId =
++        page("/products").selectFirst("a[href^=/products/]").attr("href").substring(10);
++    submit(
++        "/cart/add-product",
++        page("/products/" + productId),
++        "productId",
++        productId,
++        "quantity",
++        "1");
++
++    final Document cart = page("/cart");
++    submit("/checkout/start", cart, "cartId", cart.selectFirst("input[name=cartId]").val());
++
++    submit(
++        "/checkout/buyer",
++        page("/checkout/buyer"),
++        "email",
++        "guest@example.com",
++        "firstName",
++        "Test",
++        "lastName",
++        "Guest",
++        "phone",
++        "+1-555-0100");
++
++    final Document delivery = page("/checkout/delivery");
++    final Element option =
++        delivery.selectFirst("[data-test=delivery-shipping-radio]").closest(".option-card");
++    submit(
++        "/checkout/delivery",
++        delivery,
++        "street",
++        "123 Main Street",
++        "city",
++        "Springfield",
++        "postalCode",
++        "12345",
++        "country",
++        "United States",
++        "state",
++        "IL",
++        "shippingOptionId",
++        option.selectFirst("input[name=shippingOptionId]").val(),
++        "shippingOptionName",
++        option.selectFirst("input[name=shippingOptionName]").val(),
++        "estimatedDelivery",
++        option.selectFirst("input[name=estimatedDelivery]").val(),
++        "shippingCost",
++        option.selectFirst("input[name=shippingCost]").val(),
++        "currencyCode",
++        option.selectFirst("input[name=currencyCode]").val());
++
++    return page("/checkout/payment").selectFirst("[data-test=payment-provider-radio]").val();
++  }
++
++  private Document page(final String path) throws Exception {
++    final MvcResult result = perform(get(path));
++    assertThat(result.getResponse().getStatus()).as("GET " + path).isEqualTo(200);
++    return Jsoup.parse(result.getResponse().getContentAsString());
++  }
++
++  /**
++   * Posts a form the way the browser does: with the page's CSRF field and the visitor's cookies.
++   */
++  private MvcResult submit(final String path, final Document formPage, final String... fields)
++      throws Exception {
++    final MockHttpServletRequestBuilder request =
++        MockMvcRequestBuilders.post(path)
++            .param("_csrf", formPage.selectFirst("input[name=_csrf]").val());
++    for (int i = 0; i < fields.length; i += 2) {
++      request.param(fields[i], fields[i + 1]);
++    }
++    final MvcResult result = perform(request);
++    assertThat(result.getResponse().getStatus()).as("POST " + path).isEqualTo(302);
++    return result;
++  }
++
++  private MvcResult perform(final MockHttpServletRequestBuilder request) throws Exception {
++    if (!cookies.isEmpty()) {
++      request.cookie(cookies.values().toArray(Cookie[]::new));
++    }
++    final MvcResult result = mockMvc.perform(request).andReturn();
++    for (final Cookie cookie : result.getResponse().getCookies()) {
++      if (cookie.getMaxAge() == 0) {
++        cookies.remove(cookie.getName());
++      } else {
++        cookies.put(cookie.getName(), cookie);
++      }
++    }
++    return result;
++  }
++}

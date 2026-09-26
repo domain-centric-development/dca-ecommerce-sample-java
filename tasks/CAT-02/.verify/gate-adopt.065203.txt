@@ -1,0 +1,25 @@
+gate:pass story — CAT-02 in context product with 5 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.39.4)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:pass rounds — round 2 of at most 3
+gate:pass decisions — CAT-02-01 applied ("a — accepted: the change came from a commit outside this story (the browser suite now starts the shop itself); the story's own tests pass on it." by Christoph Bloemer)
+gate:pass tests-mapped — 5 test(s) mapped to 5 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#backToProductsOpensTheCatalogue found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (back-to-products-returns-to-the-catalogue, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#breadcrumbLeadsFromHomeThroughTheCatalogueToTheProduct found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-breadcrumb, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#showsTheProductsImageDescriptionAndCategory found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-shows-image-description-and-category, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#tabIsTitledWithTheProductsName found in src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductDetailPageIntegrationTest.java (product-page-title-is-the-product-name, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest#viewDetailsOpensTheProductsPageHeadedWithItsName found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductPageE2ETest.java (view-details-opens-the-product-page, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#backToProductsOpensTheCatalogue passes — a journey guards what is delivered (back-to-products-returns-to-the-catalogue)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#breadcrumbLeadsFromHomeThroughTheCatalogueToTheProduct passes — a journey guards what is delivered (product-page-breadcrumb)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#showsTheProductsImageDescriptionAndCategory passes — a journey guards what is delivered (product-page-shows-image-description-and-category)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#tabIsTitledWithTheProductsName passes — a journey guards what is delivered (product-page-title-is-the-product-name)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest#viewDetailsOpensTheProductsPageHeadedWithItsName passes — a journey guards what is delivered (view-details-opens-the-product-page)
+gate:pass adopt-judged — the judge confirmed that the tests prove the scenarios
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.e2e.ProductPageE2ETest#viewDetailsOpensTheProductsPageHeadedWithItsName (view-details-opens-the-product-page): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#showsTheProductsImageDescriptionAndCategory (product-page-shows-image-description-and-category): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#tabIsTitledWithTheProductsName (product-page-title-is-the-product-name): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#breadcrumbLeadsFromHomeThroughTheCatalogueToTheProduct (product-page-breadcrumb): red under its break, on a scratch copy
+gate:pass break-proof — dev.domaincentric.sample.ecommerce.product.ProductDetailPageIntegrationTest#backToProductsOpensTheCatalogue (back-to-products-returns-to-the-catalogue): red under its break, on a scratch copy
+gate:pass story CAT-02 stage adopt

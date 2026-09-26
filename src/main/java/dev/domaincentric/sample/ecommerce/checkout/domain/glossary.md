@@ -261,10 +261,13 @@ Kernel should be used here.
 
 ### PaymentProviderId
 
-**Definition:** Identifier of an external payment provider. The sample registers a single one,
-`mock`, standing in for a real provider such as Stripe, PayPal or invoice.
+**Definition:** Identifier of an external payment provider. The shop registers a single one:
+`provider`, the payment provider behind its REST contract, where a provider address
+(`checkout.payment-provider.base-url`) is configured; `mock`, the payment stand-in, otherwise.
 
 **Type:** Value Object (ID)
+
+**Related terms:** `PaymentResult`, `PaymentSelection`.
 
 ### ArticlePrice
 
@@ -491,8 +494,33 @@ Session and cart lookups are scoped to the caller, so "not yours" reads as "not 
 
 ### PaymentProviderNotFound · PaymentProviderUnavailable · PaymentInitiationFailed
 
-**Definition:** The selected provider is unknown to the shop, known but not taking payments right now, or refused
-to open a payment. The provider's own reason travels through unchanged.
+**Definition:** The selected provider is unknown to the shop, known but not taking payments right now (an
+unavailable provider), or refused to open a payment (a refused payment). The provider's own reason travels
+through unchanged for logs and callers; the payment page shows the customer a fixed message of its own for a
+refused payment and for an unavailable provider.
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `PaymentProviderRegistry`, `PaymentProvider`
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `PaymentProviderRegistry`, `PaymentProvider`,
+`PaymentResult`
+
+---
+
+### PaymentResult
+
+**Definition:** What the payment provider made of a payment operation, as checkout understands it. A payment
+request carries the checkout session's total amount and currency to the provider; its outcome is one of:
+
+- `SUCCEEDED` — an **authorized payment**: the provider accepted it and gave a payment reference. Only then
+  does the session record its `PaymentSelection` and publish `PaymentSubmitted`.
+- `REFUSED` — a **refused payment**: the provider answered and declined. The checkout stays at the payment
+  step (`PaymentInitiationFailed`).
+- `UNAVAILABLE` — an **unavailable provider**: no answer within 2 seconds, no connection, or an answer outside
+  the provider's contract. The checkout stays at the payment step (`PaymentProviderUnavailable`).
+
+**Type:** Concept (result of the `PaymentProvider` output port)
+
+**Related terms:** `PaymentProviderId`, `PaymentSelection`, `PaymentSubmitted`.
+
+**Notes:** The **payment stand-in** (`MockPaymentProvider`, id `mock`) authorizes every payment and takes
+payments where no provider address is configured. The provider's contract has no confirmation or cancellation;
+the REST adapter answers both with `REFUSED` without asking the provider.
 

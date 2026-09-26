@@ -1,0 +1,17 @@
+gate:pass story — pay-through-the-provider in context checkout with 3 criterion(s)
+gate:pass contract — profile and gate agree on contract 9 (gate 0.38.3)
+gate:pass approved — story is approved
+gate:pass epic — epic 'provider-payment' complete (intent, goal, metric, domain_contact)
+gate:pass decisions — pay-through-the-provider-01 applied by stage plan ("The end-user suite starts the shop itself, in the test process and on a free port (done in this sample's e2e base since 2026-09-26). The payment provider's stub belongs to the suite: it starts with the shop, the shop's provider address points at it, and each test arranges the stub's answers. The story no longer names 20.00 EUR: the provider receives one payment request for the checkout session's total." by Christoph Bloemer) — stamped in .agents/factory/decisions/pay-through-the-provider-01.md
+gate:pass tests-mapped — 3 test(s) mapped to 3 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.ProviderPaymentE2ETest#authorizedPaymentMovesTheCheckoutToReview found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProviderPaymentE2ETest.java (authorized-payment-moves-to-review, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.checkout.ProviderPaymentIntegrationTest#refusedPaymentKeepsTheCustomerAtThePaymentStep found in src/test-integration/java/dev/domaincentric/sample/ecommerce/checkout/ProviderPaymentIntegrationTest.java (refused-payment-stays-at-payment, by a file named after the class)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.checkout.ProviderPaymentIntegrationTest#slowProviderCountsAsUnavailable found in src/test-integration/java/dev/domaincentric/sample/ecommerce/checkout/ProviderPaymentIntegrationTest.java (slow-provider-counts-as-unavailable, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-red — dev.domaincentric.sample.ecommerce.e2e.ProviderPaymentE2ETest#authorizedPaymentMovesTheCheckoutToReview is red (authorized-payment-moves-to-review, via `e2eTest:`, report by the display name declared in the code ('A payment the provider authorizes moves the checkout on to the review step'))
+gate:pass tests-red — dev.domaincentric.sample.ecommerce.checkout.ProviderPaymentIntegrationTest#refusedPaymentKeepsTheCustomerAtThePaymentStep is red (refused-payment-stays-at-payment, via `test.integration:`, report by the display name declared in the code ('A payment the provider refuses keeps the customer at the payment step'))
+gate:pass tests-red — dev.domaincentric.sample.ecommerce.checkout.ProviderPaymentIntegrationTest#slowProviderCountsAsUnavailable is red (slow-provider-counts-as-unavailable, via `test.integration:`, report by the display name declared in the code ('A provider that answers only after 5 seconds counts as unavailable'))
+gate:pass levels — every end-user test belongs to the happy path or a browser-only scenario
+gate:pass files-listed — tests.md lists the 4 file(s) the stage changed
+gate:fail tests-kept — src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/BaseE2ETest.java existed before this story and no longer expects what it did, and the plan's `## Changed tests` does not list it. Keep the old lines and add a case — or, where the story changes that behaviour, the plan lists the test with what backs the change.
+gate:fail story pay-through-the-provider stage test
