@@ -66,6 +66,8 @@ logging:
   level:
     dev.domaincentric.sample.ecommerce: INFO
     org.springframework.web: INFO
+    # the staleness check runs every second (ADR-026) and logs each empty pass at INFO
+    org.springframework.modulith.events.core.DefaultEventPublicationRegistry: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
 
