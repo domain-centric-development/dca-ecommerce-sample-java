@@ -1,0 +1,4 @@
+modified	README.md
+modified	docs/architecture/package-structure.md
+modified	src/main/java/dev/domaincentric/sample/ecommerce/portal/domain/glossary.md
+modified	src/main/java/dev/domaincentric/sample/ecommerce/product/domain/glossary.md

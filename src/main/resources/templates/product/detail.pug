@@ -10,7 +10,7 @@ block content
 
   .product-detail(data-test="product-detail")
     .product-detail__header
-      h1.product-detail__title #{productDetail.name()}
+      h1.product-detail__title(data-test="product-detail-title") #{productDetail.name()}
       if productDetail.isAvailable()
         span.badge.badge--success In Stock
       else
@@ -25,7 +25,7 @@ block content
 
       .product-detail__info
         .product-detail__price
-          span #{productDetail.priceAmount()} #{productDetail.priceCurrency()}
+          span(data-test="product-detail-price") #{productDetail.priceAmount()} #{productDetail.priceCurrency()}
           span.product-detail__price-label Retail Price
 
         if productDetail.description() != null && productDetail.description() != ''

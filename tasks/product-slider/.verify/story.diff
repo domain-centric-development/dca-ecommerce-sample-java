@@ -1,0 +1,2020 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 57f1baf..438645f 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -84,6 +84,12 @@ This is a **sample e-commerce application** demonstrating best practices for:
+ **Purpose:**
+ This project serves as a reference implementation showing how to properly structure an enterprise application using modern architectural patterns.
+ 
++**One markup for both shops.** The .NET sample (`../dca-ecommerce-sample-dotnet/`) renders the same pages: the
++same routes, CSS classes, `data-test` attributes and `main.css`, so either browser suite runs against either shop.
++A page change the .NET sample delivered first is taken over from there — its views under
++`src/DcaShop.Web/Views/` and its `src/DcaShop.Web/wwwroot/css/main.css` — not named anew; a change delivered here
++first is the one the .NET sample takes over.
++
+ ## Development Workflow
+ 
+ ### Standard Development Process
+diff --git a/README.md b/README.md
+index 12d01a4..035b9b5 100644
+--- a/README.md
++++ b/README.md
+@@ -117,6 +117,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
+ │   │   │   ├── EnrichedProduct.java      # Enriched read model
+ │   │   │   ├── Category.java
+ │   │   │   ├── ImageUrl.java
++│   │   │   ├── ProductSelection.java     # Homepage slider's random draw
+ │   │   │   └── ProductFactory.java       # Factory
+ │   │   └── event/                        # Domain events
+ │   │       ├── ProductCreated.java
+@@ -139,6 +140,11 @@ src/main/java/dev/domaincentric/sample/ecommerce/
+ │   │   │   ├── GetProductByIdUseCase.java
+ │   │   │   ├── GetProductByIdQuery.java
+ │   │   │   └── GetProductByIdResult.java
++│   │   ├── getproductselection/          # Use case: Get Product Selection
++│   │   │   ├── GetProductSelectionInputPort.java
++│   │   │   ├── GetProductSelectionUseCase.java
++│   │   │   ├── GetProductSelectionQuery.java
++│   │   │   └── GetProductSelectionResult.java
+ │   │   └── shared/                       # Shared output ports
+ │   │       ├── ProductRepository.java
+ │   │       ├── PricingDataPort.java      # Port for pricing data from Pricing context
+@@ -159,7 +165,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
+ │       │   ├── web/
+ │       │   │   ├── ProductPageController.java
+ │       │   │   ├── ProductCatalogPageViewModel.java
+-│       │   │   └── ProductDetailPageViewModel.java
++│       │   │   ├── ProductDetailPageViewModel.java
++│       │   │   ├── ProductSliderControllerAdvice.java  # Homepage "Discover products" slider
++│       │   │   └── ProductSliderViewModel.java
+ │       │   └── event/
+ │       │       └── ProductEventConsumer.java
+ │       └── outgoing/                     # Outgoing adapters (secondary)
+diff --git a/docs/architecture/package-structure.md b/docs/architecture/package-structure.md
+index 770a520..d59837a 100644
+--- a/docs/architecture/package-structure.md
++++ b/docs/architecture/package-structure.md
+@@ -38,7 +38,8 @@ dev.domaincentric.sample.ecommerce
+ │   │   │   ├── Category (Value Object)
+ │   │   │   ├── ProductFactory
+ │   │   │   ├── ProductArticle (external article data)
+-│   │   │   └── EnrichedProduct (Enriched Domain Model with factory)
++│   │   │   ├── EnrichedProduct (Enriched Domain Model with factory)
++│   │   │   └── ProductSelection (Value Object: the homepage slider's random draw)
+ │   │   └── event/                  # Domain Events
+ │   │       └── ProductCreated
+ │   ├── application/                # Application Layer
+@@ -57,6 +58,11 @@ dev.domaincentric.sample.ecommerce
+ │   │   │   ├── GetProductByIdUseCase
+ │   │   │   ├── GetProductByIdQuery
+ │   │   │   └── GetProductByIdResult
++│   │   ├── getproductselection/   # Use case: Get Product Selection
++│   │   │   ├── GetProductSelectionInputPort
++│   │   │   ├── GetProductSelectionUseCase
++│   │   │   ├── GetProductSelectionQuery
++│   │   │   └── GetProductSelectionResult
+ │   │   ├── updateproductprice/    # Use case: Update Product Price
+ │   │   │   ├── UpdateProductPriceInputPort
+ │   │   │   ├── UpdateProductPriceUseCase
+@@ -84,7 +90,9 @@ dev.domaincentric.sample.ecommerce
+ │       │   ├── web/
+ │       │   │   ├── ProductPageController
+ │       │   │   ├── ProductCatalogPageViewModel
+-│       │   │   └── ProductDetailPageViewModel
++│       │   │   ├── ProductDetailPageViewModel
++│       │   │   ├── ProductSliderControllerAdvice   # Homepage "Discover products" slider
++│       │   │   └── ProductSliderViewModel
+ │       │   └── event/
+ │       │       └── ProductEventConsumer
+ │       └── outgoing/               # Outgoing Adapters (Secondary)
+diff --git a/project/backlog/homepage-discovery/product-slider.md b/project/backlog/homepage-discovery/product-slider.md
+index feead50..70f075a 100644
+--- a/project/backlog/homepage-discovery/product-slider.md
++++ b/project/backlog/homepage-discovery/product-slider.md
+@@ -4,7 +4,7 @@ epic: homepage-discovery
+ status: approved
+ context: product
+ title: Product slider on the homepage
+-depends_on: []
++depends_on: [CAT-02, CAT-04]
+ ---
+ 
+ # Product slider on the homepage
+@@ -22,6 +22,7 @@ window; "on a phone" is size s, as in the shop's other phone checks; m and l are
+ ### Rule: Directly below the hero the homepage shows a slider headed "Discover products"
+ 
+ #### shows-discover-products-slider-below-hero
++Title: The homepage shows a "Discover products" slider directly below the hero
+ - Given the shop has started and seeded its sample catalog
+ - When the shopper opens the homepage
+ - Then a slider headed "Discover products" is shown directly below the hero
+@@ -30,12 +31,14 @@ window; "on a phone" is size s, as in the shop's other phone checks; m and l are
+ ### Rule: The slider holds up to eight random products that have a price, drawn anew on every request
+ 
+ #### slider-holds-eight-different-products
++Title: The homepage slider holds eight different products of the sample catalog
+ - Given the shop has started and seeded its sample catalog
+ - When the shopper opens the homepage
+ - Then the slider holds 8 product cards
+ - And each card shows a different product of the sample catalog
+ 
+ #### products-are-drawn-anew-per-request
++Title: The homepage slider draws its products anew on every request
+ - Given the shopper has opened the homepage and noted the 8 products in the slider
+ - When they reload the homepage 10 times
+ - Then at least one reload shows a different selection of products
+@@ -53,11 +56,13 @@ window; "on a phone" is size s, as in the shop's other phone checks; m and l are
+ ### Rule: A card shows the product's image, name and price and leads to its product page
+ 
+ #### card-shows-image-name-and-price
++Title: A slider card shows the product's image, name and price
+ - Given the shopper has opened the homepage
+ - When they look at a card of the slider
+ - Then it shows the product's image, its name and the price its product page shows
+ 
+ #### card-links-to-product-page (happy path)
++Title: A slider card leads to its product page
+ - Given the shopper has opened the homepage
+ - When they follow the link of a card
+ - Then the product page of that card's product is shown
+@@ -65,22 +70,26 @@ window; "on a phone" is size s, as in the shop's other phone checks; m and l are
+ ### Rule: Four cards are in view side by side on sizes xl and l, two on size m, one on size s
+ 
+ #### desktop-shows-four-cards-side-by-side
++Title: On the desktop the slider shows four of its cards side by side
+ - Given the shop has started and seeded its sample catalog
+ - When the shopper opens the homepage on the desktop
+ - Then the first 4 cards are in view side by side and the other 4 are not
+ - And "Previous" is disabled and "Next" is enabled
+ 
+ #### size-l-shows-four-cards-side-by-side
++Title: On a large tablet the slider shows four of its cards side by side
+ - Given the shop has started and seeded its sample catalog
+ - When the shopper opens the homepage on size l
+ - Then the first 4 cards are in view side by side and the other 4 are not
+ 
+ #### size-m-shows-two-cards-side-by-side
++Title: On a small tablet the slider shows two of its cards side by side
+ - Given the shop has started and seeded its sample catalog
+ - When the shopper opens the homepage on size m
+ - Then the first 2 cards are in view side by side and the other 6 are not
+ 
+ #### phone-shows-one-card-at-a-time
++Title: On a phone the slider shows one card at a time
+ - Given the shop has started and seeded its sample catalog
+ - When the shopper opens the homepage on a phone
+ - Then only the first card is in view
+@@ -89,39 +98,46 @@ window; "on a phone" is size s, as in the shop's other phone checks; m and l are
+ ### Rule: Previous and Next move by one card, by mouse or keyboard, and are disabled at the start and at the end
+ 
+ #### desktop-next-moves-by-one-card
++Title: On the desktop Next moves the slider on by one card
+ - Given the shopper has opened the homepage on the desktop and the first 4 cards are in view
+ - When they press "Next"
+ - Then the second to the fifth card are in view and the first is not
+ - And "Previous" is enabled
+ 
+ #### desktop-next-is-disabled-at-the-last-card
++Title: On the desktop the slider stops at its last card
+ - Given the shopper has opened the homepage on the desktop
+ - When they press "Next" four times
+ - Then the fifth to the eighth card are in view
+ - And "Next" is disabled
+ 
+ #### next-brings-the-following-card-into-view
++Title: On a phone Next brings the following slider card into view
+ - Given the shopper has opened the homepage on a phone and the first card is in view
+ - When they press "Next"
+ - Then the second card is in view instead of the first
+ 
+ #### previous-brings-the-preceding-card-into-view
++Title: On a phone Previous brings the preceding slider card back into view
+ - Given the shopper on a phone has pressed "Next" once and the second card is in view
+ - When they press "Previous"
+ - Then the first card is in view again
+ 
+ #### next-is-operable-by-keyboard
++Title: On a phone the slider's Next button works from the keyboard
+ - Given the shopper on a phone has moved the keyboard focus to "Next" with the Tab key
+ - When they press Enter
+ - Then the second card is in view instead of the first
+ 
+ #### next-is-disabled-at-the-last-card
++Title: On a phone the slider stops at its last card
+ - Given the shopper has opened the homepage on a phone
+ - When they press "Next" seven times
+ - Then the eighth card is in view
+ - And "Next" is disabled
+ 
+ #### slider-does-not-move-by-itself
++Title: The homepage slider does not move by itself
+ - Given the shopper has opened the homepage on a phone and the first card is in view
+ - When they wait 10 seconds without touching the slider
+ - Then the first card is still in view
+@@ -143,6 +159,4 @@ window; "on a phone" is size s, as in the shop's other phone checks; m and l are
+ - answered: What happens at the ends? — "Next" is disabled at the last card, "Previous" at the first; paging stops at the start as it stops at the end.
+ - answered: Fewer than 8 products with a price? — The slider shows those there are.
+ - answered: Where exactly? — Directly below the hero, before "Why Shop With Us".
+-- answered: Does the browser test need the shared specification? — Yes: the browser-observable scenarios are in the specification's `scenarios.md` under `scenario.home.slider-*`; their browser tests carry the scenario titles verbatim. The exception for the Java side in the specification's `exceptions.md` ("the Java twin follows as its own story", review 2026-10-31) ends with this story and is removed. The two scenarios that need a catalogue other than the seeded one (a product without a price, only 2 priced products) are not shared scenarios.
+-- answered: A scenario title with a quote? — `SharedScenariosTest` reads escaped literals: `\"` inside a `@DisplayName` literal is a quote of the title, not its end, as the story gate reads it.
+-- answered: Same markup as the other shop? — Yes, the two shops' HTML stays interchangeable: `data-test` = `product-slider`, `product-slider-title`, `product-slider-card`, `product-slider-card-image`, `product-slider-card-name`, `product-slider-card-price`, `product-slider-card-link`, `product-slider-previous`, `product-slider-next`; the styles as `.product-slider__*` rules in `main.css`; and `product-detail-title` / `product-detail-price` on the product page.
++- answered: Does the browser test need the shared specification? — Yes: the browser-observable scenarios are in the specification's `scenarios.md` under `scenario.home.slider-*`; their browser tests carry the scenario titles verbatim. The two scenarios that need a catalogue other than the seeded one (a product without a price, only 2 priced products) are not shared scenarios.
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/portal/domain/glossary.md b/src/main/java/dev/domaincentric/sample/ecommerce/portal/domain/glossary.md
+index 87f28b4..b61bc55 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/portal/domain/glossary.md
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/portal/domain/glossary.md
+@@ -49,6 +49,7 @@ them. Definitions can be found in the respective context glossaries.
+ | Term              | Owning Context        | Usage in Portal                               |
+ |-------------------|-----------------------|-----------------------------------------------|
+ | Product / Catalog | `product`             | Navigation to product listing                 |
++| Product slider    | `product`             | The homepage section "Discover products", directly below the hero: the `ProductSelection` as cards, paged with Previous and Next; composed into the page as the model attribute `productSlider`, which `product`'s `ProductSliderControllerAdvice` adds on `GET /`, not referenced in Java |
+ | Cart              | `cart`                | Navigation to shopping cart                   |
+ | Checkout / Order  | `checkout`            | Navigation to checkout flow                   |
+ | Account / User    | `account`             | Login/profile entry points (once available)   |
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductSliderControllerAdvice.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductSliderControllerAdvice.java
+new file mode 100644
+index 0000000..e93625d
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductSliderControllerAdvice.java
+@@ -0,0 +1,44 @@
++package dev.domaincentric.sample.ecommerce.product.adapter.incoming.web;
++
++import dev.domaincentric.sample.ecommerce.product.application.getproductselection.GetProductSelectionInputPort;
++import dev.domaincentric.sample.ecommerce.product.application.getproductselection.GetProductSelectionQuery;
++import jakarta.servlet.http.HttpServletRequest;
++import org.springframework.ui.Model;
++import org.springframework.web.bind.annotation.ControllerAdvice;
++import org.springframework.web.bind.annotation.ModelAttribute;
++
++/**
++ * Provides the homepage's "Discover products" slider as the model attribute {@code productSlider}.
++ *
++ * <p>The homepage belongs to another context; it renders the attribute without referencing this
++ * one. The selection is drawn only for the homepage request {@code GET /}: every other request
++ * returns early and gets no attribute, so no other page or API call pays for the draw.
++ */
++@ControllerAdvice
++public class ProductSliderControllerAdvice {
++
++  private static final String HOME_PAGE = "/";
++
++  private final GetProductSelectionInputPort getProductSelection;
++
++  public ProductSliderControllerAdvice(final GetProductSelectionInputPort getProductSelection) {
++    this.getProductSelection = getProductSelection;
++  }
++
++  /**
++   * Adds the slider to the model of the homepage request.
++   *
++   * @param model the model of the current request
++   * @param request the current request
++   */
++  @ModelAttribute
++  public void addProductSlider(final Model model, final HttpServletRequest request) {
++    if (!"GET".equals(request.getMethod()) || !HOME_PAGE.equals(request.getRequestURI())) {
++      return;
++    }
++    model.addAttribute(
++        "productSlider",
++        ProductSliderViewModel.fromResult(
++            getProductSelection.execute(new GetProductSelectionQuery())));
++  }
++}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductSliderViewModel.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductSliderViewModel.java
+new file mode 100644
+index 0000000..7a51111
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/adapter/incoming/web/ProductSliderViewModel.java
+@@ -0,0 +1,57 @@
++package dev.domaincentric.sample.ecommerce.product.adapter.incoming.web;
++
++import dev.domaincentric.sample.ecommerce.product.application.getproductselection.GetProductSelectionResult;
++import dev.domaincentric.sample.ecommerce.product.domain.model.EnrichedProduct;
++import java.util.List;
++
++/**
++ * The homepage's "Discover products" slider: one card per drawn product, in draw order.
++ *
++ * @param cards the slider's cards
++ */
++public record ProductSliderViewModel(List<Card> cards) {
++
++  public ProductSliderViewModel {
++    cards = List.copyOf(cards);
++  }
++
++  /**
++   * Creates the slider from the product selection.
++   *
++   * @param result the drawn products
++   * @return the slider's view model
++   */
++  public static ProductSliderViewModel fromResult(final GetProductSelectionResult result) {
++    return new ProductSliderViewModel(result.products().stream().map(Card::from).toList());
++  }
++
++  /**
++   * Whether the slider has a card to show.
++   *
++   * @return true when at least one product was drawn
++   */
++  public boolean hasCards() {
++    return !cards.isEmpty();
++  }
++
++  /**
++   * One slider card.
++   *
++   * @param productId the product the card leads to
++   * @param name the product name
++   * @param imageUrl the product image URL, empty when the product has none
++   * @param price the price as the product page shows it
++   */
++  public record Card(String productId, String name, String imageUrl, String price) {
++
++    static Card from(final EnrichedProduct product) {
++      return new Card(
++          product.productId().value().toString(),
++          product.name(),
++          product.imageUrl() == null ? "" : product.imageUrl(),
++          product.currentPrice().amount()
++              + " "
++              + product.currentPrice().currency().getCurrencyCode());
++    }
++  }
++}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionInputPort.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionInputPort.java
+new file mode 100644
+index 0000000..ded955b
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionInputPort.java
+@@ -0,0 +1,11 @@
++package dev.domaincentric.sample.ecommerce.product.application.getproductselection;
++
++import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
++
++/** Input port for drawing up to eight random catalogue products that have a price. */
++public interface GetProductSelectionInputPort
++    extends UseCase<GetProductSelectionQuery, GetProductSelectionResult> {
++
++  @Override
++  GetProductSelectionResult execute(GetProductSelectionQuery query);
++}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionQuery.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionQuery.java
+new file mode 100644
+index 0000000..c9f3b8a
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionQuery.java
+@@ -0,0 +1,4 @@
++package dev.domaincentric.sample.ecommerce.product.application.getproductselection;
++
++/** Input model for drawing the homepage's product selection. */
++public record GetProductSelectionQuery() {}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionResult.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionResult.java
+new file mode 100644
+index 0000000..b071871
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionResult.java
+@@ -0,0 +1,16 @@
++package dev.domaincentric.sample.ecommerce.product.application.getproductselection;
++
++import dev.domaincentric.sample.ecommerce.product.domain.model.EnrichedProduct;
++import java.util.List;
++
++/**
++ * Output model of the product selection: the drawn products with price and stock, in draw order.
++ *
++ * @param products the drawn products
++ */
++public record GetProductSelectionResult(List<EnrichedProduct> products) {
++
++  public GetProductSelectionResult {
++    products = List.copyOf(products);
++  }
++}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionUseCase.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionUseCase.java
+new file mode 100644
+index 0000000..2d7f3b5
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionUseCase.java
+@@ -0,0 +1,78 @@
++package dev.domaincentric.sample.ecommerce.product.application.getproductselection;
++
++import dev.domaincentric.sample.ecommerce.product.application.shared.PricingDataPort;
++import dev.domaincentric.sample.ecommerce.product.application.shared.PricingDataPort.PriceData;
++import dev.domaincentric.sample.ecommerce.product.application.shared.ProductRepository;
++import dev.domaincentric.sample.ecommerce.product.application.shared.ProductStockDataPort;
++import dev.domaincentric.sample.ecommerce.product.application.shared.ProductStockDataPort.StockData;
++import dev.domaincentric.sample.ecommerce.product.domain.model.EnrichedProduct;
++import dev.domaincentric.sample.ecommerce.product.domain.model.Product;
++import dev.domaincentric.sample.ecommerce.product.domain.model.ProductArticle;
++import dev.domaincentric.sample.ecommerce.product.domain.model.ProductSelection;
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
++import java.util.List;
++import java.util.Map;
++import java.util.function.Function;
++import java.util.random.RandomGenerator;
++import java.util.stream.Collectors;
++import org.springframework.stereotype.Service;
++
++/**
++ * Query use case that draws the product selection the homepage shows.
++ *
++ * <p>Only products Pricing holds a price for are candidates; a product without one is not offered.
++ * The drawn products are enriched with their price and stock, in the order they were drawn.
++ */
++@Service
++public class GetProductSelectionUseCase implements GetProductSelectionInputPort {
++
++  private final ProductRepository productRepository;
++  private final PricingDataPort pricingDataPort;
++  private final ProductStockDataPort productStockDataPort;
++  private final RandomGenerator random;
++
++  public GetProductSelectionUseCase(
++      final ProductRepository productRepository,
++      final PricingDataPort pricingDataPort,
++      final ProductStockDataPort productStockDataPort,
++      final RandomGenerator random) {
++    this.productRepository = productRepository;
++    this.pricingDataPort = pricingDataPort;
++    this.productStockDataPort = productStockDataPort;
++    this.random = random;
++  }
++
++  @Override
++  public GetProductSelectionResult execute(final GetProductSelectionQuery query) {
++    final List<Product> products = productRepository.findAll();
++    final List<ProductId> productIds = products.stream().map(Product::id).toList();
++    final Map<ProductId, PriceData> prices = pricingDataPort.getPrices(productIds);
++
++    final List<ProductId> pricedProducts = productIds.stream().filter(prices::containsKey).toList();
++    final List<ProductId> drawn = ProductSelection.draw(pricedProducts, random).productIds();
++    if (drawn.isEmpty()) {
++      return new GetProductSelectionResult(List.of());
++    }
++
++    final Map<ProductId, Product> byId =
++        products.stream()
++            .collect(Collectors.toMap(Product::id, Function.identity(), (first, second) -> first));
++    final Map<ProductId, StockData> stocks = productStockDataPort.getStockData(drawn);
++
++    final List<EnrichedProduct> enriched =
++        drawn.stream()
++            .map(id -> EnrichedProduct.from(byId.get(id), article(id, prices, stocks)))
++            .toList();
++    return new GetProductSelectionResult(enriched);
++  }
++
++  private static ProductArticle article(
++      final ProductId productId,
++      final Map<ProductId, PriceData> prices,
++      final Map<ProductId, StockData> stocks) {
++    final StockData stockData = stocks.get(productId);
++    final int stockQuantity = stockData != null ? stockData.availableStock() : 0;
++    final boolean isAvailable = stockData != null && stockData.isAvailable();
++    return new ProductArticle(prices.get(productId).currentPrice(), stockQuantity, isAvailable);
++  }
++}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/domain/glossary.md b/src/main/java/dev/domaincentric/sample/ecommerce/product/domain/glossary.md
+index 4f91c19..60ec5d1 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/product/domain/glossary.md
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/domain/glossary.md
+@@ -104,6 +104,27 @@ purchased" or "stock is sufficient for quantity x".
+ **Notes:** Risk of synonyms — sometimes referred to as "Product View" or
+ "Product Display Model"; prefer `EnrichedProduct`.
+ 
++### ProductSelection
++
++**Definition:** Up to eight different products of the catalogue that have a
++price, drawn at random anew on every request; shown on the homepage as the
++"Discover products" slider. Fewer priced products yield all of them, none
++yield an empty selection.
++
++**Type:** Value Object
++
++**Related terms:**
++- `ProductId` — the selection holds the drawn ids, in draw order
++- `EnrichedProduct` — what the selection is shown as
++- Product slider — the homepage section that presents it (Portal glossary)
++
++**Operations:** `draw` (from the priced candidates and a random source)
++
++**Notes:** "Has a price" means Pricing's answer contains the product.
++Out-of-stock products are offered as long as they have a price. Not a
++popularity ranking and not personalised. Read by the query use case
++`GetProductSelectionUseCase`.
++
+ ## Domain Events
+ 
+ ### ProductCreated
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/domain/model/ProductSelection.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/domain/model/ProductSelection.java
+new file mode 100644
+index 0000000..a4e3474
+--- /dev/null
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/domain/model/ProductSelection.java
+@@ -0,0 +1,55 @@
++package dev.domaincentric.sample.ecommerce.product.domain.model;
++
++import dev.domaincentric.dca.buildingblocks.ddd.tactical.Value;
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
++import java.util.ArrayList;
++import java.util.Collection;
++import java.util.LinkedHashSet;
++import java.util.List;
++import java.util.random.RandomGenerator;
++
++/**
++ * Up to {@link #MAX_SIZE} different catalogue products that have a price, drawn at random.
++ *
++ * @param productIds the drawn products, in draw order
++ */
++public record ProductSelection(List<ProductId> productIds) implements Value {
++
++  /** The most products a selection holds. */
++  public static final int MAX_SIZE = 8;
++
++  public ProductSelection {
++    if (productIds == null) {
++      throw new IllegalArgumentException("Product IDs cannot be null");
++    }
++    productIds = List.copyOf(productIds);
++    if (productIds.size() > MAX_SIZE) {
++      throw new IllegalArgumentException("A selection holds at most " + MAX_SIZE + " products");
++    }
++  }
++
++  /**
++   * Draws up to {@link #MAX_SIZE} different products from the products that have a price: every
++   * candidate when there are fewer, none when there are none. A candidate named twice counts once.
++   * The draw depends only on the candidates and the random source.
++   *
++   * @param pricedProducts the candidates
++   * @param random the source of randomness
++   * @return the selection
++   */
++  public static ProductSelection draw(
++      final Collection<ProductId> pricedProducts, final RandomGenerator random) {
++    if (pricedProducts == null || random == null) {
++      throw new IllegalArgumentException("Candidates and random source cannot be null");
++    }
++    final List<ProductId> pool = new ArrayList<>(new LinkedHashSet<>(pricedProducts));
++    final int size = Math.min(MAX_SIZE, pool.size());
++    for (int i = 0; i < size; i++) {
++      final int pick = random.nextInt(i, pool.size());
++      final ProductId drawn = pool.get(pick);
++      pool.set(pick, pool.get(i));
++      pool.set(i, drawn);
++    }
++    return new ProductSelection(pool.subList(0, size));
++  }
++}
+diff --git a/src/main/java/dev/domaincentric/sample/ecommerce/product/infrastructure/ProductDomainConfiguration.java b/src/main/java/dev/domaincentric/sample/ecommerce/product/infrastructure/ProductDomainConfiguration.java
+index 4e17546..9d47992 100644
+--- a/src/main/java/dev/domaincentric/sample/ecommerce/product/infrastructure/ProductDomainConfiguration.java
++++ b/src/main/java/dev/domaincentric/sample/ecommerce/product/infrastructure/ProductDomainConfiguration.java
+@@ -1,6 +1,8 @@
+ package dev.domaincentric.sample.ecommerce.product.infrastructure;
+ 
+ import dev.domaincentric.sample.ecommerce.product.domain.model.ProductFactory;
++import java.util.Random;
++import java.util.random.RandomGenerator;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ 
+@@ -17,4 +19,13 @@ public class ProductDomainConfiguration {
+   public ProductFactory productFactory() {
+     return new ProductFactory();
+   }
++
++  /**
++   * The random source the homepage's product selection is drawn with. {@link Random} is safe to
++   * share between concurrent requests.
++   */
++  @Bean
++  public RandomGenerator productSelectionRandom() {
++    return new Random();
++  }
+ }
+diff --git a/src/main/resources/static/css/main.css b/src/main/resources/static/css/main.css
+index 211db34..4c683c3 100644
+--- a/src/main/resources/static/css/main.css
++++ b/src/main/resources/static/css/main.css
+@@ -2829,6 +2829,101 @@ ul, ol {
+   text-align: center;
+ }
+ 
++/* --------------------------------------------------------------------------
++   28a. Product Slider (Homepage)
++   -------------------------------------------------------------------------- */
++
++.product-slider__track {
++  --product-slider-gap: var(--space-lg);
++  display: flex;
++  gap: var(--product-slider-gap);
++  overflow-x: auto;
++  scroll-snap-type: x mandatory;
++  scrollbar-width: none;
++}
++
++.product-slider__track::-webkit-scrollbar {
++  display: none;
++}
++
++.product-slider__card {
++  flex: 0 0 calc((100% - 3 * var(--product-slider-gap)) / 4);
++  scroll-snap-align: start;
++  background: var(--color-surface);
++  border: 1px solid var(--color-border);
++  border-radius: var(--radius-lg);
++  overflow: hidden;
++  box-shadow: var(--shadow-sm);
++}
++
++.product-slider__link {
++  display: flex;
++  flex-direction: column;
++  height: 100%;
++  color: inherit;
++  text-decoration: none;
++}
++
++.product-slider__link:hover .product-slider__name,
++.product-slider__link:focus-visible .product-slider__name {
++  color: var(--color-primary);
++}
++
++.product-slider__image {
++  width: 100%;
++  aspect-ratio: 4 / 3;
++  background: var(--color-border-light);
++  overflow: hidden;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++}
++
++.product-slider__image img {
++  width: 100%;
++  height: 100%;
++  object-fit: cover;
++}
++
++.product-slider__name {
++  font-family: var(--font-display);
++  font-size: var(--font-size-lg);
++  font-weight: 600;
++  color: var(--color-text);
++  margin: var(--space-md) var(--space-md) var(--space-xs);
++}
++
++.product-slider__price {
++  font-size: var(--font-size-lg);
++  font-weight: 700;
++  color: var(--color-accent);
++  margin: 0 var(--space-md) var(--space-md);
++}
++
++.product-slider__controls {
++  display: flex;
++  justify-content: flex-end;
++  gap: var(--space-md);
++  margin-bottom: var(--space-lg);
++}
++
++.product-slider__button:disabled {
++  opacity: 0.4;
++  cursor: default;
++}
++
++@media (max-width: 768px) {
++  .product-slider__card {
++    flex-basis: calc((100% - var(--product-slider-gap)) / 2);
++  }
++}
++
++@media (max-width: 480px) {
++  .product-slider__card {
++    flex-basis: 100%;
++  }
++}
++
+ /* --------------------------------------------------------------------------
+    29. Doc Links (Homepage)
+    -------------------------------------------------------------------------- */
+diff --git a/src/main/resources/templates/home/index.pug b/src/main/resources/templates/home/index.pug
+index ddc15ce..d6b56d3 100644
+--- a/src/main/resources/templates/home/index.pug
++++ b/src/main/resources/templates/home/index.pug
+@@ -11,6 +11,48 @@ block content
+       a.hero__cta.hero__cta--primary(href="/products" data-test="browse-products-link") Browse Products
+       a.hero__cta.hero__cta--secondary(href="/cart" data-test="view-cart-link") View Cart
+ 
++  if productSlider && productSlider.hasCards()
++    section.section.product-slider(data-test="product-slider" aria-labelledby="product-slider-title")
++      h2.section__title#product-slider-title(data-test="product-slider-title") Discover products
++      .product-slider__controls
++        button.btn.btn--ghost.product-slider__button(type="button" data-test="product-slider-previous" data-product-slider-previous) Previous
++        button.btn.btn--ghost.product-slider__button(type="button" data-test="product-slider-next" data-product-slider-next) Next
++      .product-slider__track(data-product-slider-track)
++        each card in productSlider.cards()
++          article.product-slider__card(data-test="product-slider-card")
++            a.product-slider__link(href="/products/" + card.productId() data-test="product-slider-card-link")
++              .product-slider__image
++                if card.imageUrl() != ''
++                  img(src=card.imageUrl() alt=card.name() data-test="product-slider-card-image")
++                else
++                  .product-card__image-placeholder(data-test="product-slider-card-image") #{card.name().charAt(0)}
++              h3.product-slider__name(data-test="product-slider-card-name") #{card.name()}
++              .product-slider__price(data-test="product-slider-card-price") #{card.price()}
++      script.
++        (function () {
++          var slider = document.currentScript.parentElement;
++          var track = slider.querySelector('[data-product-slider-track]');
++          var previous = slider.querySelector('[data-product-slider-previous]');
++          var next = slider.querySelector('[data-product-slider-next]');
++          function step() {
++            var cards = track.children;
++            return cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : track.clientWidth;
++          }
++          function update() {
++            previous.disabled = track.scrollLeft <= 1;
++            next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
++          }
++          function move(by) {
++            var index = Math.round(track.scrollLeft / step()) + by;
++            track.scrollTo({ left: Math.max(0, index) * step() });
++          }
++          previous.addEventListener('click', function () { move(-1); });
++          next.addEventListener('click', function () { move(1); });
++          track.addEventListener('scroll', update, { passive: true });
++          window.addEventListener('resize', update);
++          update();
++        })();
++
+   section.section(data-test="features")
+     h2.section__title Why Shop With Us
+     .feature-grid
+diff --git a/src/main/resources/templates/product/detail.pug b/src/main/resources/templates/product/detail.pug
+index ea119a6..6518623 100644
+--- a/src/main/resources/templates/product/detail.pug
++++ b/src/main/resources/templates/product/detail.pug
+@@ -10,7 +10,7 @@ block content
+ 
+   .product-detail(data-test="product-detail")
+     .product-detail__header
+-      h1.product-detail__title #{productDetail.name()}
++      h1.product-detail__title(data-test="product-detail-title") #{productDetail.name()}
+       if productDetail.isAvailable()
+         span.badge.badge--success In Stock
+       else
+@@ -25,7 +25,7 @@ block content
+ 
+       .product-detail__info
+         .product-detail__price
+-          span #{productDetail.priceAmount()} #{productDetail.priceCurrency()}
++          span(data-test="product-detail-price") #{productDetail.priceAmount()} #{productDetail.priceCurrency()}
+           span.product-detail__price-label Retail Price
+ 
+         if productDetail.description() != null && productDetail.description() != ''
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderE2ETest.java
+new file mode 100644
+index 0000000..269de61
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderE2ETest.java
+@@ -0,0 +1,162 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++import dev.domaincentric.sample.ecommerce.e2e.pages.HomePage;
++import dev.domaincentric.sample.ecommerce.e2e.pages.HomePage.Position;
++import dev.domaincentric.sample.ecommerce.e2e.pages.ProductCatalogPage;
++import dev.domaincentric.sample.ecommerce.e2e.pages.ProductDetailPage;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Set;
++import java.util.stream.IntStream;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++
++/**
++ * The "Discover products" slider on the homepage, in the suite's default browser window (the
++ * desktop): where it stands, what it holds, what a card shows and where it leads.
++ *
++ * <p>Same scenarios and page objects as the .NET sample's {@code HomeSliderE2eTest}.
++ */
++@DisplayName("Home slider E2E Tests")
++class HomeSliderE2ETest extends BaseE2ETest {
++
++  @Test
++  @DisplayName("The homepage shows a \"Discover products\" slider directly below the hero")
++  void showsTheDiscoverProductsSliderDirectlyBelowTheHero() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++
++    assertEquals("Discover products", home.sliderTitle());
++    assertEquals("product-slider", home.sectionAfterHero());
++    assertTrue(
++        home.sliderStandsBetweenHeroAnd("features"),
++        "the slider stands below the hero and before \"Why Shop With Us\"");
++  }
++
++  @Test
++  @DisplayName("The homepage slider holds eight different products of the sample catalog")
++  void holdsEightDifferentProductsOfTheSampleCatalog() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++    List<String> names = home.cardNames();
++
++    assertEquals(8, home.cardCount());
++    assertEquals(8, Set.copyOf(names).size(), "the cards show different products: " + names);
++    List<String> catalog = ProductCatalogPage.navigateTo(page).productTitles();
++    assertTrue(catalog.containsAll(names), names + " are products of the sample catalog");
++  }
++
++  @Test
++  @DisplayName("The homepage slider draws its products anew on every request")
++  void drawsItsProductsAnewOnEveryRequest() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++    Set<String> noted = new HashSet<>(home.cardNames());
++    assertEquals(8, noted.size());
++
++    int differentSelections = 0;
++    for (int reload = 0; reload < 10; reload++) {
++      home.reload();
++      assertTrue(home.showSlider(), "the homepage shows the product slider");
++      if (!noted.equals(new HashSet<>(home.cardNames()))) {
++        differentSelections++;
++      }
++    }
++
++    assertTrue(differentSelections >= 1, "ten reloads all showed the same eight products");
++  }
++
++  @Test
++  @DisplayName("A slider card shows the product's image, name and price")
++  void aCardShowsTheProductsImageNameAndPrice() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++    String name = home.cardName(0);
++    String price = home.cardPrice(0);
++    String image = home.cardImageSource(0);
++    assertTrue(home.cardImageIsLoaded(0), "the card shows the product's image");
++
++    navigateTo(home.cardLinkPath(0));
++    ProductDetailPage product = new ProductDetailPage(page);
++
++    assertEquals(product.title(), name);
++    assertEquals(product.price(), price);
++    assertEquals(product.imageSource(), image);
++  }
++
++  @Test
++  @DisplayName("A slider card leads to its product page")
++  void aCardLeadsToItsProductPage() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++    String name = home.cardName(1);
++    String link = home.cardLinkPath(1);
++    assertTrue(link.matches("^/products/[0-9a-f-]{36}$"), "the card links a product page: " + link);
++
++    ProductDetailPage product = home.followCard(1);
++
++    assertEquals(link, product.shownPath());
++    assertEquals(name, product.title());
++  }
++
++  @Test
++  @DisplayName("On the desktop the slider shows four of its cards side by side")
++  void onTheDesktopTheFirstFourCardsStandSideBySide() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++
++    assertEquals(8, home.cardCount());
++    assertEquals(List.of(0, 1, 2, 3), home.cardsInView(0, 1, 2, 3));
++    assertSideBySide(home.cardPositions());
++    assertTrue(home.isPreviousDisabled(), "\"Previous\" is disabled");
++    assertTrue(home.isNextEnabled(), "\"Next\" is enabled");
++  }
++
++  @Test
++  @DisplayName("On the desktop Next moves the slider on by one card")
++  void onTheDesktopNextMovesTheSliderOnByOneCard() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++    assertEquals(List.of(0, 1, 2, 3), home.cardsInView(0, 1, 2, 3));
++    assertTrue(home.isNextEnabled(), "\"Next\" can be pressed");
++
++    home.pressNext();
++
++    assertEquals(List.of(1, 2, 3, 4), home.cardsInView(1, 2, 3, 4));
++    assertTrue(home.isPreviousEnabled(), "\"Previous\" is enabled");
++  }
++
++  @Test
++  @DisplayName("On the desktop the slider stops at its last card")
++  void onTheDesktopTheSliderStopsAtItsLastCard() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++
++    for (int press = 1; press <= 4; press++) {
++      assertTrue(home.isNextEnabled(), "\"Next\" can be pressed a " + press + ". time");
++      home.pressNext();
++      Integer[] expected = IntStream.range(press, press + 4).boxed().toArray(Integer[]::new);
++      assertEquals(List.of(expected), home.cardsInView(expected));
++    }
++
++    assertEquals(List.of(4, 5, 6, 7), home.cardsInView(4, 5, 6, 7));
++    assertTrue(home.isNextDisabled(), "\"Next\" is disabled at the last card");
++  }
++
++  /** All cards on one line, left to right in slider order. */
++  static void assertSideBySide(List<Position> positions) {
++    double top = positions.getFirst().top();
++    for (int i = 0; i < positions.size(); i++) {
++      Position position = positions.get(i);
++      assertTrue(Math.abs(position.top() - top) <= 1, "card " + i + " stands in the first line");
++      if (i > 0) {
++        assertTrue(
++            position.left() > positions.get(i - 1).left(),
++            "card " + i + " stands right of card " + (i - 1));
++      }
++    }
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderPhoneE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderPhoneE2ETest.java
+new file mode 100644
+index 0000000..f50b3f0
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderPhoneE2ETest.java
+@@ -0,0 +1,105 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertFalse;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++import com.microsoft.playwright.Browser;
++import dev.domaincentric.sample.ecommerce.e2e.pages.HomePage;
++import java.util.List;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++
++/**
++ * The "Discover products" slider on a phone (393 px, as the shop's other phone checks): one card in
++ * view, paged by "Previous" and "Next" — by mouse or keyboard — and still unless the shopper pages
++ * it.
++ */
++@DisplayName("Home slider on a phone E2E Tests")
++class HomeSliderPhoneE2ETest extends BaseE2ETest {
++
++  @Override
++  protected Browser.NewContextOptions contextOptions() {
++    return new Browser.NewContextOptions().setViewportSize(393, 852);
++  }
++
++  @Test
++  @DisplayName("On a phone the slider shows one card at a time")
++  void onAPhoneOnlyTheFirstCardIsInView() {
++    HomePage home = openSlider();
++
++    assertEquals(List.of(0), home.cardsInView(0));
++    assertTrue(home.isPreviousDisabled(), "\"Previous\" is disabled at the first card");
++  }
++
++  @Test
++  @DisplayName("On a phone Next brings the following slider card into view")
++  void onAPhoneNextBringsTheSecondCardIntoView() {
++    HomePage home = openSlider();
++    assertEquals(List.of(0), home.cardsInView(0));
++
++    home.pressNext();
++
++    assertEquals(List.of(1), home.cardsInView(1));
++  }
++
++  @Test
++  @DisplayName("On a phone Previous brings the preceding slider card back into view")
++  void onAPhonePreviousBringsTheFirstCardBackIntoView() {
++    HomePage home = openSlider();
++    home.pressNext();
++    assertEquals(List.of(1), home.cardsInView(1));
++
++    home.pressPrevious();
++
++    assertEquals(List.of(0), home.cardsInView(0));
++  }
++
++  @Test
++  @DisplayName("On a phone the slider's Next button works from the keyboard")
++  void onAPhoneNextWorksFromTheKeyboard() {
++    HomePage home = openSlider();
++    assertEquals(List.of(0), home.cardsInView(0));
++    assertTrue(home.tabToNext(), "the Tab key reaches \"Next\"");
++
++    home.pressEnter();
++
++    assertEquals(List.of(1), home.cardsInView(1));
++  }
++
++  @Test
++  @DisplayName("On a phone the slider stops at its last card")
++  void onAPhoneTheSliderStopsAtItsLastCard() {
++    HomePage home = openSlider();
++
++    for (int press = 1; press <= 7; press++) {
++      assertTrue(home.isNextEnabled(), "\"Next\" can be pressed a " + press + ". time");
++      home.pressNext();
++      assertEquals(List.of(press), home.cardsInView(press));
++    }
++
++    assertEquals(List.of(7), home.cardsInView(7));
++    assertTrue(home.isNextDisabled(), "\"Next\" is disabled at the last card");
++  }
++
++  @Test
++  @DisplayName("The homepage slider does not move by itself")
++  void theSliderDoesNotMoveByItself() {
++    page.clock().install();
++    HomePage home = openSlider();
++    assertTrue(home.isCardInView(0), "the first card is in view");
++
++    // Ten seconds of nobody touching the slider, on the page's own clock: every timer the page
++    // set fires as it would in that time.
++    page.clock().runFor(10_000);
++
++    assertTrue(home.isCardInView(0), "the first card is still in view");
++    assertFalse(home.isCardInView(1), "the slider moved on to the second card by itself");
++  }
++
++  private HomePage openSlider() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++    return home;
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderSmallTabletE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderSmallTabletE2ETest.java
+new file mode 100644
+index 0000000..1db32c0
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderSmallTabletE2ETest.java
+@@ -0,0 +1,34 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++import com.microsoft.playwright.Browser;
++import dev.domaincentric.sample.ecommerce.e2e.pages.HomePage;
++import java.util.List;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++
++/**
++ * The "Discover products" slider on a small tablet (size m, 768 px, the upper edge of 481 to 768
++ * px): two cards in view side by side.
++ */
++@DisplayName("Home slider on a small tablet E2E Tests")
++class HomeSliderSmallTabletE2ETest extends BaseE2ETest {
++
++  @Override
++  protected Browser.NewContextOptions contextOptions() {
++    return new Browser.NewContextOptions().setViewportSize(768, 1024);
++  }
++
++  @Test
++  @DisplayName("On a small tablet the slider shows two of its cards side by side")
++  void onASmallTabletTheFirstTwoCardsStandSideBySide() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++
++    assertEquals(8, home.cardCount());
++    assertEquals(List.of(0, 1), home.cardsInView(0, 1));
++    HomeSliderE2ETest.assertSideBySide(home.cardPositions());
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderTabletE2ETest.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderTabletE2ETest.java
+new file mode 100644
+index 0000000..dea37de
+--- /dev/null
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/HomeSliderTabletE2ETest.java
+@@ -0,0 +1,34 @@
++package dev.domaincentric.sample.ecommerce.e2e;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++import com.microsoft.playwright.Browser;
++import dev.domaincentric.sample.ecommerce.e2e.pages.HomePage;
++import java.util.List;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++
++/**
++ * The "Discover products" slider on a large tablet (size l, 1024 px, inside 769 to 1180 px): four
++ * cards in view, as on the desktop.
++ */
++@DisplayName("Home slider on a large tablet E2E Tests")
++class HomeSliderTabletE2ETest extends BaseE2ETest {
++
++  @Override
++  protected Browser.NewContextOptions contextOptions() {
++    return new Browser.NewContextOptions().setViewportSize(1024, 768);
++  }
++
++  @Test
++  @DisplayName("On a large tablet the slider shows four of its cards side by side")
++  void onALargeTabletTheFirstFourCardsStandSideBySide() {
++    HomePage home = HomePage.navigateTo(page);
++    assertTrue(home.showSlider(), "the homepage shows the product slider");
++
++    assertEquals(8, home.cardCount());
++    assertEquals(List.of(0, 1, 2, 3), home.cardsInView(0, 1, 2, 3));
++    HomeSliderE2ETest.assertSideBySide(home.cardPositions());
++  }
++}
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/HomePage.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/HomePage.java
+index 708e926..9a8fc36 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/HomePage.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/HomePage.java
+@@ -1,16 +1,51 @@
+ package dev.domaincentric.sample.ecommerce.e2e.pages;
+ 
++import com.microsoft.playwright.Locator;
+ import com.microsoft.playwright.Page;
++import com.microsoft.playwright.PlaywrightException;
++import com.microsoft.playwright.options.BoundingBox;
++import java.util.ArrayList;
++import java.util.List;
+ 
+ /**
+  * Page object for the home page at {@code /}.
+  *
+- * <p>Reads the welcome the hero section shows.
++ * <p>Reads the welcome the hero section shows and the "Discover products" slider below it. A slider
++ * card is <em>in view</em> when the whole card lies inside the slider as the browser lays it out
++ * and inside the window's width — judged from the rendered boxes, never from class names or markup.
+  */
+ public class HomePage extends BasePage {
+ 
+   private static final String URL_PATTERN = "/";
+   private static final String HERO = "hero";
++  private static final String SLIDER = "product-slider";
++  private static final String SLIDER_TITLE = "product-slider-title";
++  private static final String CARD = "product-slider-card";
++  private static final String CARD_IMAGE = "product-slider-card-image";
++  private static final String CARD_NAME = "product-slider-card-name";
++  private static final String CARD_PRICE = "product-slider-card-price";
++  private static final String CARD_LINK = "product-slider-card-link";
++  private static final String PREVIOUS = "product-slider-previous";
++  private static final String NEXT = "product-slider-next";
++
++  /** How long a paging step may take to settle (smooth scrolling) before a check gives up. */
++  private static final double SETTLE_TIMEOUT_MS = 5_000;
++
++  private static final String CARD_IN_VIEW =
++      """
++      ([slider, card, index]) => {
++          const s = document.querySelector(`[data-test='${slider}']`);
++          const c = s && s.querySelectorAll(`[data-test='${card}']`)[index];
++          if (!c) return false;
++          const sb = s.getBoundingClientRect();
++          const cb = c.getBoundingClientRect();
++          const left = Math.max(sb.left, 0) - 1;
++          const right = Math.min(sb.right, document.documentElement.clientWidth) + 1;
++          return cb.width > 0 && cb.left >= left && cb.right <= right;
++      }""";
++
++  /** The left and top edge of a card as the browser lays it out. */
++  public record Position(double left, double top) {}
+ 
+   /**
+    * Creates a new HomePage and waits for its hero section.
+@@ -60,6 +95,304 @@ public class HomePage extends BasePage {
+     return heroText(".hero__description");
+   }
+ 
++  /** Reloads the page and waits for its hero again. */
++  public void reload() {
++    page.reload();
++    waitFor(HERO);
++  }
++
++  /**
++   * Waits for the slider and scrolls it into the window, as a shopper would before looking at it.
++   *
++   * @return false when the page shows no slider
++   */
++  public boolean showSlider() {
++    final Locator slider = byTest(SLIDER);
++    try {
++      slider.waitFor(new Locator.WaitForOptions().setTimeout(SETTLE_TIMEOUT_MS));
++    } catch (PlaywrightException e) {
++      return false;
++    }
++    slider.scrollIntoViewIfNeeded();
++    return true;
++  }
++
++  /**
++   * The slider's heading as the browser renders it.
++   *
++   * @return the heading text
++   */
++  public String sliderTitle() {
++    return byTest(SLIDER_TITLE).innerText().strip();
++  }
++
++  /**
++   * The {@code data-test} of the element that follows the hero on the page.
++   *
++   * @return its value, or null when nothing follows or it carries none
++   */
++  public String sectionAfterHero() {
++    return (String)
++        page.evaluate(
++            "hero => document.querySelector(`[data-test='${hero}']`)?.nextElementSibling"
++                + "?.getAttribute('data-test') ?? null",
++            HERO);
++  }
++
++  /**
++   * Whether the slider is laid out below the hero and above the given section.
++   *
++   * @param followingSection the {@code data-test} of the section that should follow
++   * @return true when the slider stands between the two
++   */
++  public boolean sliderStandsBetweenHeroAnd(final String followingSection) {
++    final BoundingBox hero = byTest(HERO).boundingBox();
++    final BoundingBox slider = byTest(SLIDER).boundingBox();
++    final BoundingBox following = byTest(followingSection).boundingBox();
++    return hero != null
++        && slider != null
++        && following != null
++        && slider.y >= hero.y + hero.height - 1
++        && slider.y + slider.height <= following.y + 1;
++  }
++
++  /**
++   * The number of cards the slider holds.
++   *
++   * @return the card count
++   */
++  public int cardCount() {
++    return cards().count();
++  }
++
++  /**
++   * The product names on the cards, in slider order.
++   *
++   * @return one name per card
++   */
++  public List<String> cardNames() {
++    return page
++        .locator("[data-test='" + SLIDER + "'] [data-test='" + CARD_NAME + "']")
++        .allInnerTexts()
++        .stream()
++        .map(String::strip)
++        .toList();
++  }
++
++  /**
++   * The product name on one card.
++   *
++   * @param index the card's position in the slider, from 0
++   * @return the name
++   */
++  public String cardName(final int index) {
++    return cardPart(index, CARD_NAME).innerText().strip();
++  }
++
++  /**
++   * The price on one card.
++   *
++   * @param index the card's position in the slider, from 0
++   * @return the price text
++   */
++  public String cardPrice(final int index) {
++    return cardPart(index, CARD_PRICE).innerText().strip();
++  }
++
++  /**
++   * The image the card shows: the address the browser loaded.
++   *
++   * @param index the card's position in the slider, from 0
++   * @return the address, empty when the card shows no picture
++   */
++  public String cardImageSource(final int index) {
++    return (String)
++        cardPart(index, CARD_IMAGE).evaluate("e => e.currentSrc || e.getAttribute('src') || ''");
++  }
++
++  /**
++   * Whether the card's image has loaded and has a size.
++   *
++   * @param index the card's position in the slider, from 0
++   * @return true when the picture is shown
++   */
++  public boolean cardImageIsLoaded(final int index) {
++    return Boolean.TRUE.equals(
++        cardPart(index, CARD_IMAGE)
++            .evaluate(
++                "async e => { if (!e.complete && e.decode) await e.decode().catch(() => {});"
++                    + " return !!e.complete && e.naturalWidth > 0; }"));
++  }
++
++  /**
++   * The path the card's link leads to.
++   *
++   * @param index the card's position in the slider, from 0
++   * @return the link's target
++   */
++  public String cardLinkPath(final int index) {
++    final String href = cardPart(index, CARD_LINK).getAttribute("href");
++    return href == null ? "" : href;
++  }
++
++  /**
++   * Follows the card's link.
++   *
++   * @param index the card's position in the slider, from 0
++   * @return the product page it leads to
++   */
++  public ProductDetailPage followCard(final int index) {
++    cardPart(index, CARD_LINK).click();
++    return new ProductDetailPage(page);
++  }
++
++  /**
++   * The left and top edge of every card, in slider order.
++   *
++   * @return one position per card
++   */
++  public List<Position> cardPositions() {
++    final List<Position> positions = new ArrayList<>();
++    for (int i = 0; i < cardCount(); i++) {
++      final BoundingBox box = cards().nth(i).boundingBox();
++      positions.add(
++          box == null ? new Position(Double.NaN, Double.NaN) : new Position(box.x, box.y));
++    }
++    return positions;
++  }
++
++  /**
++   * Whether the card is in view right now.
++   *
++   * @param index the card's position in the slider, from 0
++   * @return true when the whole card is in view
++   */
++  public boolean isCardInView(final int index) {
++    return Boolean.TRUE.equals(page.evaluate(CARD_IN_VIEW, List.of(SLIDER, CARD, index)));
++  }
++
++  /**
++   * The indexes of the cards in view once paging has settled: waits until exactly the expected
++   * cards are in view, then reports what is in view.
++   *
++   * @param expected the indexes expected in view
++   * @return the indexes in view
++   */
++  public List<Integer> cardsInView(final Integer... expected) {
++    try {
++      page.waitForFunction(
++          "args => { const inView = "
++              + CARD_IN_VIEW
++              + "; const n = document.querySelectorAll(`[data-test='${args[0]}']"
++              + " [data-test='${args[1]}']`).length; const shown = [];"
++              + " for (let i = 0; i < n; i++) if (inView([args[0], args[1], i])) shown.push(i);"
++              + " return JSON.stringify(shown) === JSON.stringify(args[2]); }",
++          List.of(SLIDER, CARD, List.of(expected)),
++          new Page.WaitForFunctionOptions().setTimeout(SETTLE_TIMEOUT_MS));
++    } catch (PlaywrightException e) {
++      // Settled elsewhere: report what is in view now, so the assertion names it.
++    }
++    final List<Integer> shown = new ArrayList<>();
++    for (int i = 0; i < cardCount(); i++) {
++      if (isCardInView(i)) {
++        shown.add(i);
++      }
++    }
++    return shown;
++  }
++
++  /** Presses "Next". */
++  public void pressNext() {
++    byTest(NEXT).click();
++  }
++
++  /** Presses "Previous". */
++  public void pressPrevious() {
++    byTest(PREVIOUS).click();
++  }
++
++  /**
++   * Whether "Next" is disabled once paging has settled.
++   *
++   * @return true when it is disabled
++   */
++  public boolean isNextDisabled() {
++    return settlesTo(NEXT, true);
++  }
++
++  /**
++   * Whether "Previous" is disabled once paging has settled.
++   *
++   * @return true when it is disabled
++   */
++  public boolean isPreviousDisabled() {
++    return settlesTo(PREVIOUS, true);
++  }
++
++  /**
++   * Whether "Next" is enabled once paging has settled.
++   *
++   * @return true when it is enabled
++   */
++  public boolean isNextEnabled() {
++    return settlesTo(NEXT, false);
++  }
++
++  /**
++   * Whether "Previous" is enabled once paging has settled.
++   *
++   * @return true when it is enabled
++   */
++  public boolean isPreviousEnabled() {
++    return settlesTo(PREVIOUS, false);
++  }
++
++  /**
++   * Presses Tab until the keyboard focus is on "Next".
++   *
++   * @return false when it never gets there
++   */
++  public boolean tabToNext() {
++    for (int press = 0; press < 200; press++) {
++      page.keyboard().press("Tab");
++      final Object focused =
++          page.evaluate("() => document.activeElement?.getAttribute('data-test') ?? null");
++      if (NEXT.equals(focused)) {
++        return true;
++      }
++    }
++    return false;
++  }
++
++  /** Presses Enter on whatever has the keyboard focus. */
++  public void pressEnter() {
++    page.keyboard().press("Enter");
++  }
++
++  private Locator cards() {
++    return page.locator("[data-test='" + SLIDER + "'] [data-test='" + CARD + "']");
++  }
++
++  private Locator cardPart(final int index, final String dataTest) {
++    return cards().nth(index).locator("[data-test='" + dataTest + "']");
++  }
++
++  private Locator byTest(final String dataTest) {
++    return page.locator("[data-test='" + dataTest + "']");
++  }
++
++  private boolean settlesTo(final String dataTest, final boolean disabled) {
++    try {
++      page.waitForFunction(
++          "([dt, disabled]) => document.querySelector(`[data-test='${dt}']`)?.disabled === disabled",
++          List.of(dataTest, disabled),
++          new Page.WaitForFunctionOptions().setTimeout(SETTLE_TIMEOUT_MS));
++      return true;
++    } catch (PlaywrightException e) {
++      return false;
++    }
++  }
++
+   // The text as written, not as CSS transforms it: the subtitle is styled in capitals.
+   private String heroText(String selector) {
+     return page.locator("[data-test='" + HERO + "'] " + selector).textContent().strip();
+diff --git a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java
+index 658dde4..a348473 100644
+--- a/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java
++++ b/src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/pages/ProductDetailPage.java
+@@ -13,6 +13,8 @@ public class ProductDetailPage extends BasePage {
+   private static final String PRODUCT_DETAIL = "product-detail";
+   private static final String ADD_TO_CART_BUTTON = "product-add-to-cart-button";
+   private static final String BACK_LINK = "product-back-link";
++  private static final String TITLE = "product-detail-title";
++  private static final String PRICE = "product-detail-price";
+ 
+   /**
+    * Creates a new ProductDetailPage and waits for it to load.
+@@ -66,6 +68,45 @@ public class ProductDetailPage extends BasePage {
+     return page.locator("[data-test='" + PRODUCT_DETAIL + "'] h1").textContent().trim();
+   }
+ 
++  /**
++   * The product's name as the page's title shows it.
++   *
++   * @return the title text, trimmed
++   */
++  public String title() {
++    return page.locator("[data-test='" + TITLE + "']").innerText().strip();
++  }
++
++  /**
++   * The price the page shows.
++   *
++   * @return the price text, trimmed
++   */
++  public String price() {
++    return page.locator("[data-test='" + PRICE + "']").innerText().strip();
++  }
++
++  /**
++   * The address of the product image the page shows.
++   *
++   * @return the address the browser loaded, empty when the page shows no picture
++   */
++  public String imageSource() {
++    return (String)
++        page.locator("[data-test='" + PRODUCT_DETAIL + "'] img")
++            .first()
++            .evaluate("e => e.currentSrc || e.getAttribute('src') || ''");
++  }
++
++  /**
++   * The path of the page the browser shows.
++   *
++   * @return the path, without the base URL
++   */
++  public String shownPath() {
++    return getCurrentPath();
++  }
++
+   /**
+    * Checks if the product detail section is displayed.
+    *
+diff --git a/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductSliderIntegrationTest.java b/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductSliderIntegrationTest.java
+new file mode 100644
+index 0000000..4a7ec06
+--- /dev/null
++++ b/src/test-integration/java/dev/domaincentric/sample/ecommerce/product/ProductSliderIntegrationTest.java
+@@ -0,0 +1,147 @@
++package dev.domaincentric.sample.ecommerce.product;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
++import dev.domaincentric.sample.ecommerce.product.application.shared.PricingDataPort;
++import dev.domaincentric.sample.ecommerce.product.application.shared.ProductRepository;
++import dev.domaincentric.sample.ecommerce.product.domain.model.Product;
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
++import java.util.ArrayList;
++import java.util.Collection;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++import java.util.Set;
++import java.util.function.Function;
++import java.util.regex.Matcher;
++import java.util.regex.Pattern;
++import java.util.stream.Collectors;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.boot.test.context.TestConfiguration;
++import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Import;
++import org.springframework.context.annotation.Primary;
++import org.springframework.test.web.servlet.MockMvc;
++
++/**
++ * The homepage's "Discover products" slider over a catalogue whose prices the test decides: the
++ * seeded products, with Pricing's answer replaced by one that prices only the products a test names
++ * — the state of a product nobody has priced yet. What the browser suite cannot arrange, because it
++ * runs against the seeded shop.
++ */
++// A context of its own: the replaced Pricing answer must not reach any other test class.
++@SpringBootTest(
++    classes = EcommerceSampleApplication.class,
++    properties =
++        "spring.datasource.url=jdbc:h2:mem:product_slider_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
++@AutoConfigureMockMvc
++@Import(ProductSliderIntegrationTest.PricingChosenByTheTest.class)
++@DisplayName("Product slider on the homepage")
++class ProductSliderIntegrationTest {
++
++  private static final Pattern CARD_LINK =
++      Pattern.compile("<a\\b[^>]*\\bdata-test=\"product-slider-card-link\"[^>]*>");
++  private static final Pattern HREF = Pattern.compile("\\bhref=\"/products/([0-9a-f-]{36})\"");
++
++  @Autowired private MockMvc mockMvc;
++  @Autowired private ProductRepository productRepository;
++  @Autowired private ChosenPricing pricing;
++
++  @Test
++  @DisplayName("A product without a price is not among the slider's cards")
++  void aProductWithoutAPriceIsNotAmongTheSlidersCards() throws Exception {
++    final List<ProductId> catalogue = catalogue();
++    final Set<ProductId> priced = Set.copyOf(catalogue.subList(0, 10));
++    pricing.priceOnly(priced);
++
++    for (int request = 0; request < 10; request++) {
++      final List<ProductId> cards = cardProductIds(homePage());
++
++      assertThat(cards).as("the slider's cards on request %d", request + 1).hasSize(8);
++      assertThat(priced).as("the priced products").containsAll(cards);
++    }
++  }
++
++  @Test
++  @DisplayName("With two priced products the slider holds a card for each of them")
++  void withTwoPricedProductsTheSliderHoldsACardForEachOfThem() throws Exception {
++    final List<ProductId> catalogue = catalogue();
++    final Set<ProductId> priced = Set.of(catalogue.get(3), catalogue.get(17));
++    pricing.priceOnly(priced);
++
++    final List<ProductId> cards = cardProductIds(homePage());
++
++    assertThat(cards).containsExactlyInAnyOrderElementsOf(priced);
++  }
++
++  private List<ProductId> catalogue() {
++    final List<ProductId> products = productRepository.findAll().stream().map(Product::id).toList();
++    assertThat(products).as("the seeded catalogue").hasSizeGreaterThanOrEqualTo(18);
++    return products;
++  }
++
++  private String homePage() throws Exception {
++    return mockMvc
++        .perform(get("/"))
++        .andExpect(status().isOk())
++        .andReturn()
++        .getResponse()
++        .getContentAsString();
++  }
++
++  /** The product of every slider card, read from the card's link to its product page. */
++  private static List<ProductId> cardProductIds(final String html) {
++    final List<ProductId> ids = new ArrayList<>();
++    final Matcher tag = CARD_LINK.matcher(html);
++    while (tag.find()) {
++      final Matcher href = HREF.matcher(tag.group());
++      if (href.find()) {
++        ids.add(ProductId.of(href.group(1)));
++      }
++    }
++    return ids;
++  }
++
++  @TestConfiguration
++  static class PricingChosenByTheTest {
++
++    @Bean
++    @Primary
++    ChosenPricing chosenPricing() {
++      return new ChosenPricing();
++    }
++  }
++
++  /** Pricing's answer holds only the products priced here; every other product has no price. */
++  static final class ChosenPricing implements PricingDataPort {
++
++    private volatile Set<ProductId> priced = Set.of();
++
++    void priceOnly(final Set<ProductId> products) {
++      priced = Set.copyOf(products);
++    }
++
++    @Override
++    public Map<ProductId, PriceData> getPrices(final Collection<ProductId> productIds) {
++      return productIds.stream()
++          .filter(priced::contains)
++          .distinct()
++          .collect(Collectors.toMap(Function.identity(), id -> new PriceData(id, Money.euro(10))));
++    }
++
++    @Override
++    public Optional<PriceData> getPrice(final ProductId productId) {
++      return priced.contains(productId)
++          ? Optional.of(new PriceData(productId, Money.euro(10)))
++          : Optional.empty();
++    }
++  }
++}
+diff --git a/src/test/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionUseCaseTest.java b/src/test/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionUseCaseTest.java
+new file mode 100644
+index 0000000..54c25a1
+--- /dev/null
++++ b/src/test/java/dev/domaincentric/sample/ecommerce/product/application/getproductselection/GetProductSelectionUseCaseTest.java
+@@ -0,0 +1,171 @@
++package dev.domaincentric.sample.ecommerce.product.application.getproductselection;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import dev.domaincentric.sample.ecommerce.product.adapter.outgoing.persistence.InMemoryProductRepository;
++import dev.domaincentric.sample.ecommerce.product.application.shared.PricingDataPort;
++import dev.domaincentric.sample.ecommerce.product.application.shared.ProductStockDataPort;
++import dev.domaincentric.sample.ecommerce.product.domain.model.Category;
++import dev.domaincentric.sample.ecommerce.product.domain.model.EnrichedProduct;
++import dev.domaincentric.sample.ecommerce.product.domain.model.Product;
++import dev.domaincentric.sample.ecommerce.product.domain.model.ProductFactory;
++import dev.domaincentric.sample.ecommerce.product.domain.model.ProductName;
++import dev.domaincentric.sample.ecommerce.product.domain.model.ProductSelection;
++import dev.domaincentric.sample.ecommerce.product.domain.model.SKU;
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
++import java.util.ArrayList;
++import java.util.Collection;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++import java.util.Random;
++import java.util.stream.Collectors;
++import org.junit.jupiter.api.Test;
++
++class GetProductSelectionUseCaseTest {
++
++  private static final ProductFactory FACTORY = new ProductFactory();
++
++  private final InMemoryProductRepository repository = new InMemoryProductRepository();
++  private final FixedPricing pricing = new FixedPricing();
++  private final FixedStock stock = new FixedStock();
++
++  @Test
++  void offersOnlyProductsThatHaveAPrice() {
++    final List<Product> products = saveProducts(6);
++    pricing.price(products.get(1), Money.euro(12.50));
++    pricing.price(products.get(4), Money.euro(7));
++
++    final GetProductSelectionResult result =
++        useCase(new Random(3)).execute(new GetProductSelectionQuery());
++
++    assertThat(result.products())
++        .extracting(EnrichedProduct::productId)
++        .containsExactlyInAnyOrder(products.get(1).id(), products.get(4).id());
++    assertThat(
++            result.products().stream()
++                .filter(p -> p.productId().equals(products.get(1).id()))
++                .findFirst()
++                .orElseThrow()
++                .currentPrice())
++        .isEqualTo(Money.euro(12.50));
++  }
++
++  @Test
++  void offersAtMostEightPricedProducts() {
++    final List<Product> products = saveProducts(10);
++    products.forEach(product -> pricing.price(product, Money.euro(5)));
++
++    final GetProductSelectionResult result =
++        useCase(new Random(3)).execute(new GetProductSelectionQuery());
++
++    assertThat(result.products())
++        .extracting(EnrichedProduct::productId)
++        .hasSize(ProductSelection.MAX_SIZE)
++        .doesNotHaveDuplicates();
++  }
++
++  @Test
++  void offersAPricedProductThatIsOutOfStock() {
++    final List<Product> products = saveProducts(1);
++    pricing.price(products.get(0), Money.euro(9));
++    stock.stock(products.get(0), 0);
++
++    final GetProductSelectionResult result =
++        useCase(new Random(3)).execute(new GetProductSelectionQuery());
++
++    assertThat(result.products()).hasSize(1);
++    assertThat(result.products().get(0).productId()).isEqualTo(products.get(0).id());
++    assertThat(result.products().get(0).canPurchase()).isFalse();
++  }
++
++  @Test
++  void keepsTheOrderTheProductsWereDrawnIn() {
++    final List<Product> products = saveProducts(8);
++    products.forEach(product -> pricing.price(product, Money.euro(5)));
++    final List<ProductId> catalogueOrder = repository.findAll().stream().map(Product::id).toList();
++    final List<ProductId> drawn =
++        ProductSelection.draw(catalogueOrder, new Random(11)).productIds();
++
++    final GetProductSelectionResult result =
++        useCase(new Random(11)).execute(new GetProductSelectionQuery());
++
++    assertThat(result.products()).extracting(EnrichedProduct::productId).isEqualTo(drawn);
++  }
++
++  @Test
++  void offersNothingWhenNoProductHasAPrice() {
++    saveProducts(5);
++
++    final GetProductSelectionResult result =
++        useCase(new Random(3)).execute(new GetProductSelectionQuery());
++
++    assertThat(result.products()).isEmpty();
++  }
++
++  private GetProductSelectionUseCase useCase(final Random random) {
++    return new GetProductSelectionUseCase(repository, pricing, stock, random);
++  }
++
++  private List<Product> saveProducts(final int count) {
++    final List<Product> products = new ArrayList<>();
++    for (int i = 0; i < count; i++) {
++      final Product product =
++          FACTORY.createBasicProduct(
++              SKU.of("SKU-" + i),
++              ProductName.of(String.format("Product %02d", i)),
++              Category.of("Books"),
++              Price.of(Money.euro(1)),
++              1);
++      repository.save(product);
++      products.add(product);
++    }
++    return products;
++  }
++
++  /** Pricing's answer holds only the products priced here, as with a product nobody priced yet. */
++  private static final class FixedPricing implements PricingDataPort {
++
++    private final Map<ProductId, PriceData> prices = new HashMap<>();
++
++    void price(final Product product, final Money price) {
++      prices.put(product.id(), new PriceData(product.id(), price));
++    }
++
++    @Override
++    public Map<ProductId, PriceData> getPrices(final Collection<ProductId> productIds) {
++      return productIds.stream()
++          .filter(prices::containsKey)
++          .collect(Collectors.toMap(id -> id, prices::get));
++    }
++
++    @Override
++    public Optional<PriceData> getPrice(final ProductId productId) {
++      return Optional.ofNullable(prices.get(productId));
++    }
++  }
++
++  private static final class FixedStock implements ProductStockDataPort {
++
++    private final Map<ProductId, StockData> stock = new HashMap<>();
++
++    void stock(final Product product, final int available) {
++      stock.put(product.id(), new StockData(product.id(), available, available > 0));
++    }
++
++    @Override
++    public Optional<StockData> getStockData(final ProductId productId) {
++      return Optional.ofNullable(stock.get(productId));
++    }
++
++    @Override
++    public Map<ProductId, StockData> getStockData(final Collection<ProductId> productIds) {
++      return productIds.stream()
++          .filter(stock::containsKey)
++          .collect(Collectors.toMap(id -> id, stock::get));
++    }
++  }
++}
+diff --git a/src/test/java/dev/domaincentric/sample/ecommerce/product/domain/model/ProductSelectionTest.java b/src/test/java/dev/domaincentric/sample/ecommerce/product/domain/model/ProductSelectionTest.java
+new file mode 100644
+index 0000000..54de316
+--- /dev/null
++++ b/src/test/java/dev/domaincentric/sample/ecommerce/product/domain/model/ProductSelectionTest.java
+@@ -0,0 +1,80 @@
++package dev.domaincentric.sample.ecommerce.product.domain.model;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
++import java.util.ArrayList;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Random;
++import java.util.Set;
++import java.util.stream.IntStream;
++import org.junit.jupiter.api.Test;
++
++class ProductSelectionTest {
++
++  @Test
++  void drawsEightDifferentProductsFromTheCandidates() {
++    final List<ProductId> candidates = candidates(21);
++
++    final ProductSelection selection = ProductSelection.draw(candidates, new Random(1));
++
++    assertThat(selection.productIds()).hasSize(ProductSelection.MAX_SIZE).doesNotHaveDuplicates();
++    assertThat(candidates).containsAll(selection.productIds());
++  }
++
++  @Test
++  void drawsEveryCandidateWhenThereAreFewerThanEight() {
++    final List<ProductId> candidates = candidates(2);
++
++    final ProductSelection selection = ProductSelection.draw(candidates, new Random(1));
++
++    assertThat(selection.productIds()).containsExactlyInAnyOrderElementsOf(candidates);
++  }
++
++  @Test
++  void drawsNothingWithoutCandidates() {
++    final ProductSelection selection = ProductSelection.draw(List.of(), new Random(1));
++
++    assertThat(selection.productIds()).isEmpty();
++  }
++
++  @Test
++  void aCandidateNamedTwiceIsDrawnOnce() {
++    final List<ProductId> distinct = candidates(3);
++    final List<ProductId> twice = new ArrayList<>(distinct);
++    twice.addAll(distinct);
++
++    final ProductSelection selection = ProductSelection.draw(twice, new Random(1));
++
++    assertThat(selection.productIds()).containsExactlyInAnyOrderElementsOf(distinct);
++  }
++
++  @Test
++  void differentRandomSourcesDrawDifferentSelections() {
++    final List<ProductId> candidates = candidates(21);
++    final Set<Set<ProductId>> selections = new HashSet<>();
++
++    for (int seed = 1; seed <= 20; seed++) {
++      selections.add(Set.copyOf(ProductSelection.draw(candidates, new Random(seed)).productIds()));
++    }
++
++    assertThat(selections)
++        .as("twenty different random sources all drew the same eight products")
++        .hasSizeGreaterThan(1);
++  }
++
++  @Test
++  void theSameRandomSourceDrawsTheSameSelection() {
++    final List<ProductId> candidates = candidates(21);
++
++    final ProductSelection first = ProductSelection.draw(candidates, new Random(42));
++    final ProductSelection second = ProductSelection.draw(candidates, new Random(42));
++
++    assertThat(first.productIds()).isEqualTo(second.productIds());
++  }
++
++  private static List<ProductId> candidates(final int count) {
++    return IntStream.range(0, count).mapToObj(i -> ProductId.generate()).toList();
++  }
++}
+diff --git a/src/test/java/dev/domaincentric/sample/ecommerce/specification/SharedScenariosTest.java b/src/test/java/dev/domaincentric/sample/ecommerce/specification/SharedScenariosTest.java
+index e4f5249..94bddc3 100644
+--- a/src/test/java/dev/domaincentric/sample/ecommerce/specification/SharedScenariosTest.java
++++ b/src/test/java/dev/domaincentric/sample/ecommerce/specification/SharedScenariosTest.java
+@@ -28,11 +28,17 @@ import org.junit.jupiter.api.Test;
+ class SharedScenariosTest {
+   static final Path E2E_SOURCES = Path.of("src/test-e2e/java");
+ 
+-  /** One {@code @DisplayName(...)}, its string possibly split over several literals. */
++  /**
++   * One {@code @DisplayName(...)}, its string possibly split over several literals, each of which
++   * may carry escapes ({@code \"}, {@code \\}).
++   */
+   static final Pattern DISPLAY_NAME =
+-      Pattern.compile("@DisplayName\\(\\s*((?:\"[^\"]*\"\\s*\\+?\\s*)+)\\)");
++      Pattern.compile("@DisplayName\\(\\s*((?:\"(?:[^\"\\\\]|\\\\.)*\"\\s*\\+?\\s*)+)\\)");
++
++  static final Pattern LITERAL = Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\"");
+ 
+-  static final Pattern LITERAL = Pattern.compile("\"([^\"]*)\"");
++  /** An escape in a literal: the character after the backslash, as the runtime reads it. */
++  static final Pattern ESCAPE = Pattern.compile("\\\\(.)");
+ 
+   @Test
+   void everyScenarioIsOneBrowserTestAndEveryBrowserTestIsAScenario() throws IOException {
+@@ -96,12 +102,17 @@ class SharedScenariosTest {
+       if (upToBody.matches("(?s).*\\bclass\\b.*")) continue;
+       var literals = new StringBuilder();
+       Matcher literal = LITERAL.matcher(matcher.group(1));
+-      while (literal.find()) literals.append(literal.group(1));
++      while (literal.find()) literals.append(unescaped(literal.group(1)));
+       names.add(literals.toString());
+     }
+     return names;
+   }
+ 
++  /** A literal's content as the runtime sees it: {@code \"} is a quote, {@code \\} a backslash. */
++  static String unescaped(String literal) {
++    return ESCAPE.matcher(literal).replaceAll(escape -> Matcher.quoteReplacement(escape.group(1)));
++  }
++
+   static int countOf(String token, String text) {
+     return (int) Pattern.compile(Pattern.quote(token) + "\\b").matcher(text).results().count();
+   }

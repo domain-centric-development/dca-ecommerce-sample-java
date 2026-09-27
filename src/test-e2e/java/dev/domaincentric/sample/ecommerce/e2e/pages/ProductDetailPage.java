@@ -13,6 +13,8 @@ public class ProductDetailPage extends BasePage {
   private static final String PRODUCT_DETAIL = "product-detail";
   private static final String ADD_TO_CART_BUTTON = "product-add-to-cart-button";
   private static final String BACK_LINK = "product-back-link";
+  private static final String TITLE = "product-detail-title";
+  private static final String PRICE = "product-detail-price";
 
   /**
    * Creates a new ProductDetailPage and waits for it to load.
@@ -64,6 +66,45 @@ public class ProductDetailPage extends BasePage {
    */
   public String heading() {
     return page.locator("[data-test='" + PRODUCT_DETAIL + "'] h1").textContent().trim();
+  }
+
+  /**
+   * The product's name as the page's title shows it.
+   *
+   * @return the title text, trimmed
+   */
+  public String title() {
+    return page.locator("[data-test='" + TITLE + "']").innerText().strip();
+  }
+
+  /**
+   * The price the page shows.
+   *
+   * @return the price text, trimmed
+   */
+  public String price() {
+    return page.locator("[data-test='" + PRICE + "']").innerText().strip();
+  }
+
+  /**
+   * The address of the product image the page shows.
+   *
+   * @return the address the browser loaded, empty when the page shows no picture
+   */
+  public String imageSource() {
+    return (String)
+        page.locator("[data-test='" + PRODUCT_DETAIL + "'] img")
+            .first()
+            .evaluate("e => e.currentSrc || e.getAttribute('src') || ''");
+  }
+
+  /**
+   * The path of the page the browser shows.
+   *
+   * @return the path, without the base URL
+   */
+  public String shownPath() {
+    return getCurrentPath();
   }
 
   /**

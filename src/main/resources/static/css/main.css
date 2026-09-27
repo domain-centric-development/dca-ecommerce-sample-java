@@ -2830,6 +2830,101 @@ ul, ol {
 }
 
 /* --------------------------------------------------------------------------
+   28a. Product Slider (Homepage)
+   -------------------------------------------------------------------------- */
+
+.product-slider__track {
+  --product-slider-gap: var(--space-lg);
+  display: flex;
+  gap: var(--product-slider-gap);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.product-slider__track::-webkit-scrollbar {
+  display: none;
+}
+
+.product-slider__card {
+  flex: 0 0 calc((100% - 3 * var(--product-slider-gap)) / 4);
+  scroll-snap-align: start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.product-slider__link {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.product-slider__link:hover .product-slider__name,
+.product-slider__link:focus-visible .product-slider__name {
+  color: var(--color-primary);
+}
+
+.product-slider__image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--color-border-light);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-slider__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-slider__name {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: var(--space-md) var(--space-md) var(--space-xs);
+}
+
+.product-slider__price {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-accent);
+  margin: 0 var(--space-md) var(--space-md);
+}
+
+.product-slider__controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.product-slider__button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .product-slider__card {
+    flex-basis: calc((100% - var(--product-slider-gap)) / 2);
+  }
+}
+
+@media (max-width: 480px) {
+  .product-slider__card {
+    flex-basis: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
    29. Doc Links (Homepage)
    -------------------------------------------------------------------------- */
 
