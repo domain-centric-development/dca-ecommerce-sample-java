@@ -36,3 +36,8 @@ Start the application with `./gradlew bootRun`.
 ## Options
 - accepted: the story is delivered.
 - a correction: what should be different, written into the story (criteria and an `answered:` line naming this record); the story runs again from plan.
+
+## Answer
+answer: accepted
+by: Christoph Bloemer
+at: 2026-09-27T11:06:50Z

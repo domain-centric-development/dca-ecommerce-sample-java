@@ -27,7 +27,10 @@
 2026-09-26T14:41:07.768Z	usage	tidy	tool=claude-session	model=claude-opus-5-5	input=26	cache_read=979522	cache_write=120620	output=2003	window=2026-09-26T14:26:41.534Z/2026-09-26T14:41:07.768Z
 2026-09-26T14:48:59.392Z	stage-start	judge	tool=claude-session
 2026-09-26T14:51:34.242Z	stage-end	judge	exit=0
-2026-09-26T14:51:34.242Z	usage	judge	tool=claude-session	window=2026-09-26T14:48:59.392Z/2026-09-26T14:51:34.242Z	session=claude:49fb3e8d-7ef3-4f7c-9894-df506fdb1796
+2026-09-26T14:51:34.242Z	usage	judge	tool=claude-session	model=claude-opus-5-5	input=48	cache_read=2427637	cache_write=130901	output=5383	window=2026-09-26T14:48:59.392Z/2026-09-26T14:51:34.242Z
 2026-09-26T14:51:34.851Z	stage-start	document	tool=claude-session
 2026-09-26T14:54:06.863Z	stage-end	document	exit=0
-2026-09-26T14:54:06.863Z	usage	document	tool=claude-session	window=2026-09-26T14:51:34.851Z/2026-09-26T14:54:06.863Z	session=claude:49fb3e8d-7ef3-4f7c-9894-df506fdb1796
+2026-09-26T14:54:06.863Z	usage	document	tool=claude-session	model=claude-opus-5-5	input=62	cache_read=2866000	cache_write=74413	output=6230	window=2026-09-26T14:51:34.851Z/2026-09-26T14:54:06.863Z
+2026-09-27T11:04:35.369Z	window-start	decisions	tool=claude-session
+2026-09-27T11:06:50.280Z	window-end	decisions
+2026-09-27T11:06:50.280Z	usage	decisions	tool=claude-session	window=2026-09-27T11:04:35.369Z/2026-09-27T11:06:50.280Z	session=claude:49fb3e8d-7ef3-4f7c-9894-df506fdb1796
