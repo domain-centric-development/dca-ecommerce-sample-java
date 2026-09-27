@@ -104,6 +104,27 @@ purchased" or "stock is sufficient for quantity x".
 **Notes:** Risk of synonyms — sometimes referred to as "Product View" or
 "Product Display Model"; prefer `EnrichedProduct`.
 
+### ProductSelection
+
+**Definition:** Up to eight different products of the catalogue that have a
+price, drawn at random anew on every request; shown on the homepage as the
+"Discover products" slider. Fewer priced products yield all of them, none
+yield an empty selection.
+
+**Type:** Value Object
+
+**Related terms:**
+- `ProductId` — the selection holds the drawn ids, in draw order
+- `EnrichedProduct` — what the selection is shown as
+- Product slider — the homepage section that presents it (Portal glossary)
+
+**Operations:** `draw` (from the priced candidates and a random source)
+
+**Notes:** "Has a price" means Pricing's answer contains the product.
+Out-of-stock products are offered as long as they have a price. Not a
+popularity ranking and not personalised. Read by the query use case
+`GetProductSelectionUseCase`.
+
 ## Domain Events
 
 ### ProductCreated

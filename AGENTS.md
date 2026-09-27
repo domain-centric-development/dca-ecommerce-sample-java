@@ -84,6 +84,12 @@ This is a **sample e-commerce application** demonstrating best practices for:
 **Purpose:**
 This project serves as a reference implementation showing how to properly structure an enterprise application using modern architectural patterns.
 
+**One markup for both shops.** The .NET sample (`../dca-ecommerce-sample-dotnet/`) renders the same pages: the
+same routes, CSS classes, `data-test` attributes and `main.css`, so either browser suite runs against either shop.
+A page change the .NET sample delivered first is taken over from there — its views under
+`src/DcaShop.Web/Views/` and its `src/DcaShop.Web/wwwroot/css/main.css` — not named anew; a change delivered here
+first is the one the .NET sample takes over.
+
 ## Development Workflow
 
 ### Standard Development Process

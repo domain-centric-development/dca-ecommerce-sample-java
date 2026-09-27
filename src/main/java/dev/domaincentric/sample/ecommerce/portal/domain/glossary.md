@@ -49,6 +49,7 @@ them. Definitions can be found in the respective context glossaries.
 | Term              | Owning Context        | Usage in Portal                               |
 |-------------------|-----------------------|-----------------------------------------------|
 | Product / Catalog | `product`             | Navigation to product listing                 |
+| Product slider    | `product`             | The homepage section "Discover products", directly below the hero: the `ProductSelection` as cards, paged with Previous and Next; composed into the page as the model attribute `productSlider`, which `product`'s `ProductSliderControllerAdvice` adds on `GET /`, not referenced in Java |
 | Cart              | `cart`                | Navigation to shopping cart                   |
 | Checkout / Order  | `checkout`            | Navigation to checkout flow                   |
 | Account / User    | `account`             | Login/profile entry points (once available)   |

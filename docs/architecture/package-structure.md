@@ -38,7 +38,8 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── Category (Value Object)
 │   │   │   ├── ProductFactory
 │   │   │   ├── ProductArticle (external article data)
-│   │   │   └── EnrichedProduct (Enriched Domain Model with factory)
+│   │   │   ├── EnrichedProduct (Enriched Domain Model with factory)
+│   │   │   └── ProductSelection (Value Object: the homepage slider's random draw)
 │   │   └── event/                  # Domain Events
 │   │       └── ProductCreated
 │   ├── application/                # Application Layer
@@ -57,6 +58,11 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── GetProductByIdUseCase
 │   │   │   ├── GetProductByIdQuery
 │   │   │   └── GetProductByIdResult
+│   │   ├── getproductselection/   # Use case: Get Product Selection
+│   │   │   ├── GetProductSelectionInputPort
+│   │   │   ├── GetProductSelectionUseCase
+│   │   │   ├── GetProductSelectionQuery
+│   │   │   └── GetProductSelectionResult
 │   │   ├── updateproductprice/    # Use case: Update Product Price
 │   │   │   ├── UpdateProductPriceInputPort
 │   │   │   ├── UpdateProductPriceUseCase
@@ -84,7 +90,9 @@ dev.domaincentric.sample.ecommerce
 │       │   ├── web/
 │       │   │   ├── ProductPageController
 │       │   │   ├── ProductCatalogPageViewModel
-│       │   │   └── ProductDetailPageViewModel
+│       │   │   ├── ProductDetailPageViewModel
+│       │   │   ├── ProductSliderControllerAdvice   # Homepage "Discover products" slider
+│       │   │   └── ProductSliderViewModel
 │       │   └── event/
 │       │       └── ProductEventConsumer
 │       └── outgoing/               # Outgoing Adapters (Secondary)

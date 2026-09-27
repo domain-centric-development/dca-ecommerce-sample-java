@@ -117,6 +117,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── EnrichedProduct.java      # Enriched read model
 │   │   │   ├── Category.java
 │   │   │   ├── ImageUrl.java
+│   │   │   ├── ProductSelection.java     # Homepage slider's random draw
 │   │   │   └── ProductFactory.java       # Factory
 │   │   └── event/                        # Domain events
 │   │       ├── ProductCreated.java
@@ -139,6 +140,11 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── GetProductByIdUseCase.java
 │   │   │   ├── GetProductByIdQuery.java
 │   │   │   └── GetProductByIdResult.java
+│   │   ├── getproductselection/          # Use case: Get Product Selection
+│   │   │   ├── GetProductSelectionInputPort.java
+│   │   │   ├── GetProductSelectionUseCase.java
+│   │   │   ├── GetProductSelectionQuery.java
+│   │   │   └── GetProductSelectionResult.java
 │   │   └── shared/                       # Shared output ports
 │   │       ├── ProductRepository.java
 │   │       ├── PricingDataPort.java      # Port for pricing data from Pricing context
@@ -159,7 +165,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │   ├── web/
 │       │   │   ├── ProductPageController.java
 │       │   │   ├── ProductCatalogPageViewModel.java
-│       │   │   └── ProductDetailPageViewModel.java
+│       │   │   ├── ProductDetailPageViewModel.java
+│       │   │   ├── ProductSliderControllerAdvice.java  # Homepage "Discover products" slider
+│       │   │   └── ProductSliderViewModel.java
 │       │   └── event/
 │       │       └── ProductEventConsumer.java
 │       └── outgoing/                     # Outgoing adapters (secondary)

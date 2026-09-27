@@ -11,6 +11,48 @@ block content
       a.hero__cta.hero__cta--primary(href="/products" data-test="browse-products-link") Browse Products
       a.hero__cta.hero__cta--secondary(href="/cart" data-test="view-cart-link") View Cart
 
+  if productSlider && productSlider.hasCards()
+    section.section.product-slider(data-test="product-slider" aria-labelledby="product-slider-title")
+      h2.section__title#product-slider-title(data-test="product-slider-title") Discover products
+      .product-slider__controls
+        button.btn.btn--ghost.product-slider__button(type="button" data-test="product-slider-previous" data-product-slider-previous) Previous
+        button.btn.btn--ghost.product-slider__button(type="button" data-test="product-slider-next" data-product-slider-next) Next
+      .product-slider__track(data-product-slider-track)
+        each card in productSlider.cards()
+          article.product-slider__card(data-test="product-slider-card")
+            a.product-slider__link(href="/products/" + card.productId() data-test="product-slider-card-link")
+              .product-slider__image
+                if card.imageUrl() != ''
+                  img(src=card.imageUrl() alt=card.name() data-test="product-slider-card-image")
+                else
+                  .product-card__image-placeholder(data-test="product-slider-card-image") #{card.name().charAt(0)}
+              h3.product-slider__name(data-test="product-slider-card-name") #{card.name()}
+              .product-slider__price(data-test="product-slider-card-price") #{card.price()}
+      script.
+        (function () {
+          var slider = document.currentScript.parentElement;
+          var track = slider.querySelector('[data-product-slider-track]');
+          var previous = slider.querySelector('[data-product-slider-previous]');
+          var next = slider.querySelector('[data-product-slider-next]');
+          function step() {
+            var cards = track.children;
+            return cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : track.clientWidth;
+          }
+          function update() {
+            previous.disabled = track.scrollLeft <= 1;
+            next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+          }
+          function move(by) {
+            var index = Math.round(track.scrollLeft / step()) + by;
+            track.scrollTo({ left: Math.max(0, index) * step() });
+          }
+          previous.addEventListener('click', function () { move(-1); });
+          next.addEventListener('click', function () { move(1); });
+          track.addEventListener('scroll', update, { passive: true });
+          window.addEventListener('resize', update);
+          update();
+        })();
+
   section.section(data-test="features")
     h2.section__title Why Shop With Us
     .feature-grid

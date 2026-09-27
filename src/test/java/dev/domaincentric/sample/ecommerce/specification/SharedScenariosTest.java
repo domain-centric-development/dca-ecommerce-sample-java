@@ -28,11 +28,17 @@ import org.junit.jupiter.api.Test;
 class SharedScenariosTest {
   static final Path E2E_SOURCES = Path.of("src/test-e2e/java");
 
-  /** One {@code @DisplayName(...)}, its string possibly split over several literals. */
+  /**
+   * One {@code @DisplayName(...)}, its string possibly split over several literals, each of which
+   * may carry escapes ({@code \"}, {@code \\}).
+   */
   static final Pattern DISPLAY_NAME =
-      Pattern.compile("@DisplayName\\(\\s*((?:\"[^\"]*\"\\s*\\+?\\s*)+)\\)");
+      Pattern.compile("@DisplayName\\(\\s*((?:\"(?:[^\"\\\\]|\\\\.)*\"\\s*\\+?\\s*)+)\\)");
 
-  static final Pattern LITERAL = Pattern.compile("\"([^\"]*)\"");
+  static final Pattern LITERAL = Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\"");
+
+  /** An escape in a literal: the character after the backslash, as the runtime reads it. */
+  static final Pattern ESCAPE = Pattern.compile("\\\\(.)");
 
   @Test
   void everyScenarioIsOneBrowserTestAndEveryBrowserTestIsAScenario() throws IOException {
@@ -96,10 +102,15 @@ class SharedScenariosTest {
       if (upToBody.matches("(?s).*\\bclass\\b.*")) continue;
       var literals = new StringBuilder();
       Matcher literal = LITERAL.matcher(matcher.group(1));
-      while (literal.find()) literals.append(literal.group(1));
+      while (literal.find()) literals.append(unescaped(literal.group(1)));
       names.add(literals.toString());
     }
     return names;
+  }
+
+  /** A literal's content as the runtime sees it: {@code \"} is a quote, {@code \\} a backslash. */
+  static String unescaped(String literal) {
+    return ESCAPE.matcher(literal).replaceAll(escape -> Matcher.quoteReplacement(escape.group(1)));
   }
 
   static int countOf(String token, String text) {
