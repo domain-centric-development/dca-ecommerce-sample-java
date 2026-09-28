@@ -42,3 +42,4 @@ contextMap: docs/architecture/context-map.md
 required: compile test test.integration architecture format
 acceptance: pages
 run: ./gradlew bootRun
+carrier.plan: dca-modelling
