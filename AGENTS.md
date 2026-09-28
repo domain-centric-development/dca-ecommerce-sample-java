@@ -242,7 +242,8 @@ For the factory, run `/factory-run` with the person's words: it writes the story
 question is done directly.
 
 A session never runs `factory.sh run` — it starts a tool process per stage. One worker per checkout: a
-managing session writes backlog and decision files only. Every change — by a stage or by hand in a
+managing session writes backlog and decision files only; a stage the runner started is that worker's own
+session and writes its stage file. Every change — by a stage or by hand in a
 session — passes `bash .agents/factory/factory.sh check` before it is committed; the commit hook runs it
 on what is staged.
 <!-- dca-factory: end -->
