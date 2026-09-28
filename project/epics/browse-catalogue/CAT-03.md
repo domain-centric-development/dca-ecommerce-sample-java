@@ -2,6 +2,7 @@
 id: CAT-03
 epic: browse-catalogue
 status: adopted
+delivered: 2026-09-26T11:03:03Z
 context: product
 title: A product that does not exist
 depends_on: [CAT-02, CAT-04]

@@ -2,6 +2,7 @@
 id: CAT-05
 epic: browse-catalogue
 status: adopted
+delivered: 2026-09-26T10:52:56Z
 context: portal
 title: Every page shares the shop's header and footer
 depends_on: [CAT-04]

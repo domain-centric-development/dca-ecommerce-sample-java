@@ -1,7 +1,8 @@
 ---
 id: product-slider
 epic: homepage-discovery
-status: approved
+status: delivered
+delivered: 2026-09-27T11:06:53Z
 context: product
 title: Product slider on the homepage
 depends_on: [CAT-02, CAT-04]

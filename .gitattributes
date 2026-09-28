@@ -1,1 +1,1 @@
-tasks/**/.verify/journal.tsv merge=union
+.dca-factory/runs/**/.verify/journal.tsv merge=union

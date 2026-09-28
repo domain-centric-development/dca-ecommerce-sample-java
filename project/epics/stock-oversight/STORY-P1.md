@@ -1,7 +1,8 @@
 ---
 id: STORY-P1
 epic: stock-oversight
-status: approved
+status: delivered
+delivered: 2026-09-10T20:14:35Z
 context: Inventory
 title: Low stock overview
 depends_on: []

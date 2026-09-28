@@ -2,6 +2,7 @@
 id: CAT-04
 epic: browse-catalogue
 status: adopted
+delivered: 2026-09-26T10:40:47Z
 context: portal
 title: The home page
 depends_on: [CAT-01]

@@ -1,7 +1,8 @@
 ---
 id: pay-through-the-provider
 epic: provider-payment
-status: approved
+status: delivered
+delivered: 2026-09-26T07:39:59Z
 context: checkout
 title: Pay through the payment provider
 depends_on: []
