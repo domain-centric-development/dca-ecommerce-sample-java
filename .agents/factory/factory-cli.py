@@ -1058,6 +1058,10 @@ HELP_COMMANDS = (
     ("the profile", "what detection finds against the stack profile", "/factory-setup", "setup --check"),
     ("observe a story", "what a delivered story changed, measured from its files", "/factory-verify <story>",
      "verify --story <story>"),
+    ("the machinery", "the pipeline's own suite against fixtures — for whoever changes the pipeline",
+     "/factory-verify --fixtures", "verify --fixtures"),
+    ("one stage by hand", "stage-plan … stage-document are the six stages the run calls; by hand only to redo one "
+                          "stage of a story that has the ones before", "/stage-<stage> <story>", ""),
     ("update the pipeline", "the newest pipeline found, same tools", "/factory-update", "update"),
     ("this help", "the flow, the commands, the marks, the files", "/factory-help", "help"),
 )
@@ -1865,7 +1869,9 @@ def story_model(cwd, backlog, tasks, story_id, live=False):
                 + (f" · {entry['runs']} sessions" if entry["runs"] > 1 else "")
             continue
         extra = entry["runs"] - sum(1 for p in facts["passes"] if stage in p["stages"])
-        asked = questions.get(stage, [])[:max(extra, 0)]
+        # a shared builder's window carries plan to tidy: a question any of those stages asked is its
+        covered = ("plan", "test", "build", "tidy") if stage == "builder" else (stage,)
+        asked = [rid for name in covered for rid in questions.get(name, [])][:max(extra, 0)]
         repeats = max(extra, 0) - len(asked)
         why = [f"{len(asked)} question" + ("s" if len(asked) > 1 else "") + f" ({', '.join(asked)})"] if asked else []
         if repeats:

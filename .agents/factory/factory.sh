@@ -172,11 +172,12 @@ plugin_gate() {
 }
 
 # The pipeline's skill folder this project can update from, the newest one found: an explicit
-# FACTORY_PLUGIN_DIR, the checkout this script runs from, the skill folders the install linked or
-# copied, and Claude Code's plugin cache. A copy of the skills in the project is a candidate too, so
-# "newest" decides, not the order — the project's own copy is never the answer when a newer one exists.
+# FACTORY_PLUGIN_DIR, the checkout this script runs from, the pipeline the skill folders the install
+# linked lead to, and Claude Code's plugin cache. "Newest" decides, not the order. The project's own
+# copies are never a candidate: an update replaces them, so they are no source — from themselves they
+# would stay what they are, and on a version tie they would shadow the cache the copies came from.
 plugin_skills() {
-  local candidate dir best="" best_version="" version
+  local candidate dir best="" best_version="" version root; root=$(pwd -P)
   for candidate in \
       "${FACTORY_PLUGIN_DIR:-}" \
       "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)" \
@@ -186,6 +187,7 @@ plugin_skills() {
     # through the skill, not the folder: a project's skill folder holds one link per skill, so the
     # folder resolves to the project itself while its `factory-run` resolves to where the pipeline is
     dir=$(dirname "$(cd "$candidate/factory-run" && pwd -P)")
+    case "$candidate" in .*/skills) case "$dir/" in "$root"/*) continue ;; esac ;; esac
     version=$(gate_field "$dir/factory-run/scripts/story-gate.py" VERSION)
     if [ -z "$best" ] || [ "$(printf '%s\n%s\n' "$best_version" "$version" | sort -V | tail -1)" != "$best_version" ]; then
       best=$dir; best_version=$version
@@ -1494,8 +1496,9 @@ with open(path, "w", encoding="utf-8") as handle:
 print("factory: AGENTS.md carries the pipeline's section (between its dca-factory markers)")
 AGENTSEOF
   if [ -f CLAUDE.md ] && ! grep -q "AGENTS.md" CLAUDE.md; then
-    echo "factory: CLAUDE.md does not import AGENTS.md — Claude Code gets the section through the" >&2
-    echo "factory:   SessionStart hook; add '@AGENTS.md' to CLAUDE.md if it should read the rest too." >&2
+    echo "factory: CLAUDE.md does not import AGENTS.md — a Claude Code before 2.1.277 (it reads AGENTS.md" >&2
+    echo "factory:   natively since) gets the section through the SessionStart hook only; add '@AGENTS.md'" >&2
+    echo "factory:   to CLAUDE.md if such a version should read the rest too." >&2
   fi
 }
 
