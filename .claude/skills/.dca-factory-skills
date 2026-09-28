@@ -1,0 +1,26 @@
+mode: link
+source: checkout
+factory-backlog
+factory-decisions
+factory-help
+factory-run
+factory-setup
+factory-status
+factory-update
+factory-verify
+stage-build
+stage-document
+stage-judge
+stage-plan
+stage-test
+stage-tidy
+context-map
+dca-discipline
+dca-knowledge
+dca-modelling
+dca-review
+e2e-testing
+review-clean-code
+review-ddd
+review-hexagonal
+ubiquitous-language

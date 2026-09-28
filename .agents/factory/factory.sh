@@ -3,8 +3,9 @@
 # context and reads only its story and its predecessor's file. Same stages, same gate, same
 # files as running the skills inside a session — this only changes who holds the context.
 #
-#   factory.sh setup [--tool claude|codex|opencode|all|none] [--copy] [--from <skill folder>]
-#                    installs the pipeline where it is not; on an installed project it reports only
+#   factory.sh setup [--tool claude|codex|opencode|all|none] [--copy|--link] [--from <skill folder>]
+#                    installs the pipeline where it is not; on an installed project it reports only.
+#                    Skills are copied when the source is a plugin cache, linked when it is a checkout
 #   factory.sh setup --check                 what detection finds against the profile (read-only)
 #   factory.sh setup --write [--replace <key>]   adds the detected keys the profile lacks
 #   factory.sh backlog [--check]             every story's state and the next one; --check the backlog
@@ -16,7 +17,8 @@
 #   factory.sh decisions [--story <id>]      the decision inbox
 #   factory.sh help [--format text|md|json]  the factory explained: the flow and where this project stands,
 #                                            every command in its agent and its shell form, the marks, the files
-#   factory.sh update [--from <skill folder>]   the newest pipeline found, same tools, links or copies
+#   factory.sh update [--from <skill folder>] [--copy|--link]   the newest pipeline found, same tools; the mode
+#                                            the project has, or the one named
 #   factory.sh verify --story <id> | --fixtures   observe a delivered story | check the machinery
 #   factory.sh check [--staged] [--checks "<c> …"] | --parity <config>   for the commit hook and CI
 #
@@ -46,6 +48,12 @@ STAGES=(plan test build tidy judge document)
 PRE_GATED=(plan)
 POST_GATED=(test build tidy document)
 GATE=".agents/factory/story-gate.py"
+# What shows and coordinates, beside the gate that decides: the file next to this script (the project's
+# copy beside the project's runner, the plugin's beside the plugin's). It imports the gate beside *it*,
+# and it is the one reader the runner asks a project file's content from — the profile, a verdict, a
+# needs-human section, an open record — so the runner parses nothing the gate parses.
+CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/factory-cli.py"
+cli() { "$PY" "$CLI" "$@"; }
 TASKS="tasks"
 DECISIONS=".agents/factory/decisions"
 STOP_FILE=".agents/factory/stop"             # exists → a backlog run stops before its next story
@@ -76,10 +84,10 @@ refuse_nested() {
 # given back when the runner ends — however it ends.
 take_checkout() {
   [ -f "$GATE" ] || { echo "factory: no gate at $GATE — the checkout is not claimed; install the pipeline" >&2; return 0; }
-  "$PY" "$GATE" --claim "$WORKER" || {
+  cli --claim "$WORKER" || {
     echo "factory: another worker holds this checkout — see 'factory.sh status'. Nothing was started." >&2
     return 5; }
-  trap '"$PY" "$GATE" --release "$WORKER" >/dev/null 2>&1' EXIT
+  trap 'cli --release "$WORKER" >/dev/null 2>&1' EXIT
   # Without these, a TERM or HUP ends the runner at once — its EXIT trap gives the claim back while
   # the stage's tool process runs on, and a second worker starts beside it. With a trap set, bash
   # runs it once the foreground stage has ended, so the claim is released only after that.
@@ -186,20 +194,65 @@ plugin_skills() {
   [ -n "$best" ] && echo "$best"
 }
 
+# The list an install keeps beside the skills it placed (`<target>/.dca-factory-skills`): two header
+# lines — the mode (`link` or `copy`) and where the source was (`cache` or `checkout`) — then one
+# skill name per line. Committed with the project in both modes, so a clone and an update read the
+# mode and the install's own entries from it instead of guessing from what the directory holds. An
+# entry the list does not name is the project's, whatever its name. A list from before the header
+# (names only) is read as a copy install.
+MANIFEST_NAME=".dca-factory-skills"
+# The pipeline's own skill names, for the one guess that remains: an install from before the list.
+PIPELINE_SKILLS="factory-backlog factory-decisions factory-help factory-run factory-setup factory-status factory-update factory-verify stage-build stage-document stage-judge stage-plan stage-test stage-tidy"
+manifest_field() {                          # manifest_field <target> <mode|source>
+  sed -n "s/^$2:[[:space:]]*//p" "$1/$MANIFEST_NAME" 2>/dev/null | head -1
+}
+manifest_names() {                          # manifest_names <target>
+  grep -v ':' "$1/$MANIFEST_NAME" 2>/dev/null || true
+}
+manifest_has() {                            # manifest_has <target> <name>
+  manifest_names "$1" | grep -qx "$2"
+}
+manifest_start() {                          # manifest_start <target> <mode> <source kind> — begins <list>.new
+  printf 'mode: %s\nsource: %s\n' "$2" "$3" > "$1/$MANIFEST_NAME.new"
+}
+manifest_add() {                            # manifest_add <target> <name> — into the list, once
+  grep -qsx "$2" "$1/$MANIFEST_NAME" || {
+    [ -f "$1/$MANIFEST_NAME" ] || printf 'mode: link\nsource: checkout\n' > "$1/$MANIFEST_NAME"
+    echo "$2" >> "$1/$MANIFEST_NAME"; }
+}
+# Where a source lies: a plugin cache (`<cache>/<marketplace>/<plugin>/<version>/skills` — versioned,
+# and a version is removed some time after an update, so a link into it goes stale) or a checkout
+# (a clone of the marketplace, or FACTORY_PLUGIN_DIR — live, a developer's).
+source_kind() {                             # source_kind <source_abs>
+  if [ -n "${FACTORY_PLUGIN_DIR:-}" ] && [ "$(cd "$FACTORY_PLUGIN_DIR" 2>/dev/null && pwd -P)" = "$1" ]; then
+    echo checkout; return
+  fi
+  case "$1" in */plugins/cache/*/*/*/skills) echo cache ;; *) echo checkout ;; esac
+}
+
 # How the project holds the skills for one tool: `link` (into a checkout or cache — live), `copy`
 # (its own folders — pinned, committed with the project), or nothing for a tool it does not use.
+# The list says it; without one (an install from before the list, or a clone that lost the folder)
+# the pipeline's own names decide by majority — never one entry, which a project may own itself.
 skills_mode() {                             # skills_mode <target dir>
-  local target=$1
+  local target=$1 mode name links=0 dirs=0
   [ -L "$target" ] && { echo link; return; }
-  # a link whose target is gone is still a link: the update is what repairs it
-  [ -L "$target/factory-run" ] && { echo link; return; }
-  if [ ! -d "$target/factory-run" ]; then
+  mode=$(manifest_field "$target" mode)
+  [ -n "$mode" ] && { echo "$mode"; return; }
+  [ -f "$target/$MANIFEST_NAME" ] && { echo copy; return; }        # names only: the list before the header
+  for name in $PIPELINE_SKILLS; do
+    # a link whose target is gone is still a link: the update is what repairs it
+    if [ -L "$target/$name" ]; then links=$((links + 1)); elif [ -d "$target/$name" ]; then dirs=$((dirs + 1)); fi
+  done
+  if [ "$links" -eq 0 ] && [ "$dirs" -eq 0 ]; then
     # Links are machine-local and kept out of git, so a fresh clone has none — the ignore rule is what
     # says the project used them, and `update` is how a clone gets them back.
     git check-ignore -q "$target/factory-run" 2>/dev/null && echo link || echo ""
-    return
+  elif [ "$links" -ge "$dirs" ]; then
+    echo link
+  else
+    echo copy
   fi
-  [ -L "$target/factory-run" ] && echo link || echo copy
 }
 
 # Bring the project up to the newest pipeline found, for exactly the tools it already has, keeping
@@ -226,7 +279,7 @@ update_project() {                          # update_project <explicit skill fol
   local newest="$src/factory-run/scripts/factory.sh" self
   self=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/$(basename "${BASH_SOURCE[0]}")
   if [ -z "${FACTORY_UPDATE_HANDED:-}" ] && [ -f "$newest" ] && [ "$self" != "$newest" ]; then
-    FACTORY_UPDATE_HANDED=1 exec bash "$newest" update --from "$src"
+    FACTORY_UPDATE_HANDED=1 exec bash "$newest" update --from "$src" ${copy_mode:+--copy} ${LINK_MODE:+--link}
   fi
   before=$(sed -n 's/^version:[[:space:]]*//p' "$STAMP" 2>/dev/null | head -1)
   before_contract=$(sed -n 's/^contract:[[:space:]]*//p' "$STAMP" 2>/dev/null | head -1)
@@ -234,10 +287,13 @@ update_project() {                          # update_project <explicit skill fol
     target=".$tool/skills"
     mode=$(skills_mode "$target")
     [ -n "$mode" ] || continue
+    # the mode the project has — unless the person names the other one, which is how a project switches
+    [ -n "$copy_mode" ] && mode=copy
+    [ -n "${LINK_MODE:-}" ] && mode=link
     if [ "$mode" = copy ]; then
       install_project "$tool" "$src" 1
     else
-      install_project "$tool" "$src" ""
+      LINK_MODE=1 install_project "$tool" "$src" ""       # explicit: the mode stays, whatever the source
     fi
     updated=1
   done
@@ -250,13 +306,13 @@ update_project() {                          # update_project <explicit skill fol
   fi
   after=$(gate_field "$GATE" VERSION); after_contract=$(gate_field "$GATE" CONTRACT)
   echo "factory: updated ${before:-an unstamped install} → $after (file contract ${before_contract:-?} → $after_contract) from $src"
-  declared=$(sed -n 's/^contract:[[:space:]]*//p' "$PROFILE" 2>/dev/null | head -1)
+  declared=$(cli --get contract 2>/dev/null)
   if [ -n "$declared" ] && [ "$declared" != "$after_contract" ]; then
     echo "factory: the stack profile declares contract $declared — raise it to 'contract: $after_contract' once" >&2
     echo "factory:   the profile uses what that contract describes; the gate reads it as older until then." >&2
   fi
   # the layout before `project/` is not read by the new gate; the move is said here as well
-  "$PY" "$GATE" --schedule 2>/dev/null | sed -n 's/^layout: /factory: /p' >&2
+  cli --schedule 2>/dev/null | sed -n 's/^layout: /factory: /p' >&2
   echo "factory: review and commit the changed files — the update commits nothing. 'factory.sh setup --check'"
   echo "factory:   names what the project gained since, as profile lines to confirm; the update writes none."
 }
@@ -328,15 +384,10 @@ detect_tool() {
 # A tool that asks for permission has nobody to ask in a headless run, and a project settings file
 # is ignored while the workspace is untrusted — so the allowlist is passed on the command line.
 allowed_commands() {
-  local profile="${FACTORY_PROFILE:-.agents/factory/factory.profile.yaml}"
-  local list="Bash($PY $GATE:*)"
-  if [ -f "$profile" ]; then
-    local head
-    for key in compile test e2eTest architecture format formatFix; do
-      head=$(sed -n "s/^$key:[[:space:]]*//p" "$profile" | head -1 | tr -d '"'"'"'"' | awk '{print $1}')
-      [ -n "$head" ] && case "$list" in *"Bash($head:*)"*) ;; *) list="$list,Bash($head:*)" ;; esac
-    done
-  fi
+  local list="Bash($PY $GATE:*),Bash($PY .agents/factory/factory-cli.py:*)" head
+  for head in $(cli --command-heads 2>/dev/null); do
+    case "$list" in *"Bash($head:*)"*) ;; *) list="$list,Bash($head:*)" ;; esac
+  done
   echo "$list"
 }
 
@@ -377,13 +428,7 @@ isolation_flags() {                         # isolation_flags <tool>
 # project's own skill directory, because an isolated stage sees nothing else. Checked before the
 # first invocation, so a missing carrier stops the run instead of every stage quietly falling back.
 skill_dir_of() { case "$1" in claude) echo .claude/skills ;; codex) echo .codex/skills ;; opencode) echo .opencode/skills ;; esac; }
-named_carriers() {
-  local profile="${FACTORY_PROFILE:-.agents/factory/factory.profile.yaml}"
-  [ -f "$profile" ] || profile=factory.profile.yaml      # the gate's second place for it
-  [ -f "$profile" ] || return 0
-  sed -n -E 's/^(carrier\.[a-z]+|review\.[a-z-]+|knowledge):[[:space:]]*//p' "$profile" \
-    | tr -d '"'"'"'"' | awk '{print $1}' | sed 's/.*://' | sort -u
-}
+named_carriers() { cli --carriers 2>/dev/null; }
 # Skills the method plugins renamed: <old> <new> <the plugin that shipped the old one>. A profile that
 # still names an old one would run yesterday's copy without a word, so the run stops on it, and
 # `update` removes a copy under the old name that nobody edited.
@@ -402,10 +447,8 @@ renamed_skill() { printf '%s\n' "$RENAMED_SKILLS" | awk -v n="$1" '$1 == n {prin
 
 # The profile lines that name a renamed skill or key, as "<old line> → <new line>".
 profile_renames() {
-  local profile="${FACTORY_PROFILE:-.agents/factory/factory.profile.yaml}" key value new_key new_value
-  [ -f "$profile" ] || profile=factory.profile.yaml
-  [ -f "$profile" ] || return 0
-  sed -n -E 's/^(carrier\.[a-z]+|review\.[a-z-]+|knowledge):[[:space:]]*/\1 /p' "$profile" | tr -d '"'"'"'"' \
+  local key value new_key new_value
+  cli --carrier-lines 2>/dev/null \
     | while read -r key value _; do
       new_key=$(printf '%s\n' "$RENAMED_KEYS" | awk -v k="$key" '$1 == k {print $2}'); new_key=${new_key:-$key}
       new_value=$(renamed_skill "$value"); new_value=${new_value:-$value}
@@ -441,6 +484,20 @@ check_carriers() {                          # check_carriers <tool>
 # stage has no plan gate in front of it, and a stage run on the wrong model is spent money.
 check_contract_first() {
   [ -f "$GATE" ] || return 0
+  # The two files are one release: a CLI that reads the journal with another release's rules shows a
+  # wrong state with a straight face, so a pair that differs — or a gate alone — does not run a stage.
+  local gate_version cli_version project_cli=".agents/factory/factory-cli.py"
+  if [ -f "$project_cli" ] && [ "$(cd "$(dirname "$GATE")" && pwd -P)" = "$(cd "$(dirname "$CLI")" && pwd -P)" ]; then
+    gate_version=$(gate_field "$GATE" VERSION); cli_version=$(gate_field "$CLI" VERSION)
+    if [ "$gate_version" != "$cli_version" ]; then
+      echo "factory: story-gate.py is $gate_version and factory-cli.py is $cli_version — one release, two files;" >&2
+      echo "factory:   'factory.sh update' puts a matching pair here. Nothing was started." >&2
+      return 2
+    fi
+  elif [ ! -f "$project_cli" ]; then
+    echo "factory: no factory-cli.py beside the gate — 'factory.sh update' puts it there. Nothing was started." >&2
+    return 2
+  fi
   local out code=0
   out=$("$PY" "$GATE" --check-contract 2>&1) || code=$?
   [ "$code" = 0 ] && return 0
@@ -482,12 +539,7 @@ for m in data.get('data',[]):
 # example for a provider that does not work here — and the run says so. Exactly one model flag is
 # ever passed: which of two a tool would honour is its behaviour, not something to rely on.
 model_key() {                               # model_key <tool> <stage> — the profile's choice, or nothing
-  local profile="${FACTORY_PROFILE:-.agents/factory/factory.profile.yaml}" value
-  [ -f "$profile" ] || profile=factory.profile.yaml
-  [ -f "$profile" ] || return 0
-  value=$(sed -n "s/^model\.$1\.$2:[[:space:]]*//p" "$profile" | head -1 | tr -d '"'"'"'"' | awk '{print $1}')
-  [ -n "$value" ] || value=$(sed -n "s/^model\.$1:[[:space:]]*//p" "$profile" | head -1 | tr -d '"'"'"'"' | awk '{print $1}')
-  printf '%s' "$value"
+  printf '%s' "$(cli --model "$1" "$2" 2>/dev/null)"
 }
 tool_args() { case "$1" in claude) printf '%s' "${FACTORY_CLAUDE_ARGS:-}" ;; codex) printf '%s' "${FACTORY_CODEX_ARGS:-}" ;; opencode) printf '%s' "${FACTORY_OPENCODE_ARGS:-}" ;; esac; }
 env_model() { tool_args "$1" | sed -n -E 's/.*(^| )(-m|--model)[ =]([^ ]*).*/\3/p' | head -1; }
@@ -564,7 +616,7 @@ model_flag() {                              # model_flag <tool> [stage]
 # One `usage` line in the story's journal per invocation, and the stage's final message on screen.
 record_usage() {                            # record_usage <story> <stage> <tool> <raw> [seconds]
   local out fields
-  out=$("$PY" "$GATE" --usage-from "$(usage_format "$3")" "$4" --usage-model "$(model_flag "$3" "$2")" 2>/dev/null) \
+  out=$(cli --usage-from "$(usage_format "$3")" "$4" --usage-model "$(model_flag "$3" "$2")" 2>/dev/null) \
     || out="unknown"
   fields=$(printf '%s\n' "$out" | head -1)
   [ -n "${5:-}" ] && fields="$fields	seconds=$5"
@@ -594,8 +646,60 @@ ours() {                                    # ours <target> <source> <method dir
     plugin=$(basename "$(dirname "$dir")")
     case "$dir" in */plugins/cache/*/*/*/skills) plugin=$(basename "$(dirname "$(dirname "$dir")")") ;; esac
     case "$target" in */plugins/cache/*/"$plugin"/*/skills/*) return 0 ;; esac
+    # The same plugin in a checkout elsewhere (`<clone>/plugins/<plugin>/skills`): the install's as well,
+    # so an update moves a link between a checkout and a cache instead of keeping it as the project's.
+    case "$target" in */"$plugin"/skills/*) return 0 ;; esac
   done
   return 1
+}
+
+# Whether an entry of a skill directory is the install's to replace: named in the install's list
+# (a link — or a copy, when the list says the project held copies and is switching), or, from before
+# the list, a link into a source the install uses. A folder the list does not name is the project's,
+# and so is a link it made itself, whatever their names.
+ours_entry() {                              # ours_entry <target> <name> <source> <method dirs>
+  local entry="$1/$2"
+  if manifest_has "$1" "$2"; then
+    [ -L "$entry" ] && return 0
+    [ "$(manifest_field "$1" mode)" = copy ] && [ -d "$entry" ] && return 0
+    [ -z "$(manifest_field "$1" mode)" ] && [ -d "$entry" ] && return 0     # the list before the header
+    return 1
+  fi
+  [ -L "$entry" ] && ours "$(readlink "$entry")" "$3" "$4"
+}
+
+# The links are machine-local and stay out of git — one line per link, never the folder, so the
+# list beside them and `.claude/settings.json` are committed. Copies are the project's: the lines go.
+write_skill_ignores() {                     # write_skill_ignores <target> <mode>
+  local target=$1 mode=$2 line names want="" out="" folder_line=0 changed=0
+  names=$(manifest_names "$target")
+  if [ "$mode" = link ]; then
+    if [ -L "$target" ]; then want="$target"; else want=$(printf '%s\n' $names | sed "s|^|$target/|"); fi
+  fi
+  if [ -f .gitignore ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        "$target"|"$target/")
+          # a folder-wide line hides the list too; it is replaced by one line per link, and named
+          [ -L "$target" ] && [ "$mode" = link ] || { folder_line=1; changed=1; continue; } ;;
+        "$target"/*)
+          { [ -L "$target" ] || printf '%s\n' $names | grep -qx "${line#"$target"/}"; } && { changed=1; continue; } ;;
+      esac
+      out="$out$line
+"
+    done < .gitignore
+  fi
+  for line in $want; do
+    printf '%s' "$out" | grep -qx "$line" || { out="$out$line
+"; changed=1; }
+  done
+  [ "$changed" = 1 ] || return 0
+  printf '%s' "$out" > .gitignore.new && mv -f .gitignore.new .gitignore
+  if [ "$mode" = link ]; then
+    echo "factory: .gitignore keeps the skill links out of git, one line per link$([ "$folder_line" = 1 ] && echo " (the folder-wide line is replaced, so the list beside the links is committed)")"
+  else
+    echo "factory: .gitignore no longer ignores the skills under $target — they are copies, committed with the project"
+  fi
 }
 
 # The skill folders of the plugins beside this one. In a checkout they are `plugins/<plugin>/skills`;
@@ -632,6 +736,7 @@ only_links_into() {                         # only_links_into <dir> <source> [<m
   [ -d "$dir" ] || return 1
   for entry in "$dir"/* "$dir"/.[!.]*; do
     [ -e "$entry" ] || [ -L "$entry" ] || continue
+    [ "$(basename "$entry")" = "$MANIFEST_NAME" ] && continue
     [ -L "$entry" ] || return 1
     ours "$(readlink "$entry")" "$source_abs" "$method_dirs" || return 1
   done
@@ -645,14 +750,14 @@ only_links_into() {                         # only_links_into <dir> <source> [<m
 install_named_carriers() {                  # install_named_carriers <target> <source_abs> <copy_mode>
   local target=$1 source_abs=$2 copy_mode=$3 name dir found method_dirs
   method_dirs=$(method_skill_dirs "$source_abs")
-  local manifest="$target/.dca-factory-skills" ours_copy
+  local ours_copy
   for name in $(named_carriers); do
     # A copy this install made (in its list) is refreshed; any other skill of that name is the project's.
     ours_copy=""
-    [ -n "$copy_mode" ] && grep -qsx "$name" "$manifest" && ours_copy=1
+    [ -n "$copy_mode" ] && manifest_has "$target" "$name" && ours_copy=1
     # A link into this pipeline or a method plugin — any version of it — is the install's to refresh.
     if [ -f "$target/$name/SKILL.md" ] && ! { [ -L "$target/$name" ] && ! [ -e "$target/$name" ]; } \
-       && [ -z "$ours_copy" ] && ! { [ -L "$target/$name" ] && ours "$(readlink "$target/$name")" "$source_abs" "$method_dirs"; }; then
+       && [ -z "$ours_copy" ] && ! ours_entry "$target" "$name" "$source_abs" "$method_dirs"; then
       continue
     fi
     found=""
@@ -665,12 +770,13 @@ install_named_carriers() {                  # install_named_carriers <target> <s
       fi
       continue
     fi
+    rm -rf "${target:?}/$name"
     if [ -n "$copy_mode" ]; then
-      rm -rf "${target:?}/$name" && cp -R "$found" "$target/$name" \
-        && { grep -qsx "$name" "$manifest" || echo "$name" >> "$manifest"; }
+      cp -R "$found" "$target/$name"
     else
-      ln -sfn "$found" "$target/$name"
+      ln -s "$found" "$target/$name"
     fi
+    manifest_add "$target" "$name"
     echo "factory: carrier $name → $target"
   done
 }
@@ -694,11 +800,18 @@ install_project() {                         # install_project <tool> <skill fold
     *)        usage ;;
   esac
   local source_abs; source_abs=$(cd "$from" && pwd)
-  local copy_reason=""
+  local copy_reason="" kind; kind=$(source_kind "$source_abs")
   # The profile first: the carriers it names are linked by this same run, so the first `run` does not
   # stop in the carrier check, and the per-skill branch for Claude's directory below sees them.
   must "create .agents/factory and .githooks" mkdir -p .agents/factory .githooks
   [ -f "$PROFILE" ] || write_profile "$from"
+  # The mode follows the source: a plugin cache holds one folder per version and drops a version some
+  # time after an update, so a link into it goes stale for everyone who installed from the marketplace
+  # — copies, pinned and committed. A checkout is a developer's: linked, so an edit is live. --copy and
+  # --link name the other one.
+  if [ -z "$copy_mode" ] && [ -z "${LINK_MODE:-}" ] && [ "$kind" = cache ]; then
+    copy_mode=1; copy_reason=" — the source is a plugin cache, whose versions are removed after an update, so the install copies (--link links anyway)"
+  fi
   if [ -z "$copy_mode" ] && ! can_symlink; then
     copy_mode=1; copy_reason=" — this shell cannot make symlinks (Windows without developer mode or MSYS=winsymlinks:nativestrict), so the install copies"
   fi
@@ -713,23 +826,32 @@ install_project() {                         # install_project <tool> <skill fold
     # freeze the set at install time, so a skill added later never appears and the project runs an
     # incomplete pipeline without a word. Where the project keeps skills of its own in that
     # directory, each skill is linked individually instead and the freeze is named.
+    # An older install linked the whole directory to the pipeline's folder. Through that link every
+    # write below would land in the plugin's own folder — so the link goes first, and the directory
+    # holds one entry per skill from here on.
+    [ -L "$target" ] && must "replace the $target link" rm -f "$target"
     if [ -n "$copy_mode" ]; then
       # A copy looks like a skill of the project's own, so the install keeps a list of what it copied
       # (`.dca-factory-skills`): only those are its to replace, and one the pipeline no longer has is
       # removed. A folder of the project's own with a pipeline skill's name is left alone and named.
       must "create $target" mkdir -p "$target"
-      local manifest="$target/.dca-factory-skills" previous="" skill name copied=0 kept=0 removed=0
-      if [ -f "$manifest" ]; then
-        previous=$(cat "$manifest")
-      elif [ -d "$target/factory-run" ] && [ ! -L "$target/factory-run" ]; then
-        # a copy from before the list: the folders named like the pipeline's skills are the pipeline's
-        previous=$(for skill in "$source_abs"/*; do [ -d "$skill" ] && basename "$skill"; done)
-      fi
-      : > "$manifest.new"
+      local manifest="$target/$MANIFEST_NAME" previous="" skill name copied=0 kept=0 removed=0
       # The same set a link install gives this tool: for a tool without a plugin mechanism the craft
       # of the method plugins beside the pipeline, not only the carriers the profile already names.
       local copy_dirs="$source_abs"
       [ "$target" != ".claude/skills" ] && copy_dirs=$(printf '%s\n%s' "$source_abs" "$(method_skill_dirs "$source_abs" | tr ' ' '\n')")
+      if [ -f "$manifest" ]; then
+        previous=$(manifest_names "$target")               # links too, when the project switches to copies
+      else
+        # A copy from before the list: a folder is taken as the pipeline's only when it is byte for
+        # byte the source's skill — an edited one, or one that merely shares a name, is the project's.
+        previous=$(printf '%s\n' "$copy_dirs" | while IFS= read -r dir; do
+          for skill in "$dir"/*; do
+            [ -d "$skill" ] && [ -d "$target/$(basename "$skill")" ] && [ ! -L "$target/$(basename "$skill")" ] \
+              && diff -rq "$skill" "$target/$(basename "$skill")" >/dev/null 2>&1 && basename "$skill"
+          done; done)
+      fi
+      manifest_start "$target" copy "$kind"
       while IFS= read -r skill; do
         [ -d "$skill" ] || continue
         name=$(basename "$skill")
@@ -768,6 +890,7 @@ install_project() {                         # install_project <tool> <skill fold
       # Several sources cannot be one directory link, so these are per skill: an edited skill is
       # still live, but a *newly added* one needs another install, and that is said out loud.
       mkdir -p "$target"
+      manifest_start "$target" link "$kind"
       # Never wipe the directory: a project may keep skills of its own in it, and an install that
       # deletes them while reporting success is the worst kind of helpfulness. Only links that
       # point into a source we install from are ours to replace, and a stale one — its skill gone
@@ -775,7 +898,7 @@ install_project() {                         # install_project <tool> <skill fold
       local linked=0 kept=0 pruned=0 dir skill entry name
       for entry in "$target"/*; do
         [ -e "$entry" ] || [ -L "$entry" ] || continue
-        if [ -L "$entry" ] && ours "$(readlink "$entry")" "$source_abs" "$method_dirs"; then
+        if ours_entry "$target" "$(basename "$entry")" "$source_abs" "$method_dirs"; then
           [ -e "$entry" ] || { rm -f "$entry"; pruned=$((pruned + 1)); }   # its skill is gone
           continue
         fi
@@ -796,70 +919,76 @@ install_project() {                         # install_project <tool> <skill fold
           # project keeps here is obvious; a *link* the project made is just as much its own, and
           # overwriting it silently swaps a skill under someone's feet.
           if [ -e "$target/$name" ] || [ -L "$target/$name" ]; then
-            if ! { [ -L "$target/$name" ] && ours "$(readlink "$target/$name")" "$source_abs" "$method_dirs"; }; then
+            if ! ours_entry "$target" "$name" "$source_abs" "$method_dirs"; then
               echo "factory: kept the project's own $target/$name — the pipeline's $name was not installed" >&2
               kept=$((kept + 1))
               continue
             fi
+            rm -rf "${target:?}/$name"                       # a copy of ours, when the project switches to links
           fi
-          ln -sfn "$skill" "$target/$name"
+          ln -s "$skill" "$target/$name"
+          echo "$name" >> "$target/$MANIFEST_NAME.new"
           linked=$((linked + 1))
         done
       done
+      mv -f "$target/$MANIFEST_NAME.new" "$target/$MANIFEST_NAME"
       [ "$kept" -gt 0 ] && echo "factory: left $kept entry/entries in $target that are the project's own" >&2
       [ "$pruned" -gt 0 ] && echo "factory: pruned $pruned link(s) whose skill is gone from the source" >&2
       echo "factory: skills → $target ($linked linked: the pipeline plus the craft it names as carriers)"
       echo "factory:   per skill, because they come from several sources — 'factory.sh update' after a skill is added" >&2
-    elif [ "$target" = ".claude/skills" ] && [ -n "$(named_carriers)" ] \
-         && { [ -L "$target" ] || [ ! -e "$target" ] || only_links_into "$target" "$source_abs" "$method_dirs"; }; then
-      # The profile names carriers, and an isolated Claude stage sees only this directory — so it
-      # holds the pipeline's skills one link each, with the named carriers beside them. Per skill
-      # freezes the set: a skill added to the pipeline later needs another install (or update).
-      [ -L "$target" ] && must "replace the $target link" rm -f "$target"
+    elif [ ! -e "$target" ] || only_links_into "$target" "$source_abs" "$method_dirs"; then
+      # One link per skill, never the whole folder: through a folder link every skill a tool writes
+      # into the project's directory would land in the plugin's own, and a carrier the profile names
+      # could not sit beside the pipeline's skills. Per skill freezes the set: a skill added to the
+      # pipeline later needs another install (or update), and the report says so.
       must "create $target" mkdir -p "$target"
+      manifest_start "$target" link "$kind"
       local skill linked=0
       for skill in "$source_abs"/*; do
         [ -d "$skill" ] || continue
         ln -sfn "$skill" "$target/$(basename "$skill")"
+        echo "$(basename "$skill")" >> "$target/$MANIFEST_NAME.new"
         linked=$((linked + 1))
       done
+      mv -f "$target/$MANIFEST_NAME.new" "$target/$MANIFEST_NAME"
       echo "factory: skills → $target ($linked linked one by one, beside the carriers the profile names)"
       echo "factory:   'factory.sh update' after a skill is added to the pipeline" >&2
-    elif [ -L "$target" ] || [ ! -e "$target" ] || only_links_into "$target" "$source_abs" "$method_dirs"; then
-      must "replace $target" rm -rf "$target"
-      must "create $(dirname "$target")" mkdir -p "$(dirname "$target")"
-      must "link $target to the pipeline" ln -s "$source_abs" "$target"
-      echo "factory: skills → $target (linked to $from — a skill added there appears at once)"
     else
       mkdir -p "$target"
+      manifest_start "$target" link "$kind"
       local own_kept=0
       for skill in "$source_abs"/*; do
         [ -d "$skill" ] || continue
         # a link of ours is replaced; a folder or a link of the project's own with that name is its skill
         if { [ -e "$target/$(basename "$skill")" ] || [ -L "$target/$(basename "$skill")" ]; } \
-           && ! { [ -L "$target/$(basename "$skill")" ] && ours "$(readlink "$target/$(basename "$skill")")" "$source_abs" "$method_dirs"; }; then
+           && ! ours_entry "$target" "$(basename "$skill")" "$source_abs" "$method_dirs"; then
           echo "factory: kept the project's own $target/$(basename "$skill") — the pipeline's $(basename "$skill") was not linked" >&2
           own_kept=$((own_kept + 1))
           continue
         fi
-        rm -f "$target/$(basename "$skill")"
+        rm -rf "${target:?}/$(basename "$skill")"
         ln -s "$skill" "$target/$(basename "$skill")"
+        echo "$(basename "$skill")" >> "$target/$MANIFEST_NAME.new"
       done
+      mv -f "$target/$MANIFEST_NAME.new" "$target/$MANIFEST_NAME"
       echo "factory: skills → $target (per skill: the directory holds skills of its own$([ "$own_kept" -gt 0 ] && echo "; $own_kept kept"))" >&2
       echo "factory:   'factory.sh update' after a skill is added to the source" >&2
     fi
   done
   for target in ${targets[@]+"${targets[@]}"}; do
-    # The whole-directory link to the pipeline cannot take a carrier beside it: the carrier would be
-    # written into the plugin's own folder. Then the tool finds the carrier through its plugins, and
-    # an isolated stage does not — the runner's carrier check says so before a run.
-    [ -L "$target" ] && continue
+    [ -d "$target" ] && [ ! -L "$target" ] || continue
     if [ "$target" = ".claude/skills" ] || [ -n "$copy_mode" ]; then
       install_named_carriers "$target" "$source_abs" "$copy_mode"
     fi
   done
+  for target in ${targets[@]+"${targets[@]}"}; do
+    write_skill_ignores "$target" "$([ -n "$copy_mode" ] && echo copy || echo link)"
+  done
   check_dca_setup "$from"
   must "copy the gate to $GATE" cp "$from/factory-run/scripts/story-gate.py" "$GATE"
+  # What shows and coordinates, beside the gate that decides — the same release, checked before a run.
+  must "copy the cli to .agents/factory/factory-cli.py" \
+    cp "$from/factory-run/scripts/factory-cli.py" .agents/factory/factory-cli.py
   # The observer beside it, for `factory.sh verify --story`: a delivered story is checked in the project.
   must "copy the observer to .agents/factory/observe.py" \
     cp "$from/factory-verify/scripts/observe.py" .agents/factory/observe.py
@@ -873,7 +1002,7 @@ install_project() {                         # install_project <tool> <skill fold
   must "put the runner in place" mv -f .agents/factory/.factory.sh.new .agents/factory/factory.sh
   must "copy the commit hook to .githooks/pre-commit" \
     cp "$from/factory-run/templates/githooks/pre-commit" .githooks/pre-commit
-  must "make the gate and the commit hook executable" chmod +x .githooks/pre-commit "$GATE"
+  must "make the gate, the cli and the commit hook executable" chmod +x .githooks/pre-commit "$GATE" .agents/factory/factory-cli.py
   # Which pipeline this project is governed by — committed with the project, so it is the same
   # answer for everyone who checks it out. Deliberately no path and no timestamp: both describe the
   # machine that happened to run the install, and neither survives a second developer.
@@ -881,6 +1010,7 @@ install_project() {                         # install_project <tool> <skill fold
     echo "plugin: dca-factory"
     echo "version: $(gate_field "$GATE" VERSION)"
     echo "contract: $(gate_field "$GATE" CONTRACT)"
+    echo "files: story-gate.py factory-cli.py observe.py factory.sh"
   } > "$STAMP"
   echo "factory: gate → $GATE (version $(gate_field "$GATE" VERSION), file contract $(gate_field "$GATE" CONTRACT))"
   # Not a `must`: the project need not be a git repository for the gate to work, and a checkout
@@ -909,11 +1039,19 @@ install_project() {                         # install_project <tool> <skill fold
   write_agents_block
   if [ -n "$copy_mode" ]; then
     echo "factory: the skills are copies — commit .claude/.codex/.opencode skills with the project, and"
-    echo "factory:   every clone delivers stories with this pipeline, without the marketplace."
+    echo "factory:   every clone delivers stories with this pipeline, without the marketplace ('factory.sh update' refreshes them)."
   elif [ -n "${targets[*]+x}" ] && [ "${#targets[@]}" -gt 0 ]; then
-    echo "factory: the skill links point into $source_abs — they belong in .gitignore; a clone"
-    echo "factory:   gets them with 'factory.sh update', or use --copy to commit the skills with the project."
+    echo "factory: the skill links point into $source_abs — kept out of git; a clone gets them"
+    echo "factory:   with 'factory.sh update', or use --copy to commit the skills with the project."
+    if [ "$kind" = cache ]; then
+      echo "factory: that source is a plugin cache: its versions are removed some time after an update, and the" >&2
+      echo "factory:   links then point nowhere until 'factory.sh update' — 'setup --copy' or 'update --copy' avoids it." >&2
+    fi
   fi
+  case " ${targets[*]+"${targets[*]}"} " in *" .claude/skills "*)
+    echo "factory: with the dca-factory plugin enabled, Claude Code lists these skills a second time as"
+    echo "factory:   dca-factory:<skill>; the project's entry is the one a session and a runner stage use." ;;
+  esac
 }
 
 check_dca_setup() {                        # check_dca_setup <skill folder>
@@ -1328,7 +1466,7 @@ block = start + """
 ## Delivery pipeline
 
 This project delivers stories through the dca-factory pipeline. At the start of a session, unless the
-person names a task right away, run `python3 .agents/factory/story-gate.py --status --brief`, show
+person names a task right away, run `python3 .agents/factory/factory-cli.py --status --brief`, show
 its lines, and ask what they want to do: write or release a story (`/factory-backlog`), answer a
 waiting question (`/factory-decisions`), work the backlog (`/factory-run`; to keep listening, a tool
 that repeats a prompt runs it again — in Claude Code `/loop /factory-run`), look closer (`/factory-status`), or
@@ -1366,7 +1504,7 @@ write_claude_permissions() {
   # so the gate cannot run and no stage can be verified — the tool then stops, correctly. These
   # two entries are the smallest allowlist that lets the pipeline verify itself; every other
   # command still asks.
-  "$PY" - "$PY" <<'PYEOF'
+  "$PY" - "$PY" $(cli --command-heads 2>/dev/null) <<'PYEOF'
 import json, os, sys
 python = sys.argv[1]
 path = ".claude/settings.json"
@@ -1376,15 +1514,10 @@ if os.path.isfile(path):
     with open(path) as handle:
         settings = json.load(handle)
 allow = settings.setdefault("permissions", {}).setdefault("allow", [])
-wanted = [f"Bash({python} .agents/factory/story-gate.py:*)"]
-profile = ".agents/factory/factory.profile.yaml"
-if os.path.isfile(profile):
-    for line in open(profile):
-        if line.startswith(("compile:", "test:", "test.", "e2eTest:", "architecture:", "format:", "formatFix:")):
-            command = line.split(":", 1)[1].strip().strip("\"'")
-            head = command.split()[0] if command else ""
-            if head and not head.startswith("{{"):
-                wanted.append(f"Bash({head}:*)")
+wanted = [f"Bash({python} .agents/factory/story-gate.py:*)", f"Bash({python} .agents/factory/factory-cli.py:*)"]
+# the commands the profile declares, read through the cli (sys.argv[2:]) — the runner parses no profile
+for head in sys.argv[2:]:
+    wanted.append(f"Bash({head}:*)")
 # the reading commands, so a session looks without being asked; `run` is not in it — it starts a
 # tool process per stage, and the runner refuses it inside a session anyway
 for verb in ("status", "decisions", "backlog", "setup --check", "verify"):
@@ -1397,10 +1530,11 @@ added = [entry for entry in dict.fromkeys(wanted) if entry not in allow]
 allow.extend(added)
 # The session starts knowing where the pipeline stands: the hook's output lands in its context. It
 # calls the gate, which only reads — `factory.sh` is the person's, and no hook or skill runs it.
-hook_command = f"{python} .agents/factory/story-gate.py --status --brief --session-start"
+hook_command = f"{python} .agents/factory/factory-cli.py --status --brief --session-start"
 starts = settings.setdefault("hooks", {}).setdefault("SessionStart", [])
-for entry in starts:                         # an earlier install's hook through factory.sh is replaced
-    entry["hooks"] = [h for h in entry.get("hooks", []) if "factory.sh status --brief" not in h.get("command", "")]
+for entry in starts:                         # an earlier install's hook through factory.sh or the gate is replaced
+    entry["hooks"] = [h for h in entry.get("hooks", []) if "factory.sh status --brief" not in h.get("command", "")
+                      and "story-gate.py --status --brief" not in h.get("command", "")]
 starts[:] = [entry for entry in starts if entry.get("hooks")]
 if not any(h.get("command") == hook_command for entry in starts for h in entry.get("hooks", [])):
     starts.append({"hooks": [{"type": "command", "command": hook_command}]})
@@ -1421,16 +1555,13 @@ PYEOF
 # than assume the run continues: `changes-requested` goes back to the build stage (one round),
 # `story-conflict` stops the run — the story or the plan is wrong, and no build round fixes that.
 verdict_of() {                              # verdict_of <story>
-  local file="$TASKS/$1/judge.md"
-  [ -f "$file" ] || { echo ""; return; }
-  sed -n 's/^verdict:[[:space:]]*//p' "$file" | head -1 | tr -d '`" '"'"''
+  cli --tasks "$TASKS" --verdict "$1" 2>/dev/null
 }
 
 # Whether a stage file stops the run: a `## needs-human` section with something in it. A bare
 # heading — empty, or `(none)` copied from the file template — asks nobody anything.
 asks_human() {                              # asks_human <file>
-  sed -n '/^## needs-human/,/^## /p' "$1" | sed '1d; /^## /d' \
-    | grep -v -i -E '^[[:space:]]*([-*][[:space:]]*)?[(_*]*(none|n/a|nothing|—|–)?[.]?[)_*]*[.]?[[:space:]]*$' | grep -q .
+  cli --needs-human "$1" >/dev/null 2>&1
 }
 
 # A stage that ends with a needs-human section has stopped. The question is a record of its own, so
@@ -1441,8 +1572,8 @@ stopped_for_human() {                       # stopped_for_human <artefact> <stag
   local artefact=$1 stage=$2 story=$3 ids id applies
   echo "factory: stage '$stage' ends with a needs-human section — the run stops here." >&2
   # the id alone: a stage may go on writing after it on the same line ("decision: s-01. The browser …")
-  ids=$(sed -n '/^## needs-human/,/^## /p' "$artefact" \
-    | sed -n 's/^[[:space:]-]*decision:[[:space:]]*`\{0,1\}\([A-Za-z0-9][A-Za-z0-9_-]*\).*/\1/p')
+  local lines; lines=$(cli --needs-human "$artefact" 2>/dev/null)
+  ids=$(printf '%s\n' "$lines" | awk -F'\t' 'NF {print $1}')
   if [ -z "$ids" ]; then
     echo "factory:   the section names no 'decision: <id>' — the stage has to write the question as" >&2
     echo "factory:   $DECISIONS/<story>-<nn>.md; the next gate refuses a question nobody was asked." >&2
@@ -1451,7 +1582,7 @@ stopped_for_human() {                       # stopped_for_human <artefact> <stag
     if [ -f "$DECISIONS/$id.md" ]; then
       # The record names the stage that applies the answer — for a judge's story conflict that is not the
       # judge — unless the answer names another (`applies:`). The run without --from reads which off the files.
-      applies=$(sed -n 's/^stage:[[:space:]]*//p' "$DECISIONS/$id.md" | head -1)
+      applies=$(printf '%s\n' "$lines" | awk -F'\t' -v i="$id" '$1 == i && $2 != "-" {print $2}' | head -1)
       echo "factory:   decision $id → $DECISIONS/$id.md — answer it there under '## Answer'" >&2
       echo "factory:   with answer:, by: and at:, then: factory.sh run --story $story — it resumes at" \
            "${applies:-$stage}, or earlier where the answer's applies: names an earlier stage" >&2
@@ -1489,7 +1620,7 @@ $TASKS/$story/. After the test, build and tidy stages run that stage's gate, \
 \`$PY $GATE --story $story --stage <stage>\`, and fix exactly what it names before the next stage, at most \
 three attempts per stage. Stop at once when a stage ends in a needs-human section. Do not run the judge or the \
 document stage."
-  local guard; guard=$(sed -n 's/^carrier\.guard:[[:space:]]*//p' "${FACTORY_PROFILE:-.agents/factory/factory.profile.yaml}" 2>/dev/null | head -1 | tr -d '"'"'"'"')
+  local guard; guard=$(cli --get carrier.guard 2>/dev/null | awk '{print $1}')
   [ -n "$guard" ] && prompt="$prompt In the build and tidy stages apply the $guard skill (the profile's carrier.guard) to every file you write."
   echo "── stage $list  (tool: $tool, one shared context)"
   if [ -n "$dry" ]; then
@@ -1499,10 +1630,10 @@ document stage."
     echo "   model: ${dry_choice%%|*}${dry_choice#*|}"
     return 0
   fi
-  if [ -f "$GATE" ] && ! "$PY" "$GATE" --claim "$WORKER" >/dev/null; then
+  if [ -f "$GATE" ] && ! cli --claim "$WORKER" >/dev/null; then
     echo "factory: the checkout was taken over by another worker before the shared stages — stopping." >&2; return 5
   fi
-  if [ -n "$STORY_BUDGET" ] && [ "$("$PY" "$GATE" --usage --story "$story" --total 2>/dev/null || echo 0)" -ge "$STORY_BUDGET" ]; then
+  if [ -n "$STORY_BUDGET" ] && [ "$(cli --usage --story "$story" --total 2>/dev/null || echo 0)" -ge "$STORY_BUDGET" ]; then
     echo "factory: story $story has reached its --story-budget $STORY_BUDGET — the shared stages are not dispatched." >&2; return 4
   fi
   if [ -n "$MAX_STAGES" ] && [ "$INVOCATIONS" -ge "$MAX_STAGES" ]; then
@@ -1584,9 +1715,9 @@ the previous verdict is $TASKS/$story/.judge-previous.md. Account for each defec
 '## Previous round' — fixed (with the evidence) or withdrawn (with the reason) — before judging anew."
   # The guard the profile names holds the invariants while code is edited: said in the prompt of the two
   # stages that write production code, so no build or tidy stage starts without it in view.
-  local guard="" profile="${FACTORY_PROFILE:-.agents/factory/factory.profile.yaml}"
+  local guard=""
   case "$stage" in build|tidy)
-    guard=$(sed -n 's/^carrier\.guard:[[:space:]]*//p' "$profile" 2>/dev/null | head -1 | tr -d '"'"'"'"')
+    guard=$(cli --get carrier.guard 2>/dev/null | awk '{print $1}')
     [ -n "$guard" ] && guard=" Apply the $guard skill (the profile's carrier.guard) to every file you write." ;;
   esac
   printf '%s' "Apply the stage-$stage skill for backlog story $story. \
@@ -1679,13 +1810,7 @@ snapshot() {                                # snapshot <story> <label>
 # fine reading (a draft without a name is still open); this is the cheap check that keeps a run from
 # starting a stage while the story waits for a human.
 open_decisions() {                          # open_decisions <story>
-  local file
-  [ -d "$DECISIONS" ] || return 0
-  for file in "$DECISIONS"/*.md; do
-    [ -f "$file" ] || continue
-    grep -q "^story:[[:space:]]*$1[[:space:]]*$" "$file" || continue
-    grep -q '^## Answer' "$file" || echo "$file"
-  done
+  cli --open-decisions "$1" 2>/dev/null
 }
 
 # The adopt gate: every scenario on a green test, the judge's pass, a break for every test the adoption
@@ -1717,7 +1842,7 @@ run_story() {
     echo "factory:   answer under '## Answer' with answer:, by: and at:, then run the stage that asked (--from <stage>)." >&2
     return 3
   fi
-  local kind; kind=$("$PY" "$GATE" --story "$story" --kind 2>/dev/null || echo story)
+  local kind; kind=$(cli --story "$story" --kind 2>/dev/null || echo story)
   # An adopted story whose judge passed: only the adopt gate is left, and it delivers the story.
   if [ "$from" = adopt ]; then
     adopt_gate "$story" "$tool" "$dry"
@@ -1785,13 +1910,13 @@ run_story() {
       echo "   tool flags: $(isolation_flags "$tool")${FACTORY_ISOLATION:+(FACTORY_ISOLATION=$FACTORY_ISOLATION)}"
       local dry_choice; dry_choice=$(model_choice "$tool" "$stage")
       echo "   model: ${dry_choice%%|*}${dry_choice#*|}"
-    elif [ -f "$GATE" ] && ! "$PY" "$GATE" --claim "$WORKER" >/dev/null; then
+    elif [ -f "$GATE" ] && ! cli --claim "$WORKER" >/dev/null; then
       echo "factory: the checkout was taken over by another worker before stage '$stage' — stopping." >&2
       return 5
-    elif [ -n "$STORY_BUDGET" ] && [ "$("$PY" "$GATE" --usage --story "$story" --total 2>/dev/null || echo 0)" -ge "$STORY_BUDGET" ]; then
+    elif [ -n "$STORY_BUDGET" ] && [ "$(cli --usage --story "$story" --total 2>/dev/null || echo 0)" -ge "$STORY_BUDGET" ]; then
       # Checked before the invocation, from the journal: a restart, a second session or a new run
       # continues the same count. The last stage may overshoot — usage is known only after it ran.
-      echo "factory: story $story has used $("$PY" "$GATE" --usage --story "$story" --total) tokens of its" >&2
+      echo "factory: story $story has used $(cli --usage --story "$story" --total) tokens of its" >&2
       echo "factory:   --story-budget $STORY_BUDGET — stage '$stage' is not dispatched; the work so far stays." >&2
       return 4
     elif [ -n "$MAX_STAGES" ] && [ "$INVOCATIONS" -ge "$MAX_STAGES" ]; then
@@ -1922,13 +2047,13 @@ run_backlog() {                             # run_backlog <tool> <watch> <interv
   while :; do
     # waiting is working too: the claim is renewed on every look, so a watch that waits for an answer
     # for hours is not mistaken for a crashed one
-    [ -n "$dry" ] || "$PY" "$GATE" --claim "$WORKER" >/dev/null || {
+    [ -n "$dry" ] || cli --claim "$WORKER" >/dev/null || {
       echo "factory: another worker took over this checkout — the backlog run ends here." >&2; return 5; }
     if [ -f "$STOP_FILE" ]; then
       echo "factory: $STOP_FILE exists — the backlog run stops here. Remove it to run again."
       return 0
     fi
-    out=$("$PY" "$GATE" --schedule 2>&1) || {
+    out=$(cli --schedule 2>&1) || {
       printf '%s\n' "$out" >&2; echo "factory: the schedule could not be read." >&2; return 1; }
     next=$(printf '%s\n' "$out" | sed -n 's/^next: //p')
     case "$next" in
@@ -2025,11 +2150,15 @@ setup_write() {                             # setup_write [<key>]
 
 [ $# -ge 1 ] || usage
 command=$1; shift
-story=""; tool=""; from=""; dry=""; source_dir=""; copy_mode=""; watch=""; interval=60
+story=""; tool=""; from=""; dry=""; source_dir=""; copy_mode=""; LINK_MODE=""; watch=""; interval=60
 setup_mode=""; replace_key=""; want_usage=""; want_brief=""; session_start=""; live=""; view=()
 
-# The reading commands are the gate's; the runner passes them on, so a project calls one script.
-read_command() {                            # read_command <gate flags…>
+# The reading commands are the CLI's; the runner passes them on, so a project calls one script.
+read_command() {                            # read_command <cli flags…>
+  [ -f "$GATE" ] || { echo "factory: no gate at $GATE — run 'factory.sh setup' from the plugin" >&2; exit 2; }
+  exec "$PY" "$CLI" "$@"
+}
+gate_command() {                            # gate_command <gate flags…> — a check, not a view
   [ -f "$GATE" ] || { echo "factory: no gate at $GATE — run 'factory.sh setup' from the plugin" >&2; exit 2; }
   exec "$PY" "$GATE" "$@"
 }
@@ -2059,19 +2188,17 @@ case "$command" in
   backlog)
     # The person's view of the backlog; the runner reads the schedule's lines from the gate itself.
     case "${1:-}" in
-      --check) read_command --check-backlog ;;
+      --check) gate_command --check-backlog ;;
       *) read_command --status --part backlog "$@" ;;
     esac ;;
   decisions) read_command --list-decisions "$@" ;;
   help)
     # The help works before the pipeline is installed too: then the plugin's gate explains it.
-    helper=$GATE
-    [ -f "$helper" ] || helper=$(plugin_gate) || { echo "factory: no gate found to explain the factory — FACTORY_PLUGIN_DIR names one" >&2; exit 2; }
-    exec "$PY" "$helper" --help-view "$@" ;;
+    exec "$PY" "$CLI" --help-view "$@" ;;
   check)
     case "${1:-}" in
-      --parity) [ $# -eq 2 ] || usage; read_command --parity "$2" ;;
-      *) read_command --change "$@" ;;
+      --parity) [ $# -eq 2 ] || usage; gate_command --parity "$2" ;;
+      *) gate_command --change "$@" ;;
     esac ;;
   verify)
     case "${1:-}" in
@@ -2096,6 +2223,7 @@ while [ $# -gt 0 ]; do
     --tool) tool=$2; shift 2 ;;
     --from) case "$command" in setup|update) source_dir=$2 ;; *) from=$2 ;; esac; shift 2 ;;
     --copy) copy_mode=1; shift ;;
+    --link) LINK_MODE=1; shift ;;
     --check) [ "$command" = setup ] || usage; setup_mode=check; shift ;;
     --write) [ "$command" = setup ] || usage; setup_mode=write; shift ;;
     --replace) [ "$command" = setup ] && [ $# -ge 2 ] || usage; replace_key=$2; shift 2 ;;
@@ -2157,7 +2285,7 @@ case "$command" in
       isolated || echo "factory: FACTORY_ISOLATION=off — stages run with the tool's full setup, user plugins included" >&2
       if [ -z "$from" ]; then
         # No stage named: the story starts where its files say, as the backlog run would start it.
-        local_start=$("$PY" "$GATE" --story "$story" --start) || exit $?
+        local_start=$(cli --story "$story" --start) || exit $?
         local_state=$(printf '%s\n' "$local_start" | sed -n 's/^state: //p')
         from=$(printf '%s\n' "$local_start" | sed -n 's/^start: //p')
         local_detail=$(printf '%s\n' "$local_start" | sed -n 's/^detail: //p')

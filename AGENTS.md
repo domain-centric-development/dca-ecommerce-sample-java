@@ -229,7 +229,7 @@ not as something to fix in the code:
 ## Delivery pipeline
 
 This project delivers stories through the dca-factory pipeline. At the start of a session, unless the
-person names a task right away, run `python3 .agents/factory/story-gate.py --status --brief`, show
+person names a task right away, run `python3 .agents/factory/factory-cli.py --status --brief`, show
 its lines, and ask what they want to do: write or release a story (`/factory-backlog`), answer a
 waiting question (`/factory-decisions`), work the backlog (`/factory-run`; to keep listening, a tool
 that repeats a prompt runs it again — in Claude Code `/loop /factory-run`), look closer (`/factory-status`), or

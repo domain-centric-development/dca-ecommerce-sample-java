@@ -25,7 +25,8 @@
       "Bash(bash .agents/factory/factory.sh decisions:*)",
       "Bash(bash .agents/factory/factory.sh backlog:*)",
       "Bash(bash .agents/factory/factory.sh setup --check:*)",
-      "Bash(bash .agents/factory/factory.sh verify:*)"
+      "Bash(bash .agents/factory/factory.sh verify:*)",
+      "Bash(python3 .agents/factory/factory-cli.py:*)"
     ],
     "deny": [],
     "ask": []
@@ -36,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .agents/factory/story-gate.py --status --brief --session-start"
+            "command": "python3 .agents/factory/factory-cli.py --status --brief --session-start"
           }
         ]
       }
