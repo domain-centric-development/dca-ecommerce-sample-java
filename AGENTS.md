@@ -201,7 +201,7 @@ this file; what is to be built is in the project description below it.
   `FACTORY_PRECOMMIT_CHECKS="compile architecture"` when the full suite is too slow to wait for
 
 Run one story with `/factory-run <story id>`. The pipeline owns the process; the architecture comes
-from `dca-core` (`/dca-init` once, then `/dca-modelling`, `/dca-review`, `/dca-knowledge`) and the
+from `dca-core` (`/dca-init` once, then `/dca-modelling`, `/dca-audit`, `/dca-knowledge`) and the
 craft from `dca-craft` (`/ubiquitous-language`, `/context-map`, `/review-ddd`, `/review-hexagonal`,
 `/review-clean-code`, `/e2e-testing`).
 

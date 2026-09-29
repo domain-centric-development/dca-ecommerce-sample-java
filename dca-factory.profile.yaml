@@ -31,7 +31,7 @@ review.ddd: review-ddd
 review.hexagonal: review-hexagonal
 review.clean-code: review-clean-code
 reviews: dca
-review.dca: dca-review
+review.dca: dca-audit
 
 # Where the project keeps its map; glossaries are the per-context glossary.md files.
 contextMap: docs/architecture/context-map.md

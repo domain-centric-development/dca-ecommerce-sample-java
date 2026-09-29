@@ -35,6 +35,9 @@ backlog/index.json
 __pycache__/
 *.pyc
 
+.claude/skills/dca-review
+.codex/skills/dca-review
+.opencode/skills/dca-review
 .claude/skills/factory-backlog
 .claude/skills/factory-decisions
 .claude/skills/factory-help
@@ -50,10 +53,10 @@ __pycache__/
 .claude/skills/stage-test
 .claude/skills/stage-tidy
 .claude/skills/context-map
+.claude/skills/dca-audit
 .claude/skills/dca-discipline
 .claude/skills/dca-knowledge
 .claude/skills/dca-modelling
-.claude/skills/dca-review
 .claude/skills/e2e-testing
 .claude/skills/review-clean-code
 .claude/skills/review-ddd
@@ -74,13 +77,13 @@ __pycache__/
 .codex/skills/stage-test
 .codex/skills/stage-tidy
 .codex/skills/dca-add
+.codex/skills/dca-audit
 .codex/skills/dca-describe
 .codex/skills/dca-discipline
 .codex/skills/dca-init
 .codex/skills/dca-knowledge
 .codex/skills/dca-modelling
 .codex/skills/dca-new
-.codex/skills/dca-review
 .codex/skills/adr
 .codex/skills/clean-code
 .codex/skills/context-map
@@ -105,13 +108,13 @@ __pycache__/
 .opencode/skills/stage-test
 .opencode/skills/stage-tidy
 .opencode/skills/dca-add
+.opencode/skills/dca-audit
 .opencode/skills/dca-describe
 .opencode/skills/dca-discipline
 .opencode/skills/dca-init
 .opencode/skills/dca-knowledge
 .opencode/skills/dca-modelling
 .opencode/skills/dca-new
-.opencode/skills/dca-review
 .opencode/skills/adr
 .opencode/skills/clean-code
 .opencode/skills/context-map
