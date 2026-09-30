@@ -168,15 +168,18 @@ Rule changes belong in `dca-java`, not here.
 
 ### Unit Tests
 
-- Test domain logic in isolation
-- Mock external dependencies
-- Focus on business rules and invariants
+- Every invariant of an aggregate, entity or value object has a unit test — its guards included (required,
+  trimmed, in range); a guard nobody named as an invariant is not written
+- The domain type alone, no framework
 
 ### Integration Tests
 
-- Test application services with real repository implementations
-- Verify event publishing and handling
-- Test REST endpoints
+- **A use case once, through its input port** in the wired application: real outgoing adapters and
+  persistence, an external system stubbed at the protocol (WireMock); asserts the business outcome
+- **Each incoming adapter for its translation** (web, api, event, mcp) against a stubbed input port: the
+  request it turns into a command, the page or response it makes of the result and of each refusal
+- Existing tests that run a use case through its REST endpoint stay; new ones follow the two shapes
+  (guide: `topics/testing-levels.md`, "The use case once, each adapter its translation")
 
 ---
 
