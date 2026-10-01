@@ -24,9 +24,12 @@ authentication, roles, and the lifecycle (active, suspended, closed).
 **Related terms:** `Email`, `Owner`, `HashedPassword`, `AccountStatus`, `UserId`,
 `PasswordHasher`, `Role` (planned).
 
-**Operations:** `register`, `reconstitute`, `checkPassword`, `recordLogin`, `changePassword`,
-`changeEmail`, `changeOwnerDateOfBirth`, `suspend`, `reactivate`, `close`, `addRole`,
-`removeRole`.
+**Operations:** `register` (the account comes into existence, linked to the caller's `UserId`),
+`reconstitute` (restores a stored account; no rule re-evaluated, no event), `checkPassword` (a
+question; changes nothing), `recordLogin`, `changePassword`, `changeEmail`,
+`changeOwnerDateOfBirth`, `suspend` (kept with status suspended; `reactivate` undoes it),
+`reactivate`, `close` (kept with status closed, for good — the account is not deleted), `addRole` /
+`removeRole` (a role goes into or out of the account's role set; no event).
 
 **Notes:** The account belongs to an **`Owner`**, whose **name is fixed at registration**: no
 operation on the aggregate accepts an `Owner` or mentions a name, so the only way a name enters the

@@ -25,8 +25,8 @@ Encapsulates the business rules around price formation and price changes.
 **Related terms:** `Money`, `ProductId`, `PriceCreated`, `PriceChanged`
 
 **Operations:**
-- `create(productId, price)` — Initial price determination for a product
-- `updatePrice(newPrice)` — Price change (new effective point in time)
+- `create(productId, price)` — Initial price determination for a product: the product's price comes into existence, effective now
+- `updatePrice(newPrice)` — Price change (new effective point in time): the current price is replaced, not added to a history; the previous price survives only in `PriceChanged`
 - `currentPrice()` — Currently valid price
 - `effectiveFrom()` — Point in time from which `currentPrice` applies
 

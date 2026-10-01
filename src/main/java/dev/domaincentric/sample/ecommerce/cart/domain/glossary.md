@@ -32,6 +32,20 @@ adapters mirror `shopping` and `cartrecovery`; the REST resource serves every fe
 
 An editable collection of stable positions. Checkout copies a snapshot through the Cart's Open Host Service; completion reconciles captured unit identities without completing the current cart. Abandoned carts reject edits. The legacy Completed state remains readable.
 
+**Type:** Aggregate Root
+
+**Operations:**
+- create (`new ShoppingCart`) — the cart comes into existence, active and empty
+- `reconstitute` — restores a stored cart; no rule re-evaluated, no event
+- `addItem` — a product goes into the cart as a new position, or the position already holding it grows by the quantity
+- `removeItem`, `removeItemByProductId` — the position is gone from the cart
+- `updateItemQuantity` — sets a position's quantity; `increaseItemQuantity` / `decreaseItemQuantity` change it by one
+- `merge` — the positions of another cart are added to this one; the source cart is left untouched
+- `clear` — every position is gone; the cart itself stays, active
+- `reconcileCheckout` — the units a checkout bought are taken out of their positions, positions left without units are gone; the cart stays active and editable
+- `abandon` — the cart is kept with status abandoned and rejects edits; it is not deleted
+- `complete` — the whole cart is kept with status completed; no use case calls it, checkout completion goes through `reconcileCheckout`
+
 ### CartItem
 
 **Definition:** A single item in the shopping cart with a reference to the

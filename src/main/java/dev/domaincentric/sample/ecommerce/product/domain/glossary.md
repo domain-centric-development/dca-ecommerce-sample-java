@@ -28,7 +28,9 @@ truth for product identity and descriptive attributes.
 - `EnrichedProduct` — enriched read model for display
 - `ProductFactory` — creation with initial price and stock
 
-**Operations:** `updateName`, `updateDescription`, `updateCategory`
+**Operations:** `create` (the product comes into existence with a new `ProductId`; its initial price and
+stock travel only in `ProductCreated`, the aggregate holds neither; `ProductFactory` delegates here),
+`updateName`, `updateDescription`, `updateCategory` (each replaces the attribute and raises its `…Changed` event)
 
 **Notes:** Prices and stock levels are NOT managed by the Product aggregate —
 they reside in the Pricing and Inventory contexts respectively.

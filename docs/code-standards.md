@@ -106,6 +106,7 @@ Catalog reads are public. Resources and MCP tool providers depend on `*InputPort
 3. **Raise Domain Events** - Capture important business occurrences
 4. **Reference by ID** - Aggregates reference each other by identity only
 5. **Keep Aggregates Small** - Focus on transactional consistency boundaries
+6. **Name Failures by the Broken Rule** - Domain and use-case exceptions carry the rule in the domain's words, with the suffix `Exception` (`CartNotModifiableException`) — the method's `failure_suffix: Exception`
 
 ### Event-Driven Design
 
