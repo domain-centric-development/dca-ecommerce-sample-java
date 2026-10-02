@@ -2,6 +2,7 @@ mode: link
 source: checkout
 factory-backlog
 factory-decisions
+factory-discover
 factory-help
 factory-run
 factory-setup

@@ -40,6 +40,7 @@ __pycache__/
 .opencode/skills/dca-review
 .claude/skills/factory-backlog
 .claude/skills/factory-decisions
+.claude/skills/factory-discover
 .claude/skills/factory-help
 .claude/skills/factory-run
 .claude/skills/factory-setup
@@ -64,6 +65,7 @@ __pycache__/
 .claude/skills/ubiquitous-language
 .codex/skills/factory-backlog
 .codex/skills/factory-decisions
+.codex/skills/factory-discover
 .codex/skills/factory-help
 .codex/skills/factory-run
 .codex/skills/factory-setup
@@ -88,6 +90,7 @@ __pycache__/
 .codex/skills/clean-code
 .codex/skills/context-map
 .codex/skills/e2e-testing
+.codex/skills/product-discovery
 .codex/skills/review-clean-code
 .codex/skills/review-ddd
 .codex/skills/review-hexagonal
@@ -95,6 +98,7 @@ __pycache__/
 .codex/skills/ubiquitous-language
 .opencode/skills/factory-backlog
 .opencode/skills/factory-decisions
+.opencode/skills/factory-discover
 .opencode/skills/factory-help
 .opencode/skills/factory-run
 .opencode/skills/factory-setup
@@ -119,6 +123,7 @@ __pycache__/
 .opencode/skills/clean-code
 .opencode/skills/context-map
 .opencode/skills/e2e-testing
+.opencode/skills/product-discovery
 .opencode/skills/review-clean-code
 .opencode/skills/review-ddd
 .opencode/skills/review-hexagonal
