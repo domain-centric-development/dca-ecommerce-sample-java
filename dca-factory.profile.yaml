@@ -19,6 +19,7 @@ formatFix: ./gradlew spotlessApply
 # The one source a stage may treat as an authority. Generated from the same sources as the
 # building blocks and the rule catalog this project consumes.
 knowledge: dca-knowledge
+knowledge.read: guide/language-mappings/building-blocks.md
 
 # Who carries a stage's craft and a review perspective. A skill works in every agent tool; an
 # agent only where the tool has agents, and the stage then falls back to its own description.
