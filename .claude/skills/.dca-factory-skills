@@ -11,6 +11,7 @@ factory-update
 factory-verify
 stage-build
 stage-document
+stage-integrate
 stage-judge
 stage-plan
 stage-test
