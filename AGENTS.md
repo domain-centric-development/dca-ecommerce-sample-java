@@ -193,8 +193,8 @@ this file; what is to be built is in the project description below it.
 - `project/product.md`, `project/tech.md`, `project/domain.md` — the project description: the product,
   the technical decisions, the designed context map (the generated one is
   `docs/architecture/context-map.md`)
-- `project/backlog/<epic>/<story>.md` — new stories; `tasks/prd.json` keeps the delivered 146 as history
-- `.agents/factory/factory.profile.yaml` — the only file that tells the pipeline how this project
+- `project/epics/<epic>/<story>/story.md` — new stories, each a folder with its `decisions/`; `tasks/prd.json` keeps the delivered 146 as history
+- `dca-factory.profile.yaml` at the root — the only file that tells the pipeline how this project
   builds: `./gradlew testClasses|test|test-e2e|test-architecture|spotlessCheck|spotlessApply`, plus
   the knowledge source (`dca-knowledge`), the carriers and the review perspectives
 - `.agents/factory/story-gate.py` — the gate between the stages

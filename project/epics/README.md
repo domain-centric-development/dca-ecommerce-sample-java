@@ -3,8 +3,9 @@
 New work is written as markdown with front matter, one file per item:
 
 ```
-project/backlog/<epic>/epic.md        intent, goal, metric (an outcome event), domain_contact
-project/backlog/<epic>/<story>.md     status, context, acceptance criteria with named keys, assumptions
+project/epics/<epic>/epic.md                  intent, goal, metric (an outcome event), domain_contact, depends_on
+project/epics/<epic>/<story>/story.md         status, context, acceptance criteria with named keys, assumptions
+project/epics/<epic>/<story>/decisions/       the questions a run asked and the answers, the acceptances
 ```
 
 The contract and the field meanings live with the pipeline, in the `factory-run` skill's
