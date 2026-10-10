@@ -27,7 +27,7 @@
 #   factory.sh update [--from <skill folder>] [--copy|--link] [--adopt <skill>,…|all]   the newest pipeline found,
 #                    same tools; --adopt takes over a copy of a method skill the install did not make; the mode
 #                                            the project has, or the one named
-#   factory.sh verify --story <id> | --fixtures   observe a delivered story | check the machinery
+#   factory.sh verify --story <id> | --fixtures [--group <g>] [--jobs <n>]   observe a delivered story | check the machinery
 #   factory.sh check [--staged] [--checks "<c> …"] | --parity <config>   for the commit hook and CI
 #
 # `run` exits 0 when the story ran through, 3 when it stopped for a decision, 4 at --max-stages,
@@ -2129,7 +2129,10 @@ where_things_are() {                        # where_things_are <tool> <stage|"th
 up in a dependency's sources or a package cache, which is never the place."
     fi
   fi
-  local cli_path=${CLI#"$PWD/"}             # the project's own copy, named as the gate is: relative to the root
+  # named as the allow-list names it: the project's copy, relative to the root — in a story's worktree the main
+  # checkout's, through the worktree's link. A path the list does not name is a refused call.
+  local cli_path=${CLI#"$PWD/"}
+  [ -f .agents/factory/factory-cli.py ] && cli_path=.agents/factory/factory-cli.py
   printf '%s' "Where things are: the stack profile is $PROFILE; this story's run folder is $RUNS/$story/; \
 what the gate checks in a stage's file, in a page, is \`$PY $cli_path --contract <stage>\` — read that, never the gate's \
 source.$catalog \
@@ -2689,7 +2692,13 @@ run_story() {                               # run_story <story> <tool> <from> <d
     "")    echo "factory: no worktree could be made for $story — nothing ran." >&2; return 1 ;;
   esac
   echo "factory: $story works in its worktree, ${wt#"$HOME_DIR/"}"
-  ADD_DIRS=("$HOME_DIR/$RUNS_REL" "$HOME_DIR/$(cli --place epics 2>/dev/null || echo project/epics)")
+  # every folder the worktree links to this checkout, so a read or a write through the link is the stage's own
+  local linked
+  ADD_DIRS=()
+  for linked in "$RUNS_REL" "$(cli --place epics 2>/dev/null)" "$(cli --place discovery 2>/dev/null)" \
+                .agents/factory .claude/skills .codex/skills .opencode/skills .agents/skills; do
+    [ -n "$linked" ] && [ -d "$HOME_DIR/$linked" ] && ADD_DIRS+=("$HOME_DIR/$linked")
+  done
   cd "$wt" || return 1
   export FACTORY_HOME="$HOME_DIR"
   RUNS="$HOME_DIR/$RUNS_REL"
@@ -2713,6 +2722,8 @@ run_backlog() {                             # run_backlog <tool> <watch> <interv
   local out previous="" next story from last="" code slots
   [ -f "$GATE" ] || { echo "factory: no gate at $GATE — run 'factory.sh setup'" >&2; return 2; }
   slots=$(parallel_slots) || return 2
+  # a superseded story's worktree has nothing to integrate; it goes before the first story starts
+  [ -n "$dry" ] || { take_lock; cli --worktree-prune; drop_lock; }
   if [ "$slots" -gt 1 ] && [ -z "$dry" ]; then
     run_parallel "$tool" "$watch" "$interval" "$slots"
     return $?
@@ -3004,11 +3015,11 @@ case "$command" in
           echo "factory: no observer at .agents/factory/observe.py — 'factory.sh update' copies it there" >&2; exit 2; }
         exec "$PY" .agents/factory/observe.py --story "$2" ;;
       --fixtures)
-        [ $# -eq 1 ] || usage
+        shift
         skills=$(plugin_skills) && [ -f "$skills/factory-verify/scripts/verify.py" ] || {
           echo "factory: no pipeline found whose fixtures could run — FACTORY_PLUGIN_DIR names one" >&2; exit 2; }
         echo "factory: the machinery of $skills"
-        exec "$PY" "$skills/factory-verify/scripts/verify.py" ;;
+        exec "$PY" "$skills/factory-verify/scripts/verify.py" "$@" ;;
       *) usage ;;
     esac ;;
 esac
