@@ -1,1 +1,1 @@
-.dca-factory/runs/**/.verify/journal.tsv merge=union
+.dca-factory/evidence/**/journal.tsv merge=union
