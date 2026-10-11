@@ -1,6 +1,6 @@
-package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
+package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtTokenService.TokenValidation;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService.TokenValidation;
 import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredQuery;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;

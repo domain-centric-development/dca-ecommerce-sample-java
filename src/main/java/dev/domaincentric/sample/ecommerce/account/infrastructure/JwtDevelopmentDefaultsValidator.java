@@ -1,6 +1,6 @@
 package dev.domaincentric.sample.ecommerce.account.infrastructure;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtProperties;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtProperties;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;

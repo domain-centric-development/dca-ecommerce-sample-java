@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
+package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;

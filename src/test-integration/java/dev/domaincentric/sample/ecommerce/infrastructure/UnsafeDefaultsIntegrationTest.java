@@ -2,7 +2,7 @@ package dev.domaincentric.sample.ecommerce.infrastructure;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtProperties;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;

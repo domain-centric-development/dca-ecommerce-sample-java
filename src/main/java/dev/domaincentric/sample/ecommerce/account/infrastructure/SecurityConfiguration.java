@@ -1,9 +1,9 @@
 package dev.domaincentric.sample.ecommerce.account.infrastructure;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtAuthenticationFilter;
-import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtProperties;
-import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.ShopAccessDeniedHandler;
-import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.ShopAuthenticationEntryPoint;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtAuthenticationFilter;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtProperties;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.ShopAccessDeniedHandler;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.ShopAuthenticationEntryPoint;
 import jakarta.servlet.DispatcherType;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;

@@ -9,7 +9,8 @@ import org.springframework.stereotype.Component;
  * Spring Security implementation of IdentityProvider.
  *
  * <p>This component extracts the current user's Identity from the Spring Security context. The
- * Identity is placed in the security context by the {@link JwtAuthenticationFilter}.
+ * Identity is placed in the security context by {@code JwtAuthenticationFilter}, the incoming
+ * adapter that resolves it from each request.
  *
  * <p><b>Usage:</b>
  *

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
+package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

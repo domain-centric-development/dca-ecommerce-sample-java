@@ -9,8 +9,8 @@ import java.util.Set;
  * <p>This is adapter-internal mechanics, not a port: a token is a property of the protocol the
  * incoming adapters speak (a cookie for the browser, a Bearer header for API clients), and no use
  * case knows or needs one. The interface therefore lives with its callers in the adapter layer and
- * carries no {@code OutputPort} marker. The JWT implementation is {@code JwtTokenService} in the
- * security adapter.
+ * carries no {@code OutputPort} marker. The JWT implementation, {@code JwtTokenService}, sits
+ * beside it in this package.
  *
  * <p>Callers: {@code LoginPageController}, {@code RegisterPageController}, {@code
  * ProfilePageController} and {@code AuthResource}, after a use case has authenticated or registered

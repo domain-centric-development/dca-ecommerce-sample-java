@@ -6,7 +6,7 @@ package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
  * <p>This is adapter-internal mechanics, not a port: setting and clearing cookies belongs to the
  * incoming adapter that owns the HTTP protocol, and no use case depends on it. The interface
  * therefore lives with its callers in the adapter layer and carries no {@code OutputPort} marker.
- * The cookie-writing implementation is {@code JwtIdentitySession} in the security adapter; it is
+ * The cookie-writing implementation is {@code JwtIdentitySession}, beside it in this package; it is
  * request-scoped because it needs the current HTTP response.
  *
  * <p>Only the Account context modifies identity sessions (during login, registration and logout).

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
+package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

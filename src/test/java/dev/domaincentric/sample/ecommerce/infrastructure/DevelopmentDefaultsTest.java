@@ -2,7 +2,7 @@ package dev.domaincentric.sample.ecommerce.infrastructure;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security.JwtProperties;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtProperties;
 import dev.domaincentric.sample.ecommerce.account.infrastructure.JwtDevelopmentDefaultsValidator;
 import dev.domaincentric.sample.ecommerce.backoffice.infrastructure.BackofficeDevelopmentDefaultsValidator;
 import dev.domaincentric.sample.ecommerce.backoffice.infrastructure.BackofficeSecurityProperties;

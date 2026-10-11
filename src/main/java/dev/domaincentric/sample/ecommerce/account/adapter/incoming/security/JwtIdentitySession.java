@@ -1,6 +1,5 @@
-package dev.domaincentric.sample.ecommerce.account.adapter.outgoing.security;
+package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
 
-import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
