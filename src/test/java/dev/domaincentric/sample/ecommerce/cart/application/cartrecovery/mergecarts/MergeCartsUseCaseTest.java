@@ -384,7 +384,7 @@ class MergeCartsUseCaseTest {
   // Helper methods
 
   private ShoppingCart createCart(String userId) {
-    return new ShoppingCart(CartId.generate(), CustomerId.of(userId));
+    return ShoppingCart.create(CartId.generate(), CustomerId.of(userId));
   }
 
   // Test doubles

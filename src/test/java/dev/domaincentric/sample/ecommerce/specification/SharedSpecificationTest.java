@@ -97,7 +97,7 @@ class SharedSpecificationTest {
   }
 
   static void reconciliation(JsonNode v) {
-    var cart = new ShoppingCart(CartId.generate(), CustomerId.of("specification"));
+    var cart = ShoppingCart.create(CartId.generate(), CustomerId.of("specification"));
     var product = ProductId.generate();
     var price = Price.of(Money.euro(10));
     cart.addItem(product, Quantity.of(v.path("initial").asInt()), price);

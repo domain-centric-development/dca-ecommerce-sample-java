@@ -134,7 +134,7 @@ class RetainedDeliveryIntegrationTest {
             new TransactionTemplate(transactions)
                 .execute(
                     status -> {
-                      carts.save(new ShoppingCart(cartId, CustomerId.of("rollback-probe")));
+                      carts.save(ShoppingCart.create(cartId, CustomerId.of("rollback-probe")));
                       publisher.publishEvent(
                           new Probe(eventId, Instant.now(), "inside", false, false));
                       throw new IllegalStateException("rollback");
@@ -152,7 +152,7 @@ class RetainedDeliveryIntegrationTest {
             new TransactionTemplate(transactions)
                 .execute(
                     status -> {
-                      carts.save(new ShoppingCart(cartId, CustomerId.of("rollback-probe")));
+                      carts.save(ShoppingCart.create(cartId, CustomerId.of("rollback-probe")));
                       throw new IllegalStateException("rollback");
                     }));
     assertTrue(carts.findById(cartId).isEmpty());

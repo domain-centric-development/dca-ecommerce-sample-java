@@ -35,9 +35,9 @@ class ActiveCartClaimIntegrationTest {
   @DisplayName("A second active cart for the same customer is refused by the wired store")
   void aSecondActiveCartIsRefused() {
     final CustomerId customer = CustomerId.of("claim-customer-" + System.nanoTime());
-    carts.save(new ShoppingCart(CartId.generate(), customer));
+    carts.save(ShoppingCart.create(CartId.generate(), customer));
 
-    assertThatThrownBy(() -> carts.save(new ShoppingCart(CartId.generate(), customer)))
+    assertThatThrownBy(() -> carts.save(ShoppingCart.create(CartId.generate(), customer)))
         .isInstanceOf(ActiveCartAlreadyExistsException.class);
   }
 
@@ -45,13 +45,13 @@ class ActiveCartClaimIntegrationTest {
   @DisplayName("The customer is free again once their cart is no longer active")
   void theCustomerIsFreeAgainOnceTheCartIsDone() {
     final CustomerId customer = CustomerId.of("claim-customer-" + System.nanoTime());
-    final ShoppingCart first = new ShoppingCart(CartId.generate(), customer);
+    final ShoppingCart first = ShoppingCart.create(CartId.generate(), customer);
     carts.save(first);
 
     first.complete();
     carts.save(first);
 
-    assertThatCode(() -> carts.save(new ShoppingCart(CartId.generate(), customer)))
+    assertThatCode(() -> carts.save(ShoppingCart.create(CartId.generate(), customer)))
         .doesNotThrowAnyException();
     assertThat(carts.findActiveCartByCustomerId(customer)).isPresent();
   }

@@ -55,7 +55,7 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
         accountCartOpt.orElseGet(
             () -> {
               final ShoppingCart newCart =
-                  new ShoppingCart(CartId.generate(), registeredCustomerId);
+                  ShoppingCart.create(CartId.generate(), registeredCustomerId);
               return shoppingCartRepository.save(newCart);
             });
 

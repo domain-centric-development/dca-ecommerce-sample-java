@@ -44,11 +44,11 @@ class ActiveCartUniquenessTest {
   void aSecondActiveCartIsRefused() {
     final InMemoryShoppingCartRepository carts = new InMemoryShoppingCartRepository();
     final CustomerId customer = CustomerId.of("customer-" + System.nanoTime());
-    carts.save(new ShoppingCart(CartId.generate(), customer));
+    carts.save(ShoppingCart.create(CartId.generate(), customer));
 
     assertThrows(
         ActiveCartAlreadyExistsException.class,
-        () -> carts.save(new ShoppingCart(CartId.generate(), customer)));
+        () -> carts.save(ShoppingCart.create(CartId.generate(), customer)));
   }
 
   @Test
@@ -56,13 +56,13 @@ class ActiveCartUniquenessTest {
   void theCustomerIsFreeAgainOnceTheCartIsDone() {
     final InMemoryShoppingCartRepository carts = new InMemoryShoppingCartRepository();
     final CustomerId customer = CustomerId.of("customer-" + System.nanoTime());
-    final ShoppingCart first = new ShoppingCart(CartId.generate(), customer);
+    final ShoppingCart first = ShoppingCart.create(CartId.generate(), customer);
     carts.save(first);
 
     first.complete();
     carts.save(first);
 
-    final ShoppingCart second = new ShoppingCart(CartId.generate(), customer);
+    final ShoppingCart second = ShoppingCart.create(CartId.generate(), customer);
     carts.save(second);
     assertEquals(second.id(), carts.findActiveCartByCustomerId(customer).orElseThrow().id());
   }

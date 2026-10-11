@@ -178,7 +178,7 @@ class CheckoutSpecificationTest {
   static class Fixture implements CartDataPort, CheckoutArticleDataPort {
     final ProductId product = ProductId.generate();
     final dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart cart =
-        new dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart(
+        dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart.create(
             dev.domaincentric.sample.ecommerce.cart.domain.model.CartId.generate(),
             dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId.of("specification"));
     final InMemoryCheckoutSessionRepository repository = new InMemoryCheckoutSessionRepository();

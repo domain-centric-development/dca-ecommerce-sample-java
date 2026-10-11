@@ -62,7 +62,7 @@ public class GetOrCreateActiveCartUseCase implements GetOrCreateActiveCartInputP
     try {
       return transactionBoundary.inTransaction(
           () -> {
-            final ShoppingCart newCart = new ShoppingCart(newCartId, customerId);
+            final ShoppingCart newCart = ShoppingCart.create(newCartId, customerId);
             shoppingCartRepository.save(newCart);
             eventPublisher.publishAndClearEvents(newCart);
             return new GetOrCreateActiveCartResult(newCartId.value(), customerId.value(), true);

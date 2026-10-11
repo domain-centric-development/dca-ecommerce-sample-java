@@ -101,7 +101,7 @@ class RecoverCartOnLoginUseCaseTest {
   @Test
   @DisplayName("does nothing when the anonymous cart is empty")
   void doesNothingWhenTheAnonymousCartIsEmpty() {
-    repository.save(new ShoppingCart(CartId.generate(), CustomerId.of(ANONYMOUS_USER_ID)));
+    repository.save(ShoppingCart.create(CartId.generate(), CustomerId.of(ANONYMOUS_USER_ID)));
 
     final RecoverCartOnLoginResult result = recover();
 
@@ -114,7 +114,7 @@ class RecoverCartOnLoginUseCaseTest {
   }
 
   private void cartFor(final String userId, final ProductId productId, final int quantity) {
-    final ShoppingCart cart = new ShoppingCart(CartId.generate(), CustomerId.of(userId));
+    final ShoppingCart cart = ShoppingCart.create(CartId.generate(), CustomerId.of(userId));
     cart.addItem(productId, Quantity.of(quantity), Price.of(Money.of(new BigDecimal("9.99"), EUR)));
     cart.clearDomainEvents();
     repository.save(cart);

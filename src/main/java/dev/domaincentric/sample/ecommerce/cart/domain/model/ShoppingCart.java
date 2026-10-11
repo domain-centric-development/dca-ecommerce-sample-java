@@ -48,11 +48,25 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
   private final List<CartItem> items;
   private CartStatus status;
 
-  public ShoppingCart(final CartId id, final CustomerId customerId) {
+  private ShoppingCart(final CartId id, final CustomerId customerId) {
     this.id = id;
     this.customerId = customerId;
     this.items = new ArrayList<>();
     this.status = CartStatus.ACTIVE;
+  }
+
+  /**
+   * Creates a new, empty and active cart for a customer.
+   *
+   * <p>Opening a cart is not a business fact anyone downstream reacts to, so no domain event is
+   * raised; the first one comes with the first line added.
+   *
+   * @param id the cart's identity
+   * @param customerId the customer the cart belongs to
+   * @return the new cart
+   */
+  public static ShoppingCart create(final CartId id, final CustomerId customerId) {
+    return new ShoppingCart(id, customerId);
   }
 
   /**

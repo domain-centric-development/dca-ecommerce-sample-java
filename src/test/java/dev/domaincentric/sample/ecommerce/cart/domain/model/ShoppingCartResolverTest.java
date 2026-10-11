@@ -41,7 +41,7 @@ class ShoppingCartResolverTest {
 
   @BeforeEach
   void setUp() {
-    cart = new ShoppingCart(CartId.generate(), CustomerId.of("test-customer"));
+    cart = ShoppingCart.create(CartId.generate(), CustomerId.of("test-customer"));
     priceResolver = new TestArticlePriceResolver();
   }
 

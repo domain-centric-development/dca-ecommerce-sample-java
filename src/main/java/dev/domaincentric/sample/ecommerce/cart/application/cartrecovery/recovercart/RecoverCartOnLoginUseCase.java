@@ -65,7 +65,7 @@ public class RecoverCartOnLoginUseCase implements RecoverCartOnLoginInputPort {
             .orElseGet(
                 () -> {
                   final ShoppingCart newCart =
-                      new ShoppingCart(CartId.generate(), registeredCustomerId);
+                      ShoppingCart.create(CartId.generate(), registeredCustomerId);
                   return shoppingCartRepository.save(newCart);
                 });
 

@@ -32,7 +32,7 @@ class ShoppingCartRepositoryJpaIntegrationTest {
     // given
     CustomerId customerId = CustomerId.of("it-customer-1");
     CartId cartId = CartId.generate();
-    ShoppingCart cart = new ShoppingCart(cartId, customerId);
+    ShoppingCart cart = ShoppingCart.create(cartId, customerId);
 
     // when
     shoppingCartRepository.save(cart);
@@ -56,10 +56,10 @@ class ShoppingCartRepositoryJpaIntegrationTest {
     CustomerId oneCustomer = CustomerId.of("it-customer-2-a");
     CustomerId anotherCustomer = CustomerId.of("it-customer-2-b");
 
-    ShoppingCart small = new ShoppingCart(CartId.generate(), oneCustomer);
+    ShoppingCart small = ShoppingCart.create(CartId.generate(), oneCustomer);
     small.addItem(ProductId.of("P1"), Quantity.of(1), Price.of(Money.euro(10.00)));
 
-    ShoppingCart big = new ShoppingCart(CartId.generate(), anotherCustomer);
+    ShoppingCart big = ShoppingCart.create(CartId.generate(), anotherCustomer);
     big.addItem(ProductId.of("P2"), Quantity.of(3), Price.of(Money.euro(25.00))); // total 75 EUR
 
     shoppingCartRepository.save(small);

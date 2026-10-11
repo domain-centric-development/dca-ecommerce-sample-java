@@ -36,7 +36,7 @@ public class CreateCartUseCase implements CreateCartInputPort {
     final CartId cartId = CartId.generate();
 
     // Create cart aggregate
-    final ShoppingCart cart = new ShoppingCart(cartId, customerId);
+    final ShoppingCart cart = ShoppingCart.create(cartId, customerId);
 
     // Persist
     shoppingCartRepository.save(cart);

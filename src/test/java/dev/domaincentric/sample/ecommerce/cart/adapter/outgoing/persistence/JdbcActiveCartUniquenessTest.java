@@ -59,11 +59,11 @@ class JdbcActiveCartUniquenessTest {
   void aSecondActiveCartIsRefused() {
     final JdbcShoppingCartRepository carts = repository();
     final CustomerId customer = CustomerId.of("customer-" + System.nanoTime());
-    carts.save(new ShoppingCart(CartId.generate(), customer));
+    carts.save(ShoppingCart.create(CartId.generate(), customer));
 
     assertThrows(
         ActiveCartAlreadyExistsException.class,
-        () -> carts.save(new ShoppingCart(CartId.generate(), customer)));
+        () -> carts.save(ShoppingCart.create(CartId.generate(), customer)));
   }
 
   @Test
@@ -71,7 +71,7 @@ class JdbcActiveCartUniquenessTest {
   void savingTheSameCartAgainIsNotASecondCart() {
     final JdbcShoppingCartRepository carts = repository();
     final CustomerId customer = CustomerId.of("customer-" + System.nanoTime());
-    final ShoppingCart cart = new ShoppingCart(CartId.generate(), customer);
+    final ShoppingCart cart = ShoppingCart.create(CartId.generate(), customer);
     carts.save(cart);
 
     assertDoesNotThrow(() -> carts.save(cart));
@@ -82,13 +82,13 @@ class JdbcActiveCartUniquenessTest {
   void theCustomerIsFreeAgainOnceTheCartIsDone() {
     final JdbcShoppingCartRepository carts = repository();
     final CustomerId customer = CustomerId.of("customer-" + System.nanoTime());
-    final ShoppingCart first = new ShoppingCart(CartId.generate(), customer);
+    final ShoppingCart first = ShoppingCart.create(CartId.generate(), customer);
     carts.save(first);
 
     first.complete();
     carts.save(first);
 
-    assertDoesNotThrow(() -> carts.save(new ShoppingCart(CartId.generate(), customer)));
+    assertDoesNotThrow(() -> carts.save(ShoppingCart.create(CartId.generate(), customer)));
   }
 
   @Test
@@ -108,7 +108,7 @@ class JdbcActiveCartUniquenessTest {
                         pool.submit(
                             () -> {
                               try {
-                                carts.save(new ShoppingCart(CartId.generate(), customer));
+                                carts.save(ShoppingCart.create(CartId.generate(), customer));
                                 accepted.incrementAndGet();
                               } catch (final ActiveCartAlreadyExistsException expected) {
                                 // the request that lost the race takes the cart that won

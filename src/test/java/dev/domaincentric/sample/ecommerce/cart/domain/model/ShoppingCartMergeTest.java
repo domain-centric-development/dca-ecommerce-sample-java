@@ -32,8 +32,8 @@ class ShoppingCartMergeTest {
 
   @BeforeEach
   void setUp() {
-    targetCart = new ShoppingCart(CartId.generate(), CustomerId.of("target-customer"));
-    sourceCart = new ShoppingCart(CartId.generate(), CustomerId.of("source-customer"));
+    targetCart = ShoppingCart.create(CartId.generate(), CustomerId.of("target-customer"));
+    sourceCart = ShoppingCart.create(CartId.generate(), CustomerId.of("source-customer"));
   }
 
   @Nested
