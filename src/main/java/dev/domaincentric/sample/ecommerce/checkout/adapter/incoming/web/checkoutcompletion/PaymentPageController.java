@@ -14,9 +14,15 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getactive
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.NothingToPayException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -156,18 +162,34 @@ public class PaymentPageController {
 
       return "redirect:/checkout/review";
 
-    } catch (PaymentInitiationFailedException e) {
-      redirectAttributes.addFlashAttribute("error", PAYMENT_REFUSED);
-      return "redirect:/checkout/payment";
-    } catch (PaymentProviderUnavailableException e) {
-      redirectAttributes.addFlashAttribute("error", PROVIDER_UNAVAILABLE);
-      return "redirect:/checkout/payment";
     } catch (UseCaseException | DomainException | IllegalArgumentException e) {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", e.getMessage());
+      redirectAttributes.addFlashAttribute("error", messageFor(e));
       return "redirect:/checkout/payment";
     }
+  }
+
+  /**
+   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
+   * The failure's message is for the log, never for the customer.
+   */
+  private static String messageFor(final RuntimeException failure) {
+    return switch (failure) {
+      case PaymentInitiationFailedException e -> PAYMENT_REFUSED;
+      case PaymentProviderUnavailableException e -> PROVIDER_UNAVAILABLE;
+      case PaymentProviderNotFoundException e ->
+          "This way to pay is not offered. Please choose another one.";
+      case NothingToPayException e -> "There is nothing to pay for this order.";
+      case CheckoutSessionNotFoundException e -> "Checkout session not found";
+      case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
+      case CheckoutStepNotCompletedException e ->
+          "Please complete the previous checkout steps first.";
+      case CheckoutStepOutOfOrderException e ->
+          "Please complete the previous checkout steps first.";
+      case IllegalArgumentException e -> "Please choose a way to pay.";
+      default -> "Your payment selection could not be saved. Please try again.";
+    };
   }
 }

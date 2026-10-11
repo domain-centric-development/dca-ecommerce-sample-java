@@ -4,6 +4,12 @@ import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.ArticleNotAvailableException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotActiveException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotAvailableException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutItemsUnavailableException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.EmptyCartException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.EmptyCheckoutException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -70,8 +76,27 @@ public class StartCheckoutPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", e.getMessage());
+      redirectAttributes.addFlashAttribute("error", messageFor(e));
       return "redirect:/cart";
     }
+  }
+
+  /**
+   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
+   * The failure's message is for the log, never for the customer.
+   */
+  private static String messageFor(final RuntimeException failure) {
+    return switch (failure) {
+      case CartNotAvailableException e -> "Your cart could not be found.";
+      case CartNotActiveException e -> "This cart can no longer be checked out.";
+      case EmptyCartException e -> "Cannot check out an empty cart.";
+      case EmptyCheckoutException e -> "Cannot check out an empty cart.";
+      case ArticleNotAvailableException e -> "A product in your cart is no longer available.";
+      case CheckoutItemsUnavailableException e ->
+          "Cannot start checkout, "
+              + e.productIds().size()
+              + " item(s) unavailable or out of stock.";
+      default -> "The checkout could not be started. Please try again.";
+    };
   }
 }

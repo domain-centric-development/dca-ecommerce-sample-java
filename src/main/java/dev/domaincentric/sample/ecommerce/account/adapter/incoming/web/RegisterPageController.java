@@ -4,9 +4,12 @@ import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
+import dev.domaincentric.sample.ecommerce.account.application.registeraccount.AccountAlreadyExistsException;
+import dev.domaincentric.sample.ecommerce.account.application.registeraccount.EmailAlreadyRegisteredException;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountResult;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordTooWeakException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.LocalDate;
@@ -130,7 +133,7 @@ public class RegisterPageController {
     } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
       // The context's own refusals, plus the argument exception a form field still reaches a value
       // object with.
-      return renderError(model, submission, e.getMessage());
+      return renderError(model, submission, messageFor(e));
     }
   }
 
@@ -158,4 +161,20 @@ public class RegisterPageController {
       String lastName,
       String dateOfBirth,
       @Nullable String returnUrl) {}
+
+  /**
+   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
+   * The failure's message is for the log, never for the person at the form.
+   */
+  private static String messageFor(final RuntimeException failure) {
+    return switch (failure) {
+      case EmailAlreadyRegisteredException e -> "This email address is already registered";
+      case AccountAlreadyExistsException e -> "You already have an account.";
+      case PasswordTooWeakException e ->
+          "Password must be at least 8 characters and contain an uppercase letter,"
+              + " a lowercase letter and a digit.";
+      case IllegalArgumentException e -> "Please check the details you entered.";
+      default -> "The account could not be created. Please try again.";
+    };
+  }
 }

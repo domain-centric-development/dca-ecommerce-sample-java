@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * decides what a caller is told about it. That decision lives here, so the same use case can serve
  * this REST exposure and the tool provider next to it with different answers.
  *
+ * <p>The words are this adapter's own: a detail is built from the failure's values, never from its
+ * message, which is for the log.
+ *
  * <p>Scoped to this context's REST package: an adapter answers for its own module only (ADR-037).
  */
 @RestControllerAdvice(
@@ -31,7 +34,9 @@ public class ProductApiExceptionHandler {
   @ExceptionHandler(DuplicateSkuException.class)
   public ProblemDetail handleDuplicateSku(final DuplicateSkuException exception) {
     return problem(
-        HttpStatus.CONFLICT, "Stock keeping unit already in use", exception.getMessage());
+        HttpStatus.CONFLICT,
+        "Stock keeping unit already in use",
+        "A product with SKU " + exception.sku().value() + " already exists.");
   }
 
   /**
@@ -41,15 +46,13 @@ public class ProductApiExceptionHandler {
    */
   @ExceptionHandler(UseCaseException.class)
   public ProblemDetail handleUseCaseFailure(final UseCaseException exception) {
-    return problem(
-        HttpStatus.UNPROCESSABLE_ENTITY, "Request cannot be served", exception.getMessage());
+    return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Request cannot be served");
   }
 
   /** A rule of the model refused the request. */
   @ExceptionHandler(DomainException.class)
   public ProblemDetail handleDomainRule(final DomainException exception) {
-    return problem(
-        HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violated", exception.getMessage());
+    return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violated");
   }
 
   /**
@@ -62,12 +65,19 @@ public class ProductApiExceptionHandler {
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleUnacceptableValue(final IllegalArgumentException exception) {
     LOG.debug("Rejected request value: {}", exception.getMessage());
-    return problem(HttpStatus.BAD_REQUEST, "Unacceptable value", exception.getMessage());
+    return problem(HttpStatus.BAD_REQUEST, "Unacceptable value");
   }
 
   private static ProblemDetail problem(
       final HttpStatus status, final String title, final String detail) {
     final ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+    problem.setTitle(title);
+    return problem;
+  }
+
+  /** A refusal the title names completely: no detail beyond it. */
+  private static ProblemDetail problem(final HttpStatus status, final String title) {
+    final ProblemDetail problem = ProblemDetail.forStatus(status);
     problem.setTitle(title);
     return problem;
   }

@@ -26,10 +26,11 @@ import org.springframework.test.web.servlet.MockMvc;
  * How a refused request reads over the API.
  *
  * <p>Every refusal is a problem document (RFC 9457): the status carries the kind of failure, the
- * title names it, the detail is the wording of the layer that refused. What is being checked here
- * is that the status follows the failure and not the base type — a stock keeping unit the catalog
- * already holds is a conflict, a malformed one is a bad request, and both come out of the same
- * endpoint that used to answer {@code 400} with an empty body for either (ADR-037).
+ * title names it, the detail is the adapter's own wording from the failure's values — never the
+ * exception's message, which is for the log. What is being checked here is that the status follows
+ * the failure and not the base type — a stock keeping unit the catalog already holds is a conflict,
+ * a malformed one is a bad request, and both come out of the same endpoint that used to answer
+ * {@code 400} with an empty body for either (ADR-037).
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,

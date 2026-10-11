@@ -11,7 +11,10 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getactive
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -152,8 +155,23 @@ public class BuyerInfoPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", e.getMessage());
+      redirectAttributes.addFlashAttribute("error", messageFor(e));
       return "redirect:/checkout/buyer";
     }
+  }
+
+  /**
+   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
+   * The failure's message is for the log, never for the customer.
+   */
+  private static String messageFor(final RuntimeException failure) {
+    return switch (failure) {
+      case CheckoutSessionNotFoundException e -> "Checkout session not found";
+      case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
+      case CheckoutStepOutOfOrderException e ->
+          "Please complete the previous checkout steps first.";
+      case IllegalArgumentException e -> "Please check the details you entered.";
+      default -> "Your details could not be saved. Please try again.";
+    };
   }
 }

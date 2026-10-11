@@ -14,7 +14,12 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionResult;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -97,7 +102,7 @@ public class ConfirmationPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", e.getMessage());
+      redirectAttributes.addFlashAttribute("error", messageFor(e));
       return "redirect:/checkout/review";
     }
   }
@@ -154,5 +159,24 @@ public class ConfirmationPageController {
     model.addAttribute("title", "Order Confirmed - Thank You!");
 
     return "checkout/confirmation";
+  }
+
+  /**
+   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
+   * The failure's message is for the log, never for the customer.
+   */
+  private static String messageFor(final RuntimeException failure) {
+    return switch (failure) {
+      case CheckoutValidationException e ->
+          "Cannot place the order, "
+              + e.validation().errors().size()
+              + " item(s) unavailable or out of stock.";
+      case CheckoutSessionNotFoundException e -> "Checkout session not found";
+      case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
+      case CheckoutStepNotCompletedException e ->
+          "Please complete the previous checkout steps first.";
+      case CheckoutStepOutOfOrderException e -> "Please review your order before placing it.";
+      default -> "Your order could not be placed. Please try again.";
+    };
   }
 }

@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.Toke
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountResult;
+import dev.domaincentric.sample.ecommerce.account.domain.model.AccountNotAccessibleException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URLEncoder;
@@ -129,10 +130,22 @@ public class LoginPageController {
       // The context's own refusals, plus the argument exception a form field still reaches a value
       // object with.
       model.addAttribute("title", "Login");
-      model.addAttribute("error", e.getMessage());
+      model.addAttribute("error", messageFor(e));
       model.addAttribute("email", email);
       model.addAttribute("returnUrl", returnUrl);
       return "account/login";
     }
+  }
+
+  /**
+   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
+   * The failure's message is for the log, never for the person at the form.
+   */
+  private static String messageFor(final RuntimeException failure) {
+    return switch (failure) {
+      case AccountNotAccessibleException e -> "This account cannot sign in";
+      case IllegalArgumentException e -> "Please enter your email and your password.";
+      default -> "Signing in failed. Please try again.";
+    };
   }
 }

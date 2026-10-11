@@ -23,6 +23,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * refusals: an address somebody else holds, a password the model will not accept, an account that
  * is closed.
  *
+ * <p>The words are this adapter's own: a detail is built from the failure's values, never from its
+ * message, which is for the log.
+ *
  * <p>Scoped to this context's REST package: an adapter answers for its own module only (ADR-037).
  */
 @RestControllerAdvice(
@@ -31,31 +34,43 @@ public class AccountApiExceptionHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(AccountApiExceptionHandler.class);
 
+  private static final String ACCOUNT_EXISTS = "The signed-in user already has an account.";
+  private static final String PASSWORD_RULES =
+      "Password must be at least 8 characters and contain an uppercase letter,"
+          + " a lowercase letter and a digit.";
+  private static final String CANNOT_SIGN_IN = "This account cannot sign in";
+
   /** Another account already holds that address. */
   @ExceptionHandler(EmailAlreadyRegisteredException.class)
   public ProblemDetail handleEmailTaken(final EmailAlreadyRegisteredException exception) {
-    return problem(HttpStatus.CONFLICT, "Email already registered", exception.getMessage());
+    return problem(
+        HttpStatus.CONFLICT,
+        "Email already registered",
+        "The email address " + exception.email().value() + " is already registered.");
   }
 
   /** The signed-in user already has an account. */
   @ExceptionHandler(AccountAlreadyExistsException.class)
   public ProblemDetail handleAccountExists(final AccountAlreadyExistsException exception) {
-    return problem(HttpStatus.CONFLICT, "Account already exists", exception.getMessage());
+    return problem(HttpStatus.CONFLICT, "Account already exists", ACCOUNT_EXISTS);
   }
 
   /**
-   * The password does not meet the strength rules. The model's own wording goes to the caller
-   * verbatim — it says what to change, and it describes the rule, not the attempt.
+   * The password does not meet the strength rules. The failure carries no value that says which
+   * rule, so the answer states all of them — the rule, not the attempt.
    */
   @ExceptionHandler(PasswordTooWeakException.class)
   public ProblemDetail handleWeakPassword(final PasswordTooWeakException exception) {
-    return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Password too weak", exception.getMessage());
+    return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Password too weak", PASSWORD_RULES);
   }
 
   /** The account exists but is closed. */
   @ExceptionHandler(AccountClosedException.class)
   public ProblemDetail handleClosedAccount(final AccountClosedException exception) {
-    return problem(HttpStatus.CONFLICT, "Account closed", exception.getMessage());
+    return problem(
+        HttpStatus.CONFLICT,
+        "Account closed",
+        "Account " + exception.accountId().value() + " is closed.");
   }
 
   /**
@@ -66,21 +81,19 @@ public class AccountApiExceptionHandler {
   public ProblemDetail handleInaccessibleAccount(final AccountNotAccessibleException exception) {
     LOG.info(
         "Sign-in refused for account {}: {}", exception.accountId().value(), exception.status());
-    return problem(HttpStatus.FORBIDDEN, "Account not accessible", "This account cannot sign in");
+    return problem(HttpStatus.FORBIDDEN, "Account not accessible", CANNOT_SIGN_IN);
   }
 
   /** Any other failure the use case reports. */
   @ExceptionHandler(UseCaseException.class)
   public ProblemDetail handleUseCaseFailure(final UseCaseException exception) {
-    return problem(
-        HttpStatus.UNPROCESSABLE_ENTITY, "Request cannot be served", exception.getMessage());
+    return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Request cannot be served");
   }
 
   /** A rule of the model refused the request. */
   @ExceptionHandler(DomainException.class)
   public ProblemDetail handleDomainRule(final DomainException exception) {
-    return problem(
-        HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violated", exception.getMessage());
+    return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violated");
   }
 
   /**
@@ -91,12 +104,19 @@ public class AccountApiExceptionHandler {
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleUnacceptableValue(final IllegalArgumentException exception) {
     LOG.debug("Rejected request value: {}", exception.getMessage());
-    return problem(HttpStatus.BAD_REQUEST, "Unacceptable value", exception.getMessage());
+    return problem(HttpStatus.BAD_REQUEST, "Unacceptable value");
   }
 
   private static ProblemDetail problem(
       final HttpStatus status, final String title, final String detail) {
     final ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+    problem.setTitle(title);
+    return problem;
+  }
+
+  /** A refusal the title names completely: no detail beyond it. */
+  private static ProblemDetail problem(final HttpStatus status, final String title) {
+    final ProblemDetail problem = ProblemDetail.forStatus(status);
     problem.setTitle(title);
     return problem;
   }

@@ -2262,7 +2262,8 @@ that port. That is what lets a use case react to a lost race without knowing whi
 ### The adapter answers
 
 Neither base type carries a status code, a header or a message shape, and neither is annotated. The incoming
-adapter maps type to protocol answer, in one place per context:
+adapter maps type to protocol answer, in one place per context, and writes the words itself — from the failure's
+values, never from its message, which is for the log:
 
 ```java
 @RestControllerAdvice(basePackages = "...product.adapter.incoming.api")
@@ -2270,7 +2271,8 @@ public class ProductApiExceptionHandler {
 
     @ExceptionHandler(DuplicateSkuException.class)
     public ProblemDetail handleDuplicateSku(final DuplicateSkuException exception) {
-        return problem(HttpStatus.CONFLICT, "Stock keeping unit already in use", exception.getMessage());
+        return problem(HttpStatus.CONFLICT, "Stock keeping unit already in use",
+                "A product with SKU " + exception.sku().value() + " already exists.");
     }
     ...
 }
@@ -2278,7 +2280,8 @@ public class ProductApiExceptionHandler {
 
 The status follows the failure, not the base type: `CartItemNotFoundException` is a rule of the model and still
 answers `404`, because what the caller has to do about it is ask for something that exists. Page controllers of
-the same context map the same types into form errors instead. One use case, several protocols, one decision site
+the same context map the same types into the page's own sentence instead (`messageFor`, a `switch` on the
+failure's type). One use case, several protocols, one decision site
 each.
 
 ### When a result variant is the better channel

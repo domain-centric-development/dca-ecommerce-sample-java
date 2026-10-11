@@ -23,6 +23,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * model and still answers {@code 404}, because what the caller has to do about it is look for
  * something that exists. Deciding that is this adapter's job and nothing further in.
  *
+ * <p>The words are this adapter's own: a detail is built from the failure's values, never from its
+ * message, which is for the log.
+ *
  * <p>Scoped to this context's REST package: an adapter answers for its own module only (ADR-037).
  */
 @RestControllerAdvice(basePackages = "dev.domaincentric.sample.ecommerce.cart.adapter.incoming.api")
@@ -33,38 +36,56 @@ public class CartApiExceptionHandler {
   /** No cart of this customer under that identity. */
   @ExceptionHandler(CartNotFoundException.class)
   public ProblemDetail handleCartNotFound(final CartNotFoundException exception) {
-    return problem(HttpStatus.NOT_FOUND, "Cart not found", exception.getMessage());
+    return problem(
+        HttpStatus.NOT_FOUND,
+        "Cart not found",
+        "There is no cart " + exception.cartId().value() + ".");
   }
 
   /** The assortment carries no article for that product. */
   @ExceptionHandler(ArticleNotAvailableException.class)
   public ProblemDetail handleArticleNotAvailable(final ArticleNotAvailableException exception) {
-    return problem(HttpStatus.NOT_FOUND, "Article not available", exception.getMessage());
+    return problem(
+        HttpStatus.NOT_FOUND,
+        "Article not available",
+        "There is no article for product " + exception.productId().value() + ".");
   }
 
   /** The cart does not hold the position the caller named. */
   @ExceptionHandler(CartItemNotFoundException.class)
   public ProblemDetail handleCartItemNotFound(final CartItemNotFoundException exception) {
-    return problem(HttpStatus.NOT_FOUND, "Position not in cart", exception.getMessage());
+    return problem(
+        HttpStatus.NOT_FOUND,
+        "Position not in cart",
+        "The cart holds no position for " + exception.reference() + ".");
   }
 
   /** Not enough of the article to promise the requested quantity. */
   @ExceptionHandler(InsufficientArticleStockException.class)
   public ProblemDetail handleInsufficientStock(final InsufficientArticleStockException exception) {
-    return problem(HttpStatus.CONFLICT, "Not enough stock", exception.getMessage());
+    return problem(
+        HttpStatus.CONFLICT,
+        "Not enough stock",
+        "Requested "
+            + exception.requested()
+            + " of product "
+            + exception.productId().value()
+            + ", more than is in stock.");
   }
 
   /** The customer already shops in another cart. */
   @ExceptionHandler(ActiveCartAlreadyExistsException.class)
   public ProblemDetail handleActiveCartExists(final ActiveCartAlreadyExistsException exception) {
-    return problem(HttpStatus.CONFLICT, "Active cart already exists", exception.getMessage());
+    return problem(
+        HttpStatus.CONFLICT,
+        "Active cart already exists",
+        "Customer " + exception.customerId().value() + " already has an active cart.");
   }
 
   /** Any other failure the use case reports. */
   @ExceptionHandler(UseCaseException.class)
   public ProblemDetail handleUseCaseFailure(final UseCaseException exception) {
-    return problem(
-        HttpStatus.UNPROCESSABLE_ENTITY, "Request cannot be served", exception.getMessage());
+    return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Request cannot be served");
   }
 
   /**
@@ -73,7 +94,7 @@ public class CartApiExceptionHandler {
    */
   @ExceptionHandler(DomainException.class)
   public ProblemDetail handleDomainRule(final DomainException exception) {
-    return problem(HttpStatus.CONFLICT, "Cart refuses the change", exception.getMessage());
+    return problem(HttpStatus.CONFLICT, "Cart refuses the change");
   }
 
   /**
@@ -85,12 +106,19 @@ public class CartApiExceptionHandler {
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleUnacceptableValue(final IllegalArgumentException exception) {
     LOG.debug("Rejected request value: {}", exception.getMessage());
-    return problem(HttpStatus.BAD_REQUEST, "Unacceptable value", exception.getMessage());
+    return problem(HttpStatus.BAD_REQUEST, "Unacceptable value");
   }
 
   private static ProblemDetail problem(
       final HttpStatus status, final String title, final String detail) {
     final ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+    problem.setTitle(title);
+    return problem;
+  }
+
+  /** A refusal the title names completely: no detail beyond it. */
+  private static ProblemDetail problem(final HttpStatus status, final String title) {
+    final ProblemDetail problem = ProblemDetail.forStatus(status);
     problem.setTitle(title);
     return problem;
   }
