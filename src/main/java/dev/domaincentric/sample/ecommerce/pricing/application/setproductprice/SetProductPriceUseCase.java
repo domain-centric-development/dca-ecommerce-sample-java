@@ -1,11 +1,13 @@
 package dev.domaincentric.sample.ecommerce.pricing.application.setproductprice;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.pricing.application.shared.ProcessedEvents;
 import dev.domaincentric.sample.ecommerce.pricing.application.shared.ProductPriceRepository;
 import dev.domaincentric.sample.ecommerce.pricing.domain.model.ProductPrice;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.Currency;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,14 +30,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class SetProductPriceUseCase implements SetProductPriceInputPort {
 
+  /** The effect's key in {@link ProcessedEvents} — stable: a rename would replay old events. */
+  private static final String EFFECT = "set-product-price";
+
   private final ProductPriceRepository productPriceRepository;
   private final DomainEventPublisher eventPublisher;
+  private final ProcessedEvents processedEvents;
 
   public SetProductPriceUseCase(
       final ProductPriceRepository productPriceRepository,
-      final DomainEventPublisher eventPublisher) {
+      final DomainEventPublisher eventPublisher,
+      final ProcessedEvents processedEvents) {
     this.productPriceRepository = productPriceRepository;
     this.eventPublisher = eventPublisher;
+    this.processedEvents = processedEvents;
   }
 
   @Override
@@ -47,6 +55,11 @@ public class SetProductPriceUseCase implements SetProductPriceInputPort {
 
     // Check if price exists for this product
     final var existingPrice = productPriceRepository.findByProductId(productId);
+    final UUID eventId = command.eventId();
+
+    if (eventId != null && existingPrice.isPresent() && processedEvents.contains(EFFECT, eventId)) {
+      return toResult(existingPrice.get(), false, true);
+    }
 
     final ProductPrice productPrice;
     final boolean created;
@@ -68,13 +81,22 @@ public class SetProductPriceUseCase implements SetProductPriceInputPort {
     // Publish domain events
     eventPublisher.publishAndClearEvents(productPrice);
 
-    // Map to result
+    if (eventId != null) {
+      processedEvents.markProcessed(EFFECT, eventId);
+    }
+
+    return toResult(productPrice, created, false);
+  }
+
+  private static SetProductPriceResult toResult(
+      final ProductPrice productPrice, final boolean created, final boolean alreadyApplied) {
     return new SetProductPriceResult(
         productPrice.id().value(),
         productPrice.productId().value(),
         productPrice.currentPrice().value().amount(),
         productPrice.currentPrice().value().currency().getCurrencyCode(),
         productPrice.effectiveFrom(),
-        created);
+        created,
+        alreadyApplied);
   }
 }

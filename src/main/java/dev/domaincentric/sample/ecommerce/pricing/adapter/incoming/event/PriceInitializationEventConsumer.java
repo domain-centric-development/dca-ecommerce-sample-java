@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
  * producing module (Product Catalog) implements this interface on its {@code ProductCreatedEvent}.
  * This avoids a dependency from Pricing to Product.
  *
- * <p>Idempotent: the use case updates an existing price instead of failing, so a redelivery is
- * harmless.
+ * <p>Delivery is at least once: the consumer hands the event's {@code eventId()} on in the command,
+ * and the use case skips an effect it has already produced for that id, inside its own transaction.
  */
 @Component
 public class PriceInitializationEventConsumer {
@@ -41,6 +41,9 @@ public class PriceInitializationEventConsumer {
 
     setProductPriceInputPort.execute(
         new SetProductPriceCommand(
-            event.productId(), new java.math.BigDecimal(event.amount()), event.currency()));
+            event.productId(),
+            new java.math.BigDecimal(event.amount()),
+            event.currency(),
+            event.eventId()));
   }
 }
