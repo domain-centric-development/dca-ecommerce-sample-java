@@ -1,8 +1,9 @@
 ---
 id: CAT-02
 epic: browse-catalogue
-status: adopted
+status: delivered
 delivered: 2026-09-26T06:52:03Z
+delivered_by: gate
 context: product
 title: The product page
 depends_on: [CAT-01]

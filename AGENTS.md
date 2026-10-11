@@ -190,10 +190,13 @@ into this repository (the skill links in `.claude/`, `.codex/`, `.opencode/` are
 gets them with `factory.sh update`). The pipeline's own instructions are in its section at the end of
 this file; what is to be built is in the project description below it.
 
-- `project/product.md`, `project/tech.md`, `project/domain.md` — the project description: the product,
+- `product/overview.md`, `product/tech.md`, `product/domain.md` — the project description: the product,
   the technical decisions, the designed context map (the generated one is
   `docs/architecture/context-map.md`)
-- `project/epics/<epic>/<story>/story.md` — new stories, each a folder with its `decisions/`; `tasks/prd.json` keeps the delivered 146 as history
+- `product/spec/<context>/scenarios.md` — what holds today, per bounded context, each criterion with its `Test:`
+  line; written only by the gate that delivers a story. `product/spec/<context>/glossary.md` is the context's
+  glossary (the glossary skill and the document stage keep it)
+- `product/epics/<epic>/<story>/story.md` — the changes: stories, each a folder with its `decisions/`; `tasks/prd.json` keeps the delivered 146 as history
 - `dca-factory.profile.yaml` at the root — the only file that tells the pipeline how this project
   builds: `./gradlew testClasses|test|test-e2e|test-architecture|spotlessCheck|spotlessApply`, plus
   the knowledge source (`dca-knowledge`), the carriers and the review perspectives
@@ -220,11 +223,11 @@ What is to be built is described in three files. Read them before any implementa
 delivery pipeline or by hand — and treat a contradiction between them and a change as a finding,
 not as something to fix in the code:
 
-- product: `project/product.md` — what is built, for whom, surfaces, how it works, how it looks,
+- product: `product/overview.md` — what is built, for whom, surfaces, how it works, how it looks,
   qualities, what it is not
-- tech: `project/tech.md` — stack, frontend approach, persistence, runtime, integrations,
+- tech: `product/tech.md` — stack, frontend approach, persistence, runtime, integrations,
   version policy
-- domain: `project/domain.md` — the designed bounded contexts, their subdomain types and
+- domain: `product/domain.md` — the designed bounded contexts, their subdomain types and
   relationships; the map generated from the code shows what was built
 <!-- dca-describe: end -->
 

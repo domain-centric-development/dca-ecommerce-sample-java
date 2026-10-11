@@ -1,8 +1,9 @@
 ---
 id: CAT-04
 epic: browse-catalogue
-status: adopted
+status: delivered
 delivered: 2026-09-26T10:40:47Z
+delivered_by: gate
 context: portal
 title: The home page
 depends_on: [CAT-01]

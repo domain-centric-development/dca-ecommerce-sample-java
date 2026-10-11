@@ -1,8 +1,9 @@
 ---
 id: CAT-01
 epic: browse-catalogue
-status: adopted
+status: delivered
 delivered: 2026-09-26T06:36:21Z
+delivered_by: gate
 context: product
 title: The catalogue lists the range
 depends_on: []

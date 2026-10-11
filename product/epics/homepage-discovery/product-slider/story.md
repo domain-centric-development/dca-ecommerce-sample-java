@@ -3,6 +3,7 @@ id: product-slider
 epic: homepage-discovery
 status: delivered
 delivered: 2026-09-27T11:06:53Z
+delivered_by: gate
 context: product
 title: Product slider on the homepage
 depends_on: [CAT-02, CAT-04]
