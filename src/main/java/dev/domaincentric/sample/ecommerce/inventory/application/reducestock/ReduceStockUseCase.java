@@ -69,8 +69,7 @@ public class ReduceStockUseCase implements ReduceStockInputPort {
 
     if (stockLevelOpt.isEmpty()) {
       logger.warn("Stock level not found for product: {}", line.productId());
-      return LineOutcome.failure(
-          line.productId(), "Stock level not found for product: " + line.productId());
+      return LineOutcome.stockLevelNotFound(line.productId());
     }
 
     final StockLevel stockLevel = stockLevelOpt.get();
@@ -97,7 +96,7 @@ public class ReduceStockUseCase implements ReduceStockInputPort {
       // be
       // a malformed call - a defect here, not an answer for the caller - and keeps travelling.
       logger.warn("Stock too low for product {}: {}", line.productId(), e.getMessage());
-      return LineOutcome.failure(line.productId(), e.getMessage());
+      return LineOutcome.insufficientStock(line.productId(), e.available());
     }
   }
 }

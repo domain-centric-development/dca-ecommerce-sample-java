@@ -59,8 +59,9 @@ public class StockReductionEventConsumer {
         .forEach(
             line ->
                 log.warn(
-                    "Stock reduction for product {} failed: {}",
+                    "Stock reduction for product {} failed: {} (stock {})",
                     line.productId(),
-                    line.errorMessage()));
+                    line.failure().orElseThrow(),
+                    line.previousStock()));
   }
 }

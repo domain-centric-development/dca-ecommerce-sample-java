@@ -14,6 +14,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
@@ -168,6 +169,8 @@ public class BuyerInfoPageController {
     return switch (failure) {
       case CheckoutSessionNotFoundException e -> "Checkout session not found";
       case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
+      case CheckoutStepNotCompletedException e ->
+          "Please complete the previous checkout steps first.";
       case CheckoutStepOutOfOrderException e ->
           "Please complete the previous checkout steps first.";
       case IllegalArgumentException e -> "Please check the details you entered.";

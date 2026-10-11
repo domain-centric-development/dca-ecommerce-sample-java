@@ -66,6 +66,7 @@ class HashedPasswordTest {
         assertThrows(
             PasswordTooWeakException.class,
             () -> HashedPassword.validatePasswordStrength("Ab1cdef"));
+    assertEquals(PasswordRule.TOO_SHORT, thrown.rule());
     assertEquals(
         "Password must be at least " + HashedPassword.MIN_LENGTH + " characters long",
         thrown.getMessage());
@@ -82,6 +83,7 @@ class HashedPasswordTest {
         assertThrows(
             PasswordTooWeakException.class,
             () -> HashedPassword.validatePasswordStrength(overLimitAllLowercase));
+    assertEquals(PasswordRule.TOO_LONG, thrown.rule());
     assertTrue(
         thrown.getMessage().contains("must not be longer than"),
         "expected the length message, was: " + thrown.getMessage());

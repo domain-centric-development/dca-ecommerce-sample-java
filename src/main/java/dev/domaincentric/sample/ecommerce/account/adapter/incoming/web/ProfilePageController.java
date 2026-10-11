@@ -48,6 +48,13 @@ public class ProfilePageController {
 
   static final String PROFILE_UPDATED = "Your profile has been updated.";
 
+  static final String EMAIL_ALREADY_IN_USE = "This email address is already registered";
+
+  static final String EMAIL_INVALID = "Please enter a valid email address.";
+
+  static final String DATE_OF_BIRTH_INVALID =
+      "Please enter a date of birth that is not in the future.";
+
   /** Name of the flash attribute carrying the success message across the redirect. */
   private static final String FLASH_MESSAGE = "message";
 
@@ -145,8 +152,11 @@ public class ProfilePageController {
         yield "redirect:" + PROFILE_PATH;
       }
       case ACCOUNT_NOT_ACCESSIBLE -> LOGIN_REDIRECT;
-      case EMAIL_ALREADY_IN_USE, INPUT_REJECTED ->
-          renderRejection(model, identity, email, dateOfBirth, result.errorMessage().orElseThrow());
+      case EMAIL_ALREADY_IN_USE ->
+          renderRejection(model, identity, email, dateOfBirth, EMAIL_ALREADY_IN_USE);
+      case EMAIL_INVALID -> renderRejection(model, identity, email, dateOfBirth, EMAIL_INVALID);
+      case DATE_OF_BIRTH_INVALID ->
+          renderRejection(model, identity, email, dateOfBirth, DATE_OF_BIRTH_INVALID);
     };
   }
 

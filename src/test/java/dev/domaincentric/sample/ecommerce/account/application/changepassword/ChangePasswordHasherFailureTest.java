@@ -13,8 +13,10 @@ import dev.domaincentric.sample.ecommerce.account.domain.gateway.PasswordHasher;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Account;
 import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -92,11 +94,7 @@ class ChangePasswordHasherFailureTest {
         ChangePasswordResult.Outcome.NEW_PASSWORD_REJECTED,
         result.outcome(),
         "the length rule lives in the domain, so this never reaches the hasher");
-    assertEquals(
-        "Password must not be longer than "
-            + HashedPassword.MAX_BYTE_LENGTH
-            + " bytes (UTF-8 encoded)",
-        result.errorMessage().orElseThrow());
+    assertEquals(Optional.of(PasswordRule.TOO_LONG), result.brokenRule());
   }
 
   private static ChangePasswordResult execute(

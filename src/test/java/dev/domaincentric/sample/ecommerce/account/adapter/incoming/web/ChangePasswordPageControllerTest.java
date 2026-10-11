@@ -19,6 +19,7 @@ import dev.domaincentric.sample.ecommerce.account.application.changepassword.Cha
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult.AccountOverview;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -232,8 +233,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("the mismatch message wins over a wrong current password")
   void mismatchWinsOverWrongCurrentPassword() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(
-        ChangePasswordResult.currentPasswordInvalid("Current password is not correct"));
+    changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
 
     controller.handleChangePassword("WrongPassw0rd", NEW, "Different1", model, redirectAttributes);
 
@@ -244,26 +244,24 @@ class ChangePasswordPageControllerTest {
   }
 
   @Test
-  @DisplayName("a rejected new password re-renders with the use case's message")
+  @DisplayName("a rejected new password re-renders with the page's sentence for the broken rule")
   void rejectedNewPasswordReRendersWithMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(
-        ChangePasswordResult.newPasswordRejected("Password must contain at least one digit"));
+    changePassword.setResult(ChangePasswordResult.newPasswordRejected(PasswordRule.NO_DIGIT));
 
     final String viewName =
         controller.handleChangePassword(
             CURRENT, "Weakpassword", "Weakpassword", model, redirectAttributes);
 
     assertEquals("account/change-password", viewName);
-    assertEquals("Password must contain at least one digit", viewModel(model).errorMessage());
+    assertEquals("Password must contain a digit.", viewModel(model).errorMessage());
   }
 
   @Test
-  @DisplayName("a wrong current password re-renders with the use case's message")
+  @DisplayName("a wrong current password re-renders with the page's sentence")
   void wrongCurrentPasswordReRendersWithMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(
-        ChangePasswordResult.currentPasswordInvalid("Current password is not correct"));
+    changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
 
     final String viewName =
         controller.handleChangePassword("WrongPassw0rd", NEW, NEW, model, redirectAttributes);
@@ -276,8 +274,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("an error re-render puts no submitted password into the model")
   void errorReRenderLeaksNoPassword() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(
-        ChangePasswordResult.currentPasswordInvalid("Current password is not correct"));
+    changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
 
     controller.handleChangePassword("WrongPassw0rd", NEW, NEW, model, redirectAttributes);
 

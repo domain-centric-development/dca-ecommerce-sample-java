@@ -114,12 +114,10 @@ public record HashedPassword(String hash) implements Value {
    */
   public static void validatePasswordStrength(final String plaintext) {
     if (plaintext == null || plaintext.length() < MIN_LENGTH) {
-      throw new PasswordTooWeakException(
-          "Password must be at least " + MIN_LENGTH + " characters long");
+      throw new PasswordTooWeakException(PasswordRule.TOO_SHORT);
     }
     if (plaintext.getBytes(StandardCharsets.UTF_8).length > MAX_BYTE_LENGTH) {
-      throw new PasswordTooWeakException(
-          "Password must not be longer than " + MAX_BYTE_LENGTH + " bytes (UTF-8 encoded)");
+      throw new PasswordTooWeakException(PasswordRule.TOO_LONG);
     }
 
     boolean hasUpper = false;
@@ -133,13 +131,13 @@ public record HashedPassword(String hash) implements Value {
     }
 
     if (!hasUpper) {
-      throw new PasswordTooWeakException("Password must contain at least one uppercase letter");
+      throw new PasswordTooWeakException(PasswordRule.NO_UPPERCASE_LETTER);
     }
     if (!hasLower) {
-      throw new PasswordTooWeakException("Password must contain at least one lowercase letter");
+      throw new PasswordTooWeakException(PasswordRule.NO_LOWERCASE_LETTER);
     }
     if (!hasDigit) {
-      throw new PasswordTooWeakException("Password must contain at least one digit");
+      throw new PasswordTooWeakException(PasswordRule.NO_DIGIT);
     }
   }
 

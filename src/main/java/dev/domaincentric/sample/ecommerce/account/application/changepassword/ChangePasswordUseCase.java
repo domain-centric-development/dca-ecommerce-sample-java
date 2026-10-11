@@ -46,8 +46,6 @@ public class ChangePasswordUseCase implements ChangePasswordInputPort {
 
   private static final Logger LOG = LoggerFactory.getLogger(ChangePasswordUseCase.class);
 
-  private static final String CURRENT_PASSWORD_INVALID = "Current password is not correct";
-
   private final AccountRepository accountRepository;
   private final PasswordHasher passwordHasher;
   private final DomainEventPublisher eventPublisher;
@@ -78,18 +76,18 @@ public class ChangePasswordUseCase implements ChangePasswordInputPort {
 
     if (!account.checkPassword(command.currentPassword(), passwordHasher)) {
       LOG.warn("Password change attempt with a wrong current password: {}", command.userId());
-      return ChangePasswordResult.currentPasswordInvalid(CURRENT_PASSWORD_INVALID);
+      return ChangePasswordResult.currentPasswordInvalid();
     }
 
     // Only the strength decision may become NEW_PASSWORD_REJECTED. The rule has its own type, so
     // a malformed call inside the hasher or the HashedPassword constructor - which would arrive as
-    // the platform's argument exception - is no longer caught here and rendered to the user as if
-    // it were a password rule.
+    // the platform's argument exception - is no longer caught here and reported as if it were a
+    // password rule.
     try {
       HashedPassword.validatePasswordStrength(command.newPassword());
     } catch (final PasswordTooWeakException e) {
       LOG.debug("Password change rejected for {}: {}", command.userId(), e.getMessage());
-      return ChangePasswordResult.newPasswordRejected(e.getMessage());
+      return ChangePasswordResult.newPasswordRejected(e.rule());
     }
 
     account.changePassword(command.newPassword(), passwordHasher);

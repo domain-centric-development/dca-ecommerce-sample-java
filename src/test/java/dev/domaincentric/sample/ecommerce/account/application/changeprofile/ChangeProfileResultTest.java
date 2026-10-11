@@ -17,7 +17,8 @@ import org.junit.jupiter.params.provider.EnumSource;
  * Unit tests for {@link ChangeProfileResult}.
  *
  * <p>Pins that every rejection is a return value rather than an exception crossing the port, and
- * that the result cannot be built in a state that contradicts its outcome.
+ * that the result cannot be built in a state that contradicts its outcome. A rejection carries no
+ * words: the page words it from the outcome.
  */
 @DisplayName("ChangeProfileResult")
 class ChangeProfileResultTest {
@@ -26,35 +27,12 @@ class ChangeProfileResultTest {
       new Profile("jane.doe@example.com", LocalDate.of(1990, 5, 17));
 
   @Test
-  @DisplayName("a change carries the stored profile and no message")
+  @DisplayName("a change carries the stored profile")
   void changedCarriesProfile() {
     final ChangeProfileResult result = ChangeProfileResult.changed(PROFILE);
 
     assertEquals(Outcome.CHANGED, result.outcome());
     assertEquals(Optional.of(PROFILE), result.profile());
-    assertTrue(result.errorMessage().isEmpty());
-  }
-
-  @ParameterizedTest
-  @EnumSource(
-      value = Outcome.class,
-      names = {"EMAIL_ALREADY_IN_USE", "INPUT_REJECTED"})
-  @DisplayName("a rejecting outcome without a reason is refused")
-  void rejectingOutcomeNeedsReason(final Outcome outcome) {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new ChangeProfileResult(outcome, Optional.empty(), Optional.empty()));
-  }
-
-  @ParameterizedTest
-  @EnumSource(
-      value = Outcome.class,
-      names = {"CHANGED", "ACCOUNT_NOT_ACCESSIBLE"})
-  @DisplayName("a non-rejecting outcome carrying a reason is refused")
-  void nonRejectingOutcomeCarriesNoReason(final Outcome outcome) {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new ChangeProfileResult(outcome, Optional.of("boom"), Optional.of(PROFILE)));
   }
 
   @Test
@@ -62,26 +40,26 @@ class ChangeProfileResultTest {
   void changeNeedsProfile() {
     assertThrows(
         IllegalArgumentException.class,
-        () -> new ChangeProfileResult(Outcome.CHANGED, Optional.empty(), Optional.empty()));
+        () -> new ChangeProfileResult(Outcome.CHANGED, Optional.empty()));
   }
 
-  @Test
+  @ParameterizedTest
+  @EnumSource(
+      value = Outcome.class,
+      names = {"EMAIL_ALREADY_IN_USE", "EMAIL_INVALID", "DATE_OF_BIRTH_INVALID"})
   @DisplayName("a rejection carrying a profile is refused")
-  void rejectionCarriesNoProfile() {
+  void rejectionCarriesNoProfile(final Outcome outcome) {
     assertThrows(
         IllegalArgumentException.class,
-        () ->
-            new ChangeProfileResult(
-                Outcome.INPUT_REJECTED, Optional.of("boom"), Optional.of(PROFILE)));
+        () -> new ChangeProfileResult(outcome, Optional.of(PROFILE)));
   }
 
   @Test
-  @DisplayName("an inaccessible account carries neither a message nor a profile")
+  @DisplayName("an inaccessible account carries no profile")
   void accountNotAccessibleCarriesNothing() {
     final ChangeProfileResult result = ChangeProfileResult.accountNotAccessible();
 
     assertEquals(Outcome.ACCOUNT_NOT_ACCESSIBLE, result.outcome());
-    assertTrue(result.errorMessage().isEmpty());
     assertTrue(result.profile().isEmpty());
   }
 
@@ -90,9 +68,6 @@ class ChangeProfileResultTest {
   void nullOptionalIsRefused() {
     assertThrows(
         IllegalArgumentException.class,
-        () -> new ChangeProfileResult(Outcome.ACCOUNT_NOT_ACCESSIBLE, null, Optional.empty()));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new ChangeProfileResult(Outcome.ACCOUNT_NOT_ACCESSIBLE, Optional.empty(), null));
+        () -> new ChangeProfileResult(Outcome.ACCOUNT_NOT_ACCESSIBLE, null));
   }
 }

@@ -2320,6 +2320,15 @@ the same context map the same types into the page's own sentence instead (`messa
 failure's type). One use case, several protocols, one decision site
 each.
 
+### Refusal wording
+
+Every sentence the shop refuses with — problem document titles and details per failure type, page sentences per
+page, failure type and fallback, and the sentences for the outcomes a use case result names — is listed in
+[refusal-wording.md](refusal-wording.md). The .NET twin carries the same file and produces the same sentences, so
+the two shops can be compared line by line. A use case result never carries a sentence: `ChangePasswordResult`
+names the outcome and the broken `PasswordRule`, `ChangeProfileResult` the outcome (`EMAIL_INVALID`,
+`DATE_OF_BIRTH_INVALID`, …), `ReduceStockResult` a `Failure` per line, and the page words them.
+
 ### When a result variant is the better channel
 
 Some outcomes are part of what a use case promises its caller, and then the caller should be made to handle them.

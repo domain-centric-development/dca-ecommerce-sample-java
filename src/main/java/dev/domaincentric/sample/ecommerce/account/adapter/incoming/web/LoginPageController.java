@@ -143,7 +143,7 @@ public class LoginPageController {
    */
   private static String messageFor(final RuntimeException failure) {
     return switch (failure) {
-      case AccountNotAccessibleException e -> "This account cannot sign in";
+      case AccountNotAccessibleException e -> "This account cannot sign in.";
       case IllegalArgumentException e -> "Please enter your email and your password.";
       default -> "Signing in failed. Please try again.";
     };

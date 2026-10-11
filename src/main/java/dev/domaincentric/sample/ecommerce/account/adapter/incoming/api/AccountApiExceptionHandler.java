@@ -6,6 +6,8 @@ import dev.domaincentric.sample.ecommerce.account.application.registeraccount.Ac
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.EmailAlreadyRegisteredException;
 import dev.domaincentric.sample.ecommerce.account.domain.model.AccountClosedException;
 import dev.domaincentric.sample.ecommerce.account.domain.model.AccountNotAccessibleException;
+import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordTooWeakException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,10 +37,7 @@ public class AccountApiExceptionHandler {
   private static final Logger LOG = LoggerFactory.getLogger(AccountApiExceptionHandler.class);
 
   private static final String ACCOUNT_EXISTS = "The signed-in user already has an account.";
-  private static final String PASSWORD_RULES =
-      "Password must be at least 8 characters and contain an uppercase letter,"
-          + " a lowercase letter and a digit.";
-  private static final String CANNOT_SIGN_IN = "This account cannot sign in";
+  private static final String CANNOT_SIGN_IN = "This account cannot sign in.";
 
   /** Another account already holds that address. */
   @ExceptionHandler(EmailAlreadyRegisteredException.class)
@@ -56,12 +55,15 @@ public class AccountApiExceptionHandler {
   }
 
   /**
-   * The password does not meet the strength rules. The failure carries no value that says which
-   * rule, so the answer states all of them — the rule, not the attempt.
+   * The password does not meet the strength rules. The answer names the broken rule — the rule,
+   * never the attempt.
    */
   @ExceptionHandler(PasswordTooWeakException.class)
   public ProblemDetail handleWeakPassword(final PasswordTooWeakException exception) {
-    return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Password too weak", PASSWORD_RULES);
+    return problem(
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        "Password too weak",
+        passwordRuleSentence(exception.rule()));
   }
 
   /** The account exists but is closed. */
@@ -119,5 +121,17 @@ public class AccountApiExceptionHandler {
     final ProblemDetail problem = ProblemDetail.forStatus(status);
     problem.setTitle(title);
     return problem;
+  }
+
+  private static String passwordRuleSentence(final PasswordRule rule) {
+    return switch (rule) {
+      case TOO_SHORT ->
+          "Password must be at least " + HashedPassword.MIN_LENGTH + " characters long.";
+      case TOO_LONG ->
+          "Password must not be longer than " + HashedPassword.MAX_BYTE_LENGTH + " bytes.";
+      case NO_UPPERCASE_LETTER -> "Password must contain an uppercase letter.";
+      case NO_LOWERCASE_LETTER -> "Password must contain a lowercase letter.";
+      case NO_DIGIT -> "Password must contain a digit.";
+    };
   }
 }

@@ -73,3 +73,8 @@ type: `ChangePasswordUseCase` catches `PasswordTooWeakException`, `ReduceStockUs
 - The remaining imprecision is deliberate and marked in each handler: `IllegalArgumentException` is still mapped
   to `400`, because a form field reaches a value object unvalidated. Every field moved into request validation is
   one reason less for that mapping to exist.
+
+## Note
+
+2026-10-11: a page no longer renders the failure's message; the adapter words the refusal from its type and values
+(guide: The adapter answers; WP-101).

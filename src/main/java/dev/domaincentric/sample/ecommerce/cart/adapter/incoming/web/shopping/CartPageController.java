@@ -1,14 +1,19 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
+import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.ArticleNotAvailableException;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.InsufficientArticleStockException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartNotModifiableException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -123,12 +128,32 @@ public class CartPageController {
     // Add product to cart
     final AddItemToCartCommand command =
         new AddItemToCartCommand(cartResponse.cartId(), customerId, productId, quantity);
-    final AddItemToCartResult addResponse = addItemToCartUseCase.execute(command);
-
-    // Add success message
-    redirectAttributes.addFlashAttribute("message", "Product added to cart!");
+    try {
+      addItemToCartUseCase.execute(command);
+      redirectAttributes.addFlashAttribute("message", "Product added to cart!");
+    } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
+      // The context's own refusals, plus the argument exception a form field still reaches a value
+      // object with.
+      redirectAttributes.addFlashAttribute("error", messageFor(e));
+    }
 
     // Redirect to cart view
     return "redirect:/cart";
+  }
+
+  /**
+   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
+   * The failure's message is for the log, never for the customer.
+   */
+  private static String messageFor(final RuntimeException failure) {
+    return switch (failure) {
+      case InsufficientArticleStockException e ->
+          "There is not enough stock to add " + e.requested() + " of this product.";
+      case ArticleNotAvailableException e -> "This product is no longer available.";
+      case CartNotFoundException e -> "Your cart could not be found.";
+      case CartNotModifiableException e -> "This cart can no longer be changed.";
+      case IllegalArgumentException e -> "Please enter a valid quantity.";
+      default -> "The product could not be added to the cart. Please try again.";
+    };
   }
 }

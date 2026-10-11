@@ -289,8 +289,7 @@ class ProfilePageControllerTest {
   @DisplayName("an email already in use re-renders with the message and the submitted values")
   void emailAlreadyInUseReRenders() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changeProfile.setResult(
-        ChangeProfileResult.emailAlreadyInUse("This email address is already registered"));
+    changeProfile.setResult(ChangeProfileResult.emailAlreadyInUse());
 
     final String viewName =
         controller.handleProfileUpdate(
@@ -310,18 +309,17 @@ class ProfilePageControllerTest {
   }
 
   @Test
-  @DisplayName("rejected input re-renders with the use case's message verbatim")
+  @DisplayName("an invalid email re-renders with the page's sentence for it")
   void rejectedInputReRendersWithMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changeProfile.setResult(
-        ChangeProfileResult.inputRejected("Invalid email format: not-an-email"));
+    changeProfile.setResult(ChangeProfileResult.emailInvalid());
 
     final String viewName =
         controller.handleProfileUpdate(
             "not-an-email", NEW_DATE_OF_BIRTH_INPUT, model, redirectAttributes);
 
     assertEquals("account/profile", viewName);
-    assertEquals("Invalid email format: not-an-email", viewModel(model).errorMessage());
+    assertEquals("Please enter a valid email address.", viewModel(model).errorMessage());
     assertEquals("not-an-email", viewModel(model).email());
   }
 
@@ -329,8 +327,7 @@ class ProfilePageControllerTest {
   @DisplayName("a rejected change issues no token")
   void rejectedChangeIssuesNoToken() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changeProfile.setResult(
-        ChangeProfileResult.emailAlreadyInUse("This email address is already registered"));
+    changeProfile.setResult(ChangeProfileResult.emailAlreadyInUse());
 
     controller.handleProfileUpdate(
         "taken@example.com", NEW_DATE_OF_BIRTH_INPUT, model, redirectAttributes);
@@ -344,7 +341,7 @@ class ProfilePageControllerTest {
   @DisplayName("no error re-render exposes a success message")
   void errorReRenderExposesNoSuccessMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changeProfile.setResult(ChangeProfileResult.inputRejected("Invalid email format: nope"));
+    changeProfile.setResult(ChangeProfileResult.emailInvalid());
 
     controller.handleProfileUpdate("nope", NEW_DATE_OF_BIRTH_INPUT, model, redirectAttributes);
 

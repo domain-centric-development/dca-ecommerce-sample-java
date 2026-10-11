@@ -10,7 +10,6 @@ import static dev.domaincentric.sample.ecommerce.account.application.changeprofi
 import static dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.accountWith;
 import static dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.otherAccountWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,8 +43,6 @@ import org.junit.jupiter.params.provider.EnumSource;
  */
 @DisplayName("ChangeProfileUseCase")
 class ChangeProfileUseCaseTest {
-
-  private static final String EMAIL_ALREADY_IN_USE = "This email address is already registered";
 
   private TestPasswordHasher passwordHasher;
   private TestAccountRepository accountRepository;
@@ -158,23 +155,19 @@ class ChangeProfileUseCaseTest {
     final ChangeProfileResult result = submit("taken@example.com", DATE_OF_BIRTH);
 
     assertEquals(Outcome.EMAIL_ALREADY_IN_USE, result.outcome());
-    assertEquals(EMAIL_ALREADY_IN_USE, result.errorMessage().orElseThrow());
     assertEquals(Email.of(EMAIL), storedAccount().email(), "the rejected change stores nothing");
     assertEquals(0, accountRepository.saveCount());
     assertTrue(eventPublisher.publishedEvents().isEmpty());
   }
 
   @Test
-  @DisplayName("a syntactically invalid email is rejected with the domain's message")
+  @DisplayName("a syntactically invalid email is rejected as EMAIL_INVALID")
   void rejectsInvalidEmail() {
     givenActiveAccount();
 
     final ChangeProfileResult result = submit("not-an-email", DATE_OF_BIRTH);
 
-    assertEquals(Outcome.INPUT_REJECTED, result.outcome());
-    assertTrue(
-        result.errorMessage().orElseThrow().contains("not-an-email"),
-        "the domain's rejection message is passed through: " + result.errorMessage());
+    assertEquals(Outcome.EMAIL_INVALID, result.outcome());
     assertEquals(Email.of(EMAIL), storedAccount().email());
     assertEquals(0, accountRepository.saveCount());
   }
@@ -210,8 +203,7 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit(NEW_EMAIL, null);
 
-    assertEquals(Outcome.INPUT_REJECTED, result.outcome());
-    assertFalse(result.errorMessage().orElseThrow().isBlank(), "a rejection must name its reason");
+    assertEquals(Outcome.DATE_OF_BIRTH_INVALID, result.outcome());
     assertEquals(Email.of(EMAIL), storedAccount().email());
     assertEquals(0, accountRepository.saveCount());
   }
@@ -223,8 +215,7 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit(NEW_EMAIL, LocalDate.now().plusDays(1));
 
-    assertEquals(Outcome.INPUT_REJECTED, result.outcome());
-    assertFalse(result.errorMessage().orElseThrow().isBlank(), "a rejection must name its reason");
+    assertEquals(Outcome.DATE_OF_BIRTH_INVALID, result.outcome());
     assertEquals(
         Email.of(EMAIL),
         storedAccount().email(),

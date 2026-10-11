@@ -777,7 +777,7 @@ context's own `*ApiExceptionHandler`. The status follows what went wrong, not wh
 
 ```json
 { "type": "about:blank", "title": "Stock keeping unit already in use", "status": 409,
-  "detail": "Product with SKU already exists: API-42" }
+  "detail": "A product with SKU API-42 already exists." }
 ```
 
 The failures themselves are types, not status codes: the use cases and the model raise

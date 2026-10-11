@@ -28,8 +28,6 @@ public class ChangeProfileUseCase implements ChangeProfileInputPort {
 
   private static final Logger LOG = LoggerFactory.getLogger(ChangeProfileUseCase.class);
 
-  private static final String EMAIL_ALREADY_IN_USE = "This email address is already registered";
-
   private final AccountRepository accountRepository;
   private final DomainEventPublisher eventPublisher;
 
@@ -54,19 +52,22 @@ public class ChangeProfileUseCase implements ChangeProfileInputPort {
 
     final Account account = accessibleAccount.get();
 
+    // Both values are checked before either is applied, so a rejection leaves the profile whole.
     final Email newEmail;
     try {
       newEmail = Email.of(command.email());
-      // Both values are checked before either is applied, so a rejection leaves the profile whole.
-      UsableDateOfBirth.RULE.requireSatisfiedBy(command.dateOfBirth());
     } catch (final IllegalArgumentException e) {
       LOG.debug("Profile change rejected for {}: {}", command.userId(), e.getMessage());
-      return ChangeProfileResult.inputRejected(e.getMessage());
+      return ChangeProfileResult.emailInvalid();
+    }
+    if (!UsableDateOfBirth.RULE.isSatisfiedBy(command.dateOfBirth())) {
+      LOG.debug("Profile change rejected for {}: date of birth not usable", command.userId());
+      return ChangeProfileResult.dateOfBirthInvalid();
     }
 
     if (!newEmail.equals(account.email()) && accountRepository.existsByEmail(newEmail)) {
       LOG.debug("Profile change rejected for {}: email already in use", command.userId());
-      return ChangeProfileResult.emailAlreadyInUse(EMAIL_ALREADY_IN_USE);
+      return ChangeProfileResult.emailAlreadyInUse();
     }
 
     account.changeEmail(newEmail);

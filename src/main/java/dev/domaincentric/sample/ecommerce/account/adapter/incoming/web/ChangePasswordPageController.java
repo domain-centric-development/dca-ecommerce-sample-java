@@ -5,6 +5,8 @@ import dev.domaincentric.sample.ecommerce.account.application.changepassword.Cha
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
+import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
 import org.springframework.stereotype.Controller;
@@ -25,7 +27,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  *
  * <p>The confirmation field is a pure presentation concern and is compared here; the current
  * password and the strength of the new one are decided by {@link ChangePasswordInputPort}, whose
- * message is rendered verbatim.
+ * outcome this page words.
  *
  * <p>Changing the password issues no new token: the token carries the userId, email and roles,
  * never the password, so the session stays valid.
@@ -48,6 +50,8 @@ public class ChangePasswordPageController {
   static final String CONFIRMATION_MISMATCH = "New password and confirmation do not match";
 
   static final String PASSWORD_CHANGED = "Your password has been changed.";
+
+  static final String CURRENT_PASSWORD_INVALID = "Current password is not correct";
 
   /** Name of the flash attribute carrying the success message across the redirect. */
   private static final String FLASH_MESSAGE = "message";
@@ -136,8 +140,13 @@ public class ChangePasswordPageController {
         yield "redirect:" + CHANGE_PASSWORD_PATH;
       }
       case ACCOUNT_NOT_ACCESSIBLE -> LOGIN_REDIRECT;
-      case CURRENT_PASSWORD_INVALID, NEW_PASSWORD_REJECTED ->
-          render(model, ChangePasswordPageViewModel.withError(result.errorMessage().orElseThrow()));
+      case CURRENT_PASSWORD_INVALID ->
+          render(model, ChangePasswordPageViewModel.withError(CURRENT_PASSWORD_INVALID));
+      case NEW_PASSWORD_REJECTED ->
+          render(
+              model,
+              ChangePasswordPageViewModel.withError(
+                  passwordRuleSentence(result.brokenRule().orElseThrow())));
     };
   }
 
@@ -145,5 +154,21 @@ public class ChangePasswordPageController {
     model.addAttribute("title", TITLE);
     model.addAttribute(MODEL_ATTRIBUTE, viewModel);
     return VIEW_NAME;
+  }
+
+  /**
+   * The account pages' sentence for a password the policy refuses, worded from the broken rule —
+   * the rule, never the attempt. The register page uses it too.
+   */
+  static String passwordRuleSentence(final PasswordRule rule) {
+    return switch (rule) {
+      case TOO_SHORT ->
+          "Password must be at least " + HashedPassword.MIN_LENGTH + " characters long.";
+      case TOO_LONG ->
+          "Password must not be longer than " + HashedPassword.MAX_BYTE_LENGTH + " bytes.";
+      case NO_UPPERCASE_LETTER -> "Password must contain an uppercase letter.";
+      case NO_LOWERCASE_LETTER -> "Password must contain a lowercase letter.";
+      case NO_DIGIT -> "Password must contain a digit.";
+    };
   }
 }

@@ -171,9 +171,9 @@ public class RegisterPageController {
       case EmailAlreadyRegisteredException e -> "This email address is already registered";
       case AccountAlreadyExistsException e -> "You already have an account.";
       case PasswordTooWeakException e ->
-          "Password must be at least 8 characters and contain an uppercase letter,"
-              + " a lowercase letter and a digit.";
-      case IllegalArgumentException e -> "Please check the details you entered.";
+          ChangePasswordPageController.passwordRuleSentence(e.rule());
+      case IllegalArgumentException e ->
+          "Please check the email address, your name and your date of birth.";
       default -> "The account could not be created. Please try again.";
     };
   }

@@ -7,28 +7,20 @@ import java.util.Optional;
  * Output model of the Change Profile use case.
  *
  * <p>Per ADR-023 a rejected profile change is a normal return value, not an exception crossing the
- * port.
+ * port. The result says what happened and which value was refused, never in words: the page that
+ * shows it words the refusal from the outcome.
  *
  * @param outcome what happened
- * @param errorMessage the message to display, present exactly for the rejecting outcomes {@link
- *     Outcome#EMAIL_ALREADY_IN_USE} and {@link Outcome#INPUT_REJECTED}
  * @param profile the stored profile after the change, present exactly for {@link Outcome#CHANGED}
  */
-public record ChangeProfileResult(
-    Outcome outcome, Optional<String> errorMessage, Optional<Profile> profile) {
+public record ChangeProfileResult(Outcome outcome, Optional<Profile> profile) {
 
   public ChangeProfileResult {
     if (outcome == null) {
       throw new IllegalArgumentException("Outcome cannot be null");
     }
-    if (errorMessage == null || profile == null) {
-      throw new IllegalArgumentException("Optionals cannot be null, use Optional.empty()");
-    }
-    final boolean rejecting =
-        outcome == Outcome.EMAIL_ALREADY_IN_USE || outcome == Outcome.INPUT_REJECTED;
-    if (rejecting != errorMessage.isPresent()) {
-      throw new IllegalArgumentException(
-          "A rejecting outcome must name its reason, any other outcome must not: " + outcome);
+    if (profile == null) {
+      throw new IllegalArgumentException("Profile optional cannot be null, use Optional.empty()");
     }
     if ((outcome == Outcome.CHANGED) != profile.isPresent()) {
       throw new IllegalArgumentException(
@@ -44,29 +36,30 @@ public record ChangeProfileResult(
     ACCOUNT_NOT_ACCESSIBLE,
     /** Another account already uses the submitted email address. */
     EMAIL_ALREADY_IN_USE,
-    /** The submitted values are not valid profile information. */
-    INPUT_REJECTED
+    /** The submitted email address is not a valid address. */
+    EMAIL_INVALID,
+    /** The submitted date of birth is missing or lies in the future. */
+    DATE_OF_BIRTH_INVALID
   }
 
   public static ChangeProfileResult changed(final Profile profile) {
-    return new ChangeProfileResult(Outcome.CHANGED, Optional.empty(), Optional.of(profile));
+    return new ChangeProfileResult(Outcome.CHANGED, Optional.of(profile));
   }
 
   public static ChangeProfileResult accountNotAccessible() {
-    return new ChangeProfileResult(
-        Outcome.ACCOUNT_NOT_ACCESSIBLE, Optional.empty(), Optional.empty());
+    return new ChangeProfileResult(Outcome.ACCOUNT_NOT_ACCESSIBLE, Optional.empty());
   }
 
-  public static ChangeProfileResult emailAlreadyInUse(final String message) {
-    return new ChangeProfileResult(
-        Outcome.EMAIL_ALREADY_IN_USE, Optional.of(message), Optional.empty());
+  public static ChangeProfileResult emailAlreadyInUse() {
+    return new ChangeProfileResult(Outcome.EMAIL_ALREADY_IN_USE, Optional.empty());
   }
 
-  /**
-   * @param message the domain's rejection text, rendered to the user verbatim
-   */
-  public static ChangeProfileResult inputRejected(final String message) {
-    return new ChangeProfileResult(Outcome.INPUT_REJECTED, Optional.of(message), Optional.empty());
+  public static ChangeProfileResult emailInvalid() {
+    return new ChangeProfileResult(Outcome.EMAIL_INVALID, Optional.empty());
+  }
+
+  public static ChangeProfileResult dateOfBirthInvalid() {
+    return new ChangeProfileResult(Outcome.DATE_OF_BIRTH_INVALID, Optional.empty());
   }
 
   /**

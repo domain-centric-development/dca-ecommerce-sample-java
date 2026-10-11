@@ -21,12 +21,14 @@ import dev.domaincentric.sample.ecommerce.account.domain.event.AccountPasswordCh
 import dev.domaincentric.sample.ecommerce.account.domain.model.Account;
 import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordTooWeakException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -83,7 +85,7 @@ class ChangePasswordUseCaseTest {
     final ChangePasswordResult result = execute(CURRENT_PASSWORD, NEW_PASSWORD);
 
     assertEquals(Outcome.CHANGED, result.outcome());
-    assertTrue(result.errorMessage().isEmpty(), "a successful change carries no error message");
+    assertTrue(result.brokenRule().isEmpty(), "a successful change names no broken rule");
   }
 
   @Test
@@ -139,14 +141,13 @@ class ChangePasswordUseCaseTest {
   // ---------------------------------------------------------------- current password
 
   @Test
-  @DisplayName("a wrong current password yields CURRENT_PASSWORD_INVALID with its message")
+  @DisplayName("a wrong current password yields CURRENT_PASSWORD_INVALID")
   void rejectsWrongCurrentPassword() {
     givenStoredAccount(AccountStatus.ACTIVE);
 
     final ChangePasswordResult result = execute("WrongPassw0rd", NEW_PASSWORD);
 
     assertEquals(Outcome.CURRENT_PASSWORD_INVALID, result.outcome());
-    assertEquals("Current password is not correct", result.errorMessage().orElse(null));
   }
 
   @Test
@@ -168,7 +169,7 @@ class ChangePasswordUseCaseTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"Short1", "alllowercase1", "ALLUPPERCASE1", "NoDigitsAtAll"})
-  @DisplayName("a weak new password yields NEW_PASSWORD_REJECTED with the domain's message")
+  @DisplayName("a weak new password yields NEW_PASSWORD_REJECTED naming the broken rule")
   void rejectsWeakNewPassword(final String weakPassword) {
     givenStoredAccount(AccountStatus.ACTIVE);
 
@@ -176,9 +177,9 @@ class ChangePasswordUseCaseTest {
 
     assertEquals(Outcome.NEW_PASSWORD_REJECTED, result.outcome());
     assertEquals(
-        domainRejectionMessage(weakPassword),
-        result.errorMessage().orElse(null),
-        "the domain's rejection message must be reported verbatim");
+        Optional.of(domainBrokenRule(weakPassword)),
+        result.brokenRule(),
+        "the rule the domain names must be reported as it is");
   }
 
   @Test
@@ -204,7 +205,6 @@ class ChangePasswordUseCaseTest {
     final ChangePasswordResult result = execute("WrongPassw0rd", "weak");
 
     assertEquals(Outcome.CURRENT_PASSWORD_INVALID, result.outcome());
-    assertEquals("Current password is not correct", result.errorMessage().orElse(null));
   }
 
   // ---------------------------------------------------------------- accessibility
@@ -300,11 +300,11 @@ class ChangePasswordUseCaseTest {
         "changing a password must not touch the identity session");
   }
 
-  private static String domainRejectionMessage(final String weakPassword) {
+  private static PasswordRule domainBrokenRule(final String weakPassword) {
     try {
       HashedPassword.validatePasswordStrength(weakPassword);
     } catch (final PasswordTooWeakException e) {
-      return e.getMessage();
+      return e.rule();
     }
     throw new AssertionError("Expected '" + weakPassword + "' to be rejected by the domain");
   }

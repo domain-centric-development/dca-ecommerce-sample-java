@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.inventory.application.reducestock;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Result of reducing the stock of one sale's lines.
@@ -28,24 +29,42 @@ public record ReduceStockResult(List<LineOutcome> lines, boolean alreadyReduced)
     return lines.stream().allMatch(LineOutcome::success);
   }
 
+  /** Why a line was not reduced. */
+  public enum Failure {
+    /** The inventory keeps no stock level for the product. */
+    STOCK_LEVEL_NOT_FOUND,
+    /** Less is in stock than the line asks for; the stock stays as it was. */
+    INSUFFICIENT_STOCK
+  }
+
   /**
-   * The outcome of one line.
+   * The outcome of one line. A failure is named by its type and values, never in words: whoever
+   * reports it words it.
    *
    * @param productId the product ID
-   * @param previousStock the stock level before reduction
-   * @param newStock the stock level after reduction
-   * @param success whether the reduction was successful
-   * @param errorMessage error message if reduction failed (null if successful)
+   * @param previousStock the stock level before reduction (for a failure, the stock as it is)
+   * @param newStock the stock level after reduction (for a failure, the stock as it is)
+   * @param failure why the line was not reduced, empty if it was
    */
   public record LineOutcome(
-      String productId, int previousStock, int newStock, boolean success, String errorMessage) {
+      String productId, int previousStock, int newStock, Optional<Failure> failure) {
 
     public static LineOutcome success(String productId, int previousStock, int newStock) {
-      return new LineOutcome(productId, previousStock, newStock, true, null);
+      return new LineOutcome(productId, previousStock, newStock, Optional.empty());
     }
 
-    public static LineOutcome failure(String productId, String errorMessage) {
-      return new LineOutcome(productId, 0, 0, false, errorMessage);
+    public static LineOutcome stockLevelNotFound(String productId) {
+      return new LineOutcome(productId, 0, 0, Optional.of(Failure.STOCK_LEVEL_NOT_FOUND));
+    }
+
+    public static LineOutcome insufficientStock(String productId, int available) {
+      return new LineOutcome(
+          productId, available, available, Optional.of(Failure.INSUFFICIENT_STOCK));
+    }
+
+    /** Whether the line was reduced. */
+    public boolean success() {
+      return failure.isEmpty();
     }
   }
 }

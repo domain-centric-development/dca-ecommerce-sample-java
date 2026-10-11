@@ -29,8 +29,7 @@ public final class UsableDateOfBirth implements Specification<LocalDate> {
   /**
    * Enforces the rule, naming which half of it the candidate fails.
    *
-   * <p>The message is meant for the user, so it lives here with the rule rather than in each
-   * caller.
+   * <p>The message is for the log; a page that shows the refusal words it itself.
    *
    * @param candidate the date to check
    * @throws IllegalArgumentException if the date is missing or lies in the future
