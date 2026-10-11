@@ -709,10 +709,13 @@ Cart and Inventory never import anything from Checkout. Instead, Checkout depend
 
 ```java
 // cart/events/CartCompletionTrigger.java — Cart defines what it needs
-public interface CartCompletionTrigger {
+public interface CartCompletionTrigger extends IntegrationEvent {
     String cartId();
 }
 ```
+
+The trigger extends `IntegrationEvent` (`DCA-STR-013`): delivery is at least once, so the consumer
+needs the event's `eventId()` through the contract it listens to, not only the payload.
 
 **Producer event implements trigger interfaces:**
 
@@ -730,10 +733,42 @@ public record CheckoutConfirmedEvent(...)
 public class CartCompletionEventConsumer {
     @ApplicationModuleListener
     void on(final CartCompletionTrigger event) {
-        completeCartInputPort.execute(new CompleteCartCommand(event.cartId()));
+        completeCartInputPort.execute(
+            new CompleteCartCommand(event.cartId(), /* ... */, event.eventId()));
     }
 }
 ```
+
+**The use case deduplicates, per effect, in its own transaction:**
+
+```java
+// cart/application/cartcheckout/completecart/CompleteCartUseCase.java
+private static final String EFFECT = "complete-cart"; // stable: a rename would replay old events
+
+@Override
+public CompleteCartResult execute(final CompleteCartCommand input) {   // @Transactional
+    final ShoppingCart cart = shoppingCartRepository.findById(cartId).orElseThrow(/* ... */);
+    if (input.eventId() != null && processedEvents.contains(EFFECT, input.eventId())) {
+        return new CompleteCartResult(/* ... */, true);               // already completed
+    }
+    cart.reconcileCheckout(input.sessionId(), input.purchasedPositions());
+    shoppingCartRepository.save(cart);
+    eventPublisher.publishAndClearEvents(cart);
+    processedEvents.markProcessed(EFFECT, input.eventId());
+    return new CompleteCartResult(/* ... */, false);
+}
+```
+
+Delivery is at least once, so every effect of an event happens exactly once. Each consuming context
+keeps a `ProcessedEvents` store (`application/shared`, implemented by `InMemoryProcessedEvents` in
+`adapter/outgoing/persistence`) keyed by the effect and the event id: two effects of one context may
+react to the same event, and each runs. The consumer only translates the trigger into a command that
+carries `eventId()`; the use case checks and marks inside its transaction, the mark after the effect,
+so a redelivery changes nothing and a failed attempt leaves no mark and is retried. A command without
+an event id — an `api/` call — is not deduplicated. One event is one effect: the stock reduction takes
+every line of the sale in one command (`reduce-stock`), and a line that cannot be reduced does not
+stop the others. The effects and their already-done flags: `complete-cart` / `alreadyCompleted`,
+`reduce-stock` / `alreadyReduced`, `set-stock-level` and `set-product-price` / `alreadyApplied`.
 
 **Module Dependency Graph:**
 
@@ -752,6 +787,7 @@ Dependencies flow toward leaf modules. Checkout depends on consumer trigger inte
 3. The producer's integration event implements all relevant trigger interfaces
 4. Consumers use `@ApplicationModuleListener` on the trigger interface type
 5. Each listener runs in its own transaction (Spring Modulith default)
+6. Trigger interfaces extend `IntegrationEvent`; the consumer passes `eventId()` in the command, and the use case skips an effect it has already produced for that id, inside its transaction
 
 **Implementation:**
 - `dev.domaincentric.sample.ecommerce.cart.events.CartCompletionTrigger`
@@ -2332,6 +2368,9 @@ covered without being registered anywhere. No rule names a context.
 5. **Every context may access the Shared Kernel** - it carries `@SharedKernel`, not
    `@BoundedContext`, so it never appears among a rule's forbidden targets
 6. **Shared Kernel must be minimal** - only universal concepts with consistent meaning
+7. **Every interface in a context's `events/` package extends `IntegrationEvent`** (`DCA-STR-013`) - a
+   consumer-defined trigger is an event contract, and delivery is at least once: the consumer reads
+   `eventId()` through the trigger to recognise a redelivery
 
 All of these use `dependOnClassesThat`, not `accessClassesThat`. ArchUnit counts an *access* as a
 method call or field access, so a field, parameter or record component of a foreign type is not an
@@ -2353,6 +2392,9 @@ class holds the forbidden type outright.
     arguments, so `Optional<CartItem>` and `List<CartItem>` fail too. Deliberately a prohibition:
     a boolean, a count, a `PageResult` or an Enriched Domain Model (ADR-021) are legitimate returns
 11. **Stores** must extend the `Store` marker (not `Repository`), live in `application.shared`, keep their implementation in `adapter.outgoing`, and must not declare `findById`/`save`
+12. **Aggregate roots declare no public constructor** (`DCA-TAC-023`) - a new aggregate comes from a
+    static `create(...)`, which raises the creation event where there is one; a stored one from a static
+    `reconstitute(...)`, which raises none (`Product`, `ShoppingCart`, `Account`)
 
 #### Domain Layer Rules
 
@@ -2390,6 +2432,7 @@ class holds the forbidden type outright.
 4. Repository implementations must be in `adapter.outgoing`
 5. Controllers and Resources must never access repositories directly - they drive the application through input ports only
 6. Incoming adapters must not depend on domain services (`DCA-HEX-012`) - they read and format the result; the use case owns the domain collaboration. Outgoing adapters may construct and reconstitute domain objects
+7. Outgoing adapters must not depend on input ports (`DCA-HEX-013`) - an adapter that turns a request into a call of the application is an incoming adapter. The JWT filter asks the Account context whether a session's account still exists through `IsAccountRegisteredInputPort`, so it lives in `account.adapter.incoming.security`, beside the token and cookie mechanics it uses; the outgoing security package keeps only what implements an output port (`SpringSecurityIdentityProvider`, `SpringSecurityPasswordHasher`)
 
 #### Onion Architecture Rules
 

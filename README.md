@@ -534,9 +534,19 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │   │   ├── LoginResponse.java
 │       │   │   ├── RegisterRequest.java
 │       │   │   └── RegisterResponse.java
-│       │   ├── security/                 # Adapter-internal mechanics (no OutputPort marker)
+│       │   ├── security/                 # Request-side security; TokenService and IdentitySession carry no OutputPort marker
 │       │   │   ├── TokenService.java
-│       │   │   └── IdentitySession.java
+│       │   │   ├── IdentitySession.java
+│       │   │   ├── JwtTokenService.java
+│       │   │   ├── JwtIdentitySession.java
+│       │   │   ├── JwtIdentity.java
+│       │   │   ├── JwtIdentityType.java
+│       │   │   ├── JwtProperties.java
+│       │   │   ├── TokenOnlyPaths.java
+│       │   │   ├── ShopAuthenticationEntryPoint.java
+│       │   │   ├── ShopAccessDeniedHandler.java
+│       │   │   ├── ApiRefusal.java
+│       │   │   └── JwtAuthenticationFilter.java   # calls IsAccountRegisteredInputPort (DCA-HEX-013)
 │       │   └── web/
 │       │       ├── LoginPageController.java
 │       │       ├── LogoutPageController.java
@@ -552,15 +562,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           ├── persistence/
 │           │   ├── JdbcAccountRepository.java     # default (ADR-031)
 │           │   └── InMemoryAccountRepository.java # "inmemory" profile
-│           └── security/
+│           └── security/                 # Implementations of output ports only
 │               ├── SpringSecurityPasswordHasher.java
-│               ├── SpringSecurityIdentityProvider.java
-│               ├── JwtTokenService.java
-│               ├── JwtIdentitySession.java
-│               ├── JwtIdentity.java
-│               ├── JwtIdentityType.java
-│               ├── JwtProperties.java
-│               └── JwtAuthenticationFilter.java
+│               └── SpringSecurityIdentityProvider.java
 │
 ├── inventory/                            # Inventory bounded context
 │   ├── api/                              # Spring Modulith @NamedInterface API
@@ -921,12 +925,13 @@ For comprehensive architecture documentation, see:
   - `adapter.incoming.mcp` - MCP Server for AI assistants
   - `adapter.incoming.event` - Domain event consumers
   - `adapter.incoming.event.acl` - Anti-corruption layer event translators
+  - `adapter.incoming.security` - Request-side security: the JWT filter, tokens, session cookies, refusals
 - Outgoing Adapters (Secondary):
   - `adapter.outgoing.persistence` - Repository implementations (InMemory, JPA, JDBC)
   - `adapter.outgoing.event` - Integration event publishers
   - `adapter.outgoing.cart`, `adapter.outgoing.product` - Cross-context data adapters
   - `adapter.outgoing.payment` - Payment provider adapters
-  - `adapter.outgoing.security` - Security-related adapters
+  - `adapter.outgoing.security` - Security adapters that implement output ports (identity, password hashing)
 - DTO/ViewModel conversion happens in adapters (not application layer)
 - ViewModels use primitives only, created from domain read models
 - Adapters don't communicate directly

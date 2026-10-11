@@ -112,9 +112,12 @@ event can change freely, the integration event only by a new version.
 public class StockReductionEventConsumer {
   @ApplicationModuleListener
   void on(final StockReductionTrigger event) {
-    event.orderLineItems().forEach(item ->
-        reduceStockInputPort.execute(
-            new ReduceStockCommand(item.productId().value(), item.quantity())));
+    reduceStockInputPort.execute(
+        new ReduceStockCommand(
+            event.orderLineItems().stream()
+                .map(item -> new ReduceStockCommand.Line(item.productId().value(), item.quantity()))
+                .toList(),
+            event.eventId()));
   }
 }
 ```
@@ -127,9 +130,13 @@ touches another context's repository.
 
 Integration events go through the transactional outbox (ADR-026): the publication is stored with the
 publishing transaction, delivered after commit and retried on failure, so a consumer that is down
-during the confirmation still reduces the stock later. Consumers are therefore written to be
-idempotent — `CompleteCartUseCase` reconciles by position identity and cannot remove a unit twice, and
-a replayed event with no remaining intersection changes nothing (ADR-040).
+during the confirmation still reduces the stock later. Delivery is at least once, so every consumer
+produces each effect once: each trigger interface extends `IntegrationEvent`, the consumer hands
+`eventId()` on in the command, and the use case skips an effect its context's `ProcessedEvents` store
+already holds for that id — keyed by effect and event id, checked and marked inside the use case's
+transaction, the mark after the effect. Where the use case is idempotent as well, that is a second line —
+`CompleteCartUseCase` reconciles by position identity and cannot remove a unit twice, and a replayed
+event with no remaining intersection changes nothing (ADR-040).
 
 ## Rules the architecture tests enforce
 
@@ -139,6 +146,8 @@ a replayed event with no remaining intersection changes nothing (ADR-040).
   `events/`; domain events implement `DomainEvent` and live in `domain/event/` (ADR-027).
 - A consumer-defined trigger interface lives in the consumer's `events/` package; the producer's
   integration event implements it (ADR-024).
+- Every interface in an `events/` package extends `IntegrationEvent` (`DCA-STR-013`), so a consumer
+  reads `eventId()` and `occurredOn()` from the contract it listens to.
 
 ## Seeing it
 

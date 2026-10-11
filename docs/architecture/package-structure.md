@@ -162,7 +162,8 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── RecoverCartCommand, RecoverCartOnLoginResult
 │   │   └── shared/                 # Shared output ports
 │   │       ├── ShoppingCartRepository
-│   │       └── ArticleDataPort
+│   │       ├── ArticleDataPort
+│   │       └── ProcessedEvents          # Store: effects already produced, by effect and event id
 │   ├── infrastructure/            # Per-context infrastructure
 │   │   └── CartDomainConfiguration
 │   └── adapter/
@@ -183,6 +184,7 @@ dev.domaincentric.sample.ecommerce
 │           │   └── CompositeArticleDataAdapter
 │           └── persistence/
 │               ├── InMemoryShoppingCartRepository
+│               ├── InMemoryProcessedEvents
 │               ├── JdbcShoppingCartRepository
 │               ├── jpa/
 │               │   ├── JpaShoppingCartRepository, CartJpaRepository
@@ -318,8 +320,12 @@ dev.domaincentric.sample.ecommerce
 │       │   │   ├── AuthResource
 │       │   │   ├── LoginRequest, LoginResponse
 │       │   │   └── RegisterRequest, RegisterResponse
-│       │   ├── security/                  # adapter-internal mechanics, no OutputPort marker
-│       │   │   └── TokenService, IdentitySession
+│       │   ├── security/                  # request-side security; the interfaces carry no OutputPort marker
+│       │   │   ├── TokenService, IdentitySession
+│       │   │   ├── JwtTokenService, JwtIdentitySession   # implement the two interfaces
+│       │   │   ├── JwtAuthenticationFilter    # calls IsAccountRegisteredInputPort (DCA-HEX-013)
+│       │   │   ├── JwtProperties, JwtIdentity, JwtIdentityType, TokenOnlyPaths
+│       │   │   └── ShopAuthenticationEntryPoint, ShopAccessDeniedHandler, ApiRefusal
 │       │   └── web/
 │       │       ├── LoginPageController, LogoutPageController
 │       │       ├── RegisterPageController
@@ -330,10 +336,8 @@ dev.domaincentric.sample.ecommerce
 │           ├── persistence/
 │           │   ├── JdbcAccountRepository      # default (ADR-031)
 │           │   └── InMemoryAccountRepository  # "inmemory" profile
-│           └── security/
-│               ├── SpringSecurityPasswordHasher, SpringSecurityIdentityProvider
-│               ├── JwtTokenService, JwtIdentitySession   # implement the incoming/security interfaces
-│               └── JwtAuthenticationFilter, JwtProperties, JwtIdentity, JwtIdentityType
+│           └── security/                  # output-port implementations only
+│               └── SpringSecurityPasswordHasher, SpringSecurityIdentityProvider
 │
 ├── inventory/                       # Inventory Bounded Context
 │   ├── api/                         # @NamedInterface("api") — Open Host Service
@@ -366,7 +370,8 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── GetLowStockProductsInputPort, GetLowStockProductsUseCase
 │   │   │   ├── GetLowStockProductsQuery, GetLowStockProductsResult
 │   │   └── shared/
-│   │       └── StockLevelRepository
+│   │       ├── StockLevelRepository
+│   │       └── ProcessedEvents          # Store: effects already produced, by effect and event id
 │   └── adapter/
 │       ├── incoming/
 │       │   └── event/
@@ -374,7 +379,8 @@ dev.domaincentric.sample.ecommerce
 │       │       └── StockInitializationEventConsumer
 │       └── outgoing/
 │           └── persistence/
-│               └── InMemoryStockLevelRepository
+│               ├── InMemoryStockLevelRepository
+│               └── InMemoryProcessedEvents
 │
 ├── pricing/                         # Pricing Bounded Context
 │   ├── api/                         # @NamedInterface("api") — Open Host Service
@@ -396,14 +402,16 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── GetPricesForProductsInputPort, GetPricesForProductsUseCase
 │   │   │   ├── GetPricesForProductsQuery, GetPricesForProductsResult
 │   │   └── shared/
-│   │       └── ProductPriceRepository
+│   │       ├── ProductPriceRepository
+│   │       └── ProcessedEvents          # Store: effects already produced, by effect and event id
 │   └── adapter/
 │       ├── incoming/
 │       │   └── event/
 │       │       └── PriceInitializationEventConsumer
 │       └── outgoing/
 │           └── persistence/
-│               └── InMemoryProductPriceRepository
+│               ├── InMemoryProductPriceRepository
+│               └── InMemoryProcessedEvents
 │
 ├── portal/                          # Portal Bounded Context
 │   └── adapter/

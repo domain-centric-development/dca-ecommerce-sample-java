@@ -136,7 +136,8 @@ whoever creates products (Interface Inversion).
 **Related terms:** `ProductPrice`, **Initial Price Determination**
 
 **Notes:** Consumed by `pricing.adapter.incoming.event.PriceInitializationEventConsumer`, which calls
-the `SetProductPrice` use case. Idempotent: a redelivery updates the existing price instead of failing.
+the `SetProductPrice` use case with the event's `eventId()`. Extends `IntegrationEvent`; the use case sets
+the value once per event (`ProcessedEvents`), so a redelivery does not undo a later change.
 
 ---
 

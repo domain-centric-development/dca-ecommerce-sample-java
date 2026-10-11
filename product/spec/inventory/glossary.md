@@ -194,7 +194,8 @@ catalog.
 **Related terms:** `StockLevel`, `StockReductionTrigger`
 
 **Notes:** Consumed by `inventory.adapter.incoming.event.StockInitializationEventConsumer`, which calls
-the `SetStockLevel` use case. Idempotent: setting the same figure twice has the same effect.
+the `SetStockLevel` use case with the event's `eventId()`. Extends `IntegrationEvent`; the use case sets
+the value once per event (`ProcessedEvents`), so a redelivery does not undo a later change.
 
 ---
 
@@ -207,7 +208,9 @@ whose stock must go down. Owned here and implemented by Checkout's `CheckoutConf
 
 **Related terms:** `StockLevel`, `StockInitializationTrigger`
 
-**Notes:** Consumed by `inventory.adapter.incoming.event.StockReductionEventConsumer`. Its
+**Notes:** Consumed by `inventory.adapter.incoming.event.StockReductionEventConsumer`, which hands all
+lines of the sale to `ReduceStock` in one command with the event's `eventId()`; the use case reduces
+them once per event (`ProcessedEvents`), so a redelivered confirmation reduces stock once. Its
 `OrderLineItem` wording is an open issue — see below.
 
 ---
