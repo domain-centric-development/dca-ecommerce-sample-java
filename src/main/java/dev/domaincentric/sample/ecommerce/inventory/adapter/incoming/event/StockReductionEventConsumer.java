@@ -18,6 +18,9 @@ import org.springframework.stereotype.Component;
  *
  * <p>Each event is processed in its own transaction, ensuring one-aggregate-per-transaction
  * consistency.
+ *
+ * <p>Delivery is at least once: the consumer hands the event's {@code eventId()} on in the command,
+ * and the use case skips an effect it has already produced for that id, inside its own transaction.
  */
 @Component
 public class StockReductionEventConsumer {
@@ -48,7 +51,8 @@ public class StockReductionEventConsumer {
               log.debug(
                   "Reducing stock for product {} by {}", item.productId().value(), item.quantity());
               reduceStockInputPort.execute(
-                  new ReduceStockCommand(item.productId().value(), item.quantity()));
+                  new ReduceStockCommand(
+                      item.productId().value(), item.quantity(), event.eventId()));
             });
   }
 }

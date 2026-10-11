@@ -16,7 +16,8 @@ import org.springframework.stereotype.Component;
  * The producing module (Product Catalog) implements this interface on its {@code
  * ProductCreatedEvent}. This avoids a dependency from Inventory to Product.
  *
- * <p>Idempotent: setting the same figure twice has the same effect, so a redelivery is harmless.
+ * <p>Delivery is at least once: the consumer hands the event's {@code eventId()} on in the command,
+ * and the use case skips an effect it has already produced for that id, inside its own transaction.
  */
 @Component
 public class StockInitializationEventConsumer {
@@ -39,6 +40,6 @@ public class StockInitializationEventConsumer {
     log.info("Initializing stock for product {}", event.productId());
 
     setStockLevelInputPort.execute(
-        new SetStockLevelCommand(event.productId(), event.initialStock()));
+        new SetStockLevelCommand(event.productId(), event.initialStock(), event.eventId()));
   }
 }

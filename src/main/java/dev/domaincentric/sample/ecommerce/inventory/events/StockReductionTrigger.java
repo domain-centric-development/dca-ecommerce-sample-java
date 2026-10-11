@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.inventory.events;
 
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.IntegrationEvent;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
 
@@ -11,10 +12,13 @@ import java.util.List;
  * implements this interface on its event. This way the Inventory module listens to its own
  * interface, avoiding a dependency on the Checkout module.
  *
+ * <p>Extends {@link IntegrationEvent}: delivery is at least once, so the consumer needs the event's
+ * identity ({@code eventId()}) to recognise a redelivery, not only the payload.
+ *
  * @see
  *     dev.domaincentric.sample.ecommerce.inventory.adapter.incoming.event.StockReductionEventConsumer
  */
-public interface StockReductionTrigger {
+public interface StockReductionTrigger extends IntegrationEvent {
 
   /** The line items for which stock should be reduced. */
   List<OrderLineItem> orderLineItems();
