@@ -18,6 +18,9 @@ import org.springframework.stereotype.Component;
  *
  * <p>Each event is processed in its own transaction, ensuring one-aggregate-per-transaction
  * consistency.
+ *
+ * <p>Delivery is at least once: the consumer hands the event's {@code eventId()} on in the command,
+ * and the use case skips an effect it has already produced for that id, inside its own transaction.
  */
 @Component
 public class CartCompletionEventConsumer {
@@ -39,6 +42,7 @@ public class CartCompletionEventConsumer {
   void on(final CartCompletionTrigger event) {
     log.info("Completing cart {} after checkout confirmation", event.cartId());
     completeCartInputPort.execute(
-        new CompleteCartCommand(event.cartId(), event.sessionId(), event.purchasedPositions()));
+        new CompleteCartCommand(
+            event.cartId(), event.sessionId(), event.purchasedPositions(), event.eventId()));
   }
 }
