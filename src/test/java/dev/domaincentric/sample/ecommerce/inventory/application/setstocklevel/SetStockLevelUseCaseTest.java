@@ -35,7 +35,7 @@ class SetStockLevelUseCaseTest {
     final SetStockLevelResult second =
         useCase.execute(new SetStockLevelCommand(product.value(), 10, eventId));
 
-    assertTrue(second.alreadySet());
+    assertTrue(second.alreadyApplied());
     assertEquals(7, stockLevels.findByProductId(product).orElseThrow().availableQuantity().value());
   }
 

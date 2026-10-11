@@ -85,13 +85,13 @@ public class SetStockLevelUseCase implements SetStockLevelInputPort {
   }
 
   private static SetStockLevelResult toResult(
-      final StockLevel stockLevel, final boolean created, final boolean alreadySet) {
+      final StockLevel stockLevel, final boolean created, final boolean alreadyApplied) {
     return new SetStockLevelResult(
         stockLevel.id().value(),
         stockLevel.productId().value(),
         stockLevel.availableQuantity().value(),
         stockLevel.reservedQuantity().value(),
         created,
-        alreadySet);
+        alreadyApplied);
   }
 }

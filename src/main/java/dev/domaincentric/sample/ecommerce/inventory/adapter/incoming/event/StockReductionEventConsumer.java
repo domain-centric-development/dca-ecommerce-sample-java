@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.inventory.adapter.incoming.event;
 
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockCommand;
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockResult;
 import dev.domaincentric.sample.ecommerce.inventory.events.StockReductionTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,7 @@ public class StockReductionEventConsumer {
   }
 
   /**
-   * Reduces stock for each line item when a checkout confirmation event is received.
+   * Reduces the stock of every line item of a confirmed checkout, in one command.
    *
    * @param event the trigger containing order line items
    */
@@ -44,15 +45,22 @@ public class StockReductionEventConsumer {
         "Reducing stock for {} line items after checkout confirmation",
         event.orderLineItems().size());
 
-    event
-        .orderLineItems()
+    final ReduceStockResult result =
+        reduceStockInputPort.execute(
+            new ReduceStockCommand(
+                event.orderLineItems().stream()
+                    .map(
+                        item ->
+                            new ReduceStockCommand.Line(item.productId().value(), item.quantity()))
+                    .toList(),
+                event.eventId()));
+    result.lines().stream()
+        .filter(line -> !line.success())
         .forEach(
-            item -> {
-              log.debug(
-                  "Reducing stock for product {} by {}", item.productId().value(), item.quantity());
-              reduceStockInputPort.execute(
-                  new ReduceStockCommand(
-                      item.productId().value(), item.quantity(), event.eventId()));
-            });
+            line ->
+                log.warn(
+                    "Stock reduction for product {} failed: {}",
+                    line.productId(),
+                    line.errorMessage()));
   }
 }
