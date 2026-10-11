@@ -46,7 +46,7 @@ public final class Product extends BaseAggregateRoot<Product, ProductId> {
   private Category category;
   private ImageUrl imageUrl;
 
-  public Product(
+  private Product(
       final ProductId id,
       final SKU sku,
       final ProductName name,
@@ -75,6 +75,30 @@ public final class Product extends BaseAggregateRoot<Product, ProductId> {
     Product product = new Product(ProductId.generate(), sku, name, description, category, imageUrl);
     product.registerEvent(ProductCreated.now(product.id(), sku, name, initialPrice, initialStock));
     return product;
+  }
+
+  /**
+   * Reconstitutes a stored product.
+   *
+   * <p>Used when loading a product from storage: a stored product is a fact to be restored, not a
+   * decision to be re-made, so <b>no domain event is raised</b>.
+   *
+   * @param id the product's identity
+   * @param sku the SKU
+   * @param name the product name
+   * @param description the product description
+   * @param category the product category
+   * @param imageUrl the product image URL
+   * @return the reconstituted product, with no pending domain events
+   */
+  public static Product reconstitute(
+      final ProductId id,
+      final SKU sku,
+      final ProductName name,
+      final ProductDescription description,
+      final Category category,
+      final ImageUrl imageUrl) {
+    return new Product(id, sku, name, description, category, imageUrl);
   }
 
   @Override

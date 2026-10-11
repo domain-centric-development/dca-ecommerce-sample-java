@@ -66,7 +66,7 @@ public final class ProductFactory implements Factory {
       final Category category,
       final ImageUrl imageUrl) {
 
-    return new Product(id, sku, name, description, category, imageUrl);
+    return Product.reconstitute(id, sku, name, description, category, imageUrl);
   }
 
   /**
