@@ -19,6 +19,7 @@ public class RegisterPage extends BasePage {
   private static final String DEFAULT_DATE_OF_BIRTH = "1990-05-17";
   private static final String SUBMIT_BUTTON = "register-submit-button";
   private static final String CONFIRM_PASSWORD_INPUT = "register-confirm-password-input";
+  private static final String ERROR_MESSAGE = "register-error-message";
 
   /**
    * Creates a new RegisterPage and waits for it to load.
@@ -109,6 +110,18 @@ public class RegisterPage extends BasePage {
   public void submit() {
     click(SUBMIT_BUTTON);
     page.waitForURL(url -> !url.contains("/register"));
+  }
+
+  /**
+   * Submits a registration form the shop refuses; the registration page opens again with the
+   * refusal.
+   *
+   * @return the refusal the page shows
+   */
+  public String submitRefused() {
+    click(SUBMIT_BUTTON);
+    waitFor(ERROR_MESSAGE);
+    return page.locator("[data-test='" + ERROR_MESSAGE + "']").textContent().strip();
   }
 
   /**

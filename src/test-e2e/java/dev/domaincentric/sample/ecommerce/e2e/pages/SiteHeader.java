@@ -44,6 +44,15 @@ public class SiteHeader extends BasePage {
   }
 
   /**
+   * Whether the header greets a logged-in visitor.
+   *
+   * @return true when the greeting is shown
+   */
+  public boolean greets() {
+    return exists(GREETING);
+  }
+
+  /**
    * Whether the header offers the "Register" link.
    *
    * @return true when the link is shown
