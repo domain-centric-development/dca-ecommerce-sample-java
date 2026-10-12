@@ -23,4 +23,12 @@ class ProductNotFoundE2ETest extends BaseE2ETest {
         notFound.message());
     assertEquals("domaincentric.commerce", page.title());
   }
+
+  @Test
+  @DisplayName("The not-found page is titled with the shop's name")
+  void notFoundPageIsTitledWithTheShopsName() {
+    NotFoundPage.openProduct(page, "no-such-product");
+
+    assertEquals("domaincentric.commerce", page.title());
+  }
 }
