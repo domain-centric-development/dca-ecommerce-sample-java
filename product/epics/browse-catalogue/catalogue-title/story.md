@@ -1,7 +1,9 @@
 ---
 id: catalogue-title
 epic: browse-catalogue
-status: adopted
+status: delivered
+delivered: 2026-10-12T20:45:03Z
+delivered_by: gate
 context: product
 feature: catalogue
 title: The catalogue page is titled "Product Catalog"

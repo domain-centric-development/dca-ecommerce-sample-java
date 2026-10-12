@@ -1,0 +1,15 @@
+gate:pass story — catalogue-title in context product with 1 criterion(s)
+gate:pass contract — profile and gate agree on contract 22 (gate 0.81.1)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:note decisions — no decision record for this story
+gate:pass pipeline — no stage of catalogue-title changed .agents/factory/
+gate:pass tests-mapped — 1 test(s) mapped to 1 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.CatalogTitleE2ETest#catalogPageIsTitledProductCatalog found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/CatalogTitleE2ETest.java (catalogue-tab-reads-product-catalog, by a file named after the class)
+gate:pass files-listed — tests.md list(s) the 0 file(s) the stage changed
+gate:pass tests-kept — no test that existed before this story changed what it expects
+gate:pass spec-delta — 1 added, 0 held in product/spec/product/catalogue/scenarios.md — nothing that holds changes
+gate:pass tests-real — every integrated and end-to-end test of a criterion runs through the real input port
+gate:pass compiles — `./gradlew testClasses` succeeded
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.CatalogTitleE2ETest#catalogPageIsTitledProductCatalog passes — a journey guards what is delivered (catalogue-tab-reads-product-catalog)
+gate:pass story catalogue-title stage test

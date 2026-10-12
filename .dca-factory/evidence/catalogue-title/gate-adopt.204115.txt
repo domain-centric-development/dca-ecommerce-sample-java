@@ -1,0 +1,16 @@
+gate:pass story — catalogue-title in context product with 1 criterion(s)
+gate:pass contract — profile and gate agree on contract 22 (gate 0.81.1)
+gate:pass approved — story is adopted — it describes behaviour the project already has; adopted, never built
+gate:pass epic — epic 'browse-catalogue' complete (intent, goal, metric, domain_contact)
+gate:note decisions — no decision record for this story
+gate:pass pipeline — no stage of catalogue-title changed .agents/factory/
+gate:pass tests-mapped — 1 test(s) mapped to 1 criterion(s)
+gate:pass tests-exist — dev.domaincentric.sample.ecommerce.e2e.CatalogTitleE2ETest#catalogPageIsTitledProductCatalog found in src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/CatalogTitleE2ETest.java (catalogue-tab-reads-product-catalog, by a file named after the class)
+gate:pass compiles — `./gradlew testClasses` succeeded (recorded at 2026-10-12T20:40:13Z for this tree)
+gate:pass tests-green — dev.domaincentric.sample.ecommerce.e2e.CatalogTitleE2ETest#catalogPageIsTitledProductCatalog passes — a journey guards what is delivered (catalogue-tab-reads-product-catalog)
+gate:pass adopt-judged — the judge confirmed that the tests prove the scenarios
+gate:skip break-proof — the adoption wrote no test of its own — every scenario maps to an existing test, which the judge read
+gate:pass spec-tests — every test line of product/spec/product/catalogue/scenarios.md names a test that is there
+gate:pass integrate — every check passed — catalogue-title is adopted once its tests are integrated into the main checkout (the runner's integrate step)
+gate:note stage adopt ran without break-proof — a green run here does not cover them
+gate:pass story catalogue-title stage adopt

@@ -38,3 +38,12 @@ Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTe
 - When a visitor opens the catalogue page
 - Then the page title is "Product Catalog", the heading reads "Our Products" and the breadcrumb reads "Home / Products"
 Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogPageIntegrationTest#pageIsTitledHeadedAndPlacedAsTheCatalogue
+
+### Rule: The catalogue page carries the catalogue's name as its title
+
+#### catalogue-tab-reads-product-catalog
+Title: The catalogue page is titled Product Catalog
+- Given the seeded sample catalogue
+- When a visitor opens the catalogue page
+- Then the page title is "Product Catalog"
+Test: dev.domaincentric.sample.ecommerce.e2e.CatalogTitleE2ETest#catalogPageIsTitledProductCatalog
