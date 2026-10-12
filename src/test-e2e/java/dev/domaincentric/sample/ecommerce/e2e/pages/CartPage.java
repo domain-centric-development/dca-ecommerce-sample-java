@@ -12,6 +12,7 @@ public class CartPage extends BasePage {
   private static final String URL_PATTERN = "/cart**";
   private static final String CART_ITEM = "cart-item";
   private static final String CHECKOUT_BUTTON = "cart-checkout-button";
+  private static final String SUCCESS_MESSAGE = "cart-success-message";
 
   /**
    * Creates a new CartPage and waits for it to load.
@@ -78,6 +79,24 @@ public class CartPage extends BasePage {
               + item.locator("[data-test='cart-item-quantity']").textContent().trim());
     }
     return lines;
+  }
+
+  /**
+   * The success message the cart page shows after a product was added.
+   *
+   * @return the message text, trimmed
+   */
+  public String successMessage() {
+    return page.locator("[data-test='" + SUCCESS_MESSAGE + "']").textContent().strip();
+  }
+
+  /**
+   * The path of the page the browser shows.
+   *
+   * @return the path, without the base URL
+   */
+  public String shownPath() {
+    return getCurrentPath();
   }
 
   /**
