@@ -24,4 +24,14 @@ class ProductPageE2ETest extends BaseE2ETest {
     assertTrue(productPage.isDisplayed(), "The product page renders its details");
     assertEquals("Domain-Driven Design", productPage.heading());
   }
+
+  @Test
+  @DisplayName("Product page shows units available")
+  void productPageShowsTheUnitsItWasStockedWith() {
+    ProductDetailPage productPage =
+        ProductCatalogPage.navigateTo(page).viewProductNamed("Domain-Driven Design");
+
+    assertEquals("In Stock", productPage.stockBadge());
+    assertEquals("20 units available", productPage.metaValue("Availability"));
+  }
 }

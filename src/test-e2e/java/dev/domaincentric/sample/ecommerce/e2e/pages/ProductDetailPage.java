@@ -87,6 +87,37 @@ public class ProductDetailPage extends BasePage {
   }
 
   /**
+   * The stock badge beside the product's heading, as the page words it (the style sets it in
+   * capitals).
+   *
+   * @return the badge text, trimmed
+   */
+  public String stockBadge() {
+    return page.locator("[data-test='" + PRODUCT_DETAIL + "'] .product-detail__header .badge")
+        .textContent()
+        .strip();
+  }
+
+  /**
+   * The value the page shows under a meta label, such as "Availability".
+   *
+   * @param label the label as the page shows it
+   * @return the value text, trimmed
+   */
+  public String metaValue(String label) {
+    return page.locator(".product-detail__meta-item")
+        .filter(
+            new com.microsoft.playwright.Locator.FilterOptions()
+                .setHas(
+                    page.locator(
+                        ".product-detail__meta-label",
+                        new Page.LocatorOptions().setHasText(label))))
+        .locator(".product-detail__meta-value")
+        .textContent()
+        .strip();
+  }
+
+  /**
    * The address of the product image the page shows.
    *
    * @return the address the browser loaded, empty when the page shows no picture

@@ -53,6 +53,10 @@ class ProductDetailPageIntegrationTest {
   private static final Pattern BACK_LINK =
       Pattern.compile(
           "<a[^>]*\\bhref=\"([^\"]*)\"[^>]*data-test=\"product-back-link\"[^>]*>([^<]*)</a>");
+  private static final Pattern ACTIONS =
+      Pattern.compile("class=\"product-detail__actions\">(.*?</a>)", Pattern.DOTALL);
+  private static final Pattern ADD_TO_CART_BUTTON =
+      Pattern.compile("<button[^>]*data-test=\"product-add-to-cart-button\"[^>]*>([^<]*)</button>");
 
   private static final String DDD_DESCRIPTION =
       "The seminal work by Eric Evans that introduced the software industry to Domain-Driven"
@@ -99,6 +103,27 @@ class ProductDetailPageIntegrationTest {
     final String catalogue = render(back.group(1));
 
     assertThat(text(HEADING, catalogue)).isEqualTo("Our Products");
+  }
+
+  @Test
+  @DisplayName("Few units are counted exactly")
+  void fewUnitsAreCountedExactly() throws Exception {
+    final String page = productPageOf("Wooden Hexagon Desk Model");
+
+    assertThat(metaValue(page, "Availability")).isEqualTo("8 units available");
+  }
+
+  @Test
+  @DisplayName("Available product offers add to cart")
+  void availableProductOffersAddToCartNextToBackToProducts() throws Exception {
+    final String actions = text(ACTIONS, productPageOf("Clean Architecture"));
+
+    final Matcher addToCart = ADD_TO_CART_BUTTON.matcher(actions);
+    assertThat(addToCart.find()).as("the actions offer an Add to Cart button").isTrue();
+    assertThat(addToCart.group(1).strip()).isEqualTo("Add to Cart");
+    final Matcher back = BACK_LINK.matcher(actions);
+    assertThat(back.find()).as("the actions offer the back link beside it").isTrue();
+    assertThat(back.group(2).strip()).isEqualTo("Back to Products");
   }
 
   /** Follows the "View Details" link on the catalogue card of the named product. */

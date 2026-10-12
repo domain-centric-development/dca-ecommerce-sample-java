@@ -43,6 +43,8 @@ class ProductCatalogPageIntegrationTest {
   private static final Pattern HEADING = Pattern.compile("<h1[^>]*>([^<]*)</h1>");
   private static final Pattern BREADCRUMB =
       Pattern.compile("data-test=\"breadcrumb\">(.*?)</div>", Pattern.DOTALL);
+  private static final Pattern STOCK_BADGE =
+      Pattern.compile("class=\"product-card__badge[^\"]*\">([^<]*)<");
   private static final Pattern PRODUCT_PAGE = Pattern.compile("/products/[0-9a-f-]{36}");
 
   private static final String DDD_DESCRIPTION =
@@ -108,6 +110,19 @@ class ProductCatalogPageIntegrationTest {
     assertThat(text(PAGE_TITLE, page)).isEqualTo("Product Catalog");
     assertThat(text(HEADING, page)).isEqualTo("Our Products");
     assertThat(breadcrumb(page)).isEqualTo("Home / Products");
+  }
+
+  @Test
+  @DisplayName("Card shows in stock")
+  void everyCardOfTheStockedCatalogueShowsInStock() throws Exception {
+    final List<String> cards = cards(catalogPage());
+    assertThat(cards).isNotEmpty();
+
+    for (final String card : cards) {
+      assertThat(text(STOCK_BADGE, card))
+          .as("badge on %s", text(TITLE, card))
+          .isEqualTo("In Stock");
+    }
   }
 
   private String catalogPage() throws Exception {
