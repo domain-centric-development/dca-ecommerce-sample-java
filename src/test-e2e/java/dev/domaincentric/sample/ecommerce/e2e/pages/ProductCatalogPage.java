@@ -13,6 +13,8 @@ public class ProductCatalogPage extends BasePage {
   private static final String PRODUCT_CARD = "product-card";
   private static final String VIEW_DETAILS_LINK = "view-product";
   private static final String PRODUCT_TITLE = "product-card-title";
+  // The card's price carries no data-test; adopting the page changes no template.
+  private static final String CARD_PRICE = ".product-card__price";
 
   /**
    * Creates a new ProductCatalogPage and waits for it to load.
@@ -63,17 +65,29 @@ public class ProductCatalogPage extends BasePage {
    * @return the ProductDetailPage for that product
    */
   public ProductDetailPage viewProductNamed(String name) {
-    page.locator("[data-test='" + PRODUCT_CARD + "']")
+    cardNamed(name).locator("[data-test='" + VIEW_DETAILS_LINK + "']").click();
+    return new ProductDetailPage(page);
+  }
+
+  /**
+   * The price on the card of the named product.
+   *
+   * @param name the product name as its card shows it
+   * @return the price text, trimmed
+   */
+  public String cardPriceOf(String name) {
+    return cardNamed(name).locator(CARD_PRICE).innerText().strip();
+  }
+
+  private com.microsoft.playwright.Locator cardNamed(String name) {
+    return page.locator("[data-test='" + PRODUCT_CARD + "']")
         .filter(
             new com.microsoft.playwright.Locator.FilterOptions()
                 .setHas(
                     page.locator(
                         "[data-test='" + PRODUCT_TITLE + "']",
                         new Page.LocatorOptions().setHasText(name))))
-        .first()
-        .locator("[data-test='" + VIEW_DETAILS_LINK + "']")
-        .click();
-    return new ProductDetailPage(page);
+        .first();
   }
 
   /**

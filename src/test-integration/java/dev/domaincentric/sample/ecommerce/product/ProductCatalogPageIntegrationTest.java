@@ -6,7 +6,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
@@ -46,6 +48,33 @@ class ProductCatalogPageIntegrationTest {
   private static final Pattern STOCK_BADGE =
       Pattern.compile("class=\"product-card__badge[^\"]*\">([^<]*)<");
   private static final Pattern PRODUCT_PAGE = Pattern.compile("/products/[0-9a-f-]{36}");
+  private static final Pattern CARD_PRICE =
+      Pattern.compile("class=\"product-card__price\">([^<]*)<");
+
+  /** The price each product of the sample catalogue is created with, by name. */
+  private static final Map<String, String> SEEDED_PRICES =
+      Map.ofEntries(
+          Map.entry("Domain-Driven Design", "54.99 EUR"),
+          Map.entry("Clean Architecture", "39.99 EUR"),
+          Map.entry("Implementing Domain-Driven Design", "49.99 EUR"),
+          Map.entry("Domain-Driven Design Distilled", "24.99 EUR"),
+          Map.entry("Hexagonal Architecture Explained", "34.99 EUR"),
+          Map.entry("Learning Domain-Driven Design", "44.99 EUR"),
+          Map.entry("Patterns of Enterprise Application Architecture", "59.99 EUR"),
+          Map.entry("Team Topologies", "29.99 EUR"),
+          Map.entry("Event Storming Sticky Note Kit", "34.99 EUR"),
+          Map.entry("Hexagon Whiteboard Magnets, Set of 24", "24.99 EUR"),
+          Map.entry("Context Map Poster, A1", "19.99 EUR"),
+          Map.entry("DDD Pattern Card Deck", "22.99 EUR"),
+          Map.entry("\"Ports & Adapters\" T-Shirt", "29.99 EUR"),
+          Map.entry("\"Domain over Framework\" Hoodie", "59.99 EUR"),
+          Map.entry("Hexagon Embroidered Cap", "24.99 EUR"),
+          Map.entry("\"Ubiquitous Language\" Mug", "16.99 EUR"),
+          Map.entry("Hexagon Wooden Coasters, Set of 6", "27.99 EUR"),
+          Map.entry("Hex-Grid Modeling Notebook", "18.99 EUR"),
+          Map.entry("Wooden Hexagon Desk Model", "39.99 EUR"),
+          Map.entry("Hexagon Sticker Sheet", "9.99 EUR"),
+          Map.entry("\"Bounded Context\" Enamel Pin", "12.99 EUR"));
 
   private static final String DDD_DESCRIPTION =
       "The seminal work by Eric Evans that introduced the software industry to Domain-Driven"
@@ -123,6 +152,34 @@ class ProductCatalogPageIntegrationTest {
           .as("badge on %s", text(TITLE, card))
           .isEqualTo("In Stock");
     }
+  }
+
+  @Test
+  @DisplayName("Price keeps two decimals")
+  void cardShowsThePriceWithTwoDecimalsAndItsCurrency() throws Exception {
+    assertThat(priceOnCardOf("Hexagon Sticker Sheet")).isEqualTo("9.99 EUR");
+  }
+
+  @Test
+  @DisplayName("Every card shows its seeded price")
+  void everyCardShowsThePriceItsProductWasSeededWith() throws Exception {
+    final Map<String, String> pricesByCard = new LinkedHashMap<>();
+    for (final String card : cards(catalogPage())) {
+      pricesByCard.put(text(TITLE, card), text(CARD_PRICE, card));
+    }
+
+    assertThat(pricesByCard).hasSize(21).isEqualTo(SEEDED_PRICES);
+    assertThat(pricesByCard)
+        .containsEntry("Wooden Hexagon Desk Model", "39.99 EUR")
+        .containsEntry("\"Bounded Context\" Enamel Pin", "12.99 EUR");
+  }
+
+  private String priceOnCardOf(final String name) throws Exception {
+    return cards(catalogPage()).stream()
+        .filter(c -> name.equals(text(TITLE, c)))
+        .findFirst()
+        .map(c -> text(CARD_PRICE, c))
+        .orElseThrow(() -> new AssertionError("no card titled " + name));
   }
 
   private String catalogPage() throws Exception {

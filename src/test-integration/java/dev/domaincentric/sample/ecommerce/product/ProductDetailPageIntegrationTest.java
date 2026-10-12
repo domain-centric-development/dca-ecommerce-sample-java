@@ -34,6 +34,12 @@ class ProductDetailPageIntegrationTest {
       Pattern.compile("data-test=\"product-card-title\">([^<]*)<");
   private static final Pattern VIEW_LINK =
       Pattern.compile("<a[^>]*\\bhref=\"([^\"]*)\"[^>]*data-test=\"view-product\"");
+  private static final Pattern CARD_PRICE =
+      Pattern.compile("class=\"product-card__price\">([^<]*)<");
+  private static final Pattern PRICE =
+      Pattern.compile("data-test=\"product-detail-price\">([^<]*)<");
+  private static final Pattern PRICE_LABEL =
+      Pattern.compile("class=\"product-detail__price-label\">([^<]*)<");
   private static final Pattern PAGE_TITLE = Pattern.compile("<title>([^<]*)</title>");
   private static final Pattern HEADING = Pattern.compile("<h1[^>]*>([^<]*)</h1>");
   private static final Pattern IMAGE =
@@ -126,15 +132,39 @@ class ProductDetailPageIntegrationTest {
     assertThat(back.group(2).strip()).isEqualTo("Back to Products");
   }
 
+  @Test
+  @DisplayName("Product page shows the retail price")
+  void showsThePriceTheProductWasCreatedWithLabelledRetailPrice() throws Exception {
+    final String page = productPageOf("Domain-Driven Design");
+
+    assertThat(text(PRICE, page)).isEqualTo("54.99 EUR");
+    assertThat(text(PRICE_LABEL, page)).isEqualTo("Retail Price");
+  }
+
+  @Test
+  @DisplayName("Page and card agree")
+  void showsTheSamePriceAsTheProductsCard() throws Exception {
+    final String name = "Patterns of Enterprise Application Architecture";
+    final String priceOnCard = text(CARD_PRICE, cardOf(name));
+    assertThat(priceOnCard).isEqualTo("59.99 EUR");
+
+    final String page = productPageOf(name);
+
+    assertThat(text(PRICE, page)).isEqualTo(priceOnCard);
+  }
+
   /** Follows the "View Details" link on the catalogue card of the named product. */
   private String productPageOf(final String name) throws Exception {
-    final String card =
-        Arrays.stream(render("/products").split(Pattern.quote(CARD)))
-            .skip(1)
-            .filter(c -> name.equals(text(CARD_TITLE, c)))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("no card titled " + name));
-    return render(text(VIEW_LINK, card));
+    return render(text(VIEW_LINK, cardOf(name)));
+  }
+
+  /** The catalogue card of the named product. */
+  private String cardOf(final String name) throws Exception {
+    return Arrays.stream(render("/products").split(Pattern.quote(CARD)))
+        .skip(1)
+        .filter(c -> name.equals(text(CARD_TITLE, c)))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("no card titled " + name));
   }
 
   private String render(final String path) throws Exception {
