@@ -197,3 +197,25 @@ aggregate depending on foreign contexts.
 Price wraps strictly positive Money; Money is ISO 4217, non-negative, two decimals half-up, maximum 999999999999.99.
 Default quantities must be rejected before mutation/reconstitution. ProductCreated is raised by aggregate creation;
 product-created v1 exposes only eventId, occurredOn, productId, amount, currency and initialStock.
+
+## Features
+
+The parts of the context's behaviour its people name; each groups what holds in a folder of the living spec.
+
+### Catalogue (catalogue)
+
+**Definition:** The products the shop offers, listed and found: the range it starts with, the order, the card that shows a product and leads to it.
+
+**Type:** Feature
+
+### Product details (productdetails)
+
+**Definition:** One product's own page — what it is, how to get back to the catalogue, and what a visitor sees for an address no product has.
+
+**Type:** Feature
+
+### Recommendations (recommendations)
+
+**Definition:** Products the shop puts in front of a visitor to discover — the slider below the home page's hero.
+
+**Type:** Feature

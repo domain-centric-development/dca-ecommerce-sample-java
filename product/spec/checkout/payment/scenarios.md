@@ -1,4 +1,4 @@
-# checkout
+# checkout — payment
 
 ### Rule: A payment the provider authorizes moves the checkout on
 

@@ -65,3 +65,13 @@ them. Definitions can be found in the respective context glossaries.
 - How will Portal handle aggregated views once they become necessary — via
   integration events plus a local read model, or via Open Host Services of
   other contexts?
+
+## Features
+
+The parts of the context's behaviour its people name; each groups what holds in a folder of the living spec.
+
+### Home (home)
+
+**Definition:** The shop's home page: what the shop is, why to shop here, and the way on to the products and the cart.
+
+**Type:** Feature

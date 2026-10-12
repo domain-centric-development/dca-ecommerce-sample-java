@@ -29,13 +29,15 @@ from .contract import (
 from .reports import (
     tokens_of, usage_lines)
 from .state import (
+    CLAIM_TRAILERS, claim_config_here, fetch_remote,
     back_in, claim, freeze_all, gate_passed_on_record, git_tree, has_worktree, journal_usage, journal_writer, listed_files, run_owned, run_stories, snapshot_reason, start_of,
     STAGE_WORD, STAGES_MADE, STORY_DIGEST, story_title, tree_changes, verdict_in, worktree_of, worktrees_dir,
     write_mark, write_story_fields)
 from .spec import (
-    context_folder, derived, merge, read_delta, read_spec, render_spec, story_entries)
+    context_folder, derived, merge, place_name, read_delta, read_spec, render_spec, story_entries)
 from .gate import (
-    read_mapping, spec_target,
+    merge_target,
+    read_mapping, spec_target, story_spec,
     BUILT_IN_PERSPECTIVES, CLAUSES_MARKER, CONFLICT_MARKER, contract_of, criteria_of, HANDOVER_BUDGET,
     integration_target, INVARIANTS_MARKER, perspectives_of, plan_invariants, plan_proposals, read_clause_rows,
     read_invariant_rows, scenario_clauses, TESTS_BASELINE)
@@ -292,8 +294,12 @@ def squash_story(path, runs, story_id, target, front, body):
         git(path, "reset", "--soft", target)
     if git(path, "diff", "--cached", "--quiet")[0] != 0:
         scope = re.sub(r"[^a-z0-9]+", "-", str(front.get("context", "")).lower()).strip("-") or "story"
-        kind = "feat" if story_kind(front) == "story" else "test"
+        kind = {"story": "feat", "task": "refactor"}.get(story_kind(front), "test")
         message = f"{kind}({scope}): {story_title(front, body) or story_id}\n\nStory: {story_id}\n"
+        claimed = os.path.join(evidence_dir(runs, story_id), CLAIM_TRAILERS)
+        if os.path.isfile(claimed):
+            # The claim's trailers survive the squash: the published branch still says who has the story (WP-93).
+            message += read_text(claimed).strip() + "\n"
         done = git(path, *git_identity(path), "commit", "--no-verify", "--quiet", "-m", message)
         if done[0] != 0:
             print(f"factory: the story's commit could not be made — {done[1]}", file=sys.stderr)
@@ -333,7 +339,10 @@ def integrate_prepare(cwd, runs, epics, story_id):
     if not has_worktree(story_id, cwd):
         print(f"factory: {story_id} has no worktree to integrate", file=sys.stderr)
         return 1
-    target = integration_target(runs, story_id)
+    config = claim_config_here(cwd)
+    if config:
+        fetch_remote(cwd, config["remote"])
+    target = merge_target(runs, story_id, cwd)
     front, body = read_front_matter(find_story(epics, story_id))
     restore_places(path)
     stage_story(path, runs, story_id)
@@ -358,7 +367,7 @@ def integrate_finish(cwd, runs, epics, story_id):
     """After the conflicts were resolved in the worktree: no marker left in a conflicted file, the merge committed,
     the story squashed. Exit 1, naming the files, while a marker is left."""
     path = worktree_of(story_id, cwd)
-    target = integration_target(runs, story_id)
+    target = merge_target(runs, story_id, cwd)
     listed = os.path.join(evidence_dir(runs, story_id), CONFLICTS_FILE)
     files = [line.strip() for line in read_text(listed).splitlines() if line.strip()] if os.path.isfile(listed) else []
     left = []
@@ -497,10 +506,12 @@ def migrate_spec(cwd, epics, runs, say):
         if is_delivered(front) and spec_target(front):
             delivered.append((delivered_on(front), story_id_of(story_path), story_path, front, body))
     for _when, story_id, story_path, front, body in sorted(delivered):
-        target = spec_target(front)
+        target, held, _features, _feature = story_spec(front)
         preamble, spec = read_spec(target)
         story = story_entries(body)
-        found = derived(story, spec)
+        # held anywhere in the context — its own file or a feature's (WP-105): a criterion moved into a feature
+        # folder is not merged back into the file the story names
+        found = derived(story, held)
         if not story or all(verb == "holds" for verb in found.values()):
             continue
         try:
@@ -589,7 +600,7 @@ def migrate_configuration(cwd, say):
     start, end = "<!-- dca-describe: start -->", "<!-- dca-describe: end -->"
     if start in text and end in text:
         block = text.split(start, 1)[1].split(end, 1)[0]
-        defaults = {"product": ("overview", METHOD_ROOT + "product.md"), "tech": ("tech", METHOD_ROOT + "tech.md"),
+        defaults = {"product": ("overview", METHOD_ROOT + "overview.md"), "tech": ("tech", METHOD_ROOT + "tech.md"),
                     "domain": ("domain", METHOD_ROOT + "domain.md")}
         for key, path in re.findall(r"^\s*-\s*(product|tech|domain):\s*`([^`]+)`", block, re.M):
             method_key, default = defaults[key]
@@ -674,6 +685,18 @@ def migrate_layout(cwd):
                 say(f"{src.replace(os.sep, '/')} → {dst.replace(os.sep, '/')} ({move_path(cwd, src, dst)})")
             if not os.listdir("project"):
                 os.rmdir("project")
+    # The description section of AGENTS.md is the agents' pointer: its places follow the move.
+    if os.path.isfile("AGENTS.md") and os.path.isdir("product"):
+        text = read_text("AGENTS.md")
+        start, end = "<!-- dca-describe: start -->", "<!-- dca-describe: end -->"
+        if start in text and end in text:
+            head, rest = text.split(start, 1)
+            block, tail = rest.split(end, 1)
+            moved_block = block.replace("project/product.md", "product/overview.md").replace("`project/", "`product/")
+            if moved_block != block:
+                with open("AGENTS.md", "w", encoding="utf-8") as handle:
+                    handle.write(head + start + moved_block + end + tail)
+                say("AGENTS.md: the description section names product/")
     old_overview, overview = os.path.join("product", "product.md"), place("product")
     if os.path.isfile(old_overview) and not os.path.exists(overview) \
             and overview.replace("\\", "/").endswith("product/overview.md"):
@@ -1124,6 +1147,11 @@ PLAN_SKELETON = ("# Plan — {story}\n\n## Context\n\n## Changes\n| Element | Ki
                  "## Open assumptions\n")
 
 
+#: A task's plan (WP-106): what changes in the code and where — no criteria, no levels, no spec delta.
+TASK_PLAN_SKELETON = ("# Plan — {story}\n\n## Context\n\n## Changes\n| Element | Kind | Location | New or changed | Evidence |\n"
+                      "| --- | --- | --- | --- | --- |\n\n## Invariants\n\n## Files\n\n## Open assumptions\n")
+
+
 def plan_skeleton(runs, story_id, cwd="."):
     """`plan.md` before the plan stage runs: the file's headings and, under `## Acceptance criteria`, one line per
     criterion of the story with its key — the stage gives each its level and never retypes the story's text.
@@ -1135,17 +1163,32 @@ def plan_skeleton(runs, story_id, cwd="."):
         return 0
     try:
         story_path = find_story(place("epics"), story_id)
-        criteria = criteria_of(story_path, read_front_matter(story_path)[1])
+        criteria = criteria_of(story_path, read_front_matter(story_path)[1], read_front_matter(story_path)[0])
     except GateError as error:
         print(f"factory: {error}", file=sys.stderr)
         return 1
+    if story_kind(read_front_matter(story_path)[0]) == "task":
+        os.makedirs(folder, exist_ok=True)
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(TASK_PLAN_SKELETON.format(story=story_id))
+        print(f"factory: {runs}/{story_id}/plan.md — a task's skeleton: no criteria, no spec delta")
+        return 0
     rows = "\n".join(f"- {key}  →  level: " for key, _text in criteria)
     # The spec delta as far as it follows from the story and the spec: added, held, changed by key. A removal and
     # a renamed rule are the plan stage's to add — and a change it finds that the story does not say, its question.
     front, body = read_front_matter(story_path)
-    target_spec = spec_target(front)
-    found = derived(story_entries(body), read_spec(target_spec)[1]) if target_spec else {}
+    target_spec, held, features, feature = story_spec(front)
+    story = story_entries(body)
+    found = derived(story, held) if target_spec else {}
     delta = "\n".join(f"- {verb} {key}" for key, verb in found.items())
+    # Where the story's criteria go (WP-105): a feature the context does not have yet is born, a criterion that stands
+    # under another feature moves — both follow from the story and the spec, so the skeleton writes them.
+    if target_spec and story_kind(front) != "journey":
+        where = {item["key"]: item["feature"] for item in held}
+        moves = [f"- moves {item['key']}: {place_name(where[item['key']])} → {place_name(feature)}"
+                 for item in story if item["key"] in where and where[item["key"]] != feature]
+        born = [f"- adds feature {feature}"] if feature and feature not in features else []
+        delta = "\n".join([line for line in (delta,) if line] + born + moves)
     os.makedirs(folder, exist_ok=True)
     with open(target, "w", encoding="utf-8") as handle:
         handle.write(PLAN_SKELETON.format(story=story_id, rows=rows, delta=delta))
@@ -1215,14 +1258,16 @@ def document_skeleton(runs, story_id, cwd="."):
 # 124 a stage ran past its time limit is reported as a failure (1), 129/130/143 a hang-up, an interrupt, a TERM.
 
 #: The shell a stage may use without asking, beside the gate, the cli and the profile's commands: the ordinary
-#: reading and text tools, and the git verbs that look without changing anything (`git apply --check` is how a
-#: stage tries a break patch). What writes or runs anything stays out — `sed -i`, `xargs`, `find -exec`, a redirect
-#: of `echo`/`printf`, `mkdir`: each allowed head is allowed with every argument (WP-94). Measured on the bench:
-#: without the reading tools a stage hit the allow-list about three times per story, each a wasted turn.
+#: reading and text tools, the git verbs that look without changing anything (`git apply --check` is how a stage
+#: tries a break patch), and `git rm` — how a stage removes a file its plan says `removed`; it takes tracked files
+#: only, which git still holds, and the pipeline's own files are watched by the run (WP-102). What writes or runs
+#: anything else stays out — `rm`, `sed -i`, `xargs`, `find -exec`, a redirect of `echo`/`printf`, `mkdir`: each
+#: allowed head is allowed with every argument (WP-94). Measured on the bench: without the reading tools a stage hit
+#: the allow-list about three times per story, each a wasted turn; without a delete the build left a planned removal.
 STAGE_SHELL_HEADS = ("cd", "ls", "cat", "head", "tail", "wc", "sort", "grep", "diff", "pwd",
-                     "git status", "git diff", "git log", "git ls-files", "git apply --check")
+                     "git status", "git diff", "git log", "git ls-files", "git apply --check", "git rm")
 STAGE_SHELL = ("cd, ls, cat, head, tail, wc, sort, grep, diff, pwd, and git status, git diff, git log, git ls-files, "
-               "git apply --check")
+               "git apply --check, and git rm (a file the plan removes)")
 
 #: The first line of a snapshot written without a hash: the observer reads such a snapshot as absent, because a
 #: snapshot of empty digests compares equal to every other and would read as "this stage changed nothing".
@@ -1324,7 +1369,9 @@ class Run:
             code = process.returncode
         else:
             code = self.wait(process)
-        return code, data.decode("utf-8", errors="replace").rstrip("\n") if capture else ""
+        # A Python child on Windows writes its lines with \r\n: read as bytes, the \r would stay on every field.
+        text = data.decode("utf-8", errors="replace").replace("\r\n", "\n") if capture else ""
+        return code, text.rstrip("\n")
 
     def cli(self, *args, quiet=True, merge=False, cwd=None, env=None):
         """The cli beside this runner: (exit code, stdout without its last newlines)."""
@@ -1563,6 +1610,54 @@ class Run:
         match = re.search(r".*(?:^| )(?:-m|--model)[ =]([^ ]*)", self.tool_args(tool))
         return match.group(1) if match else ""
 
+    @staticmethod
+    def unit_keys(unit):
+        """The profile keys a unit is named by, most specific first: `review:ddd` → review.ddd, review."""
+        unit = (unit or "").replace(":", ".")
+        head = unit.split(".")[0]
+        return [unit] + ([head] if head != unit else [])
+
+    def tool_for(self, unit, given):
+        """The tool one unit runs with: `--tool` when the person named one for this run (FACTORY_TOOL_EXPLICIT), else
+        the profile's `tool.<unit>` (a review `tool.review.<perspective>`, then `tool.review`), else `tool:`, else
+        the run's tool. A unit is what one process carries: the shared builder and verifier, a review, a separate
+        stage, the integrate step."""
+        if os.environ.get("FACTORY_TOOL_EXPLICIT") or os.environ.get("FACTORY_TOOL_CMD"):
+            return given
+        profile = self.profile()
+        for key in self.unit_keys(unit):
+            named = first_word(profile.get(f"tool.{key}", ""))
+            if named:
+                return named
+        return first_word(profile.get("tool", "")) or given
+
+    def effort_choice(self, tool, unit):
+        """(level, note) — the reasoning effort of one unit: the profile's `effort.<tool>.<unit>`, else
+        `effort.<tool>`; a `--effort`/`model_reasoning_effort` in FACTORY_<TOOL>_ARGS wins, and a tool that takes no
+        effort gets a note, never a silent drop."""
+        profile = self.profile()
+        level = next((first_word(profile.get(f"effort.{tool}.{key}", "")) for key in self.unit_keys(unit)
+                      if first_word(profile.get(f"effort.{tool}.{key}", ""))), "") \
+            or first_word(profile.get(f"effort.{tool}", ""))
+        if not level:
+            return "", ""
+        if re.search(r"(--effort|model_reasoning_effort)", self.tool_args(tool)):
+            return "", f"overridden by FACTORY_{tool.upper()}_ARGS"
+        if tool not in TOOL or not TOOL[tool].effort:
+            return "", f"effort not applied — tool {tool} takes none"
+        return level, ""
+
+    def effort_field(self, tool, unit):
+        level, note = self.effort_choice(tool, unit)
+        if note:
+            print(f"factory: effort for {unit}: {note}")
+        return f"\teffort={level}" if level else (f"\teffort=no ({note})" if note else "")
+
+    def tools_of_run(self, given):
+        """Every tool this run may start: the given one and every `tool`/`tool.<unit>` the profile names."""
+        named = {first_word(v) for k, v in self.profile().items() if (k == "tool" or k.startswith("tool.")) and v}
+        return sorted({given} | {n for n in named if n})
+
     def model_choice(self, tool, stage):
         """The model flag for one stage, and why a request does not become one: (flag words, note). The model is
         the project's choice, stated in the profile per tool and stage (`model.<tool>.<stage>`, falling back to
@@ -1620,9 +1715,10 @@ class Run:
         if tool not in TOOL:
             err(f"factory: unknown tool '{tool}'")
             return 2
+        level, _note = self.effort_choice(tool, stage)
         variables, argv = tool_command(TOOL[tool], model=flags.split(" ", 1)[1] if flags else "",
                                        writable=self.add_dirs, readable=self.read_dirs,
-                                       protected=self.protected_dirs(), allowed=self.allowed_commands())
+                                       protected=self.protected_dirs(), allowed=self.allowed_commands(), effort=level)
         env.update(variables)
         return self.tool_process(spawnable(argv + [prompt]), env, raw, stdin=subprocess.DEVNULL, stage=stage)
 
@@ -1699,7 +1795,7 @@ class Run:
             return False
 
     def kind_of(self, story):
-        """`story`, `journey` or `adopt` — `story` for one that cannot be read."""
+        """`story`, `journey`, `adopt` or `task` — `story` for one that cannot be read."""
         self.profile()
         try:
             return story_kind(read_front_matter(find_story(place("epics"), story))[0])
@@ -1978,7 +2074,9 @@ class Run:
         self.record("--record-base", story)
         self.snapshot(story, f"before-{window}")
         self.owned("start", window, story)
-        self.journal_line(story, f"{utc()}\tstage-start\t{window}\ttool={tool}\tstages={','.join(stages)}")
+        tool = self.tool_for(window, tool)
+        self.journal_line(story, f"{utc()}\tstage-start\t{window}\ttool={tool}{self.effort_field(tool, window)}"
+                                 f"\tstages={','.join(stages)}")
         began = time.time()
         invoked = self.invoke(tool, prompt, raw, window, story)
         self.record_usage(story, window, tool, raw, int(time.time() - began))
@@ -2002,6 +2100,7 @@ class Run:
         """Plan to tidy in one tool process, so each stage builds on what the one before read. The process runs
         each stage's gate itself; the runner checks, not believes: the red proof must exist and the gates after
         it run again here."""
+        tool = self.tool_for("builder", tool)
         stages, on = [], False
         for st in SHARED_WINDOWS["builder"]:
             on = on or st == start
@@ -2113,7 +2212,8 @@ class Run:
                     f"skill to the diff {self.evidence(story)}/story.diff, as *A review the runner started* in the "
                     f"rules every stage holds to says. Its input beside the diff: the story and its epic (epic.md "
                     f"beside it), {self.runs}/{story}/plan.md, tests.md and build.md, and the product and technical "
-                    f"description. Your report: {folder}/{name}.md. {self.where_things_are(tool, story)}")
+                    f"description. Your report: {folder}/{name}.md. "
+                    f"{self.where_things_are(self.tool_for(f'review:{name}', tool), story)}")
                    for name, carrier in zip(names, carriers)]
         if dry:
             for name, prompt in zip(names, prompts):
@@ -2133,12 +2233,14 @@ class Run:
             os.remove(old)
         began = time.time()
         raws = {}
+        used = {name: self.tool_for(f"review:{name}", tool) for name in names}
         for name in names:
-            self.journal_line(story, f"{utc()}\tstage-start\treview:{name}\ttool={tool}")
+            self.journal_line(story, f"{utc()}\tstage-start\treview:{name}\ttool={used[name]}"
+                                     f"{self.effort_field(used[name], f'review:{name}')}")
             raws[name] = f"{self.evidence(story)}/review-{name}.{utc('%H%M%S')}.out"
         codes = {}
         threads = [threading.Thread(target=lambda n=name, p=prompt: codes.__setitem__(
-                       n, self.invoke(tool, p, raws[n], f"review:{n}", story, count=False)))
+                       n, self.invoke(used[n], p, raws[n], f"review:{n}", story, count=False)))
                    for name, prompt in zip(names, prompts)]
         for thread in threads:
             thread.start()
@@ -2147,7 +2249,7 @@ class Run:
         self.invocations += len(names)
         seconds = int(time.time() - began)
         for name in names:
-            self.record_usage(story, f"review:{name}", tool, raws[name], seconds)
+            self.record_usage(story, f"review:{name}", used[name], raws[name], seconds)
             self.journal_line(story, f"{utc()}\tstage-end\treview:{name}\texit={self.exit_field(codes.get(name, 1))}")
             if not os.path.isfile(f"{folder}/{name}.md"):
                 err(f"factory: the {name} reviewer left no {folder}/{name}.md — the judge runs that pass itself and says so.")
@@ -2187,6 +2289,7 @@ class Run:
     def run_shared_verifier(self, story, tool, dry, kind="story"):
         """Judge and document in one tool process — never one process with the builder: the judge's independence
         from the builder is the point of the split."""
+        tool = self.tool_for("verifier", tool)
         stages = [st for st in SHARED_WINDOWS["verifier"] if self.kind_runs(kind, st)]
         document = (f" The skeleton: `{self.py} {self.cli_rel()} --document-skeleton {story}`; the document gate: "
                     f"`{self.py} {self.gate_rel} --story {story} --stage document --brief`.") if kind != "adopt" else ""
@@ -2268,7 +2371,8 @@ class Run:
                 continue
             row = STAGE[stage]
             if not self.kind_runs(kind, stage):
-                why = {"journey": "a journey builds nothing", "adopt": "an adopted story is not built"}.get(
+                why = {"journey": "a journey builds nothing", "adopt": "an adopted story is not built",
+                       "task": "a task has no criterion to test — the existing suite is its evidence"}.get(
                     kind, f"a {kind} story does not run it")
                 print(f"── stage {stage}  (skipped: {why})")
                 continue
@@ -2320,10 +2424,11 @@ class Run:
                     print(f"factory: {artefact} already holds — the document stage is not invoked again.")
                     ran.append("document")
                     break
-            print(f"── stage {stage}  (tool: {tool}, fresh context)")
-            self.tool_in_flight = tool
+            unit_tool = self.tool_for(stage, tool)      # the run's tool stays `tool`: every stage resolves its own
+            print(f"── stage {stage}  (tool: {unit_tool}, fresh context)")
+            self.tool_in_flight = unit_tool
             if dry:
-                self.dry_lines(tool, self.prompt_for(stage, story), stage)
+                self.dry_lines(unit_tool, self.prompt_for(stage, story), stage)
             else:
                 code = self.run_one(story, tool, stage, dry)
                 if code is not None:
@@ -2399,6 +2504,7 @@ class Run:
             os.makedirs(evidence, exist_ok=True)
             shutil.copy(artefact, f"{evidence}/{stage}.skeleton")
         self.snapshot(story, f"before-{stage}")
+        tool = self.tool_for(stage, tool)
         flags, note = self.model_choice(tool, stage)
         requested = self.model_key(tool, stage)
         model_fields = (f"\tmodel_requested={requested}" if requested else "") + \
@@ -2406,7 +2512,8 @@ class Run:
         if note:
             print(f"factory: model.{tool}.{stage}: {requested} — {note}")
         self.owned("start", stage, story)
-        self.journal_line(story, f"{stage_started}\tstage-start\t{stage}\ttool={tool}{model_fields}")
+        self.journal_line(story, f"{stage_started}\tstage-start\t{stage}\ttool={tool}{model_fields}"
+                                 f"{self.effort_field(tool, stage)}")
         raw = f"{evidence}/{stage}.{utc('%H%M%S')}.out"
         began = time.time()
         invoked = self.invoke(tool, self.prompt_for(stage, story), raw, stage, story)
@@ -2479,6 +2586,7 @@ class Run:
                     raw = f"{self.evidence(story)}/integrate.{utc('%H%M%S')}.out"
                     began = time.time()
                     self.owned("start", "integrate", story)
+                    tool = self.tool_for("integrate", tool)
                     self.journal_line(story, f"{utc()}\tstage-start\tintegrate\ttool={tool}")
                     code = self.invoke(tool, self.integrate_prompt(story, conflicts), raw, "integrate", story)
                     self.record_usage(story, "integrate", tool, raw, int(time.time() - began))
@@ -2504,7 +2612,10 @@ class Run:
             finally:
                 self.drop_lock()
             if code == 0:
-                print(f"factory: story {story} is integrated and delivered.")
+                if claim_config_here(self.home):
+                    print(f"factory: story {story} is delivered on its branch and published — a person merges it.")
+                else:
+                    print(f"factory: story {story} is integrated and delivered.")
                 return 0
             report = f"{self.runs}/{story}/.gate-integrate.txt"
             fails = [line for line in (read_text(report).splitlines() if os.path.isfile(report) else [])
@@ -2541,6 +2652,17 @@ class Run:
         with the run folder named absolutely and FACTORY_HOME naming this checkout; delivered, its worktree goes."""
         if dry:
             return self.run_stages(story, tool, start, dry)
+        # Several factories on one backlog (WP-93): the story is claimed on the remote before anything runs —
+        # another factory's claim skips it, a branch rule or an id collision stops for a person.
+        if claim_config_here(self.home):
+            code, out = self.cli("--claim-story", story, quiet=False)
+            if out:
+                print(out)
+            if code == 3:
+                return 0
+            if code != 0:
+                err(f"factory: {story} could not be claimed — needs-human (see above).")
+                return 1
         self.take_lock()
         try:
             _, out = self.cli("--worktree-prepare", story, quiet=False)
@@ -2629,6 +2751,11 @@ class Run:
             if os.path.isfile(self.stop_file):
                 print(f"factory: {self.stop_file} exists — the backlog run stops here. Remove it to run again.")
                 return 0
+            if claim_config_here(self.home) and not dry:
+                _c, claimed = self.cli("--claims-refresh", quiet=False)
+                if claimed and claimed != getattr(self, "last_claims", ""):
+                    print(claimed)
+                self.last_claims = claimed
             code, out = self.cli("--schedule", "--slots", "1", merge=True)
             if code != 0:
                 err(out)
@@ -2736,7 +2863,7 @@ class Run:
 
         def pump():
             for line in iter(process.stdout.readline, b""):
-                sys.stdout.write(f"[{story}] {line.decode('utf-8', errors='replace').rstrip(chr(10))}\n")
+                sys.stdout.write(f"[{story}] {line.decode('utf-8', errors='replace').rstrip(chr(13) + chr(10))}\n")
                 sys.stdout.flush()
         thread = threading.Thread(target=pump, daemon=True)
         thread.start()
@@ -2932,8 +3059,32 @@ def run_main(argv):
             run.release()
 
 
+def tools_ready(run, tool):
+    """Before the first stage: every tool the run may start is a known record whose binary is on the PATH — a run
+    that could not start a later unit's tool starts nothing. A `tool.<stage>` for a stage a shared process carries
+    is named: the unit is the process (`tool.builder`, `tool.verifier`), never a silent split."""
+    if os.environ.get("FACTORY_TOOL_CMD") or tool == "stand-in":
+        return 0
+    missing = [t for t in run.tools_of_run(tool) if t not in TOOL or not shutil.which(TOOL[t].command[0])]
+    if missing:
+        err(f"factory: the run would start {', '.join(missing)}, which "
+            + ("is" if len(missing) == 1 else "are") + " no known tool or not on the PATH (tool / tool.<unit> in the "
+            "profile) — nothing started")
+        return 2
+    shared = {stage for stages in SHARED_WINDOWS.values() for stage in stages}
+    for key in sorted(run.profile()):
+        if key.startswith("tool.") and key[5:] in shared:
+            print(f"factory: note — `{key}` names a stage a shared process carries; the unit is the process "
+                  f"(`tool.builder` / `tool.verifier`), with `stages: separate` each stage is one")
+    return 0
+
+
 def run_start(run, options):
     tool = options.tool
+    if not options.dry_run and not options.child:
+        code = tools_ready(run, tool or "stand-in")
+        if code:
+            return code
     if options.child:
         run.gate_first = False
         return run.run_story(options.story, tool or "stand-in", options.start, False)

@@ -37,7 +37,8 @@ Checks by stage:
            every test command the profile's `required:` names, run whole (the stories before this
            one still hold), plus every extra check the profile declares for this stage
            (architecture suite, formatter, …). Without the record the green run is skipped and named, never taken as
-           evidence: a runner that matched no test at all exits 0 exactly like a passing one
+           evidence: a runner that matched no test at all exits 0 exactly like a passing one. Every file
+           the plan's `## Files` says `new` is there, every one it says `removed` is gone (contract 22)
     tidy   the same as build: nothing the refactor touched may have changed what the code does
     document  every path, file and identifier the document stage claims actually exists, every
            row of its glossary table names where its definition came from, and every term the plan
@@ -78,22 +79,25 @@ import time
 import typing
 from datetime import datetime, timezone
 from .contract import (
+    DEFAULTS, METHOD_PROFILE, PLACES, read_flat,
     runs_top,
-    ANSWER_FIELDS, answered_decisions, CONTEXT_MAP_CANDIDATES, CONTRACT, CRITERION, decisions_store, delivered_on,
+    ALL_KINDS, ANSWER_FIELDS, answered_decisions, CONTEXT_MAP_CANDIDATES, CONTRACT, CRITERION, decisions_store, delivered_on,
     DOC_BUDGET_BYTES, duplicate_ids, epic_dependency_problem, EPIC_FIELDS, EPIC_FILE, epic_folder, evidence_dir,
-    factory_home, file_digest, find_story, findings_path, GateError, git, HAPPY_MARK, HOME_VARIABLE, in_worktree,
-    INSTRUCTION_FILES, is_delivered, JOURNEY_ORDER, layout_hint, location, MAPPING_ROW, MAX_ROUNDS, needs_human_ids,
+    factory_home, file_digest, find_story, findings_path, findings_rows, GateError, git, HAPPY_MARK, HOME_VARIABLE, in_worktree,
+    INSTRUCTION_FILES, is_delivered, JOURNEY_ORDER, order_for, layout_hint, location, MAPPING_ROW, MAX_ROUNDS, needs_human_ids,
     NOTHING, place, PROFILE_FILE, read_decisions, read_front_matter, read_profile, read_text, record_findings,
     record_path, records_of, resolve_profile, resume_stage, section_of, SELECTOR, set_places, SHARED_WINDOWS, shown,
     STAGE, STAGE_CHECKS, STAGE_FILES, STAGE_ORDER, STAGES, stamp_applied, story_digest, story_files, story_folder,
-    story_id_of, story_kind, TECH_HEADINGS, unknown_profile_keys, VERSION)
+    story_id_of, story_kind, TECH_HEADINGS, TESTED_KINDS, unknown_profile_keys, VERSION)
 from .reports import (
     clock_marker, display_name_of, executed_tests, fill, normalise, outcome_for, read_scenarios, report_state,
     reported_names, reports_from_this_run, SENTINEL, unescape_literal)
 from .spec import (
-    delta_problems, derived, journeys_path, merge, read_delta, read_spec, render_spec, scenarios_path, story_entries,
+    context_files, delta_problems, derived, feature_name, journeys_path, merge, merge_context, placement_problems,
+    lint_context, read_context, read_delta, read_spec, render_spec, scenarios_path, story_entries,
     touches)
 from .state import (
+    claim_config_here, PUBLISHED, remote_main,
     ACCEPTANCE_KIND, acceptance_mode, acceptance_records, acceptance_state, accepted, backlog_digest,
     current_stage_files, git_tree, is_acceptance, journal_append, last_ended, listed_files, MODEL_PROCESSES,
     NOT_OBSERVED, observe_writes, OWNED_CHANGED, owned_changes, owned_end, PRODUCT_HEADINGS, record_base,
@@ -128,8 +132,9 @@ STEP = re.compile(r"^-\s+(Given|When|Then|And|But)\b\s*(.*)$")
 SCENARIO_KEY = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
-def criteria_of(story_path, body):
-    """Acceptance criteria as (key, text) pairs, read from the `## Acceptance criteria` section.
+def criteria_of(story_path, body, front=None):
+    """Acceptance criteria as (key, text) pairs, read from the `## Acceptance criteria` section — none for a task
+    (`front` given), which has no criterion.
 
     Two forms, mixable. The line form: one `- <key>: <text>` line per criterion. The scenario form:
     `#### <key>` followed by `- Given / When / Then / And / But` steps, optionally grouped under
@@ -222,6 +227,8 @@ def criteria_of(story_path, body):
                    f"lowercase, hyphenated key that names the behaviour, or a `#### <key>` scenario")
     close_scenario()
     close_rule()
+    if not found and story_kind(front or {}) == "task":
+        return []
     if not found:
         raise GateError(
             f"{story_path}: no acceptance criteria — add a `## Acceptance criteria` "
@@ -241,6 +248,95 @@ def contract_of(profile):
     return int(declared) if declared.isdigit() else CONTRACT
 
 
+#: A finding row a task closes: `<story>#<n>`, the row's number in that story's findings.md.
+CLOSES_ROW = re.compile(r"^([A-Za-z0-9][\w.-]*)#(\d+)$")
+
+
+def closes_of(front):
+    """The finding rows a task names under `closes:` — a list, or one line of comma-separated rows."""
+    value = front.get("closes") or []
+    items = value if isinstance(value, list) else str(value).strip("[] ").split(",")
+    return [str(item).strip() for item in items if str(item).strip()]
+
+
+def closed_rows(row_id):
+    """(findings file, row) for `<story>#<n>` — the file None where the story or the row is not there."""
+    match = CLOSES_ROW.match(row_id)
+    if not match:
+        return None, None
+    try:
+        story_path = find_story(place("epics"), match.group(1))
+    except GateError:
+        return None, None
+    if not story_path:
+        return None, None
+    path = findings_path(story_path)
+    row = next((r for r in findings_rows(path) if r[0] == match.group(2)), None)
+    return (path if row else None), row
+
+
+def check_task(result, story_path, front, body):
+    """WP-106: a task changes nothing an actor sees — so it has no criterion (a criterion is behaviour, and behaviour
+    is a story's, with a red test), and the finding rows it closes are there and open."""
+    criteria = criteria_of(story_path, body, front)
+    if criteria:
+        result.fail("task", f"{shown(story_path)}: a `kind: task` has acceptance criteria ({', '.join(key for key, _text in criteria)}) "
+                            f"— a criterion is behaviour; behaviour that changes is a story with a red test")
+        return
+    wrong = []
+    for row_id in closes_of(front):
+        path, row = closed_rows(row_id)
+        if not path:
+            wrong.append(f"{row_id} (no such finding row)")
+        elif row[6] != "open":
+            wrong.append(f"{row_id} ({row[6]} already)")
+    if wrong:
+        result.fail("task", f"`closes:` names rows a task cannot close: {'; '.join(wrong)} — `<story>#<n>`, an open row "
+                            f"of that story's findings.md")
+    else:
+        closes = closes_of(front)
+        result.ok("task", "a task: no criterion, the existing suite is its evidence"
+                          + (f"; closes {', '.join(closes)}" if closes else ""))
+
+
+def check_task_suites(result, profile, cwd):
+    """At a task's build and tidy gates: every test command the profile declares, run whole — nothing a test was
+    written for, so everything the stories before delivered has to hold."""
+    keys = [key for key in test_command_keys(profile) if profile.get(key)]
+    if not keys:
+        result.fail("suite", "a task proves itself on the existing suite, and the stack profile declares no test "
+                             "command — declare `test:` (and its siblings)")
+        return
+    seen = set()
+    for key in keys:
+        if profile[key] in seen:
+            continue
+        seen.add(profile[key])
+        before = len(result.entries)
+        run_test_command(result, cwd, profile, key, profile[key], True, True)
+        result.entries[before:] = [(state, "suite", message) for state, _check, message in result.entries[before:]]
+
+
+def close_findings(result, front):
+    """At a task's delivery: the rows it names under `closes:` set to `done` in their findings.md."""
+    closed = []
+    for row_id in closes_of(front):
+        path, row = closed_rows(row_id)
+        if not path or row[6] != "open":
+            continue
+        lines = read_text(path).splitlines()
+        for index, line in enumerate(lines):
+            cells = [c.strip() for c in line.strip().strip("|").split("|")] if line.startswith("|") else []
+            if len(cells) == 7 and cells[0] == row[0]:
+                cells[6] = "done"
+                lines[index] = "| " + " | ".join(cells) + " |"
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+        closed.append(row_id)
+    if closed:
+        result.ok("findings", f"closed {', '.join(closed)} — set to done in their findings.md")
+
+
 def check_happy_path(result, story_path, front, body, profile):
     """Contract 9: exactly one happy path per story, marked in the backlog — never picked by a plan. A
     journey has none: it is a guard, not acceptance, and it names the stories it depends on."""
@@ -253,6 +349,9 @@ def check_happy_path(result, story_path, front, body, profile):
                                    f"under `depends_on:` — it becomes ready when they are delivered")
         else:
             result.ok("journey", f"journey over {', '.join(needs) if isinstance(needs, list) else needs}")
+        return
+    if story_kind(front) == "task":
+        check_task(result, story_path, front, body)
         return
     if story_kind(front) == "adopt":
         result.skip("happy-path", "an adopted story tests nothing new — the levels are the existing tests'")
@@ -330,6 +429,14 @@ def plan_levels(runs, story_id):
     """The keys the plan gave `browser-only` — a `Then` only a browser can observe, with its reason."""
     text = read_text(os.path.join(runs, story_id, "plan.md")) if os.path.isfile(os.path.join(runs, story_id, "plan.md")) else ""
     return {m.group(1) for m in re.finditer(r"^\s*-\s+([a-z0-9][a-z0-9-]*)\b[^\n]*level:\s*browser-only", text, re.M)}
+
+
+def adapter_level_keys(runs, story_id):
+    """The keys the plan gave `integration (adapter: …)` — an incoming adapter's translation, tested against a stubbed
+    input port by design (stage-test)."""
+    text = read_text(os.path.join(runs, story_id, "plan.md")) if os.path.isfile(os.path.join(runs, story_id, "plan.md")) else ""
+    return {m.group(1) for m in re.finditer(r"^\s*-\s+([a-z0-9][a-z0-9-]*)\b[^\n]*level:\s*integration\s*\(\s*adapter",
+                                            text, re.M)}
 
 
 def check_plan_levels(result, runs, story_id):
@@ -655,6 +762,96 @@ def check_levels(result, profile, runs, story_id, front, body, mapping, located)
                               "`level: browser-only (<why>)`: " + "; ".join(wrong))
     else:
         result.ok("levels", "every end-user test belongs to the happy path or a browser-only scenario")
+
+
+#: How a test declares a test double, across the common stacks — the profile's `mockMarkers:` (comma-separated)
+#: replaces the list for a stack it does not cover.
+MOCK_MARKERS = ("@MockitoBean", "@MockBean", "@Mock", "Mockito.mock(", "mock(", "new Mock<", "Substitute.For<",
+                "A.Fake<", "MagicMock(", "create_autospec(", "jest.mock(", "vi.mock(")
+
+
+def mocked_ports(text, markers, suffixes):
+    """The port types a test file declares as doubles: a marker followed, within the same declaration, by a type
+    whose name ends in one of `suffixes`."""
+    found = set()
+    for marker in markers:
+        for match in re.finditer(re.escape(marker), text):
+            window = text[match.end():match.end() + 160].split(";", 1)[0].split("{", 1)[0]
+            for name in re.findall(r"\b([A-Z]\w*)\b", window):
+                if name.endswith(tuple(suffixes)):
+                    found.add(name)
+    return sorted(found)
+
+
+def check_tests_real(result, profile, cwd, mapping, located, front, runs, story_id):
+    """WP-100: a criterion's test above the unit level runs through the real use case — it does not declare a double
+    of an input port. "The list stays unchanged" checked against a stub proves the stub. A unit test mocks what it
+    wants; an output port (a repository, a gateway) may be replaced at any level; and a criterion the plan gave
+    `integration (adapter: …)` tests the adapter's translation against a stubbed input port by design."""
+    if not mapping or not located:
+        return
+    adapter_keys = adapter_level_keys(runs, story_id)
+    named = str(profile.get("mockMarkers", "")).strip()
+    markers = [m.strip() for m in named.split(",") if m.strip()] if named else list(MOCK_MARKERS)
+    method = read_flat(os.path.join(factory_home() or cwd, METHOD_PROFILE))
+    suffixes = {str(method.get("input_port_suffix", "")).strip() or "InputPort", "UseCase"}
+    wrong = []
+    for key, selectors in sorted(mapping.items()):
+        if key in adapter_keys:
+            continue
+        for selector in selectors:
+            path = located.get(selector)
+            if not path or command_for(profile, path)[0] in (None, "test"):
+                continue
+            with contextlib.suppress(OSError, UnicodeDecodeError):
+                with open(os.path.join(cwd, path), encoding="utf-8") as handle:
+                    doubles = mocked_ports(handle.read(), markers, suffixes)
+                if doubles:
+                    wrong.append(f"{key} ({path}: {', '.join(doubles)})")
+    if wrong:
+        result.fail("tests-real", "a criterion's integrated or end-to-end test replaces the input port it is about — "
+                                  "it proves the double, not the use case; let it run through the real one and "
+                                  "replace only what lies outside (a repository, an external system): "
+                                  + "; ".join(sorted(set(wrong))))
+    else:
+        result.ok("tests-real", "every integrated and end-to-end test of a criterion runs through the real input port")
+
+
+#: A plan's `## Files` line that says what becomes of the file: `- `<path>` — changes: new …` or `… changes: removed …`.
+PLAN_FILE_LINE = re.compile(r"^\s*[-*]\s*`([^`]+)`\s*[—–-]+\s*changes:\s*(new|removed)\b", re.I)
+
+
+def check_plan_files(result, cwd, runs, story_id):
+    """WP-102: the plan's file list holds after the build — a file it says `removed` is gone, one it says `new` is
+    there. A deviation the build's file explains is still one: the plan changes, or the file does. The bench's
+    build left a placeholder the plan removed, wrote "deleting a file is outside this session's shell", and the
+    judge let it pass as a minor."""
+    path = os.path.join(runs, story_id, "plan.md")
+    lines = section_of(read_text(path), "files") if os.path.isfile(path) else None
+    if lines is None:
+        result.skip("plan-files", "plan.md has no `## Files` section — nothing to hold the build to")
+        return
+    wrong, held = [], 0
+    for line in lines:
+        match = PLAN_FILE_LINE.match(line)
+        if not match or any(c in match.group(1) for c in "*<>{}"):
+            continue
+        rel, change = match.group(1).strip(), match.group(2).lower()
+        present = os.path.lexists(os.path.join(cwd, rel))
+        if change == "removed" and present:
+            wrong.append(f"{rel} (planned removed, still there)")
+        elif change == "new" and not present:
+            wrong.append(f"{rel} (planned new, not there)")
+        else:
+            held += 1
+    if wrong:
+        result.fail("plan-files", "the build did not do what the plan's `## Files` says — remove the file "
+                                  "(`git rm`) or write it, or plan again; an explanation in build.md does not "
+                                  "change the plan: " + "; ".join(wrong))
+    elif held:
+        result.ok("plan-files", f"every file the plan says new or removed is so ({held})")
+    else:
+        result.ok("plan-files", "the plan's `## Files` names no file new or removed")
 
 
 BREAK_IGNORE = (".git", "build", "bin", "obj", "target", "node_modules", ".gradle", "TestResults", "out")
@@ -1190,7 +1387,7 @@ def check_backlog(cwd, epics, profile, only=None):
             if not context:
                 result.fail("story", f"{path}: front matter has no `context:` — a story names the bounded "
                                      f"context it changes")
-            criteria = criteria_of(path, body)
+            criteria = criteria_of(path, body, front)
             if context:
                 result.ok("story", f"{label} in context {context} with {len(criteria)} criterion(s)")
                 check_context_map(result, cwd, profile, context)
@@ -1579,7 +1776,8 @@ def check_exists(result, cwd, mapping):
                 found = module_files(by_path, cls, method)
                 shape = "the module path"
             if found:
-                located[selector] = os.path.relpath(found[0], cwd)
+                # with `/` on every platform: the changed-files records and the hand-overs name paths that way
+                located[selector] = os.path.relpath(found[0], cwd).replace(os.sep, "/")
                 result.ok(
                     "tests-exist",
                     f"{selector} found in {located[selector]} ({key}, by {shape})",
@@ -1908,7 +2106,7 @@ def check_story_pass(result, runs, story_id, story_path, front):
     """The document gate delivers a story, so it asks what delivery rests on: every stage of this pass
     wrote its file after the one before it, the judge passed it, and the story is the one that was planned.
     A document written for an earlier pass, or over a judge who asked for changes, delivers nothing."""
-    order = JOURNEY_ORDER if story_kind(front) == "journey" else STAGE_ORDER
+    order = order_for(story_kind(front))
     folder = os.path.join(runs, story_id)
     texts = current_stage_files(runs, story_id, order)
     gaps = [f"{STAGE_FILES[s]} ({'written for an earlier pass' if os.path.isfile(os.path.join(folder, STAGE_FILES[s])) else 'missing'})"
@@ -3401,6 +3599,7 @@ class Check(typing.NamedTuple):
     stages: tuple
     needs_process: bool
     unrun: typing.Callable       #: the check names a refusal before it leaves unproven
+    kinds: tuple                 #: the story kinds it holds (a task has no criteria, so none of their checks)
 
 
 #: The checks a gate run holds a story to, in this order: every check that needs no process first, and a refusal among
@@ -3409,9 +3608,9 @@ class Check(typing.NamedTuple):
 CHECKS = []
 
 
-def check(name, stages=None, needs_process=False, unrun=None):
+def check(name, stages=None, needs_process=False, unrun=None, kinds=ALL_KINDS):
     """Register a check against the stage table: `stages` names rows (None — every gated stage) or is a predicate
-    over a row."""
+    over a row; `kinds` the story kinds it holds."""
     if stages is None:
         chosen = tuple(s.name for s in STAGES if s.gated)
     elif callable(stages):
@@ -3423,13 +3622,13 @@ def check(name, stages=None, needs_process=False, unrun=None):
         chosen = tuple(stages)
 
     def register(function):
-        CHECKS.append(Check(name, function, chosen, needs_process, unrun or (lambda run: [name])))
+        CHECKS.append(Check(name, function, chosen, needs_process, unrun or (lambda run: [name]), tuple(kinds)))
         return function
     return register
 
 
 def run_checks(run):
-    chosen = [c for c in CHECKS if run.stage.name in c.stages]
+    chosen = [c for c in CHECKS if run.stage.name in c.stages and run.kind in c.kinds]
     for entry in (c for c in chosen if not c.needs_process):
         entry.run(run)
     process = [c for c in chosen if c.needs_process]
@@ -3467,7 +3666,7 @@ def _epic(run):
     check_epic(run.result, run.story_path, run.front, run.args.epics)
 
 
-@check("outcome", stages=("plan",))
+@check("outcome", stages=("plan",), kinds=TESTED_KINDS)
 def _outcome_named(run):
     check_outcome_named(run.result, run.profile, run.story_path, run.front, run.args.epics)
 
@@ -3532,11 +3731,16 @@ def _adopt(run):
 def _integrated(run):
     check_integrated(run.result, run.cwd, run.runs, run.story_id)
     # The spec as the main line holds it now: a key another story added meanwhile, or a criterion it changed, is a
-    # question to a person — never a silent last-writer-wins (WP-98 R3).
-    check_spec_delta(run.result, run.cwd, run.runs, run.story_id, run.story_path, run.front, run.body)
+    # question to a person — never a silent last-writer-wins (WP-98 R3). With claims on a remote the main line is the
+    # remote's, merged into this worktree (WP-93 D).
+    if claim_config_here(factory_home() or run.cwd):
+        with places_in(run.cwd):
+            check_spec_delta(run.result, run.cwd, run.runs, run.story_id, run.story_path, run.front, run.body)
+    else:
+        check_spec_delta(run.result, run.cwd, run.runs, run.story_id, run.story_path, run.front, run.body)
 
 
-@check("tests-mapped", stages=lambda s: s.tested)
+@check("tests-mapped", stages=lambda s: s.tested, kinds=TESTED_KINDS)
 def _mapping(run):
     run.mapping = check_mapping(run.result, run.runs, run.story_id, run.criteria)
     run.located = check_exists(run.result, run.cwd, run.mapping)
@@ -3565,9 +3769,21 @@ def _spec_delta(run):
     check_spec_delta(run.result, run.cwd, run.runs, run.story_id, run.story_path, run.front, run.body)
 
 
-@check("spec-tests", stages=("document", "adopt", "integrate"))
+@check("spec-tests", stages=("document", "adopt", "integrate"), kinds=TESTED_KINDS)
 def _spec_tests(run):
     check_spec_tests(run.result, run.cwd, run.runs, run.story_id, run.front, run.mapping)
+
+
+@check("tests-real", stages=("test", "adopt"))
+def _tests_real(run):
+    if contract_of(run.profile) >= 21:
+        check_tests_real(run.result, run.profile, run.cwd, run.mapping, run.located, run.front, run.runs, run.story_id)
+
+
+@check("plan-files", stages=("build",))
+def _plan_files(run):
+    if contract_of(run.profile) >= 22:
+        check_plan_files(run.result, run.cwd, run.runs, run.story_id)
 
 
 @check("size", stages=lambda s: s.sizes)
@@ -3575,7 +3791,7 @@ def _size(run):
     check_size(run.result, run.runs, run.story_id, run.stage.sizes, len(run.criteria))
 
 
-@check("red-proof", stages=lambda s: s.lists)
+@check("red-proof", stages=lambda s: s.lists, kinds=TESTED_KINDS)
 def _red_proof(run):
     # the red proof compares digests, so it belongs here, before any process
     ledger = red_ledger_path(run.runs, run.story_id)
@@ -3596,6 +3812,9 @@ def whole_suites(run):
        unrun=lambda run: ["compiles", f"tests-{run.expected}"] + (["suite"] if run.stage.suite else []))
 def _tests(run):
     check_compiles(run.result, run.profile, run.cwd)
+    if run.kind == "task":
+        check_task_suites(run.result, run.profile, run.cwd)
+        return
     run.whole_runs = check_test_state(run.result, run.profile, run.cwd, run.mapping, run.expected, run.located,
                                       run.runs, run.story_id, guard=run.kind in ("journey", "adopt"),
                                       whole_for=whole_suites(run), red_proof=False)
@@ -3643,7 +3862,7 @@ def _document_passed(run):
         result.note("story", f"{story_id} is delivered — checked, its marks are left as they are")
         return
     try:
-        if acceptance_applies(run.cwd, run.runs, story_id, run.profile):
+        if run.kind != "task" and acceptance_applies(run.cwd, run.runs, story_id, run.profile):
             verdict, rid = acceptance_state(run.cwd, story_id, story_path)
             if verdict == "accepted":
                 result.ok("acceptance", f"{rid} accepted — the story is delivered")
@@ -3689,7 +3908,11 @@ def _adopt_passed(run):
 
 @on_pass("integrate")
 def _integrate_passed(run):
-    integrate_into_home(run.result, run.cwd, run.story_path, run.story_id, run.front, run.runs)
+    config = claim_config_here(factory_home() or run.cwd)
+    if config:
+        publish_story(run.result, run.cwd, run.story_path, run.story_id, run.front, run.runs, config)
+    else:
+        integrate_into_home(run.result, run.cwd, run.story_path, run.story_id, run.front, run.runs)
 
 
 def main(argv):
@@ -3827,7 +4050,7 @@ def main(argv):
         front, body = read_front_matter(story_path)
         story_id = str(front.get("id") or os.path.basename(story_folder(story_path)))
         observe_writes(args.runs, story_id)
-        criteria = criteria_of(story_path, body)
+        criteria = criteria_of(story_path, body, front)
         run = GateRun(result=result, args=args, cwd=cwd, runs=args.runs, stage=STAGE[args.stage], story_id=story_id,
                       story_path=story_path, front=front, body=body, criteria=criteria,
                       profile=read_profile(resolve_profile(args.profile, cwd)))
@@ -3851,6 +4074,14 @@ def integration_target(runs, story_id):
     return read_text(path).strip() if os.path.isfile(path) else ""
 
 
+def merge_target(runs, story_id, cwd=None):
+    """What a story integrates against: the main checkout's branch — or, where the profile claims stories on a remote
+    (WP-93), that branch as the remote has it, fetched: the main line every factory shares."""
+    target = integration_target(runs, story_id)
+    config = claim_config_here(factory_home() or cwd)
+    return remote_main(config["remote"], target) if config and target else target
+
+
 def check_integrated(result, cwd, runs, story_id):
     """The story's branch carries the main line and nothing half-merged: no unmerged path, no conflict marker in
     a file the story's commit changes, and its commit sits on the target's tip — a target that moved since is
@@ -3859,11 +4090,11 @@ def check_integrated(result, cwd, runs, story_id):
         result.fail("integrate", f"the integrate gate runs in the story's worktree, with {HOME_VARIABLE} naming the "
                                  f"main checkout — the runner's integrate step starts it")
         return
-    target = integration_target(runs, story_id)
-    if not target:
+    if not integration_target(runs, story_id):
         result.fail("integrate", f"no target recorded for {story_id} (<evidence>/<story>/target) — the worktree was not made "
                                  f"by the runner")
         return
+    target = merge_target(runs, story_id, cwd)
     code, unmerged = git(cwd, "diff", "--name-only", "--diff-filter=U")
     if unmerged.strip():
         result.fail("conflicts", "unmerged: " + ", ".join(unmerged.split()) + " — the merge is not finished")
@@ -3911,11 +4142,25 @@ def integrate_into_home(result, cwd, story_path, story_id, front, runs):
 
 
 def spec_target(front):
-    """The spec file a story changes: its context's `scenarios.md`, or `journeys.md` for a journey item; None for a
-    story that names no context."""
+    """The spec file a story changes: its feature's `scenarios.md` under its context — the context's own for a story
+    without `feature:` —, or `journeys.md` for a journey item; None for a story that names no context."""
     if story_kind(front) == "journey":
         return journeys_path()
-    return scenarios_path(front["context"]) if str(front.get("context", "")).strip() else None
+    return scenarios_path(front["context"], front.get("feature")) if str(front.get("context", "")).strip() else None
+
+
+def story_spec(front):
+    """(the file the story's criteria go to, what the spec holds where the story's keys are looked up — every
+    criterion of the context with its feature —, the context's features, the story's feature). A journey's is
+    `journeys.md` alone."""
+    target = spec_target(front)
+    if not target:
+        return None, [], set(), ""
+    if story_kind(front) == "journey":
+        return target, [dict(item, feature="") for item in read_spec(target)[1]], set(), ""
+    context = front["context"]
+    return (target, read_context(context), {name for name, _p in context_files(context) if name},
+            feature_name(front.get("feature")))
 
 
 def spec_backing(cwd, story_id, body, story_path=None):
@@ -3940,12 +4185,14 @@ def check_spec_delta(result, cwd, runs, story_id, story_path, front, body):
     plan_path = os.path.join(runs, story_id, "plan.md")
     if not os.path.isfile(plan_path):
         return
-    target = spec_target(front)
+    target, spec, features, feature = story_spec(front)
     if not target:
         return
-    story, (_pre, spec) = story_entries(body), read_spec(target)
+    story = story_entries(body)
     delta = read_delta(read_text(plan_path))
     problems = delta_problems(story, spec, delta)
+    if story_kind(front) != "journey":
+        problems += placement_problems(story, spec, delta, feature, features)
     if problems:
         result.fail("spec-delta", f"{shown(plan_path)} `## Spec delta` against {shown(target)}: " + "; ".join(problems))
         return
@@ -3979,11 +4226,13 @@ def check_spec_tests(result, cwd, runs, story_id, front, mapping):
     """WP-98 M3: every `Test:` line of the spec the story changes still names a test that is there — one this story
     renamed or moved is named under tests.md's `## Moved tests` (or is the story's own criterion), and the gate
     writes the new selector at delivery."""
-    target = spec_target(front)
+    target, spec, _features, _feature = story_spec(front)
     if not target:
         return
-    _pre, spec = read_spec(target)
-    own = set(mapping or {}) | set(moved_tests(runs, story_id))
+    plan = os.path.join(runs, story_id, "plan.md")
+    # a criterion the story takes away takes its test with it (WP-106 B): the delta's removals are not asked for
+    removed = set(read_delta(read_text(plan))["removes"]) if os.path.isfile(plan) else set()
+    own = set(mapping or {}) | set(moved_tests(runs, story_id)) | removed
     wanted = {item["key"]: item["tests"] for item in spec if item["tests"] and item["key"] not in own}
     if not wanted:
         return
@@ -3998,13 +4247,14 @@ def check_spec_tests(result, cwd, runs, story_id, front, mapping):
 
 
 def merge_spec(result, story_path, story_id, front, runs):
-    """The delivering gate's merge (WP-98): the story's delta into its spec, by key, with the test lines from tests.md
-    — deterministic, nothing a stage writes. The story is history from here on."""
+    """The delivering gate's merge (WP-98, WP-105): the story's delta into its context's spec, by key, with the test
+    lines from tests.md — the story's criteria into its feature's file, a moved one out of the file it stood in, a
+    removed one gone wherever it stood; a feature file left without a criterion goes. Deterministic, nothing a stage
+    writes. The story is history from here on."""
     _front, body = read_front_matter(story_path)
-    target = spec_target(front)
+    target, spec, _features, feature = story_spec(front)
     if not target:
         return
-    preamble, spec = read_spec(target)
     plan = os.path.join(runs, story_id, "plan.md")
     delta = read_delta(read_text(plan)) if os.path.isfile(plan) else read_delta("")
     try:
@@ -4014,19 +4264,101 @@ def merge_spec(result, story_path, story_id, front, runs):
     tests = dict(mapping)
     tests.update(moved_tests(runs, story_id))
     story = story_entries(body)
-    merged = merge(spec, story, delta, tests)
-    for item in merged:
-        if item["key"] in tests and item["key"] not in {s["key"] for s in story}:
-            item["tests"] = tests[item["key"]]
-    title = "Journeys" if story_kind(front) == "journey" else str(front.get("context", "")).strip() or "Spec"
-    os.makedirs(os.path.dirname(target), exist_ok=True)
-    text = render_spec(preamble, merged, title)
-    with open(target, "w", encoding="utf-8") as handle:
-        handle.write(text)
+    context = str(front.get("context", "")).strip()
+    journey = story_kind(front) == "journey"
+    merged = {"": merge(spec, story, delta, tests)} if journey else merge_context(spec, story, delta, tests, feature)
+    for entries in merged.values():
+        for item in entries:
+            if item["key"] in tests and item["key"] not in {s["key"] for s in story}:
+                item["tests"] = tests[item["key"]]
+    if not journey:
+        # The spec as it will stand, checked before a line is written: a delivery never leaves it malformed.
+        texts = {name: render_spec(read_spec(scenarios_path(context, name))[0], entries,
+                                   f"{context} — {name}" if name else context)
+                 for name, entries in merged.items() if entries or not name}
+        problems = lint_context(context, texts)
+        if problems:
+            result.fail("spec", f"the spec after this story would not hold its shape: {'; '.join(problems[:6])}"
+                                + (" …" if len(problems) > 6 else "") + " — nothing written")
+            return False
+    written = []
+    for name, entries in sorted(merged.items()):
+        path = target if journey else scenarios_path(context, name)
+        if not entries and name:
+            if os.path.isfile(path):
+                os.remove(path)
+                with contextlib.suppress(OSError):
+                    os.rmdir(os.path.dirname(path))
+                written.append(f"{shown(path)} (gone — no criterion left)")
+            continue
+        if not entries and not os.path.isfile(path):
+            continue
+        preamble = read_spec(path)[0]
+        title = "Journeys" if journey else f"{context} — {name}" if name else context or "Spec"
+        text = render_spec(preamble, entries, title)
+        if not os.path.isfile(path) or read_text(path) != text:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(text)
+            written.append(shown(path))
     found = derived(story, spec)
-    result.ok("spec", f"{shown(target)}: {sum(v == 'adds' for v in found.values())} added, "
+    result.ok("spec", f"{', '.join(written) or shown(target)}: {sum(v == 'adds' for v in found.values())} added, "
                       f"{sum(v == 'changes' for v in found.values())} changed, {len(delta['removes'])} removed"
+                      + (f", {len(delta['moves'])} moved" if delta["moves"] else "")
                       + (f", {len(delta['renames'])} rule(s) renamed" if delta["renames"] else ""))
+
+
+@contextlib.contextmanager
+def places_in(cwd):
+    """The epics and the spec read from this worktree, not the main checkout — where the remote main line is what
+    the story was merged with (WP-93 D)."""
+    home = factory_home() or cwd
+    saved = dict(PLACES)
+    try:
+        for key in ("epics", "spec"):
+            own = saved.get(key) or DEFAULTS[key]
+            PLACES[key] = os.path.join(cwd, os.path.relpath(own if os.path.isabs(own) else os.path.join(home, own), home))
+        yield
+    finally:
+        PLACES.clear()
+        PLACES.update(saved)
+
+
+def publish_story(result, cwd, story_path, story_id, front, runs, config):
+    """WP-93 D: the factory never moves `main`. The delivering function writes into the story's worktree — the story's
+    three state lines and the merge into the spec —, the squashed commit takes them, and the story branch is pushed
+    with a lease on what this factory pushed last: only its own claim can be overwritten. A person merges it; the
+    remote main line then says delivered for every factory."""
+    home = factory_home() or cwd
+    rel_story = os.path.relpath(story_path, home)
+    local_story = os.path.join(cwd, rel_story)
+    spec_rel = os.path.relpath(place("spec") if os.path.isabs(place("spec")) else os.path.join(home, place("spec")), home)
+    with places_in(cwd):
+        before = read_front_matter(local_story)[0]
+        mark = os.path.join(evidence_dir(runs, story_id), "published-status")
+        with open(mark, "w", encoding="utf-8") as handle:
+            handle.write(str(before.get("status", "")).strip() + "\n")
+        deliver(result, local_story, story_id, before, runs)
+    git(cwd, "add", "-A", "--", spec_rel, os.path.dirname(rel_story))
+    if git(cwd, *(["-c", "user.name=dca-factory", "-c", "user.email=dca-factory@localhost"]
+                  if not git(cwd, "config", "user.email")[1].strip() else []),
+           "commit", "--amend", "--no-edit", "--no-verify", "--quiet")[0] != 0:
+        result.fail("published", f"the delivery could not be added to {story_id}'s commit")
+        return
+    remote, prefix = config["remote"], config["prefix"]
+    ref = f"refs/heads/{prefix}{story_id}"
+    known = git(cwd, "rev-parse", "--verify", "--quiet", f"refs/remotes/{remote}/{prefix}{story_id}")
+    lease = f"--force-with-lease={ref}:{known[1].strip()}" if known[0] == 0 else f"--force-with-lease={ref}:"
+    code, out = git(cwd, "push", "--porcelain", lease, remote, f"HEAD:{ref}")
+    if code != 0:
+        result.fail("published", f"{remote} refused {prefix}{story_id}: {' '.join(out.split())[:300]} — another "
+                                 f"factory's commit is there, or a branch rule; needs-human")
+        return
+    head = git(cwd, "rev-parse", "HEAD")[1].strip()
+    with open(os.path.join(evidence_dir(runs, story_id), PUBLISHED), "w", encoding="utf-8") as handle:
+        handle.write(head + "\n")
+    result.ok("published", f"{prefix}{story_id} on {remote} carries the story as one commit {head[:12]} — delivered on "
+                           f"its branch; `main` is not moved: a person merges it (merge request or push)")
 
 
 def deliver(result, story_path, story_id, front, runs):
@@ -4034,7 +4366,10 @@ def deliver(result, story_path, story_id, front, runs):
     worktree, the integrate gate all call it. One end state: built or adopted, the story reads `status:
     delivered`, `delivered:` and `delivered_by: gate`; an adopted story is no longer `adopted` (that was its
     input: "the code exists, check it"). The judge's confirmed defects that did not block are kept beside it."""
-    merge_spec(result, story_path, story_id, front, runs)
+    if story_kind(front) == "task":
+        close_findings(result, front)
+    elif merge_spec(result, story_path, story_id, front, runs) is False:
+        return
     stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     write_story_fields(story_path, status="delivered", delivered=stamp, delivered_by="gate")
     result.ok("delivered", f"{shown(story_path)} carries `status: delivered`, `delivered: {stamp}`, "

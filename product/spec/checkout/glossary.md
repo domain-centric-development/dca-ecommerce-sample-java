@@ -538,3 +538,12 @@ request carries the checkout session's total amount and currency to the provider
 payments where no provider address is configured. The provider's contract has no confirmation or cancellation;
 the REST adapter answers both with `REFUSED` without asking the provider.
 
+## Features
+
+The parts of the context's behaviour its people name; each groups what holds in a folder of the living spec.
+
+### Payment (payment)
+
+**Definition:** Paying for the checkout's order through a payment provider — authorized, refused or unanswered.
+
+**Type:** Feature
