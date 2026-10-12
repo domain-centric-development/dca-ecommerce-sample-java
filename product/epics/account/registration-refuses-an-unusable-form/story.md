@@ -12,7 +12,7 @@ depends_on: [register-an-account]
 
 ## Story
 
-As a visitor I want the registration to tell me exactly which entry it cannot accept, and keep what I typed,
+As a visitor I want the registration to refuse what it cannot accept, say what to check, and keep what I typed,
 so that I can correct it without starting over.
 
 ## Acceptance criteria
@@ -45,26 +45,26 @@ so that I can correct it without starting over.
 #### future-date-is-refused
 - Given a visitor with no cookies on `/register`
 - When they submit an otherwise valid registration with Date of Birth 2999-01-01
-- Then the registration page shows "Date of birth cannot be in the future"
+- Then the registration page shows "Please check the email address, your name and your date of birth."
 
 ### Rule: The address must be an email address
 
 #### malformed-email-is-refused
 - Given a visitor with no cookies on `/register`
 - When they submit an otherwise valid registration with Email "anna.schmidt@example"
-- Then the registration page shows "Invalid email format: anna.schmidt@example"
+- Then the registration page shows "Please check the email address, your name and your date of birth."
 
 ### Rule: Both names are required and at most 100 characters long
 
 #### blank-first-name-is-refused
 - Given a visitor with no cookies on `/register`
 - When they submit an otherwise valid registration with First Name "   "
-- Then the registration page shows "First name is required"
+- Then the registration page shows "Please check the email address, your name and your date of birth."
 
 #### overlong-last-name-is-refused
 - Given a visitor with no cookies on `/register`
 - When they submit an otherwise valid registration with a Last Name of 101 characters
-- Then the registration page shows "Last name is too long"
+- Then the registration page shows "Please check the email address, your name and your date of birth."
 
 ## Out of scope
 

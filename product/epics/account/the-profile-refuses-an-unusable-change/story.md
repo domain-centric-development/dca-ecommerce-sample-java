@@ -32,7 +32,7 @@ it, so that my details are never half changed.
 #### malformed-address-is-refused-in-the-profile
 - Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`
 - When they save Email "anna.meyer@example"
-- Then the profile shows "Invalid email format: anna.meyer@example"
+- Then the profile shows "Please enter a valid email address."
 
 #### missing-date-is-refused-in-the-profile
 - Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`

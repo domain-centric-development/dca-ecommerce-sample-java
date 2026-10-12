@@ -25,7 +25,7 @@ what went wrong instead of a broken cart.
 - Given Ada's open, empty cart
 - When her client sends `POST /api/carts/<cartId>/items` with `{"productId":"no-such-product","quantity":1}`
 - Then the shop answers 404 with an `application/problem+json` body
-- And its title is "Article not available" and its detail "Product not found: no-such-product"
+- And its title is "Article not available" and its detail "There is no article for product no-such-product."
 
 ### Rule: No more can be added than is in stock
 

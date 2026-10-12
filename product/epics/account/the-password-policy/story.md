@@ -24,19 +24,19 @@ password breaks, so that my account is protected and I know how to fix my choice
 #### short-new-password-is-refused
 - Given the customer "anna.schmidt@example.com" with password "Secret123" is logged in on `/account/change-password`
 - When they submit Current Password "Secret123" and "Abc1234" as new and confirmed password
-- Then the page shows "Password must be at least 8 characters long"
+- Then the page shows "Password must be at least 8 characters long."
 
 #### length-is-checked-before-the-characters
 - Given the customer "anna.schmidt@example.com" with password "Secret123" is logged in on `/account/change-password`
 - When they submit Current Password "Secret123" and "abcdefg" as new and confirmed password
-- Then the page shows "Password must be at least 8 characters long"
+- Then the page shows "Password must be at least 8 characters long."
 
 ### Rule: At most 72 bytes in UTF-8
 
 #### password-over-72-bytes-is-refused
 - Given the customer "anna.schmidt@example.com" with password "Secret123" is logged in on `/account/change-password`
 - When they submit Current Password "Secret123" and, as new and confirmed password, "Aa1" followed by 35 times "ä" (38 characters, 73 bytes)
-- Then the page shows "Password must not be longer than 72 bytes (UTF-8 encoded)"
+- Then the page shows "Password must not be longer than 72 bytes."
 
 #### password-of-72-bytes-is-accepted
 - Given the customer "anna.schmidt@example.com" with password "Secret123" is logged in on `/account/change-password`
@@ -48,18 +48,18 @@ password breaks, so that my account is protected and I know how to fix my choice
 #### password-without-uppercase-is-refused
 - Given a visitor with no cookies on `/register`
 - When they submit a registration for "anna.schmidt@example.com" with Password and Confirm Password "secret123"
-- Then the registration page shows "Password must contain at least one uppercase letter"
+- Then the registration page shows "Password must contain an uppercase letter."
 - And the visitor is not logged in
 
 #### new-password-without-lowercase-is-refused
 - Given the customer "anna.schmidt@example.com" with password "Secret123" is logged in on `/account/change-password`
 - When they submit Current Password "Secret123" and "SECRET123" as new and confirmed password
-- Then the page shows "Password must contain at least one lowercase letter"
+- Then the page shows "Password must contain a lowercase letter."
 
 #### new-password-without-digit-is-refused
 - Given the customer "anna.schmidt@example.com" with password "Secret123" is logged in on `/account/change-password`
 - When they submit Current Password "Secret123" and "SecretPass" as new and confirmed password
-- Then the page shows "Password must contain at least one digit"
+- Then the page shows "Password must contain a digit."
 
 ## Out of scope
 

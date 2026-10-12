@@ -1,7 +1,9 @@
 ---
 id: availability-shown
 epic: availability
-status: adopted
+status: delivered
+delivered: 2026-10-12T20:56:08Z
+delivered_by: gate
 context: inventory
 feature: availability
 title: Availability shown

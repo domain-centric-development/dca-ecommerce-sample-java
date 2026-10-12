@@ -50,7 +50,7 @@ that I can go on to review the order.
 #### unknown-provider-is-refused
 - Given a guest on the payment step
 - When the payment form is sent with the provider "paypal"
-- Then the payment step opens again with the error "Payment provider not found: paypal"
+- Then the payment step opens again with the error "This way to pay is not offered. Please choose another one."
 
 ## Out of scope
 

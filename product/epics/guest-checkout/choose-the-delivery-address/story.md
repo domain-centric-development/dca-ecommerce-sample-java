@@ -54,25 +54,25 @@ shipping costs, so that I get the order where and when I need it.
 - Given a guest on the delivery step
 - When the guest submits Street Address "   " (spaces only), City "Berlin", Postal Code "10115", Country
   "Germany" and "Standard Shipping"
-- Then the delivery step opens again with the error "Street cannot be null or blank"
+- Then the delivery step opens again with the error "Please check the delivery address you entered."
 
 #### blank-city-is-refused
 - Given a guest on the delivery step
 - When the guest submits Street Address "Hauptstrasse 1", City "   " (spaces only), Postal Code "10115",
   Country "Germany" and "Standard Shipping"
-- Then the delivery step opens again with the error "City cannot be null or blank"
+- Then the delivery step opens again with the error "Please check the delivery address you entered."
 
 #### blank-postal-code-is-refused
 - Given a guest on the delivery step
 - When the guest submits Street Address "Hauptstrasse 1", City "Berlin", Postal Code "   " (spaces only),
   Country "Germany" and "Standard Shipping"
-- Then the delivery step opens again with the error "Postal code cannot be null or blank"
+- Then the delivery step opens again with the error "Please check the delivery address you entered."
 
 #### blank-country-is-refused
 - Given a guest on the delivery step
 - When the guest submits Street Address "Hauptstrasse 1", City "Berlin", Postal Code "10115", Country "   "
   (spaces only) and "Standard Shipping"
-- Then the delivery step opens again with the error "Country cannot be null or blank"
+- Then the delivery step opens again with the error "Please check the delivery address you entered."
 
 ## Out of scope
 

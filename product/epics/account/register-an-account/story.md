@@ -1,7 +1,9 @@
 ---
 id: register-an-account
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-12T21:01:59Z
+delivered_by: gate
 context: account
 feature: registration
 title: Register an account

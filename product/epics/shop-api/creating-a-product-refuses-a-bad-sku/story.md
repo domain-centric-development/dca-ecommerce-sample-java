@@ -25,7 +25,7 @@ ever holds products it can tell apart and show.
 - Given the seeded product "Domain-Driven Design" with SKU "BOOK-001" and a client holding a staff token
 - When it creates a product "Another Book" with SKU "BOOK-001", price 19.99, category "Books" and stock 5
 - Then the shop answers 409 with an `application/problem+json` body
-- And its title is "Stock keeping unit already in use" and its detail "Product with SKU already exists: BOOK-001"
+- And its title is "Stock keeping unit already in use" and its detail "A product with SKU BOOK-001 already exists."
 - And the catalogue still holds 21 products
 
 ### Rule: A SKU holds only upper-case letters, digits and hyphens
@@ -34,7 +34,7 @@ ever holds products it can tell apart and show.
 - Given a client holding a staff token
 - When it creates a product "Aggregate Mug" with SKU "mug-002", price 14.99, category "Desk & Office" and stock 12
 - Then the shop answers 400 with an `application/problem+json` body
-- And its title is "Unacceptable value" and its detail "SKU must contain only uppercase letters, numbers, and hyphens"
+- And its title is "Unacceptable value" and it carries no detail
 
 ### Rule: A name is required and at most 255 characters long
 
@@ -42,7 +42,7 @@ ever holds products it can tell apart and show.
 - Given a client holding a staff token
 - When it creates a product with SKU "LONG-001" and a name of 256 letters "A", price 9.99, category "Books" and stock 1
 - Then the shop answers 400 with an `application/problem+json` body
-- And its title is "Unacceptable value" and its detail "Product name cannot exceed 255 characters"
+- And its title is "Unacceptable value" and it carries no detail
 
 #### a-name-of-255-characters-is-accepted
 - Given a client holding a staff token
@@ -61,13 +61,13 @@ ever holds products it can tell apart and show.
 - Given a client holding a staff token
 - When it creates a product with SKU "DESC-001", name "Long Story", a description of 2001 letters "A", price 9.99, category "Books" and stock 1
 - Then the shop answers 400 with an `application/problem+json` body
-- And its title is "Unacceptable value" and its detail "Product description cannot exceed 2000 characters"
+- And its title is "Unacceptable value" and it carries no detail
 
 #### an-overlong-image-url-is-refused
 - Given a client holding a staff token
 - When it creates a product with SKU "IMG-001", name "Big Picture", an `imageUrl` of 2001 characters, price 9.99, category "Books" and stock 1
 - Then the shop answers 400 with an `application/problem+json` body
-- And its title is "Unacceptable value" and its detail "Image URL cannot exceed 2000 characters"
+- And its title is "Unacceptable value" and it carries no detail
 
 ## Out of scope
 

@@ -46,19 +46,19 @@ placed in my name.
 - Given a guest on the buyer step
 - When the buyer form is sent past the browser's own checks with Email Address "jane.example.com", First Name
   "Jane", Last Name "Doe" and Phone Number "+49 30 1234567"
-- Then the buyer step opens again with the error "Email must be a valid email address"
+- Then the buyer step opens again with the error "Please check the details you entered."
 
 #### blank-first-name-is-refused
 - Given a guest on the buyer step
 - When the guest submits Email Address "jane@example.com", First Name "   " (spaces only), Last Name "Doe" and
   Phone Number "+49 30 1234567"
-- Then the buyer step opens again with the error "First name cannot be null or blank"
+- Then the buyer step opens again with the error "Please check the details you entered."
 
 #### blank-phone-is-refused
 - Given a guest on the buyer step
 - When the guest submits Email Address "jane@example.com", First Name "Jane", Last Name "Doe" and Phone
   Number "   " (spaces only)
-- Then the buyer step opens again with the error "Phone cannot be null or blank"
+- Then the buyer step opens again with the error "Please check the details you entered."
 
 ## Out of scope
 

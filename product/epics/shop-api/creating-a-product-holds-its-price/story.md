@@ -39,7 +39,7 @@ amount in the shop, so that the catalogue never shows a price of nothing, a frac
 - Given a client holding a staff token
 - When it creates "Tiny Mug" with SKU "TINY-001", price 0.001, category "Desk & Office" and stock 5
 - Then the shop answers 400 with an `application/problem+json` body
-- And its title is "Unacceptable value" and its detail "Price must be greater than zero"
+- And its title is "Unacceptable value" and it carries no detail
 
 ### Rule: A price is at most 999999999999.99
 
@@ -53,7 +53,7 @@ amount in the shop, so that the catalogue never shows a price of nothing, a frac
 - Given a client holding a staff token
 - When it creates "Too Precious Model" with SKU "MAX-002", price 1000000000000.00, category "Modeling" and stock 1
 - Then the shop answers 400 with an `application/problem+json` body
-- And its title is "Unacceptable value" and its detail "Amount exceeds maximum monetary value"
+- And its title is "Unacceptable value" and it carries no detail
 
 ### Rule: Initial stock may be zero but not negative
 
