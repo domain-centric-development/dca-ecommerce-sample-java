@@ -55,6 +55,78 @@ class CartPageIntegrationTest {
     assertThat(cart.selectFirst(".cart__header-title").text()).isEqualTo("Shopping Cart");
   }
 
+  @Test
+  @DisplayName("Above the lines the cart counts its lines and its units")
+  void cartCountsItsLinesAndItsUnits() throws Exception {
+    addToCart("Domain-Driven Design");
+    addToCart("Domain-Driven Design");
+    addToCart("Clean Architecture");
+
+    final Document cart = page("/cart");
+
+    assertThat(cart.select(".cart__summary-row span").eachText())
+        .containsExactly("Total Items: 2", "Total Quantity: 3");
+  }
+
+  @Test
+  @DisplayName("Below the lines the cart shows the subtotal")
+  void cartShowsTheSubtotalBelowTheLines() throws Exception {
+    addToCart("Domain-Driven Design");
+    addToCart("Domain-Driven Design");
+    addToCart("Clean Architecture");
+
+    final Document cart = page("/cart");
+
+    assertThat(totalRow(cart, "Subtotal")).isEqualTo("149.97 EUR");
+  }
+
+  @Test
+  @DisplayName("Below the subtotal the cart shows the VAT it contains")
+  void cartShowsTheVatItsSubtotalContains() throws Exception {
+    addToCart("Domain-Driven Design");
+    addToCart("Domain-Driven Design");
+    addToCart("Clean Architecture");
+
+    final Document cart = page("/cart");
+
+    assertThat(totalRow(cart, "incl. VAT")).isEqualTo("23.94 EUR");
+  }
+
+  @Test
+  @DisplayName("The VAT the cart shows is rounded half up to the cent")
+  void containedVatIsRoundedHalfUpToTheCent() throws Exception {
+    addToCart("Domain-Driven Design");
+
+    final Document cart = page("/cart");
+
+    assertThat(totalRow(cart, "Subtotal")).isEqualTo("54.99 EUR");
+    assertThat(totalRow(cart, "incl. VAT")).isEqualTo("8.78 EUR");
+  }
+
+  @Test
+  @DisplayName("An empty cart invites the visitor to browse")
+  void emptyCartInvitesTheVisitorToBrowse() throws Exception {
+    final Document cart = page("/cart");
+
+    assertThat(cart.selectFirst(".empty-state__title").text()).isEqualTo("Your cart is empty");
+    assertThat(cart.selectFirst(".empty-state__message").text())
+        .isEqualTo("Browse our products to find something you'll love.");
+    final Element browse = cart.selectFirst("[data-test=cart-browse-link]");
+    assertThat(browse.text()).isEqualTo("Browse Products");
+    assertThat(browse.attr("href")).isEqualTo("/products");
+    assertThat(cart.select("[data-test=cart-item], .cart__summary, .cart__total")).isEmpty();
+  }
+
+  /** The amount a row below the cart's lines shows beside its label. */
+  private static String totalRow(final Document cart, final String label) {
+    return cart.select(".cart__total-row").stream()
+        .filter(row -> label.equals(row.child(0).text()))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("no total row " + label))
+        .child(1)
+        .text();
+  }
+
   /** Presses "Add to Cart" on the product page of the product with that name. */
   private void addToCart(final String productName) throws Exception {
     final Element card =

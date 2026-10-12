@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 /**
@@ -79,6 +80,49 @@ public class CartPage extends BasePage {
               + item.locator("[data-test='cart-item-quantity']").textContent().trim());
     }
     return lines;
+  }
+
+  /**
+   * The value a cart line shows under a label, such as "Unit Price".
+   *
+   * @param productName the name the line shows
+   * @param label the label as the page shows it
+   * @return the value text, trimmed
+   */
+  public String lineValue(String productName, String label) {
+    return lineOf(productName)
+        .locator(".cart__item-row")
+        .filter(
+            new Locator.FilterOptions()
+                .setHas(
+                    page.locator(".cart__item-label", new Page.LocatorOptions().setHasText(label))))
+        .locator("span")
+        .last()
+        .textContent()
+        .strip();
+  }
+
+  /**
+   * Whether a cart line shows a product image the browser loaded.
+   *
+   * @param productName the name the line shows
+   * @return true if the line's image is visible and loaded
+   */
+  public boolean showsImageOf(String productName) {
+    Locator image = lineOf(productName).locator(".cart__item-image img");
+    return image.count() == 1
+        && image.isVisible()
+        && (Boolean) image.evaluate("e => e.complete && e.naturalWidth > 0");
+  }
+
+  private Locator lineOf(String productName) {
+    return page.locator("[data-test='" + CART_ITEM + "']")
+        .filter(
+            new Locator.FilterOptions()
+                .setHas(
+                    page.locator(
+                        "[data-test='cart-item-name']",
+                        new Page.LocatorOptions().setHasText(productName))));
   }
 
   /**
