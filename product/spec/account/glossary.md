@@ -343,3 +343,30 @@ about all accounts, which only the store can make.
 
 **Type:** Use-case failure (`UseCaseException`) · **Related terms:** `AccountRepository`
 
+## Features
+
+The parts of the context's behaviour its people name; each groups what holds in a folder of the living spec.
+
+### Registration (registration)
+
+**Definition:** Becoming a customer: one account per address, an unusable form refused.
+
+**Type:** Feature
+
+### Sign-in (signin)
+
+**Definition:** Logging in and out, a failed login that gives nothing away, the token the API trusts.
+
+**Type:** Feature
+
+### Profile (profile)
+
+**Definition:** The account overview and keeping its details up to date.
+
+**Type:** Feature
+
+### Password (password)
+
+**Definition:** Changing the password, and the policy it is held to.
+
+**Type:** Feature

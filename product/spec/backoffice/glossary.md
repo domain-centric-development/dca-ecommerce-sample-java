@@ -145,6 +145,28 @@ event type, time range, completion status.
 
 ---
 
+## Features
+
+The parts of the context's behaviour its people name; each groups what holds in a folder of the living spec.
+
+### Back-office access (access)
+
+**Definition:** The operator's login; the back office closed to everyone else.
+
+**Type:** Feature
+
+### Event log (eventlog)
+
+**Definition:** Every delivery of an event, listed, with its payload.
+
+**Type:** Feature
+
+### Redelivery (redelivery)
+
+**Definition:** Failed deliveries retried on their own, and by an operator.
+
+**Type:** Feature
+
 ## Open Questions
 
 - Should the term **Event Publication** be promoted to the Shared Kernel

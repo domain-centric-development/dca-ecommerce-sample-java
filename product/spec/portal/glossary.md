@@ -75,3 +75,9 @@ The parts of the context's behaviour its people name; each groups what holds in 
 **Definition:** The shop's home page: what the shop is, why to shop here, and the way on to the products and the cart.
 
 **Type:** Feature
+
+### Appearance (appearance)
+
+**Definition:** How the shop looks and moves: the look a visitor chooses, the transitions between pages, a phone's width.
+
+**Type:** Feature

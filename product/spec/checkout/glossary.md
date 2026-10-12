@@ -547,3 +547,39 @@ The parts of the context's behaviour its people name; each groups what holds in 
 **Definition:** Paying for the checkout's order through a payment provider — authorized, refused or unanswered.
 
 **Type:** Feature
+
+### Checkout session (session)
+
+**Definition:** Starting the checkout from the cart; nobody reaches another visitor's checkout.
+
+**Type:** Feature
+
+### Buyer details (buyerdetails)
+
+**Definition:** Who is buying — entered by a guest, known for a signed-in customer.
+
+**Type:** Feature
+
+### Delivery (delivery)
+
+**Definition:** The delivery address and the shipping method.
+
+**Type:** Feature
+
+### Ordering (ordering)
+
+**Definition:** The review, placing the order and the confirmation — checked against what can still be sold.
+
+**Type:** Feature
+
+### Checkout steps (steps)
+
+**Definition:** The steps' progress and order, going back to an earlier step, and the way to the cart without an open checkout.
+
+**Type:** Feature
+
+### Cart sync (cartsync)
+
+**Definition:** The open checkout keeps its order while the cart changes.
+
+**Type:** Feature

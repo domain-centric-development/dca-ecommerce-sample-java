@@ -219,3 +219,9 @@ The parts of the context's behaviour its people name; each groups what holds in 
 **Definition:** Products the shop puts in front of a visitor to discover — the slider below the home page's hero.
 
 **Type:** Feature
+
+### Assortment (assortment)
+
+**Definition:** Staff adding products to the range, held to the rules for the SKU, the name, the price and the stock.
+
+**Type:** Feature

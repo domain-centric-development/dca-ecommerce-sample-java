@@ -355,3 +355,24 @@ for. Read through the cart's own port, so a statement about the request rather t
 
 **Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ArticleDataPort`, `CartArticle`
 
+## Features
+
+The parts of the context's behaviour its people name; each groups what holds in a folder of the living spec.
+
+### Shopping (shopping)
+
+**Definition:** Filling the cart and reading it — on the cart page, in the header basket and through the API, with the stock warnings.
+
+**Type:** Feature
+
+### Cart recovery (cartrecovery)
+
+**Definition:** The guest cart brought along at login, and two carts brought together.
+
+**Type:** Feature
+
+### Cart checkout (cartcheckout)
+
+**Definition:** The cart after an order: it keeps what was not bought.
+
+**Type:** Feature
