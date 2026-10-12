@@ -45,6 +45,39 @@ public final class ShopUnderTest {
   }
 
   /**
+   * A second shop, started in this process on a free port with settings of its own — for a scenario
+   * about how the shop was started rather than what it does. Its own in-memory database, so it
+   * shares no rows with the shop the suite drives; the caller closes it.
+   *
+   * @param database the name of its in-memory database
+   * @param settings the settings it starts with, as {@code key=value}
+   * @return the started shop
+   */
+  public static ConfigurableApplicationContext startedWith(
+      final String database, final String... settings) {
+    final String[] arguments = new String[settings.length + 2];
+    arguments[0] = "--server.port=0";
+    arguments[1] =
+        "--spring.datasource.url=jdbc:h2:mem:"
+            + database
+            + ";DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
+    for (int i = 0; i < settings.length; i++) {
+      arguments[i + 2] = "--" + settings[i];
+    }
+    return SpringApplication.run(EcommerceSampleApplication.class, arguments);
+  }
+
+  /**
+   * The address of a shop this suite started, reached as {@code localhost}.
+   *
+   * @param started the shop
+   * @return its base URL
+   */
+  public static String baseUrlOf(final ConfigurableApplicationContext started) {
+    return "http://localhost:" + started.getEnvironment().getProperty("local.server.port");
+  }
+
+  /**
    * The payment provider the shop pays through, for a test to arrange its answers and count its
    * requests. Empty when the suite drives a shop started elsewhere: that shop's provider is not the
    * suite's to control.
