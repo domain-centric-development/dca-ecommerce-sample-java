@@ -11,6 +11,8 @@ public class SiteHeader extends BasePage {
 
   private static final String SITE_HEADER = "site-header";
   private static final String LOGO = "site-logo";
+  private static final String GREETING = "user-greeting";
+  private static final String REGISTER_LINK = "nav-register-link";
 
   /**
    * Creates the header of the page that is open and waits for it.
@@ -29,6 +31,25 @@ public class SiteHeader extends BasePage {
    */
   public String logoName() {
     return page.locator("[data-test='" + LOGO + "']").textContent().replaceAll("\\s+", "");
+  }
+
+  /**
+   * The greeting a logged-in visitor reads.
+   *
+   * @return the greeting text
+   */
+  public String greeting() {
+    waitFor(GREETING);
+    return page.locator("[data-test='" + GREETING + "']").textContent().strip();
+  }
+
+  /**
+   * Whether the header offers the "Register" link.
+   *
+   * @return true when the link is shown
+   */
+  public boolean offersRegister() {
+    return exists(REGISTER_LINK);
   }
 
   /**
