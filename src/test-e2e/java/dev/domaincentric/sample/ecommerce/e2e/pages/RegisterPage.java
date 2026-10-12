@@ -113,6 +113,26 @@ public class RegisterPage extends BasePage {
   }
 
   /**
+   * Submits a registration the shop refuses, and waits for the form to come back with its message.
+   *
+   * @return this page, re-rendered with the refusal
+   */
+  public RegisterPage submitExpectingRefusal() {
+    click(SUBMIT_BUTTON);
+    waitFor(ERROR_MESSAGE);
+    return this;
+  }
+
+  /**
+   * The refusal the page shows above the form.
+   *
+   * @return the message text
+   */
+  public String errorMessage() {
+    return page.locator("[data-test='" + ERROR_MESSAGE + "']").textContent().strip();
+  }
+
+  /**
    * Submits a registration form the shop refuses; the registration page opens again with the
    * refusal.
    *
@@ -122,6 +142,16 @@ public class RegisterPage extends BasePage {
     click(SUBMIT_BUTTON);
     waitFor(ERROR_MESSAGE);
     return page.locator("[data-test='" + ERROR_MESSAGE + "']").textContent().strip();
+  }
+
+  /**
+   * The value a form field holds as the page shows it.
+   *
+   * @param name the name attribute of the input
+   * @return the field's current value
+   */
+  public String fieldValue(String name) {
+    return page.locator("input[name='" + name + "']").inputValue();
   }
 
   /**

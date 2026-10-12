@@ -46,6 +46,10 @@ class RegistrationPageIntegrationTest {
   private static final Pattern RETURN_URL_FIELD =
       Pattern.compile("name=\"returnUrl\" value=\"([^\"]*)\"");
 
+  /** The register page's one sentence for a value its owner, address or date refuses. */
+  private static final String CHECK_YOUR_ENTRIES =
+      "Please check the email address, your name and your date of birth.";
+
   @Autowired private MockMvc mockMvc;
 
   @Test
@@ -126,6 +130,87 @@ class RegistrationPageIntegrationTest {
 
     assertThat(element(page, "register-login-link").attribute("href"))
         .isEqualTo("/login?returnUrl=/products");
+  }
+
+  @Test
+  @DisplayName("Short password is refused")
+  void shortPasswordIsRefusedWithTheLengthRule() throws Exception {
+    final String page =
+        refusedRegistration(Map.of("password", "Sec123", "confirmPassword", "Sec123"));
+
+    assertThat(element(page, "register-error-message").text())
+        .isEqualTo("Password must be at least 8 characters");
+  }
+
+  @Test
+  @DisplayName("Unreadable date is refused")
+  void unreadableDateIsRefusedWithTheExpectedFormat() throws Exception {
+    final String page = refusedRegistration(Map.of("dateOfBirth", "17.05.1990"));
+
+    assertThat(element(page, "register-error-message").text())
+        .isEqualTo("Please enter a date like 1990-05-17");
+  }
+
+  @Test
+  @DisplayName("Future date is refused")
+  void futureDateOfBirthIsRefusedWithTheCheckYourEntriesSentence() throws Exception {
+    final String page = refusedRegistration(Map.of("dateOfBirth", "2999-01-01"));
+
+    assertThat(element(page, "register-error-message").text()).isEqualTo(CHECK_YOUR_ENTRIES);
+  }
+
+  @Test
+  @DisplayName("Malformed email is refused")
+  void malformedEmailIsRefusedWithTheCheckYourEntriesSentence() throws Exception {
+    final String page = refusedRegistration(Map.of("email", "anna.schmidt@example"));
+
+    assertThat(element(page, "register-error-message").text()).isEqualTo(CHECK_YOUR_ENTRIES);
+  }
+
+  @Test
+  @DisplayName("Blank first name is refused")
+  void blankFirstNameIsRefusedWithTheCheckYourEntriesSentence() throws Exception {
+    final String page = refusedRegistration(Map.of("firstName", "   "));
+
+    assertThat(element(page, "register-error-message").text()).isEqualTo(CHECK_YOUR_ENTRIES);
+  }
+
+  @Test
+  @DisplayName("Overlong last name is refused")
+  void overlongLastNameIsRefusedWithTheCheckYourEntriesSentence() throws Exception {
+    final String page = refusedRegistration(Map.of("lastName", "S".repeat(101)));
+
+    assertThat(element(page, "register-error-message").text()).isEqualTo(CHECK_YOUR_ENTRIES);
+  }
+
+  /**
+   * Submits an otherwise valid registration from a visitor without cookies, with the given fields
+   * replaced, and returns the page the shop answers with.
+   */
+  private String refusedRegistration(final Map<String, String> replaced) throws Exception {
+    final Map<String, Cookie> cookies = new LinkedHashMap<>();
+    final String form = page("/register", cookies);
+    final Map<String, String> fields = new LinkedHashMap<>();
+    fields.put("firstName", "Anna");
+    fields.put("lastName", "Schmidt");
+    fields.put("dateOfBirth", "1990-05-17");
+    // An address no test registers, so a refusal is never the one for a taken address.
+    fields.put("email", "refused.visitor@example.com");
+    fields.put("password", "Secret123");
+    fields.put("confirmPassword", "Secret123");
+    fields.putAll(replaced);
+
+    final var request =
+        post("/register")
+            .cookie(cookies.values().toArray(Cookie[]::new))
+            .param("_csrf", text(CSRF_FIELD, form));
+    fields.forEach(request::param);
+    return mockMvc
+        .perform(request)
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
   }
 
   /** A page opened by a visitor without cookies. */
