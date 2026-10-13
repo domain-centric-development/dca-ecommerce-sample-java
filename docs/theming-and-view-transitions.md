@@ -231,10 +231,13 @@ Because the `view-transition-name` includes the product ID, the browser matches 
 
 ### Accessibility
 
-All view transitions respect `prefers-reduced-motion`:
+All view transitions respect `prefers-reduced-motion`: the groups (the morph of a named element such as the
+product image) are stilled as well as the old and new snapshots, because the universal selector `*` matches no
+view-transition pseudo-element:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;

@@ -3862,6 +3862,8 @@ ul, ol {
     transition-duration: 0.01ms !important;
   }
 
+  /* `*` above matches no view-transition pseudo-element; the groups would still morph */
+  ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
