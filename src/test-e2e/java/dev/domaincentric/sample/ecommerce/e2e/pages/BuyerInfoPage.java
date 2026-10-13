@@ -135,6 +135,24 @@ public class BuyerInfoPage extends BasePage {
   }
 
   /**
+   * The first name input, for assertions on its value.
+   *
+   * @return the first name input's locator
+   */
+  public Locator firstNameInput() {
+    return page.locator("[data-test='buyer-firstname-input']");
+  }
+
+  /**
+   * The last name input, for assertions on its value.
+   *
+   * @return the last name input's locator
+   */
+  public Locator lastNameInput() {
+    return page.locator("[data-test='buyer-lastname-input']");
+  }
+
+  /**
    * The phone number input, for assertions on its value and the browser's verdict on it.
    *
    * @return the phone input's locator
