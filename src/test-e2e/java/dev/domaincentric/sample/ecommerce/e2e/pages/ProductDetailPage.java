@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
 import com.microsoft.playwright.Page;
+import java.time.Duration;
 
 /**
  * Page object for the product detail page.
@@ -115,6 +116,25 @@ public class ProductDetailPage extends BasePage {
         .locator(".product-detail__meta-value")
         .textContent()
         .strip();
+  }
+
+  /**
+   * The value under a meta label once it reads the expected text — the page reloaded until it does
+   * or the time is up, for a value the shop changes shortly after something happened elsewhere.
+   *
+   * @param label the label as the page shows it
+   * @param expected the value waited for
+   * @param within how long to wait for it
+   * @return the value last read, trimmed
+   */
+  public String metaValueOnceItReads(String label, String expected, Duration within) {
+    final long deadline = System.nanoTime() + within.toNanos();
+    String value = metaValue(label);
+    while (!expected.equals(value) && System.nanoTime() < deadline) {
+      page.reload();
+      value = metaValue(label);
+    }
+    return value;
   }
 
   /**
