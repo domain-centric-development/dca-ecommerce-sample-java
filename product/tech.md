@@ -23,6 +23,10 @@ database, no second store beside these.
 One Spring Boot process on port 8080, started with `./gradlew bootRun` or as a container
 (`docker compose up`).
 
+It is built to run as several instances behind a load balancer without sticky sessions: nothing a later request
+needs lives in one instance's memory. A message for the page a redirect leads to travels with the redirect, never in
+a server session; what must outlast a request lives in the database or in a cookie every instance can read.
+
 ## Integrations
 
 A payment provider over REST, outbound. A payment is `POST /payments` with the body
