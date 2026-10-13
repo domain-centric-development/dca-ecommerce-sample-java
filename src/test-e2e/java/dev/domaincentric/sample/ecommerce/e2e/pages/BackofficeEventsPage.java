@@ -57,6 +57,39 @@ public class BackofficeEventsPage extends BasePage {
   }
 
   /**
+   * Gets the path the browser shows for this page.
+   *
+   * @return the current path, without the base URL
+   */
+  public String shownPath() {
+    return getCurrentPath();
+  }
+
+  /**
+   * Gets the page heading.
+   *
+   * @return the text of the page's first-level heading
+   */
+  public String heading() {
+    return page.locator("h1").textContent().strip();
+  }
+
+  /**
+   * Gets the labels of the summary's counters, in the order the page shows them.
+   *
+   * @return one label per counter
+   */
+  public List<String> counterLabels() {
+    waitFor(EVENT_LOG_SUMMARY);
+    return page
+        .locator("[data-test='" + EVENT_LOG_SUMMARY + "'] .event-log__stat-label")
+        .allTextContents()
+        .stream()
+        .map(String::strip)
+        .toList();
+  }
+
+  /**
    * Checks if the summary section is present.
    *
    * @return true if the summary section is displayed
