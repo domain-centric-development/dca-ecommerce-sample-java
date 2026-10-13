@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 /**
@@ -107,6 +108,25 @@ public class DeliveryPage extends BasePage {
       selectFirstRadio(SHIPPING_RADIO);
     }
     return this;
+  }
+
+  /**
+   * Chooses the shipping method shown under the given name.
+   *
+   * @param name the shipping method's name, e.g. "Standard Shipping"
+   * @return this page for method chaining
+   */
+  public DeliveryPage chooseShippingMethod(String name) {
+    page.locator("[data-test='delivery-shipping-option']")
+        .filter(new Locator.FilterOptions().setHasText(name))
+        .locator("[data-test='" + SHIPPING_RADIO + "']")
+        .check();
+    return this;
+  }
+
+  /** Presses "Continue to Payment" without assuming where the shop sends the guest. */
+  public void pressContinue() {
+    click(CONTINUE_BUTTON);
   }
 
   /**
