@@ -1,6 +1,8 @@
 package dev.domaincentric.sample.ecommerce.e2e;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,13 +10,16 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Base64;
 import java.util.Locale;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
  * A partner application opens a cart for its signed-in customer and puts a product into it through
- * the running shop's JSON API. No browser: the actor is an application.
+ * the running shop's JSON API; staff see every cart in the shop. No browser: the actor is an
+ * application.
  */
 @DisplayName("Shopping Cart API E2E Tests")
 class ShoppingCartApiE2ETest {
@@ -50,6 +55,49 @@ class ShoppingCartApiE2ETest {
     assertEquals("109.98", cart.path("total").decimalValue().toPlainString());
     assertEquals("EUR", cart.path("currency").asText());
     assertEquals(1, cart.path("itemCount").asInt());
+  }
+
+  @Test
+  @DisplayName("Staff list every cart")
+  void staffSeeEveryCartWithItsOwnerStatusAndTotal() throws Exception {
+    final String ada = registeredToken();
+    final JsonNode adasCart =
+        JSON.readTree(send(authorized(ada, "/api/carts").POST(noBody())).body());
+    final String cartId = adasCart.get("cartId").asText();
+    final HttpResponse<String> added =
+        send(
+            authorized(ada, "/api/carts/" + cartId + "/items")
+                .header("Content-Type", "application/json")
+                .POST(
+                    HttpRequest.BodyPublishers.ofString(
+                        """
+                        {"productId":"%s","quantity":2}"""
+                            .formatted(productIdOf("Domain-Driven Design")))));
+    assertEquals(200, added.statusCode(), added.body());
+    final JsonNode operator = claimsOf(registeredToken());
+    final Optional<String> staff =
+        ShopUnderTest.staffTokenFor(operator.get("sub").asText(), operator.get("email").asText());
+    assumeTrue(staff.isPresent(), "a staff token is minted only by the suite's own shop");
+
+    final HttpResponse<String> response = send(authorized(staff.get(), "/api/carts").GET());
+
+    assertEquals(200, response.statusCode(), response.body());
+    JsonNode listed = null;
+    for (final JsonNode cart : JSON.readTree(response.body()).path("carts")) {
+      if (cartId.equals(cart.path("cartId").asText())) {
+        listed = cart;
+      }
+    }
+    assertNotNull(listed, "Ada's cart is among the carts");
+    assertEquals(adasCart.get("customerId").asText(), listed.path("customerId").asText());
+    assertEquals("ACTIVE", listed.path("status").asText());
+    assertEquals(1, listed.path("itemCount").asInt());
+    assertEquals("109.98", listed.path("total").decimalValue().toPlainString());
+    assertEquals("EUR", listed.path("currency").asText());
+  }
+
+  private static JsonNode claimsOf(final String jwt) throws Exception {
+    return JSON.readTree(Base64.getUrlDecoder().decode(jwt.split("\\.")[1]));
   }
 
   /** A fresh customer: a shop started elsewhere may keep accounts and carts from an earlier run. */

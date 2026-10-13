@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -9,7 +10,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +25,9 @@ import org.springframework.test.web.servlet.ResultActions;
 
 /**
  * How the cart routes of the JSON API answer a customer who opens, reads and fills their own cart:
- * the cart in the body, with its lines, total and item count. Runs against the wired application
- * with a database of its own; every test registers a customer of its own, who has no cart yet.
+ * the cart in the body, with its lines, total and item count — and how they answer a caller who
+ * reaches for a cart that is not theirs. Runs against the wired application with a database of its
+ * own; every test registers a customer of its own, who has no cart yet.
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
@@ -34,6 +39,8 @@ class ShoppingCartApiIntegrationTest {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   @Autowired private MockMvc mockMvc;
+
+  @Autowired private GetCartByIdInputPort getCartById;
 
   @Test
   @DisplayName("Opening a cart for the caller")
@@ -130,6 +137,86 @@ class ShoppingCartApiIntegrationTest {
         .andExpect(jsonPath("$.items[0].productId").value(teamTopologies))
         .andExpect(jsonPath("$.items[0].quantity").value(1))
         .andExpect(jsonPath("$.itemCount").value(1));
+  }
+
+  @Test
+  @DisplayName("Adding to another customer's cart finds nothing")
+  void addingToAnotherCustomersCartAnswersNotFoundAndLeavesItAsItWas() throws Exception {
+    final String ada = register("ada-foreign-add@example.com");
+    final JsonNode adasCart = open(ada);
+    final String cartId = adasCart.get("cartId").asText();
+    final String ddd = productIdOf("Domain-Driven Design");
+    add(ada, cartId, ddd, 2).andExpect(status().isOk());
+    final String grace = register("grace-foreign-add@example.com");
+
+    add(grace, cartId, productIdOf("Team Topologies"), 1).andExpect(status().isNotFound());
+
+    assertThat(linesOf(cartId, adasCart.get("customerId").asText())).containsExactly(ddd + " x 2");
+  }
+
+  @Test
+  @DisplayName("Removing from another customer's cart finds nothing")
+  void removingFromAnotherCustomersCartAnswersNotFoundAndLeavesItAsItWas() throws Exception {
+    final String ada = register("ada-foreign-remove@example.com");
+    final JsonNode adasCart = open(ada);
+    final String cartId = adasCart.get("cartId").asText();
+    final String ddd = productIdOf("Domain-Driven Design");
+    add(ada, cartId, ddd, 2).andExpect(status().isOk());
+    final String grace = register("grace-foreign-remove@example.com");
+
+    mockMvc
+        .perform(
+            delete("/api/carts/" + cartId + "/items/" + ddd)
+                .header("Authorization", "Bearer " + grace))
+        .andExpect(status().isNotFound());
+
+    assertThat(linesOf(cartId, adasCart.get("customerId").asText())).containsExactly(ddd + " x 2");
+  }
+
+  @Test
+  @DisplayName("Another customer's active cart finds nothing")
+  void theActiveCartOfAnotherCustomersIdAnswersNotFound() throws Exception {
+    final String adasCustomerId =
+        open(register("ada-foreign-active@example.com")).get("customerId").asText();
+    final String grace = register("grace-foreign-active@example.com");
+
+    mockMvc
+        .perform(
+            get("/api/carts/customer/" + adasCustomerId + "/active")
+                .header("Authorization", "Bearer " + grace))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  @DisplayName("Tokenless calls are strangers to each other")
+  void eachCallWithoutATokenOpensACartForANewGuest() throws Exception {
+    final JsonNode first = openWithoutToken();
+    final JsonNode second = openWithoutToken();
+
+    assertThat(second.get("customerId").asText()).isNotEqualTo(first.get("customerId").asText());
+  }
+
+  private JsonNode openWithoutToken() throws Exception {
+    final String body =
+        mockMvc
+            .perform(post("/api/carts"))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    return JSON.readTree(body);
+  }
+
+  /** The cart's lines as its owner reads them through the input port: "productId x quantity". */
+  private List<String> linesOf(final String cartId, final String customerId) {
+    return getCartById
+        .execute(new GetCartByIdQuery(cartId, customerId))
+        .cart()
+        .orElseThrow()
+        .items()
+        .stream()
+        .map(item -> item.productId().value() + " x " + item.quantity().value())
+        .toList();
   }
 
   private ResultActions add(

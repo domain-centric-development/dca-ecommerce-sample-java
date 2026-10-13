@@ -6,8 +6,12 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -113,6 +117,31 @@ public final class ShopUnderTest {
     baseUrl();
     return Optional.ofNullable(shop)
         .map(started -> started.getBean(FailingUntilFixedDelivery.class));
+  }
+
+  /**
+   * A staff token for a registered account, minted by the suite's own shop the way an operator
+   * provisioning tool would — no registration or login hands the role out. Empty when the suite
+   * drives a shop started elsewhere: that shop's signing key is not the suite's.
+   *
+   * @param userId the account's user id
+   * @param email the account's email address
+   * @return the token, or empty
+   */
+  public static synchronized Optional<String> staffTokenFor(
+      final String userId, final String email) {
+    baseUrl();
+    return Optional.ofNullable(shop)
+        .map(
+            started ->
+                started
+                    .getBean(TokenService.class)
+                    .generateRegisteredToken(
+                        UserId.of(userId),
+                        email,
+                        Set.of(
+                            IdentityProvider.Identity.ROLE_CUSTOMER,
+                            IdentityProvider.Identity.ROLE_STAFF)));
   }
 
   private static WireMockServer authorizingPaymentProvider() {
