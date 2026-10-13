@@ -66,9 +66,9 @@ type-safe wrapper around a quantity and encapsulates the invariant
 - `of(value)` — Factory
 - `value()` — Access to the raw value
 
-**Notes:** Currently `int`-based. Arithmetic operations (`plus`, `minus`) are
-currently performed outside the value object in the aggregate — a candidate
-for relocation into the value object.
+**Notes:** Currently `int`-based. Arithmetic is currently performed outside the
+value object in the aggregate — a candidate for relocation into the value
+object.
 
 ---
 
@@ -82,7 +82,7 @@ for relocation into the value object.
 
 **Related terms:** `StockLevel`
 
-**Operations:** `generate()`, `of(uuid)`
+**Operations:** `generate()`, `of(value)`
 
 ---
 
@@ -169,7 +169,28 @@ _None._
 
 ## Specifications
 
-_None._
+### StockLevelSpecification
+
+**Definition:** Common interface of all stock-related specifications; enables
+persistence adapters to translate them into queries via the Visitor pattern
+(`StockLevelSpecificationVisitor`).
+
+**Type:** Specification (Marker)
+
+### AvailableQuantityBelow
+
+**Definition:** The available quantity of a stock level is strictly below a
+given threshold — the stock level is *low*. The threshold itself is not low.
+
+**Type:** Specification
+
+**Related terms:** `StockQuantity`, Available quantity, Low stock, Low stock
+threshold
+
+**Notes:** Compares the quantity **held**; reservations do not enter the
+comparison (see Open Issues). Evaluated in memory by the default
+`StockLevelRepository.findBy`; the visitor exists so an adapter can adopt
+predicate push-down without query technology entering the domain.
 
 ---
 
@@ -194,8 +215,9 @@ catalog.
 **Related terms:** `StockLevel`, `StockReductionTrigger`
 
 **Notes:** Consumed by `inventory.adapter.incoming.event.StockInitializationEventConsumer`, which calls
-the `SetStockLevel` use case with the event's `eventId()`. Extends `IntegrationEvent`; the use case sets
-the value once per event (`ProcessedEvents`), so a redelivery does not undo a later change.
+the `SetStockLevel` use case with the event's `eventId()` (the contract extends `IntegrationEvent`). The use case
+skips an event `ProcessedEvents` has already recorded for its effect, `set-stock-level`, and records it in the
+same transaction — a redelivery cannot reset a stock level that changed since.
 
 ---
 
@@ -209,8 +231,10 @@ whose stock must go down. Owned here and implemented by Checkout's `CheckoutConf
 **Related terms:** `StockLevel`, `StockInitializationTrigger`
 
 **Notes:** Consumed by `inventory.adapter.incoming.event.StockReductionEventConsumer`, which hands all
-lines of the sale to `ReduceStock` in one command with the event's `eventId()`; the use case reduces
-them once per event (`ProcessedEvents`), so a redelivered confirmation reduces stock once. Its
+lines and the event's `eventId()` to the `ReduceStock` use case in one command (the contract extends
+`IntegrationEvent`). The use case reduces the lines in one transaction, skips an event `ProcessedEvents` has
+already recorded for its effect, `reduce-stock`, and records it there — a redelivered order never reduces stock
+twice, while `set-stock-level` for the same event id is a different effect and still happens. Its
 `OrderLineItem` wording is an open issue — see below.
 
 ---
@@ -252,35 +276,38 @@ still be reserved.
 
 ### Low stock
 
-**Definition:** A product whose available quantity is lower than a threshold
-given with the question. A property of the answer to that question, not a state
-stored on `StockLevel`.
+**Definition:** A product whose available quantity is strictly below a threshold
+given with the question — the state an operator must react to before the
+product runs out. A property of the answer to that question, not a state stored
+on `StockLevel`.
 
 **Type:** Concept
 
-**Related terms:** `GetLowStockProductsQuery`,
-`GetLowStockProductsResult.LowStockProduct`,
-`StockLevelRepository.findWithAvailableQuantityBelow`, Available quantity
+**Related terms:** `AvailableQuantityBelow`, `GetLowStockProductsQuery`,
+`GetLowStockProductsResult.LowStockProduct`, Available quantity, Low stock
+threshold
 
-**Notes:** The comparison is strict — a product at exactly the threshold is not
-low. Reserved quantity does not enter the answer; the measure is *Available
-quantity* as defined above, so a product with everything on hand reserved is
-not reported as low. Whether that is the measure the business wants is an open
-question of `project/backlog/stock-oversight/STORY-P1.md`.
+**Notes:** Realised by `AvailableQuantityBelow`; asked for through the
+`GetLowStockProducts` use case, which answers a `LowStockProduct` per stock
+level with the quantity it holds. The comparison is strict — a product at
+exactly the threshold is not low. Reserved quantity does not enter the answer,
+so a product with everything on hand reserved is not reported as low (see Open
+Issues).
 
 ---
 
 ### Low stock threshold
 
 **Definition:** The quantity asked about when looking for low stock; a product
-below it counts as low.
+below it counts as low, a product at or above it does not.
 
 **Type:** Concept
 
-**Related terms:** `GetLowStockProductsQuery.threshold`, Low stock
+**Related terms:** `GetLowStockProductsQuery.threshold`, `AvailableQuantityBelow`,
+Low stock
 
-**Notes:** Per question, not per product — no product carries a reorder level of
-its own. Negative thresholds are rejected.
+**Notes:** Per question, not per product — no stock level carries a reorder
+level of its own (see Open Issues). Negative thresholds are rejected.
 
 ---
 
@@ -310,7 +337,16 @@ business before the model is consolidated:
    integration events, not via borrowed terms.
 
 4. **Arithmetic on `StockQuantity`** is currently done in the aggregate.
-   Candidate for moving `plus`/`minus` operations into the value object.
+   Candidate for moving addition and subtraction into the value object.
+
+5. **Which quantity is "low"?** `AvailableQuantityBelow` compares the
+   available quantity, so a stock level of 4 with 4 units reserved is not low
+   at a threshold of 4. Whether the operator means available quantity or
+   unreserved quantity (available-to-promise) is unanswered; both readings are
+   in this glossary.
+
+6. **Whose threshold?** One threshold is supplied per question. Whether a stock
+   level should instead carry its own reorder level is unanswered.
 
 ---
 

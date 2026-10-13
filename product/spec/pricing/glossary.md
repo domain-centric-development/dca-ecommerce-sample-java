@@ -56,7 +56,7 @@ in a pure pricing model, `ProductId` suffices as a natural key.
 
 **Related terms:** `ProductPrice`
 
-**Operations:** `generate()`, `of(uuid)`
+**Operations:** `generate()`, `of(value)`
 
 ---
 
@@ -136,8 +136,9 @@ whoever creates products (Interface Inversion).
 **Related terms:** `ProductPrice`, **Initial Price Determination**
 
 **Notes:** Consumed by `pricing.adapter.incoming.event.PriceInitializationEventConsumer`, which calls
-the `SetProductPrice` use case with the event's `eventId()`. Extends `IntegrationEvent`; the use case sets
-the value once per event (`ProcessedEvents`), so a redelivery does not undo a later change.
+the `SetProductPrice` use case with the event's `eventId()` (the contract extends `IntegrationEvent`). The use
+case skips an event `ProcessedEvents` has already recorded for its effect, `set-product-price`, and records it
+in the same transaction — a redelivery cannot reset a price that changed since.
 
 ---
 
@@ -192,7 +193,8 @@ business:
    - Extend the model into a **price history** in which each historical price
      entry has its own identity (then `PriceId` makes sense).
 
-2. **CRUD language `setInitialPrice`** in the use-case layer — should be
+2. **CRUD language `SetProductPrice`** in the use-case layer and
+   `PricingService.setInitialPrice` in the Api — should be
    renamed to **`provisionInitialPrice`** (or similar business-meaningful name)
    to linguistically express the transition character ("a product is being
    priced for the first time"). In the aggregate this already corresponds to

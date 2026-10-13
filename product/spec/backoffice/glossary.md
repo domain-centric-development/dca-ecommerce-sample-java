@@ -11,18 +11,20 @@
 
 Backoffice is the Bounded Context for **operating this application**: monitoring,
 the event publication log, future dashboards and operator navigation. Its language
-is its own — an *event publication* is a dispatched domain event with a completion
-status, a term no business context uses. Context-specific admin pages (products,
-prices, inventory) belong to their own Bounded Contexts under
-`/backoffice/{context}/`, not here.
+is its own — an *event publication* is a dispatched event with a completion status,
+a term no business context uses. Context-specific admin pages (products, prices,
+inventory) belong to their own Bounded Contexts under `/backoffice/{context}/`, not
+here.
 
 ## Concepts
 
 ### EventPublicationLog
 
-**Definition:** Logical, append-only audit log of all domain events published by
-Spring Modulith, including their processing status. Backoffice reads this log;
-writes are performed exclusively by Spring Modulith.
+**Definition:** Logical, append-only audit log of everything the shop has published,
+including its delivery status. Backoffice reads this log; the writes belong to
+Spring Modulith's event publication registry, which registers a publication for
+every listener of a published event and marks it completed once that listener has
+handled it.
 
 **Type:** Concept (operational data set, not an Aggregate)
 
@@ -35,19 +37,24 @@ accessed via a **Store** (not via a Repository).
 
 ### EventPublicationEntry
 
-**Definition:** A single entry from the event publication log: an event
-published to a specific listener, with publication and completion timestamps
-and a serialized payload.
+**Definition:** A single entry from the event publication log: one delivery of a
+published event to one listener, with that listener's own status, publication and
+completion timestamps and a serialized payload. An event with two listeners has two
+entries.
 
 **Type:** Value Object (read schema of the Store)
 
-**Identity:** `UUID id` (technical Modulith ID, not a business identifier)
+**Identity:** `UUID id` (technical Modulith id, one per event and listener — not
+a business identifier)
 
 **Related terms:** `EventPublicationLogStore`, `EventPublicationSummary`
 
 **Operations:**
-- `isCompleted()` — did the listener complete successfully?
-- `shortEventType()` — simple class name of the event type
+- `isCompleted()` — has the delivery to this listener been made?
+- `shortEventType()` — type name of the event without its package
+- Retry failed listener (`replayFailed`) — delivers a failed entry's event once more
+  to that entry's listener alone; the other listeners' entries stay as they were
+  (use case `ReplayFailedPublication`)
 
 **Notes:** Belongs to the Store as its **read schema** and is deliberately
 decoupled from the use-case API (see `EventPublicationSummary`).
@@ -85,14 +92,45 @@ distinguish `EventPublicationSummary` (application layer) from
 
 ### Completion Status
 
-**Definition:** Status of an event publication: **completed** when the listener
-has processed the event successfully (`completionDate != null`), otherwise
-**incomplete**.
+**Definition:** Status of an event publication: **completed** when it has been
+delivered (`completionDate != null`), otherwise **incomplete** — which covers
+both what is still queued and what failed and is being retried. The event log's
+badge shows exactly these two words; a **failed** publication is incomplete and is
+the one an operator can retry from the log.
 
 **Type:** Concept (derived attribute)
 
 **Related terms:** `EventPublicationEntry.isCompleted()`,
-`GetEventPublicationsResult.completedCount` / `incompleteCount`
+`GetEventPublicationsResult.completedCount` / `incompleteCount`, `Publication Status`
+
+---
+
+### Publication Status
+
+**Definition:** Spring Modulith's own status of a delivery to one listener — `PUBLISHED`,
+`PROCESSING`, `RESUBMITTED`, `FAILED` or `COMPLETED`. An entry's payload names it upper-case on its first line,
+`Status: <STATUS>, attempts: <number>`. The badge reduces it to the two words of
+the **Completion Status**: `COMPLETED` is completed, every other status is incomplete.
+
+**Type:** Concept
+
+**Related terms:** `Completion Status`, `Attempt`
+
+---
+
+### Attempt
+
+**Definition:** One try at delivering an event to one listener, counted per entry.
+The number on the payload's first line counts every try, including the successful
+one. A delivery made at its first try reads `attempts: 1`; a delivery that used up
+its attempts reads `Status: FAILED, attempts: 5`.
+
+**Type:** Concept
+
+**Related terms:** `Publication Status`, `EventPublicationEntry`
+
+**Notes:** Spring Modulith counts every try as it starts (`COMPLETION_ATTEMPTS`);
+the store shows that number as it is (`JdbcEventPublicationLogStore`).
 
 ---
 
@@ -101,16 +139,16 @@ has processed the event successfully (`completionDate != null`), otherwise
 **Store** is used in Backoffice instead of **Repository** because the data has
 **no Aggregate lifecycle**:
 
-| Aspect          | Repository                                | Store (here)                                    |
-|-----------------|-------------------------------------------|-------------------------------------------------|
-| Lifecycle       | Load → mutate → save                      | Append-only, written externally                 |
-| Content         | Aggregate Roots                           | Operational entries without business identity   |
-| Operations      | `findById`, `save`, `deleteById`          | `findAll`, `count`, `record(...)` (no save)     |
-| Example         | `OrderRepository`                         | `EventPublicationLogStore`                      |
+| Aspect          | Repository                                      | Store (here)                                    |
+|-----------------|-------------------------------------------------|-------------------------------------------------|
+| Lifecycle       | Load → mutate → save                            | Append-only, written externally                 |
+| Content         | Aggregate Roots                                 | Operational entries without business identity   |
+| Operations      | `findById`, `save`, `deleteById`                | `findAll`, count, record (no save)              |
+| Example         | `ShoppingCartRepository`                        | `EventPublicationLogStore`                      |
 
 Backoffice does **not** write to the log — Spring Modulith owns the
-`EVENT_PUBLICATION` table. The `JdbcEventPublicationLogStore` is
-**read-only**.
+`EVENT_PUBLICATION` table.
+`JdbcEventPublicationLogStore` is **read-only**.
 
 ---
 
@@ -118,22 +156,23 @@ Backoffice does **not** write to the log — Spring Modulith owns the
 
 ### EventPublicationLogStore (Output Port)
 
-**Definition:** Read port onto the Spring Modulith event log.
+**Definition:** Read port onto the shop's event publication log.
 
-**Type:** Output Port (Store marker)
+**Type:** Output Port (`Store` marker)
 
 **Operations:** `findAll(): List<EventPublicationEntry>`
 
 **Notes:** Implementation: `JdbcEventPublicationLogStore` (reads directly from
-the `EVENT_PUBLICATION` table).
+the `EVENT_PUBLICATION` table). One row per event and listener, for every event a
+registered listener receives — domain and integration events alike.
 
 ---
 
 ### GetEventPublications (Use Case)
 
-**Definition:** Returns all event publications with processing status and
-aggregated statistics (`totalCount`, `completedCount`, `incompleteCount`) for
-the Backoffice overview page.
+**Definition:** Returns all event publications with delivery status and
+aggregated statistics (`totalCount`, `completedCount`, `incompleteCount`, each
+counting entries — deliveries to one listener) for the Backoffice overview page.
 
 **Type:** Use Case (Query)
 
@@ -171,7 +210,7 @@ The parts of the context's behaviour its people name; each groups what holds in 
 
 - Should the term **Event Publication** be promoted to the Shared Kernel
   glossary? (It will likely be relevant for other operational views as well.)
-- Planned extensions (retry, republish) — will these live in Backoffice or in
-  Spring Modulith configuration?
+- Planned extensions (retry, republish) — will these live in Backoffice or with
+  Spring Modulith, which owns delivery?
 - Should Backoffice become its own Bounded Context in the long term, or remain
   classified as a Generic Subdomain?

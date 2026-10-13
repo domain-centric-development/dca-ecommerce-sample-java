@@ -37,8 +37,8 @@ system is `register`. The date of birth of that same owner may be corrected late
 (`changeOwnerDateOfBirth`). Distinct from the buyer's name in the `checkout` context (`BuyerInfo`),
 which is per-order shipping data and freely editable — same words, different concept, different
 lifecycle. `roles` is currently a `Set<String>`. Planned
-cleanup: introduce a `Role` Value Object
-(instead of String) to enforce valid values and improve domain vocabulary. On registration the
+cleanup: introduce a `Role` Value Object (instead of `String`) to enforce valid values and improve
+domain vocabulary. On registration the
 `UserId` from the JWT is preserved unchanged to guarantee cart/checkout continuity across the
 guest → account transition.
 
@@ -103,7 +103,7 @@ promote it to one if a second component needs to evaluate the policy without cre
 algorithms impose — BCrypt rejects input beyond 72 bytes. Keeping the policy at that value means an
 over-long password is refused as a rule with a message meant for the user, and can never reach
 `PasswordHasher` and fail there as a technical fault. The `maxlength="72"` on the password inputs of
-`register.pug` and `account/change-password.pug` is a convenience hint only: the browser counts
+`account/register.pug` and `account/change-password.pug` is a convenience hint only: the browser counts
 characters, so a multi-byte password within that hint can still be refused by the policy.
 
 ### Usable Date of Birth

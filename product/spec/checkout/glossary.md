@@ -385,11 +385,12 @@ It decides on the snapshot alone, so a read does not load the session aggregate.
 
 **Related terms:** `CheckoutSession`, `CheckoutCartSnapshot`, `CheckoutStep`, `StepAccess`.
 
-**Operations:** `accessTo(snapshot, targetStep)` — answers with a `StepAccess`.
+**Operations:** `accessTo(targetStep)` — answers with a `StepAccess`.
 
 **Notes:** Decides on the `CheckoutCartSnapshot` read model and knows no routes. The `GetCheckoutSession` query
 use case invokes it when a step is requested and delivers the `StepAccess` in its result; the web
 adapter (`CheckoutRoutes`) maps the decision to a redirect path.
+
 ### CheckoutArticlePriceResolver
 
 Legacy application/test lookup abstraction. CheckoutSession accepts supplied article facts; CheckoutPricing owns cross-article validation and calculation. No repository or remote callback enters the aggregate.
@@ -501,6 +502,8 @@ the per-item result.
 
 **Definition:** What the use case could not get hold of before a session exists, or could not address afterwards.
 Session and cart lookups are scoped to the caller, so "not yours" reads as "not found" (ADR-036).
+`CheckoutItemsUnavailable` is the start's refusal of a cart whose lines are unavailable or short of stock; it
+carries their product ids, in cart order.
 
 **Type:** Use-case failure (`UseCaseException`) · **Related terms:** `CartDataPort`, `CheckoutArticleDataPort`
 
@@ -508,10 +511,11 @@ Session and cart lookups are scoped to the caller, so "not yours" reads as "not 
 
 ### PaymentProviderNotFound · PaymentProviderUnavailable · PaymentInitiationFailed
 
-**Definition:** The selected provider is unknown to the shop, known but not taking payments right now (an
-unavailable provider), or refused to open a payment (a refused payment). The provider's own reason travels
-through unchanged for logs and callers; the payment page shows the customer a fixed message of its own for a
-refused payment and for an unavailable provider.
+**Definition:** The selected provider is unknown to the shop; it is unavailable (it says it is not taking payments,
+cannot be reached, does not answer in time or answers outside its contract); or it refused to open a payment. The
+provider's reason travels on the failure and into the log. The customer sees the shop's own text: "The payment was
+refused. Please choose another way to pay." for a refusal, "The payment provider is not available right now. Please
+try again later." when the provider is unavailable.
 
 **Type:** Use-case failure (`UseCaseException`) · **Related terms:** `PaymentProviderRegistry`, `PaymentProvider`,
 `PaymentResult`

@@ -30,6 +30,7 @@ truth for product identity and descriptive attributes.
 
 **Operations:** `create` (the product comes into existence with a new `ProductId`; its initial price and
 stock travel only in `ProductCreated`, the aggregate holds neither; `ProductFactory` delegates here),
+`reconstitute` (restores a stored product; no rule re-evaluated, no event),
 `updateName`, `updateDescription`, `updateCategory` (each replaces the attribute and raises its `…Changed` event)
 
 **Notes:** Prices and stock levels are NOT managed by the Product aggregate —
@@ -78,8 +79,8 @@ values.
 
 ### ImageUrl
 
-**Definition:** URL of a product's display image. May be empty (products
-without an image).
+**Definition:** URL of a product's display image. Maximum 2000 characters,
+may be empty (products without an image).
 
 **Type:** Value Object
 

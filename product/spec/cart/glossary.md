@@ -35,7 +35,7 @@ An editable collection of stable positions. Checkout copies a snapshot through t
 **Type:** Aggregate Root
 
 **Operations:**
-- create (`new ShoppingCart`) — the cart comes into existence, active and empty
+- `create` — the cart comes into existence, active and empty
 - `reconstitute` — restores a stored cart; no rule re-evaluated, no event
 - `addItem` — a product goes into the cart as a new position, or the position already holding it grows by the quantity
 - `removeItem`, `removeItemByProductId` — the position is gone from the cart
@@ -186,7 +186,7 @@ via "clear cart").
 
 ### CartCompleted
 
-Legacy event name retained for the cart reconciliation notification. The current completion handler removes only captured units; it does not change an active cart to Completed. Replays with no intersection emit nothing.
+Legacy event name retained for the cart reconciliation notification. The current completion handler removes only captured units; it does not change an active cart to Completed. Replays with no intersection emit nothing. The handler, `CartCompletionEventConsumer`, hands the `eventId` of the `CartCompletionTrigger` (an `IntegrationEvent`) to `CompleteCartUseCase`, which skips an event `ProcessedEvents` has already recorded for its effect, `complete-cart`, and records it in the same transaction.
 
 ### CartAbandoned
 
@@ -213,9 +213,9 @@ own type. The `GetCartById` use case puts the value into its result; the cart pa
 
 ### CartSpecification
 
-**Definition:** Sealed marker for all cart-related specifications; enables
-adapters (e.g., JPA) to translate them into persistence queries via the
-Visitor pattern.
+**Definition:** Common (sealed) interface of all cart-related specifications; enables
+persistence adapters to translate them into queries via the Visitor pattern
+(`CartSpecificationVisitor`).
 
 **Type:** Specification (Marker)
 
@@ -279,14 +279,23 @@ completeness of the article data.
 
 ### ArticlePriceResolver
 
-Legacy application/test lookup abstraction. No aggregate accepts this callback. CartPricing receives immutable line and ArticlePrice snapshots retrieved by the use case.
+**Definition:** Interface through which current prices and availabilities for a product are
+looked up — without direct coupling to Pricing or Inventory infrastructure. A legacy lookup
+abstraction: no aggregate accepts it, only tests implement it; `CartPricing` receives immutable
+line and `ArticlePrice` snapshots retrieved by the use case.
+
+**Type:** Concept (Domain Port)
+
+**Related terms:** `ArticlePrice`, `CartPricing`
+
+## Concepts (no code artifact)
 
 ### Price Snapshot (priceAtAddition)
 
 **Definition:** The price of a cart item frozen at the time it was added.
 Serves price-change detection and transparency toward the customer, but is
-NOT the price used for settlement at checkout time (that one is fetched fresh
-from the `ArticlePriceResolver`).
+NOT the price used for settlement at checkout time (that one is read fresh
+when the checkout is priced).
 
 **Type:** Concept
 

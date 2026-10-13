@@ -17,7 +17,7 @@ so it carries the thin shape the pattern-selection decision (ADR-025) allows:
 - Navigation to Product Catalog, Shopping Cart, Checkout
 - No Aggregates, Entities, Value Objects, Events, or Domain Services
 - No application use cases (purely presentational)
-- Allowed dependencies: `sharedkernel`, `infrastructure`
+- Allowed dependencies: `sharedkernel`, `infrastructure` — no other context
 
 **Classification:** a Bounded Context with a generic subdomain (UI composition).
 The boundary is a language boundary, not a model size: the Portal's terms —
@@ -39,6 +39,16 @@ title and navigation elements for products, cart, and checkout.
 
 **Notes:** Currently the module's only endpoint.
 
+### Reduced motion (prefers-reduced-motion)
+
+**Definition:** The visitor's device preference for less motion; under it the
+shop changes pages without any animation.
+
+**Type:** Concept (part of the *Appearance* feature)
+
+**Notes:** Honoured by the `@media (prefers-reduced-motion: reduce)` block of
+`src/main/resources/static/css/main.css`, which stills every view-transition part.
+
 ---
 
 ## Referenced Terms (displayed from other contexts)
@@ -52,7 +62,7 @@ them. Definitions can be found in the respective context glossaries.
 | Product slider    | `product`             | The homepage section "Discover products", directly below the hero: the `ProductSelection` as cards, paged with Previous and Next; composed into the page as the model attribute `productSlider`, which `product`'s `ProductSliderControllerAdvice` adds on `GET /`, not referenced in Java |
 | Cart              | `cart`                | Navigation to shopping cart                   |
 | Checkout / Order  | `checkout`            | Navigation to checkout flow                   |
-| Account / User    | `account`             | Login/profile entry points (once available)   |
+| Account / User    | `account`             | Login, register and profile entry points      |
 
 ---
 
