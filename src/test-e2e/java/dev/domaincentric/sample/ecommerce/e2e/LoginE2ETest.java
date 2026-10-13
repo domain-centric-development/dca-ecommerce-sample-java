@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.e2e;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.microsoft.playwright.BrowserContext;
 import dev.domaincentric.sample.ecommerce.e2e.pages.CartPage;
@@ -36,5 +37,24 @@ class LoginE2ETest extends BaseE2ETest {
     assertEquals("Logout", header.logoutButton());
     assertFalse(header.offersLogin(), "a logged-in customer is not offered to log in");
     assertFalse(header.offersRegister(), "a logged-in customer is not offered to register");
+  }
+
+  @Test
+  @DisplayName("Wrong password is refused")
+  void aWrongPasswordIsRefusedWithTheGenericMessageAndKeepsTheEmail() {
+    String email = "anna.schmidt." + System.currentTimeMillis() + "@example.com";
+    try (BrowserContext registration = browser.newContext()) {
+      RegisterPage.navigateTo(registration.newPage()).register(email, PASSWORD);
+    }
+
+    LoginPage refused =
+        LoginPage.navigateTo(page).fillCredentials(email, "Secret999").submitExpectingError();
+
+    assertEquals("Invalid email or password", refused.errorMessage());
+    assertEquals(email, refused.emailValue());
+    assertEquals("", refused.passwordValue());
+    SiteHeader header = new SiteHeader(page);
+    assertTrue(header.offersLogin(), "a refused visitor is still offered to log in");
+    assertTrue(header.offersRegister(), "a refused visitor is still offered to register");
   }
 }
