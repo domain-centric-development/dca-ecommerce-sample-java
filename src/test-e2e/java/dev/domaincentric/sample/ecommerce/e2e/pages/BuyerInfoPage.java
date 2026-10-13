@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 /**
@@ -110,6 +111,36 @@ public class BuyerInfoPage extends BasePage {
     // server-side validation triggers a redirect back to this page.
     page.waitForTimeout(500);
     return this;
+  }
+
+  /**
+   * Presses "Continue to Delivery" and waits for whatever the press started to settle — a page load
+   * when the form was sent, nothing when the browser's own checks held it back.
+   *
+   * @return this page for method chaining
+   */
+  public BuyerInfoPage pressContinue() {
+    click(CONTINUE_BUTTON);
+    page.waitForLoadState();
+    return this;
+  }
+
+  /**
+   * The email input, for assertions on its value and the browser's verdict on it.
+   *
+   * @return the email input's locator
+   */
+  public Locator emailInput() {
+    return page.locator("[data-test='" + EMAIL_INPUT + "']");
+  }
+
+  /**
+   * The phone number input, for assertions on its value and the browser's verdict on it.
+   *
+   * @return the phone input's locator
+   */
+  public Locator phoneInput() {
+    return page.locator("[data-test='buyer-phone-input']");
   }
 
   /**
