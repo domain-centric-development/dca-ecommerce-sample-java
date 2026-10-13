@@ -16,6 +16,7 @@ public class ChangePasswordPage extends BasePage {
   private static final String CONFIRM_PASSWORD_INPUT = "change-password-confirm-password-input";
   private static final String SUBMIT_BUTTON = "change-password-submit-button";
   private static final String SUCCESS_MESSAGE = "change-password-success-message";
+  private static final String ERROR_MESSAGE = "change-password-error-message";
 
   /**
    * Creates the change-password page and waits for it.
@@ -54,6 +55,33 @@ public class ChangePasswordPage extends BasePage {
     click(SUBMIT_BUTTON);
     waitFor(SUCCESS_MESSAGE);
     return new ChangePasswordPage(page);
+  }
+
+  /**
+   * Fills the three fields and submits the form, expecting the change to be refused.
+   *
+   * @param currentPassword the current password
+   * @param newPassword the new password
+   * @param confirmPassword the confirmation of the new password
+   * @return the change-password page as it is shown again, its refusal shown
+   */
+  public ChangePasswordPage submitRefused(
+      String currentPassword, String newPassword, String confirmPassword) {
+    fill("currentPassword", currentPassword);
+    fill("newPassword", newPassword);
+    fill("confirmPassword", confirmPassword);
+    click(SUBMIT_BUTTON);
+    waitFor(ERROR_MESSAGE);
+    return new ChangePasswordPage(page);
+  }
+
+  /**
+   * The refusal the page shows.
+   *
+   * @return the message text, trimmed
+   */
+  public String errorMessage() {
+    return page.locator("[data-test='" + ERROR_MESSAGE + "']").innerText().strip();
   }
 
   /**

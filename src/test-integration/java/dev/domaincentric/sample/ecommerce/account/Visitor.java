@@ -151,6 +151,20 @@ final class Visitor {
     return new Landing(target, landed.getContentAsString());
   }
 
+  /**
+   * Submits the form of the page at {@code path} back to that path with the given fields, which the
+   * shop refuses; returns the page it shows again.
+   */
+  String refusedSubmit(final String path, final Map<String, String> fields) throws Exception {
+    final String form = page(path);
+    final var request = withCookies(post(URI.create(path))).param("_csrf", text(CSRF_FIELD, form));
+    fields.forEach(request::param);
+    final MockHttpServletResponse refused =
+        mockMvc.perform(request).andExpect(status().isOk()).andReturn().getResponse();
+    keep(refused);
+    return refused.getContentAsString();
+  }
+
   /** Opens a path that answers with a redirect; returns where it leads. */
   String redirectOf(final String path) throws Exception {
     final MockHttpServletResponse response =
