@@ -28,6 +28,7 @@ final class Visitor {
   private static final Pattern CSRF_FIELD = Pattern.compile("name=\"_csrf\" value=\"([^\"]+)\"");
   private static final Pattern RETURN_URL_FIELD =
       Pattern.compile("name=\"returnUrl\" value=\"([^\"]*)\"");
+  private static final String PROFILE_PAGE = "/account/profile";
 
   private final MockMvc mockMvc;
   private final Map<String, Cookie> cookies = new LinkedHashMap<>();
@@ -77,6 +78,14 @@ final class Visitor {
   }
 
   /**
+   * Submits the login form with credentials the shop refuses; returns the login page it shows
+   * again.
+   */
+  String refusedLogIn(final String email, final String password) throws Exception {
+    return refusedLogIn("/login", email, password);
+  }
+
+  /**
    * Submits the login form of the given page with credentials the shop refuses; returns the page it
    * shows again.
    */
@@ -96,6 +105,21 @@ final class Visitor {
     keep(refused);
     return refused.getContentAsString();
   }
+
+  /**
+   * Submits the form of the profile page with the given values and follows the redirect the shop
+   * answers with, as a browser would — the session along, which carries the page's message.
+   */
+  Saved saveProfile(final String email, final String dateOfBirth) throws Exception {
+    final Map<String, String> fields = new LinkedHashMap<>();
+    fields.put("email", email);
+    fields.put("dateOfBirth", dateOfBirth);
+    final Landing landing = submit(PROFILE_PAGE, fields);
+    return new Saved(landing.path(), landing.page());
+  }
+
+  /** Where a saved form sent the visitor, and the page shown there. */
+  record Saved(String location, String page) {}
 
   /** Keeps a cookie this browser holds from an earlier visit, and sends it from now on. */
   void holds(final Cookie cookie) {
