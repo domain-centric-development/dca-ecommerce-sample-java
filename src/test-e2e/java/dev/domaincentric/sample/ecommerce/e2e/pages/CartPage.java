@@ -14,6 +14,7 @@ public class CartPage extends BasePage {
   private static final String CART_ITEM = "cart-item";
   private static final String CHECKOUT_BUTTON = "cart-checkout-button";
   private static final String SUCCESS_MESSAGE = "cart-success-message";
+  private static final String ERROR_MESSAGE = "cart-error-message";
 
   /**
    * Creates a new CartPage and waits for it to load.
@@ -141,6 +142,15 @@ public class CartPage extends BasePage {
    */
   public String successMessage() {
     return page.locator("[data-test='" + SUCCESS_MESSAGE + "']").textContent().strip();
+  }
+
+  /**
+   * The error message the cart page shows, for assertions on its text.
+   *
+   * @return the message's locator
+   */
+  public Locator errorMessage() {
+    return page.locator("[data-test='" + ERROR_MESSAGE + "']");
   }
 
   /**
