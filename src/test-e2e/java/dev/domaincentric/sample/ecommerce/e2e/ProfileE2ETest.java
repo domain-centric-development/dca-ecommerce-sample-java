@@ -37,4 +37,26 @@ class ProfileE2ETest extends BaseE2ETest {
     assertEquals("1990-05-18", saved.dateOfBirthValue());
     assertEquals("Welcome, " + newEmail, new SiteHeader(page).greeting());
   }
+
+  @Test
+  @DisplayName("Taken address is refused in the profile")
+  void anAddressAnotherAccountUsesIsRefusedAndStaysInTheField() {
+    // The suite's shop keeps its accounts across tests, so both addresses are this run's own.
+    long run = System.currentTimeMillis();
+    String annasEmail = "anna.schmidt." + run + "@example.com";
+    String bensEmail = "ben.weber." + run + "@example.com";
+    try (BrowserContext registration = browser.newContext()) {
+      RegisterPage.navigateTo(registration.newPage()).register(annasEmail, PASSWORD);
+    }
+    try (BrowserContext registration = browser.newContext()) {
+      RegisterPage.navigateTo(registration.newPage()).register(bensEmail, PASSWORD);
+    }
+    LoginPage.navigateTo(page).login(annasEmail, PASSWORD);
+    ProfilePage profile = ProfilePage.navigateTo(page);
+
+    ProfilePage refused = profile.fillDetails(bensEmail, "1990-05-17").saveExpectingRefusal();
+
+    assertEquals("This email address is already registered", refused.errorMessage());
+    assertEquals(bensEmail, refused.emailValue());
+  }
 }

@@ -17,6 +17,7 @@ public class ProfilePage extends BasePage {
   private static final String DATE_OF_BIRTH_INPUT = "profile-date-of-birth-input";
   private static final String SUBMIT_BUTTON = "profile-submit-button";
   private static final String SUCCESS_MESSAGE = "profile-success-message";
+  private static final String ERROR_MESSAGE = "profile-error-message";
 
   /**
    * Creates the profile page and waits for it.
@@ -61,6 +62,27 @@ public class ProfilePage extends BasePage {
     click(SUBMIT_BUTTON);
     waitFor(SUCCESS_MESSAGE);
     return new ProfilePage(page);
+  }
+
+  /**
+   * Presses "Save Changes" for a change the shop refuses, and waits for the form to come back with
+   * its message.
+   *
+   * @return this page, re-rendered with the refusal
+   */
+  public ProfilePage saveExpectingRefusal() {
+    click(SUBMIT_BUTTON);
+    waitFor(ERROR_MESSAGE);
+    return this;
+  }
+
+  /**
+   * The refusal the page shows above the form.
+   *
+   * @return the message text, trimmed
+   */
+  public String errorMessage() {
+    return page.locator("[data-test='" + ERROR_MESSAGE + "']").innerText().strip();
   }
 
   /**

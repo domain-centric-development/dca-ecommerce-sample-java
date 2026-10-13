@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.domaincentric.sample.ecommerce.account.Visitor.Element;
 import dev.domaincentric.sample.ecommerce.account.Visitor.Saved;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ class ProfileIntegrationTest {
 
   private static final String EMAIL = "anna.schmidt@example.com";
   private static final String PASSWORD = "Secret123";
+  private static final String PROFILE = "/account/profile";
 
   /** The class shares one database, so the account is registered once for all its tests. */
   private static boolean accountRegistered;
@@ -81,6 +84,66 @@ class ProfileIntegrationTest {
   }
 
   @Test
+  @DisplayName("Malformed address is refused in the profile")
+  void aMalformedAddressIsRefusedWithThePagesSentence() throws Exception {
+    final Visitor customer = loggedInCustomer();
+
+    final String refused =
+        customer.refusedSubmit(PROFILE, profileFields("anna.meyer@example", "1990-05-17"));
+
+    assertThat(element(refused, "profile-error-message").text())
+        .isEqualTo("Please enter a valid email address.");
+  }
+
+  @Test
+  @DisplayName("Missing date is refused in the profile")
+  void aMissingDateOfBirthIsRefusedWithTheExpectedFormat() throws Exception {
+    final Visitor customer = loggedInCustomer();
+
+    final String refused = customer.refusedSubmit(PROFILE, profileFields(EMAIL, ""));
+
+    assertThat(element(refused, "profile-error-message").text())
+        .isEqualTo("Please enter a date like 1990-05-17");
+  }
+
+  @Test
+  @DisplayName("Future date is refused in the profile")
+  void aDateOfBirthInTheFutureIsRefused() throws Exception {
+    final Visitor customer = loggedInCustomer();
+
+    final String refused = customer.refusedSubmit(PROFILE, profileFields(EMAIL, "2999-01-01"));
+
+    assertThat(element(refused, "profile-error-message").text())
+        .isEqualTo("Please enter a date of birth that is not in the future.");
+  }
+
+  @Test
+  @DisplayName("Unreadable date is refused in the profile")
+  void anUnreadableDateIsRefusedAndStaysInTheField() throws Exception {
+    final Visitor customer = loggedInCustomer();
+
+    final String refused = customer.refusedSubmit(PROFILE, profileFields(EMAIL, "17.05.1990"));
+
+    assertThat(element(refused, "profile-error-message").text())
+        .isEqualTo("Please enter a date like 1990-05-17");
+    assertThat(element(refused, "profile-date-of-birth-input").attribute("value"))
+        .isEqualTo("17.05.1990");
+  }
+
+  @Test
+  @DisplayName("Refused change saves nothing")
+  void aRefusedChangeSavesNeitherTheValidAddressNorTheDate() throws Exception {
+    final Visitor customer = loggedInCustomer();
+    customer.refusedSubmit(PROFILE, profileFields("anna.meyer@example.com", "2999-01-01"));
+
+    final String profile = customer.page(PROFILE);
+
+    assertThat(element(profile, "profile-email-input").attribute("value")).isEqualTo(EMAIL);
+    assertThat(element(profile, "profile-date-of-birth-input").attribute("value"))
+        .isEqualTo("1990-05-17");
+  }
+
+  @Test
   @DisplayName("Profile sends a visitor to the login")
   void theProfileSendsAVisitorWithoutCookiesToTheLogin() throws Exception {
     final Visitor visitor = new Visitor(mockMvc);
@@ -104,6 +167,14 @@ class ProfileIntegrationTest {
     }
     new Visitor(mockMvc).register(EMAIL, PASSWORD);
     accountRegistered = true;
+  }
+
+  /** The profile form's two fields, as the browser submits them. */
+  private static Map<String, String> profileFields(final String email, final String dateOfBirth) {
+    final Map<String, String> fields = new LinkedHashMap<>();
+    fields.put("email", email);
+    fields.put("dateOfBirth", dateOfBirth);
+    return fields;
   }
 
   /** The title of the page's card; it carries no data-test. */
