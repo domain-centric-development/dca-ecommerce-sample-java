@@ -47,6 +47,15 @@ public class CartPage extends BasePage {
   }
 
   /**
+   * Presses "Proceed to Checkout" without expecting where the shop leads — the caller asserts the
+   * page it lands on.
+   */
+  public void pressProceedToCheckout() {
+    waitFor(CART_ITEM);
+    click(CHECKOUT_BUTTON);
+  }
+
+  /**
    * Checks if the cart has at least one item.
    *
    * @return true if cart contains items

@@ -117,6 +117,20 @@ class CartPageIntegrationTest {
     assertThat(cart.select("[data-test=cart-item], .cart__summary, .cart__total")).isEmpty();
   }
 
+  @Test
+  @DisplayName("A cart whose every line can be bought offers the checkout")
+  void cartOffersToProceedToCheckoutOrToContinueShopping() throws Exception {
+    addToCart("Domain-Driven Design");
+
+    final Document cart = page("/cart");
+
+    assertThat(cart.selectFirst("[data-test=cart-checkout-button]").text())
+        .isEqualTo("Proceed to Checkout");
+    final Element continueShopping = cart.selectFirst(".cart__actions-info a");
+    assertThat(continueShopping.text()).isEqualTo("Continue Shopping");
+    assertThat(continueShopping.attr("href")).isEqualTo("/products");
+  }
+
   /** The amount a row below the cart's lines shows beside its label. */
   private static String totalRow(final Document cart, final String label) {
     return cart.select(".cart__total-row").stream()
