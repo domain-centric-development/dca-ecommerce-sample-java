@@ -16,6 +16,7 @@ public class SiteHeader extends BasePage {
   private static final String REGISTER_LINK = "nav-register-link";
   private static final String LOGIN_LINK = "nav-login-link";
   private static final String LOGOUT_BUTTON = "logout-button";
+  private static final String MY_ACCOUNT_LINK = "nav-my-account-link";
   private static final String BASKET_TRIGGER = "mini-basket-trigger";
   private static final String BASKET_DROPDOWN = "mini-basket-dropdown";
   private static final String BASKET_VIEW_CART = "mini-basket-view-cart-link";
@@ -87,6 +88,16 @@ public class SiteHeader extends BasePage {
   public String logoutButton() {
     waitFor(LOGOUT_BUTTON);
     return page.locator("[data-test='" + LOGOUT_BUTTON + "']").textContent().strip();
+  }
+
+  /**
+   * Follows the "My Account" link a logged-in visitor is offered.
+   *
+   * @return the account overview it opens
+   */
+  public AccountOverviewPage followMyAccount() {
+    click(MY_ACCOUNT_LINK);
+    return new AccountOverviewPage(page);
   }
 
   /**
