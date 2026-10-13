@@ -51,6 +51,11 @@ public class ReviewPage extends BasePage {
     return page.locator("[data-test='" + TOTAL + "']").textContent().trim();
   }
 
+  /** Presses "Place Order" without assuming where the shop sends the guest. */
+  public void pressPlaceOrder() {
+    click(PLACE_ORDER_BUTTON);
+  }
+
   /**
    * Clicks the place order button to complete the purchase.
    *
