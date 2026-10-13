@@ -14,6 +14,8 @@ public class SiteHeader extends BasePage {
   private static final String LOGO = "site-logo";
   private static final String GREETING = "user-greeting";
   private static final String REGISTER_LINK = "nav-register-link";
+  private static final String LOGIN_LINK = "nav-login-link";
+  private static final String LOGOUT_BUTTON = "logout-button";
   private static final String BASKET_TRIGGER = "mini-basket-trigger";
   private static final String BASKET_DROPDOWN = "mini-basket-dropdown";
   private static final String BASKET_VIEW_CART = "mini-basket-view-cart-link";
@@ -66,6 +68,25 @@ public class SiteHeader extends BasePage {
    */
   public boolean offersRegister() {
     return exists(REGISTER_LINK);
+  }
+
+  /**
+   * Whether the header offers the "Login" link.
+   *
+   * @return true when the link is shown
+   */
+  public boolean offersLogin() {
+    return exists(LOGIN_LINK);
+  }
+
+  /**
+   * The text of the logout button a logged-in visitor is offered.
+   *
+   * @return the button text
+   */
+  public String logoutButton() {
+    waitFor(LOGOUT_BUTTON);
+    return page.locator("[data-test='" + LOGOUT_BUTTON + "']").textContent().strip();
   }
 
   /**
