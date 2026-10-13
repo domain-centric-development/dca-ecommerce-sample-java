@@ -101,6 +101,20 @@ public final class ShopUnderTest {
     return Optional.ofNullable(shop).map(started -> started.getBean(FailingOnceDelivery.class));
   }
 
+  /**
+   * The delivery that fails until it is fixed, for a test to publish an event whose deliveries fail
+   * until the test fixes their cause — a component of the suite's own shop, which scans this
+   * package. Empty when the suite drives a shop started elsewhere: that shop carries no such
+   * listener.
+   *
+   * @return the failing-until-fixed delivery, or empty
+   */
+  public static synchronized Optional<FailingUntilFixedDelivery> failingUntilFixedDelivery() {
+    baseUrl();
+    return Optional.ofNullable(shop)
+        .map(started -> started.getBean(FailingUntilFixedDelivery.class));
+  }
+
   private static WireMockServer authorizingPaymentProvider() {
     WireMockServer provider = new WireMockServer(wireMockConfig().dynamicPort());
     provider.start();

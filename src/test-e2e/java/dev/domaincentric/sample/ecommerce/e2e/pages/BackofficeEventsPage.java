@@ -1,7 +1,10 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.AriaRole;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -254,6 +257,43 @@ public class BackofficeEventsPage extends BasePage {
   }
 
   /**
+   * Opens the page again until the payload of the entry carrying the given text starts with the
+   * given line, or the time is up.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @param firstLine the payload's first line to wait for
+   * @param within how long the entry may take to get there
+   * @return the page as last opened
+   */
+  public BackofficeEventsPage reloadUntilPayloadFirstLine(
+      String text, String firstLine, Duration within) {
+    Instant deadline = Instant.now().plus(within);
+    while (!firstLine.equals(payloadFirstLineOrEmpty(text)) && Instant.now().isBefore(deadline)) {
+      page.waitForTimeout(250);
+      page.reload();
+      waitFor(EVENT_LOG);
+    }
+    return this;
+  }
+
+  /**
+   * Presses "Retry failed listener" on the entry carrying the given text.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @return the page the shop answers with
+   */
+  public BackofficeEventsPage retryEntryCarrying(String text) {
+    Locator retry =
+        entryCarrying(text)
+            .first()
+            .getByRole(
+                AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Retry failed listener"));
+    assertThat(retry).isVisible();
+    retry.click();
+    return new BackofficeEventsPage(page);
+  }
+
+  /**
    * Gets the status badge of the entry carrying the given text.
    *
    * @param text a text the entry's payload carries, such as the event's id
@@ -291,6 +331,13 @@ public class BackofficeEventsPage extends BasePage {
     String content =
         entryCarrying(text).first().locator(".event-log__payload-content").textContent().strip();
     return content.split("\n", 2)[0];
+  }
+
+  private String payloadFirstLineOrEmpty(String text) {
+    if (entryCarrying(text).count() == 0) {
+      return "";
+    }
+    return payloadFirstLineOfEntryCarrying(text);
   }
 
   private Locator entryCarrying(String text) {
