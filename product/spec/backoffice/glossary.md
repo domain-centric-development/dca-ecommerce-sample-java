@@ -210,7 +210,5 @@ The parts of the context's behaviour its people name; each groups what holds in 
 
 - Should the term **Event Publication** be promoted to the Shared Kernel
   glossary? (It will likely be relevant for other operational views as well.)
-- Planned extensions (retry, republish) — will these live in Backoffice or with
-  Spring Modulith, which owns delivery?
 - Should Backoffice become its own Bounded Context in the long term, or remain
   classified as a Generic Subdomain?

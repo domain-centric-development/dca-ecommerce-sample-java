@@ -4,7 +4,7 @@
  * <p>Responsible for operating this application: the event publication log and, as it grows,
  * dashboards and operator navigation. A generic subdomain — one would buy this capability rather
  * than build it — and it is a bounded context because it has a language of its own: an <em>event
- * publication</em> is a dispatched domain event with a completion status, a concept no business
+ * publication</em> is a dispatched event with a completion status, a concept no business
  * context uses or needs to know about.
  *
  * <p>It reads what other contexts have already published and negotiates no contract with any of
