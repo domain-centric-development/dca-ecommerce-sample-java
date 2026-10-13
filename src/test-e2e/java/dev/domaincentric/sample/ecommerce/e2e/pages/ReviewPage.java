@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 /**
@@ -12,6 +13,7 @@ public class ReviewPage extends BasePage {
   private static final String URL_PATTERN = "/checkout/review";
   private static final String PLACE_ORDER_BUTTON = "review-place-order-button";
   private static final String TOTAL = "review-total";
+  private static final String ERROR_MESSAGE = "review-error-message";
 
   /**
    * Creates a new ReviewPage and waits for it to load.
@@ -49,6 +51,15 @@ public class ReviewPage extends BasePage {
    */
   public String total() {
     return page.locator("[data-test='" + TOTAL + "']").textContent().trim();
+  }
+
+  /**
+   * The error message the review step shows, for assertions on it.
+   *
+   * @return the message's locator
+   */
+  public Locator errorMessage() {
+    return page.locator("[data-test='" + ERROR_MESSAGE + "']");
   }
 
   /** Presses "Place Order" without assuming where the shop sends the guest. */
