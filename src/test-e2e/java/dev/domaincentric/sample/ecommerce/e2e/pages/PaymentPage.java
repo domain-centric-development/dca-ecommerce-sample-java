@@ -35,6 +35,21 @@ public class PaymentPage extends BasePage {
   }
 
   /**
+   * Chooses the one payment provider the page offers; fails when it offers more than one.
+   *
+   * @return this page for method chaining
+   */
+  public PaymentPage chooseTheOfferedProvider() {
+    page.locator("[data-test='" + PROVIDER_RADIO + "']").check();
+    return this;
+  }
+
+  /** Presses "Continue to Review" without assuming where the shop sends the guest. */
+  public void pressContinue() {
+    click(CONTINUE_BUTTON);
+  }
+
+  /**
    * Clicks the continue button to proceed to review.
    *
    * @return the ReviewPage
