@@ -6,13 +6,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpSession;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.util.HtmlUtils;
 
@@ -99,6 +102,31 @@ final class Visitor {
     cookies.put(cookie.getName(), cookie);
   }
 
+  /**
+   * Submits the form of the page at {@code path} back to that path with the given fields, and
+   * follows the redirect the shop answers with as a browser would — the flash message the post
+   * leaves for the next page included.
+   */
+  Landing submit(final String path, final Map<String, String> fields) throws Exception {
+    final String form = page(path);
+    final var request = withCookies(post(URI.create(path))).param("_csrf", text(CSRF_FIELD, form));
+    fields.forEach(request::param);
+    final MvcResult posted =
+        mockMvc.perform(request).andExpect(status().is3xxRedirection()).andReturn();
+    keep(posted.getResponse());
+    final String target = posted.getResponse().getRedirectedUrl();
+    final var follow = withCookies(get(URI.create(target)));
+    // The browser's session cookie carries the flash message; MockMvc hands the session on.
+    final HttpSession session = posted.getRequest().getSession(false);
+    if (session != null) {
+      follow.session((MockHttpSession) session);
+    }
+    final MockHttpServletResponse landed =
+        mockMvc.perform(follow).andExpect(status().isOk()).andReturn().getResponse();
+    keep(landed);
+    return new Landing(target, landed.getContentAsString());
+  }
+
   /** Opens a path that answers with a redirect; returns where it leads. */
   String redirectOf(final String path) throws Exception {
     final MockHttpServletResponse response =
@@ -154,6 +182,9 @@ final class Visitor {
     return new Element(
         matcher.group(1), matcher.group(2), HtmlUtils.htmlUnescape(matcher.group(3)).strip());
   }
+
+  /** Where a submitted form led the browser, and the page it shows there. */
+  record Landing(String path, String page) {}
 
   /** One rendered element: its tag, its attributes as written and its text. */
   record Element(String tag, String attributes, String text) {
