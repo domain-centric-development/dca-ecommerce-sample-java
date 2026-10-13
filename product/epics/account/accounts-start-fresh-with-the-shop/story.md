@@ -1,7 +1,9 @@
 ---
 id: accounts-start-fresh-with-the-shop
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-13T01:34:06Z
+delivered_by: gate
 context: account
 feature: registration
 title: Accounts start fresh with the shop

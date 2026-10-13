@@ -1,7 +1,9 @@
 ---
 id: the-shops-forms-refuse-posts-that-did
 epic: fits-its-surroundings
-status: adopted
+status: delivered
+delivered: 2026-10-13T01:19:10Z
+delivered_by: gate
 context: account
 title: The shop's forms refuse posts that did not come from its pages
 depends_on: [register-an-account, log-in-and-log-out]

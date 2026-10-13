@@ -1,7 +1,9 @@
 ---
 id: change-the-password
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-13T01:40:18Z
+delivered_by: gate
 context: account
 feature: password
 title: Change the password

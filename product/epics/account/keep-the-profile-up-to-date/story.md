@@ -1,7 +1,9 @@
 ---
 id: keep-the-profile-up-to-date
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-13T01:47:09Z
+delivered_by: gate
 context: account
 feature: profile
 title: Keep the profile up to date

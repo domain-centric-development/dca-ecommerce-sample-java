@@ -1,7 +1,9 @@
 ---
 id: registration-refuses-an-unusable-form
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-12T21:50:54Z
+delivered_by: gate
 context: account
 feature: registration
 title: Registration refuses an unusable form
@@ -78,3 +80,7 @@ so that I can correct it without starting over.
 - The browser limits the fields (required, 100 and 72 characters, date input); the refusals above are what the
   shop answers when such a value reaches it anyway.
 - Inventory: account A5, A6, A7, A10.
+
+## Assumptions
+
+- answered: 1 — the four scenarios expect the page's sentence for an argument exception, "Please check the email address, your name and your date of birth.", and the story's sentence says the page names what to check, not which entry. It stays adopted; the story text is already changed, in both shops alike. Naming the field is not part of this story. (registration-refuses-an-unusable-form-01)

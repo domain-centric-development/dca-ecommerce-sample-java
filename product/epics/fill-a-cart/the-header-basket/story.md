@@ -1,7 +1,9 @@
 ---
 id: the-header-basket
 epic: fill-a-cart
-status: adopted
+status: delivered
+delivered: 2026-10-13T00:30:42Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: The header basket

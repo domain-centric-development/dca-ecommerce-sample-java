@@ -1,7 +1,9 @@
 ---
 id: operator-login-to-the-back-office
 epic: run-the-shop
-status: adopted
+status: delivered
+delivered: 2026-10-13T00:58:20Z
+delivered_by: gate
 context: backoffice
 feature: access
 title: Operator login to the back office

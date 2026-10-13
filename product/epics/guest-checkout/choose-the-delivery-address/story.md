@@ -1,7 +1,9 @@
 ---
 id: choose-the-delivery-address
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T02:30:47Z
+delivered_by: gate
 context: checkout
 feature: delivery
 title: Choose the delivery address and the shipping method

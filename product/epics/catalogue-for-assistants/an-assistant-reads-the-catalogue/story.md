@@ -1,7 +1,9 @@
 ---
 id: an-assistant-reads-the-catalogue
 epic: catalogue-for-assistants
-status: adopted
+status: delivered
+delivered: 2026-10-12T22:09:46Z
+delivered_by: gate
 context: product
 feature: catalogue
 title: An assistant reads the catalogue through tools

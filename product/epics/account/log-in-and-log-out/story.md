@@ -1,7 +1,9 @@
 ---
 id: log-in-and-log-out
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-13T00:40:35Z
+delivered_by: gate
 context: account
 feature: signin
 title: Log in and log out

@@ -1,7 +1,9 @@
 ---
 id: my-account-overview
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-13T01:12:18Z
+delivered_by: gate
 context: account
 feature: profile
 title: My account overview

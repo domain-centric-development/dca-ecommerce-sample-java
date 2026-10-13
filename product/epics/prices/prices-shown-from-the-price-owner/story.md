@@ -1,7 +1,9 @@
 ---
 id: prices-shown-from-the-price-owner
 epic: prices
-status: adopted
+status: delivered
+delivered: 2026-10-12T21:16:50Z
+delivered_by: gate
 context: pricing
 title: Prices shown from the price owner
 depends_on: [CAT-01, CAT-02]

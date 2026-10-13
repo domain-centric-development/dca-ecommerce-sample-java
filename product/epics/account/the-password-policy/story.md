@@ -1,7 +1,9 @@
 ---
 id: the-password-policy
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-13T02:08:12Z
+delivered_by: gate
 context: account
 feature: password
 title: The password policy

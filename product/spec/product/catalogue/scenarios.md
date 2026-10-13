@@ -47,3 +47,42 @@ Title: The catalogue page is titled Product Catalog
 - When a visitor opens the catalogue page
 - Then the page title is "Product Catalog"
 Test: dev.domaincentric.sample.ecommerce.e2e.CatalogTitleE2ETest#catalogPageIsTitledProductCatalog
+
+### Rule: The shop offers its catalogue as two tools, to anyone
+
+#### the-server-offers-two-catalogue-tools
+- Given the shop has started
+- When an assistant without any credentials connects to the MCP server at `/mcp` (streamable HTTP) and lists its tools
+- Then the server introduces itself as "dca-ecommerce-sample-mcp-server", version "1.0.0"
+- And it offers the tool `all-products` described as "Get all products in the catalog. Returns complete product information including SKU, name, price, category, and available stock."
+- And the tool `product-by-id` with one parameter `id`, described as "Get detailed product information by product ID. Requires the internal product UUID. Returns complete product details including all attributes."
+Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogMcpIntegrationTest#serverIntroducesItselfAndOffersTheTwoCatalogueTools
+
+### Rule: all-products returns every product with its price and stock, in catalogue order
+
+#### all-products-lists-the-range-with-price-and-stock
+- Given the shop has started and seeded the sample catalogue of `seed-catalogue.json`
+- When an assistant calls `all-products`
+- Then the answer holds 21 products in ordinal order of the product name, the first named `"Bounded Context" Enamel Pin`
+- And the entry for "Domain-Driven Design" has an `id`, `sku` "BOOK-001", its `description`, an `imageUrl`, `price` 54.99, `currency` "EUR", `category` "Books", `stockQuantity` 20 and `isAvailable` true
+Test: dev.domaincentric.sample.ecommerce.e2e.CatalogueToolsE2ETest#allProductsListsTheSeededRangeWithPriceAndStock
+
+### Rule: product-by-id returns the one product with that id
+
+#### product-by-id-returns-the-product
+- Given the `id` of "Wooden Hexagon Desk Model" as `all-products` returns it
+- When an assistant calls `product-by-id` with that `id`
+- Then the answer is that product: `sku` "HEXAGON-001", `price` 39.99, `currency` "EUR", `category` "Desk & Office", `stockQuantity` 8 and `isAvailable` true
+Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogMcpIntegrationTest#productByIdAnswersTheProductWithItsPriceAndStock
+
+#### an-unknown-id-returns-no-product
+- Given the seeded sample catalogue
+- When an assistant calls `product-by-id` with `id` "no-such-product"
+- Then the call succeeds and its answer is `null`
+Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogMcpIntegrationTest#productByIdAnswersNullForAnIdThatNamesNoProduct
+
+#### a-blank-id-is-a-tool-error
+- Given the seeded sample catalogue
+- When an assistant calls `product-by-id` with `id` ""
+- Then the call ends in a tool error whose message is "Product ID cannot be null or blank"
+Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogMcpIntegrationTest#productByIdRefusesABlankIdWithAToolError

@@ -1,7 +1,9 @@
 ---
 id: not-found-title
 epic: browse-catalogue
-status: adopted
+status: delivered
+delivered: 2026-10-12T21:25:50Z
+delivered_by: gate
 context: portal
 title: The not-found page carries the shop's name as its title
 depends_on: []

@@ -37,12 +37,12 @@ it, so that my details are never half changed.
 #### missing-date-is-refused-in-the-profile
 - Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`
 - When they save an empty Date of Birth
-- Then the profile shows "Date of birth is required"
+- Then the profile shows "Please enter a date like 1990-05-17"
 
 #### future-date-is-refused-in-the-profile
 - Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`
 - When they save Date of Birth 2999-01-01
-- Then the profile shows "Date of birth cannot be in the future"
+- Then the profile shows "Please enter a date of birth that is not in the future."
 
 #### unreadable-date-is-refused-in-the-profile
 - Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`

@@ -1,7 +1,9 @@
 ---
 id: the-cart-stays-with-the-guest
 epic: fill-a-cart
-status: adopted
+status: delivered
+delivered: 2026-10-12T21:41:03Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: The cart stays with the guest

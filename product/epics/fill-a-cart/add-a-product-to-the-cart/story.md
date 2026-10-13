@@ -1,7 +1,9 @@
 ---
 id: add-a-product-to-the-cart
 epic: fill-a-cart
-status: adopted
+status: delivered
+delivered: 2026-10-12T21:20:54Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: Add a product to the cart

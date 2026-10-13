@@ -36,3 +36,12 @@ Test: dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTe
 - When a visitor opens the home page
 - Then it shows the same header, with "Home" and "Products", and the same footer as the catalogue page
 Test: dev.domaincentric.sample.ecommerce.portal.SiteHeaderAndFooterIntegrationTest#homePageShowsTheSameHeaderAndFooterAsTheCatalogue
+
+### Rule: The not-found page carries the shop's name as its title
+
+#### not-found-tab-reads-the-shop-name
+Title: The not-found page is titled with the shop's name
+- Given the seeded sample catalogue, in which no product has the id "no-such-product"
+- When a visitor opens the product page `/products/no-such-product`
+- Then the browser tab title is "domaincentric.commerce"
+Test: dev.domaincentric.sample.ecommerce.e2e.ProductNotFoundE2ETest#notFoundPageIsTitledWithTheShopsName

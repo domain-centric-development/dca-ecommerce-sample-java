@@ -1,7 +1,9 @@
 ---
 id: a-site-of-the-shops-own-can-embed-it
 epic: fits-its-surroundings
-status: adopted
+status: delivered
+delivered: 2026-10-12T22:18:29Z
+delivered_by: gate
 context: account
 title: A site of the shop's own can embed it, a foreign site cannot
 depends_on: [add-a-product-to-the-cart]

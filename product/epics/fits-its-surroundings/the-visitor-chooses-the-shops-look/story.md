@@ -1,7 +1,9 @@
 ---
 id: the-visitor-chooses-the-shops-look
 epic: fits-its-surroundings
-status: adopted
+status: delivered
+delivered: 2026-10-13T00:35:15Z
+delivered_by: gate
 context: portal
 feature: appearance
 title: The visitor chooses the shop's look

@@ -952,6 +952,18 @@ def qualify_selector(selector, by_selector, cwd):
     return selector
 
 
+def break_verdict(seen):
+    """('red' | 'green' | 'unchecked', what to add) from the tests-red entries of a break's run. A note — red on a
+    timeout — gives no verdict of its own: red is red, and the note travels with it."""
+    verdicts = [(st, m) for st, m in seen if st in ("pass", "fail")]
+    notes = [m for st, m in seen if st == "note"]
+    if verdicts and all(st == "pass" for st, _m in verdicts):
+        return "red", (" — " + notes[0][:300]) if notes else ""
+    if any(st == "fail" and ("passes" in m or "is green" in m or "green before" in m) for st, m in verdicts):
+        return "green", ""
+    return "unchecked", "; ".join(m for st, m in seen if st != "pass")[:300] or "no run of it was recorded"
+
+
 def check_break(result, profile, cwd, runs, story_id, selector, key, located):
     patch = break_path(runs, story_id, selector)
     if not os.path.isfile(patch):
@@ -983,14 +995,13 @@ def check_break(result, profile, cwd, runs, story_id, selector, key, located):
             return
         probe = Result()
         check_test_state(probe, profile, copy, {key: [selector]}, "red", {selector: located.get(selector)} if located.get(selector) else {})
-        seen = [(st, m) for st, c, m in probe.entries if c == "tests-red"]
-        if seen and all(st == "pass" for st, _m in seen):
-            result.ok("break-proof", f"{selector} ({key}): red under its break, on a scratch copy")
-        elif any(st == "fail" and ("passes" in m or "is green" in m or "green before" in m) for st, m in seen):
+        verdict, said = break_verdict([(st, m) for st, c, m in probe.entries if c == "tests-red"])
+        if verdict == "red":
+            result.ok("break-proof", f"{selector} ({key}): red under its break, on a scratch copy{said}")
+        elif verdict == "green":
             result.fail("break-proof", f"{selector} ({key}): stays green under its break — the test does not "
                                        f"notice the behaviour it claims to prove")
         else:
-            said = "; ".join(m for _st, m in seen)[:300] or "no run of it was recorded"
             result.fail("break-proof", f"{selector} ({key}): its break could not be checked — {said}")
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
@@ -4249,6 +4260,13 @@ def check_spec_tests(result, cwd, runs, story_id, front, mapping):
     probe = Result()
     check_exists(probe, cwd, wanted)
     missing = [message.split(" — ")[0] for state, _c, message in probe.entries if state == "fail"]
+    if missing and in_worktree(cwd):
+        # The spec is the main checkout's; a story delivered there meanwhile names tests this worktree, branched
+        # before it, does not have yet. They are not gone: the integrate gate checks again on the main line.
+        there = Result()
+        check_exists(there, factory_home(), wanted)
+        gone_there = {message.split(":")[0] for state, _c, message in there.entries if state == "fail"}
+        missing = [m for m in missing if m.split(":")[0] in gone_there]
     if missing:
         result.fail("spec-tests", f"{shown(target)} names a test that is gone: {'; '.join(missing)} — a test this story "
                                   f"renamed or moved goes under tests.md's `## Moved tests` (| <key> | <Class>#<method> |)")

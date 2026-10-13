@@ -1,7 +1,9 @@
 ---
 id: enter-the-buyer-details
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T02:14:26Z
+delivered_by: gate
 context: checkout
 feature: buyerdetails
 title: Enter the buyer details

@@ -1,7 +1,9 @@
 ---
 id: one-account-per-address-and-per-browser
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-12T21:45:20Z
+delivered_by: gate
 context: account
 feature: registration
 title: One account per address and per browser
@@ -49,3 +51,7 @@ creating a second account by mistake, so that my address always leads to my own 
 
 - Replay story: `ACC-04` (account).
 - Inventory: account A8, A9.
+
+## Assumptions
+
+- answered: 1 — the story carries today's page sentences: "This email address is already registered" (both address scenarios) and "You already have an account.". It stays adopted; the story text is already changed, in both shops alike. (one-account-per-address-and-per-browser-01)

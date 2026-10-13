@@ -1,7 +1,9 @@
 ---
 id: the-cart-page
 epic: fill-a-cart
-status: adopted
+status: delivered
+delivered: 2026-10-12T22:13:59Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: The cart page

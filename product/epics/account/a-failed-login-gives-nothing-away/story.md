@@ -1,7 +1,9 @@
 ---
 id: a-failed-login-gives-nothing-away
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-13T00:53:12Z
+delivered_by: gate
 context: account
 feature: signin
 title: A failed login gives nothing away
