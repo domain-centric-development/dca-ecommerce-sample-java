@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import java.util.List;
 
@@ -212,5 +213,30 @@ public class BackofficeEventsPage extends BasePage {
   public String getFirstEventPayloadText() {
     waitFor(EVENT_PAYLOAD);
     return page.locator("[data-test='" + EVENT_PAYLOAD + "']").first().textContent().trim();
+  }
+
+  /**
+   * Checks if the content of the first event's payload is shown, not only its toggle.
+   *
+   * @return true if the payload content is visible
+   */
+  public boolean isFirstEventPayloadContentVisible() {
+    return firstEventPayloadContent().isVisible();
+  }
+
+  /**
+   * Gets the content of the first event's payload, without its toggle.
+   *
+   * @return the payload content text
+   */
+  public String getFirstEventPayloadContent() {
+    return firstEventPayloadContent().textContent().trim();
+  }
+
+  private Locator firstEventPayloadContent() {
+    waitFor(EVENT_PAYLOAD);
+    return page.locator("[data-test='" + EVENT_PAYLOAD + "']")
+        .first()
+        .locator(".event-log__payload-content");
   }
 }
