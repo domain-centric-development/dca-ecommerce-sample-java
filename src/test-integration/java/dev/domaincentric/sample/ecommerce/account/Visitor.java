@@ -152,6 +152,14 @@ final class Visitor {
   }
 
   /**
+   * Submits the form of the page at {@code path} back to that path with fields the shop refuses;
+   * returns the page it shows again with the refusal.
+   */
+  String refused(final String path, final Map<String, String> fields) throws Exception {
+    return refusedSubmit(path, fields);
+  }
+
+  /**
    * Submits the form of the page at {@code path} back to that path with the given fields, which the
    * shop refuses; returns the page it shows again.
    */
