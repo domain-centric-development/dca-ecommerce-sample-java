@@ -1,7 +1,9 @@
 ---
 id: creating-a-product-refuses-a-bad-sku
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-13T18:02:48Z
+delivered_by: gate
 context: product
 feature: assortment
 title: Creating a product refuses a bad SKU, name or text

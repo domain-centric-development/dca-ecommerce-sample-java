@@ -1,7 +1,9 @@
 ---
 id: place-the-order-from-the-review-and-see
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T07:40:48Z
+delivered_by: gate
 context: checkout
 feature: ordering
 title: Place the order from the review and see the confirmation

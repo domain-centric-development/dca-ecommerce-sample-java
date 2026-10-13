@@ -1,7 +1,9 @@
 ---
 id: starting-and-placing-check-the-cart
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T12:23:03Z
+delivered_by: gate
 context: checkout
 feature: ordering
 title: Starting and placing check the cart against what can still be sold
@@ -43,7 +45,7 @@ places an order in a separate browser; the stock has gone down by that order bef
   "Proceed to Checkout"
 - And the guest has since placed an order for exactly that cart in another tab, and the cart is now empty
 - When the guest presses "Proceed to Checkout" on the old page
-- Then the cart page opens with an error beginning "Cannot checkout empty cart"
+- Then the cart page opens with the error "Cannot check out an empty cart."
 
 ### Rule: Place Order checks every line again and changes nothing when one fails
 

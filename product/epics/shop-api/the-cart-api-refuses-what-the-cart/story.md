@@ -1,7 +1,9 @@
 ---
 id: the-cart-api-refuses-what-the-cart
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-13T16:47:13Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: The cart API refuses what the cart cannot take
@@ -33,7 +35,7 @@ what went wrong instead of a broken cart.
 - Given Ada's open, empty cart and "Wooden Hexagon Desk Model" with 8 in stock
 - When her client adds "Wooden Hexagon Desk Model" with quantity 9
 - Then the shop answers 409 with an `application/problem+json` body
-- And its title is "Not enough stock" and its detail "Insufficient stock for product: <id of Wooden Hexagon Desk Model>"
+- And its title is "Not enough stock" and its detail "Requested 9 of product <id of Wooden Hexagon Desk Model>, more than is in stock."
 - And her cart is still empty
 
 #### exactly-the-stock-is-accepted
@@ -55,7 +57,7 @@ what went wrong instead of a broken cart.
 - Given Ada's cart holds only "Domain-Driven Design" × 1
 - When her client sends `DELETE /api/carts/<cartId>/items/<id of Team Topologies>`
 - Then the shop answers 404 with an `application/problem+json` body
-- And its title is "Position not in cart" and its detail "Product not found in cart: <id of Team Topologies>"
+- And its title is "Position not in cart" and its detail "The cart holds no position for <id of Team Topologies>."
 
 ## Out of scope
 

@@ -1,7 +1,9 @@
 ---
 id: failed-deliveries-are-retried-on-their
 epic: run-the-shop
-status: adopted
+status: delivered
+delivered: 2026-10-13T12:39:34Z
+delivered_by: gate
 context: backoffice
 feature: redelivery
 title: Failed deliveries are retried on their own

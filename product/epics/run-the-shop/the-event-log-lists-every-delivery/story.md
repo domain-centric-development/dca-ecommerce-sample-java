@@ -1,7 +1,9 @@
 ---
 id: the-event-log-lists-every-delivery
 epic: run-the-shop
-status: adopted
+status: delivered
+delivered: 2026-10-13T07:16:19Z
+delivered_by: gate
 context: backoffice
 feature: eventlog
 title: The event log lists every delivery

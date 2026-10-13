@@ -1,7 +1,9 @@
 ---
 id: retry-a-failed-delivery
 epic: run-the-shop
-status: adopted
+status: delivered
+delivered: 2026-10-13T13:15:49Z
+delivered_by: gate
 context: backoffice
 feature: redelivery
 title: Retry a failed delivery

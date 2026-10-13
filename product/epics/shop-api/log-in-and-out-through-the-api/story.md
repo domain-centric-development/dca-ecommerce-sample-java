@@ -1,7 +1,9 @@
 ---
 id: log-in-and-out-through-the-api
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-13T13:07:15Z
+delivered_by: gate
 context: account
 feature: signin
 title: Log in and out through the API

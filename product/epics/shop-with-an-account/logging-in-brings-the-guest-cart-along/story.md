@@ -1,7 +1,9 @@
 ---
 id: logging-in-brings-the-guest-cart-along
 epic: shop-with-an-account
-status: adopted
+status: delivered
+delivered: 2026-10-13T12:58:40Z
+delivered_by: gate
 context: cart
 feature: cartrecovery
 title: Logging in brings the guest cart along

@@ -101,3 +101,47 @@ Test: dev.domaincentric.sample.ecommerce.account.ChangedAddressLoginIntegrationT
 - When they open `/account/profile`
 - Then they are sent to `/login?returnUrl=%2Faccount%2Fprofile`
 Test: dev.domaincentric.sample.ecommerce.account.ProfileIntegrationTest#theProfileSendsAVisitorWithoutCookiesToTheLogin
+
+### Rule: An address another account uses cannot be taken over
+
+#### taken-address-is-refused-in-the-profile
+- Given the accounts "anna.schmidt@example.com" and "ben.weber@example.com", and Anna logged in on `/account/profile`
+- When she saves Email "ben.weber@example.com"
+- Then the profile shows "This email address is already registered"
+- And the field Email still holds "ben.weber@example.com"
+Test: dev.domaincentric.sample.ecommerce.e2e.ProfileE2ETest#anAddressAnotherAccountUsesIsRefusedAndStaysInTheField
+
+### Rule: Address and date of birth must be usable
+
+#### malformed-address-is-refused-in-the-profile
+- Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`
+- When they save Email "anna.meyer@example"
+- Then the profile shows "Please enter a valid email address."
+Test: dev.domaincentric.sample.ecommerce.account.ProfileIntegrationTest#aMalformedAddressIsRefusedWithThePagesSentence
+
+#### missing-date-is-refused-in-the-profile
+- Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`
+- When they save an empty Date of Birth
+- Then the profile shows "Please enter a date like 1990-05-17"
+Test: dev.domaincentric.sample.ecommerce.account.ProfileIntegrationTest#aMissingDateOfBirthIsRefusedWithTheExpectedFormat
+
+#### future-date-is-refused-in-the-profile
+- Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`
+- When they save Date of Birth 2999-01-01
+- Then the profile shows "Please enter a date of birth that is not in the future."
+Test: dev.domaincentric.sample.ecommerce.account.ProfileIntegrationTest#aDateOfBirthInTheFutureIsRefused
+
+#### unreadable-date-is-refused-in-the-profile
+- Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`
+- When they save Date of Birth "17.05.1990"
+- Then the profile shows "Please enter a date like 1990-05-17"
+- And the field Date of Birth still holds "17.05.1990"
+Test: dev.domaincentric.sample.ecommerce.account.ProfileIntegrationTest#anUnreadableDateIsRefusedAndStaysInTheField
+
+### Rule: A refused change saves nothing, not even the valid field
+
+#### refused-change-saves-nothing
+- Given the customer "anna.schmidt@example.com", born 1990-05-17, saved Email "anna.meyer@example.com" together with Date of Birth 2999-01-01 and was refused
+- When they open `/account/profile` again
+- Then the fields hold "anna.schmidt@example.com" and 1990-05-17
+Test: dev.domaincentric.sample.ecommerce.account.ProfileIntegrationTest#aRefusedChangeSavesNeitherTheValidAddressNorTheDate

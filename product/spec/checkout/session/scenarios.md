@@ -28,3 +28,21 @@ Test: dev.domaincentric.sample.ecommerce.e2e.StartCheckoutE2ETest#proceedingFrom
 - And the entries read "Domain-Driven Design x2 109.98 EUR" and "Clean Architecture x1 39.99 EUR"
 - And the summary's Subtotal reads "149.97 EUR"
 Test: dev.domaincentric.sample.ecommerce.checkout.StartCheckoutIntegrationTest#buyerStepSummarisesEachCartLineAndTheSubtotal
+
+### Rule: Checkout pages only ever show the visitor's own checkout
+
+#### another-visitor-finds-no-checkout
+- Given the owner's open checkout and a stranger who has not started one
+- When the stranger opens `/checkout/buyer`
+- Then the stranger's cart page opens with the error "No active checkout session found"
+- And nothing of the owner's checkout is shown to the stranger
+Test: dev.domaincentric.sample.ecommerce.e2e.AnotherVisitorsCheckoutE2ETest#aStrangerOpeningTheBuyerStepFindsNoCheckoutOfTheOwner
+
+### Rule: A checkout starts only from the visitor's own cart
+
+#### starting-from-a-strangers-cart-is-refused
+- Given the owner's cart and a stranger who knows its cart id
+- When the stranger sends the start-checkout form with the owner's cart id
+- Then the stranger's cart page opens with the error "Your cart could not be found."
+- And the owner's buyer step still shows "Domain-Driven Design x1" and "jane@example.com"
+Test: dev.domaincentric.sample.ecommerce.checkout.StrangersCartCheckoutIntegrationTest#startingTheCheckoutWithTheOwnersCartIdIsRefusedAndLeavesTheOwnersCheckout

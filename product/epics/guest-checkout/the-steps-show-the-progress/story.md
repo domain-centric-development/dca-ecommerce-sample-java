@@ -1,7 +1,9 @@
 ---
 id: the-steps-show-the-progress
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T11:38:21Z
+delivered_by: gate
 context: checkout
 feature: steps
 title: The steps show the progress and are taken in order

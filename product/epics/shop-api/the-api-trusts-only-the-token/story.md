@@ -1,7 +1,9 @@
 ---
 id: the-api-trusts-only-the-token
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-13T17:42:05Z
+delivered_by: gate
 context: account
 feature: signin
 title: The API trusts only the token

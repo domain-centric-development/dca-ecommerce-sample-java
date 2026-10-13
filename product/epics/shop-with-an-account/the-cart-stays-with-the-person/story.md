@@ -1,7 +1,9 @@
 ---
 id: the-cart-stays-with-the-person
 epic: shop-with-an-account
-status: adopted
+status: delivered
+delivered: 2026-10-13T17:07:59Z
+delivered_by: gate
 context: account
 feature: signin
 title: The cart stays with the person through registration, logout and a lapsed login

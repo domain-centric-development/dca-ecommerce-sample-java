@@ -1,7 +1,9 @@
 ---
 id: look-into-an-events-payload
 epic: run-the-shop
-status: adopted
+status: delivered
+delivered: 2026-10-13T07:48:19Z
+delivered_by: gate
 context: backoffice
 feature: eventlog
 title: Look into an event's payload

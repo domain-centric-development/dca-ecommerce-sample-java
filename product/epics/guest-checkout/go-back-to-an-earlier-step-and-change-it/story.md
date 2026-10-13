@@ -1,7 +1,9 @@
 ---
 id: go-back-to-an-earlier-step-and-change-it
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T08:08:06Z
+delivered_by: gate
 context: checkout
 feature: steps
 title: Go back to an earlier step and change it

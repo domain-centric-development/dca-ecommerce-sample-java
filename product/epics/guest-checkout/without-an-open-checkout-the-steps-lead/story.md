@@ -1,7 +1,9 @@
 ---
 id: without-an-open-checkout-the-steps-lead
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T11:47:06Z
+delivered_by: gate
 context: checkout
 feature: steps
 title: Without an open checkout the steps lead to the cart

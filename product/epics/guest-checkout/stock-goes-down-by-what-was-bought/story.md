@@ -1,7 +1,9 @@
 ---
 id: stock-goes-down-by-what-was-bought
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T11:30:59Z
+delivered_by: gate
 context: inventory
 feature: stock
 title: Stock goes down by what was bought

@@ -1,11 +1,13 @@
 ---
 id: creating-a-product-holds-its-price
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-13T19:15:53Z
+delivered_by: gate
 context: product
 feature: assortment
 title: Creating a product holds its price and stock to the rules
-depends_on: [staff-create-a-product-through-the-api, prices-shown-from-the-price-owner, availability-shown]
+depends_on: [staff-create-a-product-through-the-api, prices-shown-from-the-price-owner, availability-shown, created-product-answers-with-its-rounded-price]
 ---
 
 # Creating a product holds its price and stock to the rules
@@ -81,3 +83,7 @@ amount in the shop, so that the catalogue never shows a price of nothing, a frac
 - Replay story: `API-05` (shop-api).
 - Inventory: product P13 (price, stock), P17 (status only), P21; product rules price, initial stock; pricing R5,
   R6 (as reached through product creation).
+
+## Assumptions
+
+- answered: a, as a story of its own — a price is a decimal with two places, rounded by the commercial rule (half up), the 201 included. The change story created-product-answers-with-its-rounded-price makes the answer carry the rounded price; this story depends on it and stays adopted as written. (creating-a-product-holds-its-price-01)

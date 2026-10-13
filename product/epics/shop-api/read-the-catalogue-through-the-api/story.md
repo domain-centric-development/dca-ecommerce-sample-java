@@ -1,7 +1,9 @@
 ---
 id: read-the-catalogue-through-the-api
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-13T12:31:31Z
+delivered_by: gate
 context: product
 feature: catalogue
 title: Read the catalogue through the API

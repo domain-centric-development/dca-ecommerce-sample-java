@@ -86,3 +86,34 @@ Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogMcpIntegrationTes
 - When an assistant calls `product-by-id` with `id` ""
 - Then the call ends in a tool error whose message is "Product ID cannot be null or blank"
 Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogMcpIntegrationTest#productByIdRefusesABlankIdWithAToolError
+
+### Rule: Anyone may read the catalogue, in the same order as the catalogue page
+
+#### listing-returns-the-range-in-name-order
+- Given the shop has started and seeded the sample catalogue of `seed-catalogue.json`
+- When a client without a token sends `GET /api/products`
+- Then the shop answers 200 with a JSON array of 21 products
+- And they are in ordinal order of the product name, the first named `"Bounded Context" Enamel Pin`
+Test: dev.domaincentric.sample.ecommerce.e2e.CatalogueApiE2ETest#listingReturnsTheSeededRangeInOrdinalNameOrder
+
+### Rule: A product carries its master data, its price and its stock
+
+#### a-listed-product-carries-price-and-stock
+- Given the seeded product "Domain-Driven Design"
+- When a client sends `GET /api/products`
+- Then its entry has an `id`, `sku` "BOOK-001", `name` "Domain-Driven Design", its `description`, an `imageUrl`, `price` 54.99, `currency` "EUR", `category` "Books", `stockQuantity` 20 and `isAvailable` true
+Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogApiIntegrationTest#aListedProductCarriesItsMasterDataPriceAndStock
+
+#### one-product-by-its-id
+- Given the `id` of "Hexagonal Architecture Explained" as the list returns it
+- When a client without a token sends `GET /api/products/<that id>`
+- Then the shop answers 200 with that product: `sku` "BOOK-005", `price` 34.99, `currency` "EUR", `category` "Books", `stockQuantity` 26 and `isAvailable` true
+Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogApiIntegrationTest#oneProductIsReadByTheIdTheListReturns
+
+### Rule: An unknown product is not found
+
+#### an-unknown-product-is-not-found
+- Given the seeded sample catalogue
+- When a client sends `GET /api/products/no-such-product`
+- Then the shop answers 404 with an empty body
+Test: dev.domaincentric.sample.ecommerce.product.ProductCatalogApiIntegrationTest#anUnknownProductIsAnsweredWithNotFoundAndNoBody

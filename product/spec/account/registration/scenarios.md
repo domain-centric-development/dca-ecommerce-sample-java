@@ -140,3 +140,42 @@ Test: dev.domaincentric.sample.ecommerce.account.RestartedShopIntegrationTest#an
 - When the visitor logs in with "anna.schmidt@example.com" and "Secret123"
 - Then the login page shows "Invalid email or password"
 Test: dev.domaincentric.sample.ecommerce.account.RestartedShopIntegrationTest#credentialsOfAnAccountFromBeforeTheRestartAreRefused
+
+### Rule: Registering through the API creates an account and hands out its token
+
+#### registering-hands-out-a-token
+- Given no account exists for "ada@example.com"
+- When a client sends `POST /api/auth/register` with `{"email":"ada@example.com","password":"Secret123","firstName":"Ada","lastName":"Lovelace","dateOfBirth":"1815-12-10"}`
+- Then the shop answers 201
+- And the body has `success` true, a non-empty `token` and `email` "ada@example.com"
+Test: dev.domaincentric.sample.ecommerce.e2e.RegistrationApiE2ETest#registeringAnAccountAnswersCreatedWithItsToken
+
+### Rule: Registration refusals are problem documents
+
+#### an-address-already-registered-is-a-conflict
+- Given an account "ada@example.com"
+- When a client sends `POST /api/auth/register` with email "ada@example.com", password "Secret123", first name "Grace", last name "Hopper" and date of birth "1906-12-09"
+- Then the shop answers 409 with an `application/problem+json` body
+- And its title is "Email already registered" and its detail "The email address ada@example.com is already registered."
+Test: dev.domaincentric.sample.ecommerce.account.RegistrationApiIntegrationTest#anAddressAnotherAccountHoldsIsAConflictStatedAsAProblem
+
+#### a-weak-password-is-refused
+- Given no account exists for "grace@example.com"
+- When a client registers "grace@example.com" through the API with password "secret123"
+- Then the shop answers 422 with an `application/problem+json` body
+- And its title is "Password too weak" and its detail "Password must contain an uppercase letter."
+Test: dev.domaincentric.sample.ecommerce.account.RegistrationApiIntegrationTest#aPasswordWithoutAnUppercaseLetterIsRefusedNamingTheRule
+
+#### a-malformed-address-is-refused
+- Given no account exists for "grace@example"
+- When a client registers "grace@example" through the API with password "Secret123"
+- Then the shop answers 400 with an `application/problem+json` body
+- And its title is "Unacceptable value" and it carries no detail
+Test: dev.domaincentric.sample.ecommerce.account.RegistrationApiIntegrationTest#aMalformedAddressIsABadRequestWithoutDetail
+
+#### a-caller-with-an-account-cannot-register-another
+- Given a client holding the token of the account "ada@example.com"
+- When it sends `POST /api/auth/register` for "grace@example.com" with `Authorization: Bearer <that token>`
+- Then the shop answers 409 with an `application/problem+json` body
+- And its title is "Account already exists" and its detail "The signed-in user already has an account."
+Test: dev.domaincentric.sample.ecommerce.account.RegistrationApiIntegrationTest#aCallerHoldingTheTokenOfAnAccountCannotRegisterASecondOne

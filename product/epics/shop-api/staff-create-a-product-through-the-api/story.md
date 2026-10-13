@@ -1,7 +1,9 @@
 ---
 id: staff-create-a-product-through-the-api
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-13T16:57:02Z
+delivered_by: gate
 context: product
 feature: assortment
 title: Staff create a product through the API

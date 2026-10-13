@@ -1,7 +1,9 @@
 ---
 id: the-back-office-stays-closed-to-others
 epic: run-the-shop
-status: adopted
+status: delivered
+delivered: 2026-10-13T07:08:49Z
+delivered_by: gate
 context: backoffice
 feature: access
 title: The back office stays closed to others

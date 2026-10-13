@@ -1,7 +1,9 @@
 ---
 id: the-profile-refuses-an-unusable-change
 epic: account
-status: adopted
+status: delivered
+delivered: 2026-10-13T06:55:24Z
+delivered_by: gate
 context: account
 feature: profile
 title: The profile refuses an unusable change
@@ -67,3 +69,7 @@ it, so that my details are never half changed.
 - The browser requires both fields and offers a date input; the refusals above are what the shop answers when
   such a value reaches it anyway.
 - Inventory: account A24, A25.
+
+## Assumptions
+
+- answered: 1 — missing-date-is-refused-in-the-profile expects "Please enter a date like 1990-05-17" and future-date-is-refused-in-the-profile "Please enter a date of birth that is not in the future.". The story stays adopted; the story text is already changed, in both shops and the replay source alike. (the-profile-refuses-an-unusable-change-01)

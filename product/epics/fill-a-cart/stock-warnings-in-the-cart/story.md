@@ -1,7 +1,9 @@
 ---
 id: stock-warnings-in-the-cart
 epic: fill-a-cart
-status: adopted
+status: delivered
+delivered: 2026-10-13T12:14:55Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: Stock warnings in the cart

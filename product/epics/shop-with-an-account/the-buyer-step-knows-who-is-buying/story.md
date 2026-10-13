@@ -1,7 +1,9 @@
 ---
 id: the-buyer-step-knows-who-is-buying
 epic: shop-with-an-account
-status: adopted
+status: delivered
+delivered: 2026-10-13T17:52:23Z
+delivered_by: gate
 context: checkout
 feature: buyerdetails
 title: The buyer step knows who is buying

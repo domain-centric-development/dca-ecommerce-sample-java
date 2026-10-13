@@ -1,7 +1,9 @@
 ---
 id: only-your-own-cart-through-the-api
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-13T16:36:31Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: Only your own cart through the API

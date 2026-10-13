@@ -1,7 +1,9 @@
 ---
 id: choose-how-to-pay
 epic: guest-checkout
-status: adopted
+status: delivered
+delivered: 2026-10-13T06:48:27Z
+delivered_by: gate
 context: checkout
 feature: payment
 title: Choose how to pay
