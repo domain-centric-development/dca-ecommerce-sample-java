@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.e2e;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -55,6 +56,41 @@ class ShoppingCartApiE2ETest {
     assertEquals("109.98", cart.path("total").decimalValue().toPlainString());
     assertEquals("EUR", cart.path("currency").asText());
     assertEquals(1, cart.path("itemCount").asInt());
+  }
+
+  @Test
+  @DisplayName("More than in stock is refused")
+  void addingMoreThanIsInStockIsAConflictAndLeavesTheCartEmpty() throws Exception {
+    final String token = registeredToken();
+    final String cartId =
+        JSON.readTree(send(authorized(token, "/api/carts").POST(noBody())).body())
+            .get("cartId")
+            .asText();
+    final String productId = productIdOf("Wooden Hexagon Desk Model");
+
+    final HttpResponse<String> response =
+        send(
+            authorized(token, "/api/carts/" + cartId + "/items")
+                .header("Content-Type", "application/json")
+                .POST(
+                    HttpRequest.BodyPublishers.ofString(
+                        """
+                        {"productId":"%s","quantity":9}"""
+                            .formatted(productId))));
+
+    assertEquals(409, response.statusCode(), response.body());
+    assertEquals(
+        "application/problem+json",
+        response.headers().firstValue("Content-Type").orElse("").split(";")[0]);
+    final JsonNode problem = JSON.readTree(response.body());
+    assertEquals("Not enough stock", problem.path("title").asText());
+    assertEquals(
+        "Requested 9 of product " + productId + ", more than is in stock.",
+        problem.path("detail").asText());
+    final JsonNode cart =
+        JSON.readTree(send(authorized(token, "/api/carts/" + cartId).GET()).body());
+    assertTrue(cart.path("items").isArray(), cart.toString());
+    assertEquals(0, cart.path("items").size(), "the cart is still empty");
   }
 
   @Test

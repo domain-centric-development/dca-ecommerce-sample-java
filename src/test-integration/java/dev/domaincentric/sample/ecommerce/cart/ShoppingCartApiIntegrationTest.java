@@ -140,6 +140,66 @@ class ShoppingCartApiIntegrationTest {
   }
 
   @Test
+  @DisplayName("An unknown product is not available")
+  void addingAProductTheCatalogueDoesNotKnowIsNotFoundStatedAsAProblem() throws Exception {
+    final String token = register("ada-adds-unknown@example.com");
+    final String cartId = open(token).get("cartId").asText();
+
+    add(token, cartId, "no-such-product", 1)
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.title").value("Article not available"))
+        .andExpect(jsonPath("$.detail").value("There is no article for product no-such-product."));
+  }
+
+  @Test
+  @DisplayName("Exactly the stock is accepted")
+  void addingExactlyTheStockOfAProductPutsAllOfItIntoTheCart() throws Exception {
+    final String token = register("ada-adds-the-stock@example.com");
+    final String cartId = open(token).get("cartId").asText();
+    final String deskModel = productIdOf("Wooden Hexagon Desk Model");
+
+    add(token, cartId, deskModel, 8)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].productId").value(deskModel))
+        .andExpect(jsonPath("$.items[0].quantity").value(8));
+  }
+
+  @Test
+  @DisplayName("A quantity of zero is refused")
+  void addingAQuantityOfZeroIsABadRequestAndLeavesTheCartEmpty() throws Exception {
+    final String token = register("ada-adds-zero@example.com");
+    final String cartId = open(token).get("cartId").asText();
+
+    add(token, cartId, productIdOf("Domain-Driven Design"), 0).andExpect(status().isBadRequest());
+
+    mockMvc
+        .perform(get("/api/carts/" + cartId).header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items").isEmpty());
+  }
+
+  @Test
+  @DisplayName("Removing a product not in the cart")
+  void removingAProductTheCartDoesNotHoldIsNotFoundStatedAsAProblem() throws Exception {
+    final String token = register("ada-removes-absent@example.com");
+    final String cartId = open(token).get("cartId").asText();
+    add(token, cartId, productIdOf("Domain-Driven Design"), 1).andExpect(status().isOk());
+    final String teamTopologies = productIdOf("Team Topologies");
+
+    mockMvc
+        .perform(
+            delete("/api/carts/" + cartId + "/items/" + teamTopologies)
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.title").value("Position not in cart"))
+        .andExpect(
+            jsonPath("$.detail").value("The cart holds no position for " + teamTopologies + "."));
+  }
+
+  @Test
   @DisplayName("Adding to another customer's cart finds nothing")
   void addingToAnotherCustomersCartAnswersNotFoundAndLeavesItAsItWas() throws Exception {
     final String ada = register("ada-foreign-add@example.com");
