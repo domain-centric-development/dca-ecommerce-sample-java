@@ -121,6 +121,25 @@ class ApiAuthorizationIntegrationTest {
         .andExpect(status().isNotFound());
   }
 
+  @Test
+  @DisplayName("A token with an altered signature grants nothing")
+  void aTokenWhoseSignatureWasAlteredIsChallengedLikeAStranger() throws Exception {
+    final String[] parts = register("api-altered-token@example.com").split("\\.");
+    final String signature = parts[2];
+    // The first character, not the last: the last one's low bits are padding and may decode alike.
+    final char altered = signature.charAt(0) == 'A' ? 'B' : 'A';
+    final String forged = parts[0] + "." + parts[1] + "." + altered + signature.substring(1);
+
+    mockMvc
+        .perform(
+            post("/api/products")
+                .header("Authorization", "Bearer " + forged)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(newProduct()))
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
+  }
+
   /** Registers an account through the API and returns its token. */
   private String register(final String email) throws Exception {
     final String body =
