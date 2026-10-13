@@ -42,6 +42,28 @@ public class RegisterPage extends BasePage {
   }
 
   /**
+   * Creates the register page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public RegisterPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+  }
+
+  /**
+   * Navigates to the register page of a shop the test started itself.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   * @return a new RegisterPage
+   */
+  public static RegisterPage navigateTo(Page page, String shopUrl) {
+    page.navigate(shopUrl + URL_PATTERN);
+    return new RegisterPage(page, shopUrl);
+  }
+
+  /**
    * Fills the email field.
    *
    * @param email the email address

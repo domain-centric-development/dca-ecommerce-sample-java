@@ -73,6 +73,32 @@ final class Visitor {
     return redirectOf(loggedIn.getRedirectedUrl());
   }
 
+  /**
+   * Submits the login form of the given page with credentials the shop refuses; returns the page it
+   * shows again.
+   */
+  String refusedLogIn(final String loginPage, final String email, final String password)
+      throws Exception {
+    final String form = page(loginPage);
+    final MockHttpServletResponse refused =
+        mockMvc
+            .perform(
+                withCookies(post("/login"))
+                    .param("_csrf", text(CSRF_FIELD, form))
+                    .param("email", email)
+                    .param("password", password))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    keep(refused);
+    return refused.getContentAsString();
+  }
+
+  /** Keeps a cookie this browser holds from an earlier visit, and sends it from now on. */
+  void holds(final Cookie cookie) {
+    cookies.put(cookie.getName(), cookie);
+  }
+
   /** Opens a path that answers with a redirect; returns where it leads. */
   String redirectOf(final String path) throws Exception {
     final MockHttpServletResponse response =

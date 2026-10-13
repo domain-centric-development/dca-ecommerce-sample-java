@@ -13,6 +13,7 @@ public class ProductCatalogPage extends BasePage {
   private static final String PRODUCT_CARD = "product-card";
   private static final String VIEW_DETAILS_LINK = "view-product";
   private static final String PRODUCT_TITLE = "product-card-title";
+  private static final String ERROR_MESSAGE = "error-message";
   // The card's price carries no data-test; adopting the page changes no template.
   private static final String CARD_PRICE = ".product-card__price";
 
@@ -35,6 +36,38 @@ public class ProductCatalogPage extends BasePage {
   public static ProductCatalogPage navigateTo(Page page) {
     page.navigate(BASE_URL + URL_PATTERN);
     return new ProductCatalogPage(page);
+  }
+
+  /**
+   * Creates the catalog page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public ProductCatalogPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+    waitFor(PRODUCT_CARD);
+  }
+
+  /**
+   * Navigates to the catalog of a shop the test started itself.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   * @return a new ProductCatalogPage
+   */
+  public static ProductCatalogPage navigateTo(Page page, String shopUrl) {
+    page.navigate(shopUrl + URL_PATTERN);
+    return new ProductCatalogPage(page, shopUrl);
+  }
+
+  /**
+   * Whether the page shows an error message above its content.
+   *
+   * @return true when the error message is shown
+   */
+  public boolean showsErrorMessage() {
+    return exists(ERROR_MESSAGE);
   }
 
   /**

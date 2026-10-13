@@ -31,6 +31,19 @@ public abstract class BasePage {
   }
 
   /**
+   * Creates a new page object of a shop the test started itself, and validates the current URL
+   * against that shop's address.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of the shop the page belongs to
+   * @param expectedUrlPattern glob pattern for the expected URL (e.g., "/products/*")
+   */
+  protected BasePage(Page page, String shopUrl, String expectedUrlPattern) {
+    this.page = page;
+    page.waitForURL(shopUrl + expectedUrlPattern);
+  }
+
+  /**
    * Creates a new page object without URL validation. Use this when the page might not be loaded
    * yet.
    *
