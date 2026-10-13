@@ -125,6 +125,23 @@ public class CartPage extends BasePage {
         && (Boolean) image.evaluate("e => e.complete && e.naturalWidth > 0");
   }
 
+  /**
+   * The stock warning a cart line shows, once it shows one — the page reloaded until it does or the
+   * time is up, for stock the shop lowers shortly after an order placed elsewhere.
+   *
+   * @param productName the name the line shows
+   * @param within how long to wait for the warning
+   * @return the warning's text, trimmed; empty when the line shows none
+   */
+  public String stockWarningOnceShown(String productName, java.time.Duration within) {
+    final long deadline = System.nanoTime() + within.toNanos();
+    Locator warning = lineOf(productName).locator("[data-test='stock-alert']");
+    while (warning.count() == 0 && System.nanoTime() < deadline) {
+      page.reload();
+    }
+    return warning.count() == 0 ? "" : warning.textContent().strip();
+  }
+
   private Locator lineOf(String productName) {
     return page.locator("[data-test='" + CART_ITEM + "']")
         .filter(
