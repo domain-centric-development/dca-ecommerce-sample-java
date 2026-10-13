@@ -2,6 +2,8 @@ package dev.domaincentric.sample.ecommerce.e2e.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -231,6 +233,69 @@ public class BackofficeEventsPage extends BasePage {
    */
   public String getFirstEventPayloadContent() {
     return firstEventPayloadContent().textContent().trim();
+  }
+
+  /**
+   * Opens the page again until the entry carrying the given text shows the badge "Completed", or
+   * the time is up.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @param within how long the entry may take to complete
+   * @return the page as last opened
+   */
+  public BackofficeEventsPage reloadUntilEntryCompleted(String text, Duration within) {
+    Instant deadline = Instant.now().plus(within);
+    while (!"Completed".equals(statusOfEntryCarrying(text)) && Instant.now().isBefore(deadline)) {
+      page.waitForTimeout(250);
+      page.reload();
+      waitFor(EVENT_LOG);
+    }
+    return this;
+  }
+
+  /**
+   * Gets the status badge of the entry carrying the given text.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @return the badge text, or empty when the page lists no such entry
+   */
+  public String statusOfEntryCarrying(String text) {
+    Locator entry = entryCarrying(text);
+    if (entry.count() == 0) {
+      return "";
+    }
+    return entry.first().locator("[data-test='" + EVENT_STATUS + "']").textContent().trim();
+  }
+
+  /**
+   * Checks if the entry carrying the given text shows a "Completed" date.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @return true if the entry shows its completion date
+   */
+  public boolean entryCarryingShowsCompletionDate(String text) {
+    return entryCarrying(text)
+            .first()
+            .locator("[data-test='" + EVENT_COMPLETION_DATE + "']")
+            .count()
+        > 0;
+  }
+
+  /**
+   * Gets the first line of the payload of the entry carrying the given text.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @return the payload's first line
+   */
+  public String payloadFirstLineOfEntryCarrying(String text) {
+    String content =
+        entryCarrying(text).first().locator(".event-log__payload-content").textContent().strip();
+    return content.split("\n", 2)[0];
+  }
+
+  private Locator entryCarrying(String text) {
+    return page.locator("[data-test='" + EVENT_LOG_ITEM + "']")
+        .filter(new Locator.FilterOptions().setHasText(text));
   }
 
   private Locator firstEventPayloadContent() {

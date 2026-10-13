@@ -89,6 +89,18 @@ public final class ShopUnderTest {
     return Optional.ofNullable(paymentProvider);
   }
 
+  /**
+   * The delivery that fails once, for a test to publish an event whose first delivery fails — a
+   * component of the suite's own shop, which scans this package. Empty when the suite drives a shop
+   * started elsewhere: that shop carries no such listener.
+   *
+   * @return the failing-once delivery, or empty
+   */
+  public static synchronized Optional<FailingOnceDelivery> failingOnceDelivery() {
+    baseUrl();
+    return Optional.ofNullable(shop).map(started -> started.getBean(FailingOnceDelivery.class));
+  }
+
   private static WireMockServer authorizingPaymentProvider() {
     WireMockServer provider = new WireMockServer(wireMockConfig().dynamicPort());
     provider.start();
