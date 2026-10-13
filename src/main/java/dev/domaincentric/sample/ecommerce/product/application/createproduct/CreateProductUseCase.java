@@ -79,15 +79,16 @@ public class CreateProductUseCase implements CreateProductInputPort {
     // Publish domain events (ProductCreated event will trigger Pricing and Inventory contexts)
     eventPublisher.publishAndClearEvents(product);
 
-    // Map to output (price comes from input since it's not stored in Product)
+    // Map to output (price comes from the Price built above, rounded to cents, since it's not
+    // stored in Product)
     return new CreateProductResult(
         product.id().value().toString(),
         product.sku().value(),
         product.name().value(),
         product.description().value(),
         product.imageUrl().value(),
-        input.priceAmount(),
-        input.priceCurrency(),
+        initialPrice.value().amount(),
+        initialPrice.value().currency().getCurrencyCode(),
         product.category().name());
   }
 }

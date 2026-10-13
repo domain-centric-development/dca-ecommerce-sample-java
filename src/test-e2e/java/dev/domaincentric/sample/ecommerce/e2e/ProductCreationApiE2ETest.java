@@ -61,6 +61,34 @@ class ProductCreationApiE2ETest {
     }
   }
 
+  @Test
+  @DisplayName("The answer carries the rounded price")
+  void theAnswerCarriesThePriceRoundedHalfUpToCents() throws Exception {
+    try (ConfigurableApplicationContext shop =
+        ShopUnderTest.startedWith("product_creation_rounding_api_e2e")) {
+      final String staffToken = staffToken(shop);
+
+      final HttpResponse<String> response =
+          HttpClient.newHttpClient()
+              .send(
+                  HttpRequest.newBuilder(
+                          URI.create(ShopUnderTest.baseUrlOf(shop) + "/api/products"))
+                      .header("Authorization", "Bearer " + staffToken)
+                      .header("Content-Type", "application/json")
+                      .POST(
+                          HttpRequest.BodyPublishers.ofString(
+                              """
+                              {"sku":"ROUND-001","name":"Rounding Mug",\
+                              "price":14.995,"category":"Desk & Office","stock":5}"""))
+                      .build(),
+                  HttpResponse.BodyHandlers.ofString());
+
+      assertEquals(201, response.statusCode(), "status: " + response.body());
+      final JsonNode product = new ObjectMapper().readTree(response.body());
+      assertEquals(15.00, product.path("price").asDouble(), "price: " + product);
+    }
+  }
+
   /**
    * A staff token for an account registered through the API, from the shop's own token service. No
    * registration and no login hands out the staff role; staff tokens are issued outside the shop,
