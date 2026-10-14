@@ -1,7 +1,9 @@
 ---
 id: a-malformed-product-id-is-a-bad-request
 epic: shop-api
-status: approved
+status: delivered
+delivered: 2026-10-14T23:02:46Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: The cart API answers a malformed product id as a malformed call
@@ -57,3 +59,4 @@ product has, so that a bug in my request reads as a bad request and not as a pro
 ## Assumptions
 
 - answered: SharedScenariosTest also knows the titles of the stories not yet delivered (their `####` criteria, title = Title line else the key in words); the spec stays the only source for the Test-line and duplicate checks. Fixed on main in d5ce1e9; nothing changes in this story — run the stage again as it is. (a-malformed-product-id-is-a-bad-request-01)
+- answered: Commit the three scenarios' spec merge on main, then integrate main into this story's branch (or let the runner (a-malformed-product-id-is-a-bad-request-02)
