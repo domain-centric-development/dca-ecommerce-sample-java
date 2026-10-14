@@ -120,6 +120,19 @@ public final class ShopUnderTest {
   }
 
   /**
+   * The delivery to two listeners that fail twice and once, for a test to publish an event whose
+   * listeners need a different number of attempts — a component of the suite's own shop, which
+   * scans this package. Empty when the suite drives a shop started elsewhere: that shop carries no
+   * such listeners.
+   *
+   * @return the two-listener delivery, or empty
+   */
+  public static synchronized Optional<TwoListenerDelivery> twoListenerDelivery() {
+    baseUrl();
+    return Optional.ofNullable(shop).map(started -> started.getBean(TwoListenerDelivery.class));
+  }
+
+  /**
    * A staff token for a registered account, minted by the suite's own shop the way an operator
    * provisioning tool would — no registration or login hands the role out. Empty when the suite
    * drives a shop started elsewhere: that shop's signing key is not the suite's.

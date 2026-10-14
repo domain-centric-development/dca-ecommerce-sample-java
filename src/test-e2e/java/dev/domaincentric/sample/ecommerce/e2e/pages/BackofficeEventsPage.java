@@ -333,6 +333,70 @@ public class BackofficeEventsPage extends BasePage {
     return content.split("\n", 2)[0];
   }
 
+  /**
+   * Opens the page again until the entry carrying the given text for the given listener shows the
+   * badge "Completed", or the time is up.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @param listener a text the entry shows under "Listener"
+   * @param within how long the entry may take to complete
+   * @return the page as last opened
+   */
+  public BackofficeEventsPage reloadUntilEntryCompleted(
+      String text, String listener, Duration within) {
+    Instant deadline = Instant.now().plus(within);
+    while (!"Completed".equals(statusOfEntry(text, listener)) && Instant.now().isBefore(deadline)) {
+      page.waitForTimeout(250);
+      page.reload();
+      waitFor(EVENT_LOG);
+    }
+    return this;
+  }
+
+  /**
+   * Expands "Event Payload" of the entry carrying the given text for the given listener.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @param listener a text the entry shows under "Listener"
+   */
+  public void expandPayloadOfEntry(String text, String listener) {
+    Locator entry = entryOf(text, listener);
+    assertThat(entry).hasCount(1);
+    entry.locator("[data-test='" + EVENT_PAYLOAD + "'] summary").click();
+    assertThat(entry.locator(".event-log__payload-content")).isVisible();
+  }
+
+  /**
+   * Gets the first line of the shown payload of the entry carrying the given text for the given
+   * listener.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @param listener a text the entry shows under "Listener"
+   * @return the payload's first line
+   */
+  public String payloadFirstLineOfEntry(String text, String listener) {
+    String content =
+        entryOf(text, listener).locator(".event-log__payload-content").innerText().strip();
+    return content.split("\n", 2)[0];
+  }
+
+  private String statusOfEntry(String text, String listener) {
+    Locator entry = entryOf(text, listener);
+    if (entry.count() == 0) {
+      return "";
+    }
+    return entry.first().locator("[data-test='" + EVENT_STATUS + "']").textContent().trim();
+  }
+
+  private Locator entryOf(String text, String listener) {
+    return entryCarrying(text)
+        .filter(
+            new Locator.FilterOptions()
+                .setHas(
+                    page.locator("[data-test='" + EVENT_LISTENER + "']")
+                        .filter(new Locator.FilterOptions().setHasText(listener))));
+  }
+
   private String payloadFirstLineOrEmpty(String text) {
     if (entryCarrying(text).count() == 0) {
       return "";
