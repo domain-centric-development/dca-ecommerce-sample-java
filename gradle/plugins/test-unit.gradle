@@ -20,6 +20,15 @@ configureTestTask(test, "test")
 test {
   jvmArgs "-Xshare:off"
 
+  // SharedScenariosTest reads the scenarios and the browser-test sources as files: they are inputs of
+  // the run, so a changed scenario or browser test reruns it instead of leaving the task up to date.
+  inputs.dir('product/spec')
+      .withPropertyName('scenarios')
+      .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+  inputs.dir('src/test-e2e/java')
+      .withPropertyName('browserTestSources')
+      .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+
   // Debug logging support
   if (project.hasProperty('log-debug')) {
     beforeTest { descriptor ->

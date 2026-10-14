@@ -84,7 +84,7 @@ class ShopInAFrameE2ETest extends BaseE2ETest {
   }
 
   @Test
-  @DisplayName("A shop started for embedding works cross-site")
+  @DisplayName("A shop started for embedding works cross site")
   void aShopStartedForEmbeddingWorksCrossSite() {
     startedOtherwise =
         ShopUnderTest.startedWith(
