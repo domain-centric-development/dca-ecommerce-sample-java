@@ -41,6 +41,9 @@ class BackofficeAccessIntegrationTest {
   private static final String LOGIN_PAGE = "/backoffice/login";
   private static final String EVENT_LOG = "/backoffice/events";
 
+  /** An address under the back office that no page answers: the guard covers it all the same. */
+  private static final String UNKNOWN_BACKOFFICE_ADDRESS = "/backoffice/settings";
+
   private static final Pattern HEADING = Pattern.compile("<h1>([^<]*)</h1>");
   private static final Pattern CSRF_FIELD = Pattern.compile("name=\"_csrf\" value=\"([^\"]+)\"");
 
@@ -75,7 +78,7 @@ class BackofficeAccessIntegrationTest {
   @DisplayName("Login after a redirect opens the event log")
   void operatorLoginAfterARedirectFromAnotherPageOpensTheEventLog() throws Exception {
     final MockHttpSession session = new MockHttpSession();
-    assertThat(redirectPath(perform(get("/backoffice/settings").session(session))))
+    assertThat(redirectPath(perform(get(UNKNOWN_BACKOFFICE_ADDRESS).session(session))))
         .isEqualTo(LOGIN_PAGE);
 
     final String landed = logIn(session);
