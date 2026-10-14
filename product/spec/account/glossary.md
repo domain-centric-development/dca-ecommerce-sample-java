@@ -62,6 +62,9 @@ The **name identifies who the account belongs to and is therefore fixed for the 
 account** — it is captured once at registration and no operation replaces it. Only the date of birth
 may be corrected, via `withDateOfBirth`, which carries both names over unchanged.
 
+Its **full name** is the first and the last name joined by one space, as the profile shows it
+(`account/profile` — `profile-shows-name-and-details`: "Anna Schmidt").
+
 **Type:** Value Object
 
 **Operations:** `of`, `withDateOfBirth`.
@@ -141,17 +144,23 @@ blocked), `CLOSED` (permanently ended).
 
 **Operations:** `canLogin`, `isTerminal`.
 
-### Role (planned)
+### Role
 
-**Definition:** Planned Value Object for a business role of the account (currently modelled as
-`String` in `Account.roles`, e.g. `CUSTOMER`).
+**Definition:** What an account may do beyond shopping. Two roles: **customer** — every registered account
+holds it; **staff** — may in addition create products and list every cart through the API, where a customer
+without it is forbidden.
 
-**Type:** Value Object (planned)
+**Sources:** `product/assortment` — `staff-create-a-product` ("a client holding a token whose roles include
+staff"); `cart/shopping` — the rule "Only staff list every cart; a stranger is challenged, a customer is
+forbidden" (`staff-list-every-cart`).
+
+**Type:** Value Object with the fixed values customer and staff — today still a `String` in `Account.roles`
+(e.g. `CUSTOMER`).
 
 **Synonyms (avoid):** raw `String` role.
 
-**Notes:** DCA review recommendation: migrate `Set<String> roles` → `Set<Role>` to encapsulate
-permitted values and rule out typos at compile time.
+**Notes:** A fixed set of values is a type, not a string: `Set<String> roles` becomes `Set<Role>`, which rules
+out typos at compile time.
 
 ### Token (planned)
 
