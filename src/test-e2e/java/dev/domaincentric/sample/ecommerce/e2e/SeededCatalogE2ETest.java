@@ -18,7 +18,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 class SeededCatalogE2ETest extends BaseE2ETest {
 
   @Test
-  @DisplayName("The catalog lists the seeded products in name order")
+  @DisplayName("Catalogue lists the seeded range")
   void catalogListsTheSeededProductsInNameOrder() {
     try (ConfigurableApplicationContext shop = ShopUnderTest.startedWith("seeded_catalog_e2e")) {
       List<String> titles =

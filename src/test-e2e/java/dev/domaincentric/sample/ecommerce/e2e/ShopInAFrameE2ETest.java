@@ -147,7 +147,8 @@ class ShopInAFrameE2ETest extends BaseE2ETest {
 
   /**
    * A throwaway server on a free port of this host, serving nothing but a page that frames the
-   * shop. A real origin rather than an intercepted one, as in {@link EmbeddedShopE2ETest}.
+   * shop. A real origin rather than an intercepted one: a browser refuses to frame anything on the
+   * local network from a page whose own origin it could not resolve.
    *
    * @return the address of that page
    */

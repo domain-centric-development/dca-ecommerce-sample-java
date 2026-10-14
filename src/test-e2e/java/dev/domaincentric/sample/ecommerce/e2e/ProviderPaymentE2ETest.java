@@ -40,7 +40,7 @@ class ProviderPaymentE2ETest extends BaseE2ETest {
   }
 
   @Test
-  @DisplayName("A payment the provider authorizes moves the checkout on to the review step")
+  @DisplayName("Authorized payment moves to review")
   void authorizedPaymentMovesTheCheckoutToReview() throws Exception {
     PaymentPage payment = checkoutAtThePaymentStep();
     paymentProvider.stubFor(post("/payments").willReturn(ShopUnderTest.authorized()));

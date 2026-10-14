@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class ProductNotFoundE2ETest extends BaseE2ETest {
 
   @Test
-  @DisplayName("Unknown product shows the not-found page")
+  @DisplayName("Unknown product shows the not found page")
   void unknownProductAddressShowsTheNotFoundPage() {
     NotFoundPage notFound = NotFoundPage.openProduct(page, "no-such-product");
 

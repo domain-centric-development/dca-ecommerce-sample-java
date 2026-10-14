@@ -57,10 +57,6 @@ tasks.named('test-e2e').configure {
   // Headless mode (default: true for CI, can set false for debugging)
   systemProperty 'e2e.headless', System.getProperty('e2e.headless', 'true')
 
-  // The shop under test runs embedded (JWT_SAME_SITE=None JWT_SECURE_COOKIES=true). Tests that only
-  // hold for that deployment run when it is true; those that only hold for a normal shop skip.
-  systemProperty 'e2e.embedded', System.getProperty('e2e.embedded', 'false')
-
   // Verbose logging for debugging
   if (project.hasProperty('log-debug')) {
     beforeTest { descriptor ->

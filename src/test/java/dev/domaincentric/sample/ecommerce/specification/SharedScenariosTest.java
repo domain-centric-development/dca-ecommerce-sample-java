@@ -39,32 +39,7 @@ class SharedScenariosTest {
    * specification describes under other titles or not at all. The list only shrinks: a title that
    * becomes a scenario's, or that no browser test carries any more, fails until it is taken off.
    */
-  static final Set<String> TITLED_AFTER_THE_SHARED_SPECIFICATION =
-      Set.of(
-          "A page on another site frames the shop and adds to the cart",
-          "A payment the provider authorizes moves the checkout on to the review step",
-          "A slide deck on another port frames the shop and adds to the cart",
-          "Buyer info validation shows errors for invalid input",
-          "Buyer step drops the login prompt and prefills the email once logged in",
-          "Can login and checkout with existing account",
-          "Can navigate back through checkout steps",
-          "Cart edits do not change the open checkout session; a new checkout supersedes it",
-          "Checkout link from login page redirects to checkout after login",
-          "Checkout should redirect to cart if no active session",
-          "Complete checkout flow as authenticated user",
-          "Complete checkout flow as guest user",
-          "Completing a checkout removes only the purchased snapshot from the cart",
-          "Event log shows published domain events with correct counts",
-          "Event payload can be expanded to reveal details",
-          "Full flow: login with both carts, see merge options, select merge, verify combined cart",
-          "Invalid credentials show a login error message",
-          "Login as admin and view the event log",
-          "Logout redirects to login page and shows logout confirmation",
-          "On a phone the catalog, a product and the cart fit the screen without sideways scrolling",
-          "Registered user can add items to cart",
-          "The catalog lists the seeded products in name order",
-          "Unauthenticated access to events page redirects to login",
-          "Unknown product shows the not-found page");
+  static final Set<String> TITLED_AFTER_THE_SHARED_SPECIFICATION = Set.of();
 
   /**
    * Titles two browser tests carry, waiting for the decision which one stays. The list only

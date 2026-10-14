@@ -1043,18 +1043,14 @@ compiles against, so the run is the same everywhere:
 docker compose --profile tools run --rm e2e     # podman-compose needs the --profile flag as shown
 ```
 
-`EmbeddedShopE2ETest` covers the shop inside someone else's iframe — a slide deck, a docs page, a demo. It starts a
+`ShopInAFrameE2ETest` covers the shop inside someone else's iframe — a slide deck, a docs page, a demo. It starts a
 throwaway page on another port of this host, frames the shop in it and adds a product to the cart. That case needs
 no configuration: the shop allows framing out of the box, and another port is the same *site*, so its `Lax` cookies
 travel into the frame unchanged.
 
-Framing from another *site* is the second case, and only that one needs the cookie policy relaxed. It runs against
-a shop started for it:
-
-```bash
-JWT_SAME_SITE=None JWT_SECURE_COOKIES=true ./gradlew bootRun &
-./gradlew test-e2e -De2e.baseUrl=http://localhost:8080 -De2e.embedded=true
-```
+Framing from another *site* is the second case, and only that one needs the cookie policy relaxed
+(`JWT_SAME_SITE=None JWT_SECURE_COOKIES=true`). The test starts a shop of its own with that policy for it, and checks
+as well that the shop as it runs by default keeps a foreign site's frame out of the cart.
 
 Because the markup is the same as the .NET sample's, either suite runs against either shop.
 
