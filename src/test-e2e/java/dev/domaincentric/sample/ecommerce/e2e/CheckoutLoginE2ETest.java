@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.e2e;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.domaincentric.sample.ecommerce.e2e.pages.*;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -28,8 +29,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("Authenticated Checkout E2E Tests")
 class CheckoutLoginE2ETest extends BaseE2ETest {
 
-  private static final String TEST_EMAIL =
-      "testuser-" + System.currentTimeMillis() + "@example.com";
+  private static final String TEST_EMAIL = "testuser-" + UUID.randomUUID() + "@example.com";
   private static final String TEST_PASSWORD = "SecurePassword123!";
 
   @Test
@@ -74,7 +74,7 @@ class CheckoutLoginE2ETest extends BaseE2ETest {
   @DisplayName("Registered user can add items to cart")
   void registeredUserCanAddToCart() {
     // Step 1: Register a new user
-    String uniqueEmail = "cartuser-" + System.currentTimeMillis() + "@example.com";
+    String uniqueEmail = "cartuser-" + UUID.randomUUID() + "@example.com";
     RegisterPage register = RegisterPage.navigateTo(page);
     register.register(uniqueEmail, TEST_PASSWORD);
 
@@ -90,7 +90,7 @@ class CheckoutLoginE2ETest extends BaseE2ETest {
   @DisplayName("Can login and checkout with existing account")
   void canLoginAndCheckoutWithExistingAccount() {
     // Step 1: Register a new user first
-    String uniqueEmail = "existing-" + System.currentTimeMillis() + "@example.com";
+    String uniqueEmail = "existing-" + UUID.randomUUID() + "@example.com";
     RegisterPage register = RegisterPage.navigateTo(page);
     register.register(uniqueEmail, TEST_PASSWORD);
 
@@ -128,7 +128,7 @@ class CheckoutLoginE2ETest extends BaseE2ETest {
       if (testElementExists("login-register-link")) {
         LoginPage login = new LoginPage(page);
         RegisterPage register = login.goToRegister();
-        String uniqueEmail = "redirect-" + System.currentTimeMillis() + "@example.com";
+        String uniqueEmail = "redirect-" + UUID.randomUUID() + "@example.com";
         register.register(uniqueEmail, TEST_PASSWORD);
       }
     }
@@ -154,7 +154,7 @@ class CheckoutLoginE2ETest extends BaseE2ETest {
     assertEquals("", guestBuyer.emailValue(), "A guest has no email to prefill");
 
     // Step 2: register from within the checkout
-    String uniqueEmail = "buyerstate-" + System.currentTimeMillis() + "@example.com";
+    String uniqueEmail = "buyerstate-" + UUID.randomUUID() + "@example.com";
     RegisterPage register = RegisterPage.navigateTo(page);
     register.register(uniqueEmail, TEST_PASSWORD);
 

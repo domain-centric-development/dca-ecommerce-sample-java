@@ -8,6 +8,7 @@ import dev.domaincentric.sample.ecommerce.e2e.pages.BuyerInfoPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.CartPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.ProductCatalogPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.RegisterPage;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +22,7 @@ class BuyerStepKnowsWhoIsBuyingE2ETest extends BaseE2ETest {
   @DisplayName("Logged in customer sees who is buying")
   void aCustomerWhoRegisteredSeesTheirAccountOnTheBuyerStep() {
     // The suite's shop keeps its accounts across tests, so the account gets an address of its own.
-    String email = "anna.schmidt." + System.currentTimeMillis() + "@example.com";
+    String email = "anna.schmidt." + UUID.randomUUID() + "@example.com";
     ProductCatalogPage.navigateTo(page).viewProductNamed("Domain-Driven Design").addToCart();
     CartPage.navigateTo(page).waitForItems().proceedToCheckout();
     RegisterPage.navigateTo(page)

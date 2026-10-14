@@ -6,6 +6,7 @@ import com.microsoft.playwright.BrowserContext;
 import dev.domaincentric.sample.ecommerce.e2e.pages.ChangePasswordPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.LoginPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.RegisterPage;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +20,7 @@ class RefusedPasswordChangeE2ETest extends BaseE2ETest {
   @DisplayName("Differing confirmation is refused")
   void aConfirmationThatDiffersFromTheNewPasswordIsRefusedOnTheEmptiedForm() {
     // The suite's shop keeps its accounts across tests, so the account gets an address of its own.
-    String email = "anna.schmidt." + System.currentTimeMillis() + "@example.com";
+    String email = "anna.schmidt." + UUID.randomUUID() + "@example.com";
     try (BrowserContext registration = browser.newContext()) {
       RegisterPage.navigateTo(registration.newPage()).register(email, PASSWORD);
     }

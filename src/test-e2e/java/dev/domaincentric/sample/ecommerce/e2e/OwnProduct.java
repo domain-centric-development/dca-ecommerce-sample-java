@@ -49,8 +49,9 @@ public record OwnProduct(String id, String name) {
                 .POST(
                     HttpRequest.BodyPublishers.ofString(
                         """
-                        {"sku":"%s","name":"%s","price":19.99,"category":"Desk & Office",\
-                        "stock":%d}"""
+                        {"sku":"%s","name":"%s","description":"A product of one test's own.",\
+                        "imageUrl":"/images/products/bounded-context-pin.webp","price":19.99,\
+                        "category":"Desk & Office","stock":%d}"""
                             .formatted(sku, name, stock))));
     assertEquals(201, created.statusCode(), "creating " + name + ": " + created.body());
     final OwnProduct product =

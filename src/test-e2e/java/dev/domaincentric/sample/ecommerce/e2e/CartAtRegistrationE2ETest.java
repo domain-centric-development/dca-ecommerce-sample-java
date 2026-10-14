@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.e2e.pages.ProductCatalogPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.RegisterPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.SiteHeader;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,7 @@ class CartAtRegistrationE2ETest extends BaseE2ETest {
   @DisplayName("Registering keeps the guest cart")
   void theNewAccountTakesOverTheCartTheGuestFilled() {
     // The suite's shop keeps its accounts across tests, so the account gets an address of its own.
-    String email = "anna.schmidt." + System.currentTimeMillis() + "@example.com";
+    String email = "anna.schmidt." + UUID.randomUUID() + "@example.com";
     ProductCatalogPage.navigateTo(page).viewProductNamed("Domain-Driven Design").addToCart();
 
     RegisterPage.navigateTo(page)

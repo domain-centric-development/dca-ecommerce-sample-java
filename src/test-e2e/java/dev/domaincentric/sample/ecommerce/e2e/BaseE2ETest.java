@@ -6,10 +6,13 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import java.nio.file.Paths;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.extension.TestWatcher;
@@ -48,8 +51,15 @@ public abstract class BaseE2ETest {
   protected static final boolean HEADLESS =
       Boolean.parseBoolean(System.getProperty("e2e.headless", "true"));
 
-  protected static Playwright playwright;
-  protected static Browser browser;
+  /**
+   * One Playwright and one browser per test class: the suite runs its classes in parallel, and a
+   * Playwright instance is used only from the thread that created it. A class runs its tests in the
+   * thread it started in, so each class keeps to the browser it launched.
+   */
+  private static final Map<Class<?>, Launched> LAUNCHED = new ConcurrentHashMap<>();
+
+  /** The browser of this test's class. */
+  protected Browser browser;
 
   protected BrowserContext context;
   protected Page page;
@@ -74,33 +84,36 @@ public abstract class BaseE2ETest {
       };
 
   @BeforeAll
-  static void launchBrowser() {
-    playwright = Playwright.create();
-    BrowserType.LaunchOptions options = new BrowserType.LaunchOptions().setHeadless(HEADLESS);
-
-    browser =
+  static void launchBrowser(final TestInfo testClass) {
+    final Playwright playwright = Playwright.create();
+    final BrowserType.LaunchOptions options = new BrowserType.LaunchOptions().setHeadless(HEADLESS);
+    final Browser launched =
         switch (BROWSER_TYPE.toLowerCase()) {
           case "firefox" -> playwright.firefox().launch(options);
           case "webkit" -> playwright.webkit().launch(options);
           default -> playwright.chromium().launch(options);
         };
+    LAUNCHED.put(testClass.getTestClass().orElseThrow(), new Launched(playwright, launched));
   }
 
   @AfterAll
-  static void closeBrowser() {
-    if (browser != null) {
-      browser.close();
-    }
-    if (playwright != null) {
-      playwright.close();
+  static void closeBrowser(final TestInfo testClass) {
+    final Launched launched = LAUNCHED.remove(testClass.getTestClass().orElseThrow());
+    if (launched != null) {
+      launched.browser().close();
+      launched.playwright().close();
     }
   }
 
   @BeforeEach
   void createContextAndPage() {
+    browser = LAUNCHED.get(getClass()).browser();
     context = browser.newContext(contextOptions());
     page = context.newPage();
   }
+
+  /** A class's Playwright and the browser it launched. */
+  private record Launched(Playwright playwright, Browser browser) {}
 
   /**
    * Options for the browser context of each test. A suite that needs a phone viewport overrides

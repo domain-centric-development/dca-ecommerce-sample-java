@@ -11,11 +11,16 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 /**
  * A delivery used up its five attempts; once its cause is fixed the operator retries it and finds
  * the entry completed.
+ *
+ * <p>Runs alone: it compares the log's Completed and Incomplete counts before and after the retry,
+ * and every other class's actions publish events into the same log.
  */
+@Isolated
 @DisplayName("Retry a failed delivery E2E Tests")
 class RetryAFailedDeliveryE2ETest extends BaseE2ETest {
 

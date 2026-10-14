@@ -17,8 +17,15 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
-/** Paying at checkout through the payment provider the shop is pointed at. */
+/**
+ * Paying at checkout through the payment provider the shop is pointed at.
+ *
+ * <p>Runs alone: it counts the payment requests the provider stub received, and every other class's
+ * checkout pays through the same stub.
+ */
+@Isolated
 @DisplayName("Provider Payment E2E Tests")
 class ProviderPaymentE2ETest extends BaseE2ETest {
 

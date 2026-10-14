@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.e2e;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.domaincentric.sample.ecommerce.e2e.pages.*;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +37,7 @@ class CartMergeE2ETest extends BaseE2ETest {
       "Full flow: login with both carts, see merge options, select merge, verify combined cart")
   void fullCartMergeFlow() {
     // Step 1: Register a new user and add a product to their account cart
-    String uniqueEmail = "merge-test-" + System.currentTimeMillis() + "@example.com";
+    String uniqueEmail = "merge-test-" + UUID.randomUUID() + "@example.com";
     RegisterPage register = RegisterPage.navigateTo(page);
     register.register(uniqueEmail, TEST_PASSWORD);
 

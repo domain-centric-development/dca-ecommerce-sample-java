@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +28,7 @@ class AccountOverviewE2ETest extends BaseE2ETest {
   @DisplayName("Overview shows the account")
   void theOverviewShowsTheAddressAndThisLogin() {
     // The suite's shop keeps its accounts across tests, so the account gets an address of its own.
-    String email = "anna.schmidt." + System.currentTimeMillis() + "@example.com";
+    String email = "anna.schmidt." + UUID.randomUUID() + "@example.com";
     try (BrowserContext registration = browser.newContext()) {
       RegisterPage.navigateTo(registration.newPage()).register(email, PASSWORD);
     }

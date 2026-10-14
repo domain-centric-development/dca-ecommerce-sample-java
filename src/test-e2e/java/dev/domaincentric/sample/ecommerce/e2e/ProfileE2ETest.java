@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.e2e.pages.LoginPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.ProfilePage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.RegisterPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.SiteHeader;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,7 @@ class ProfileE2ETest extends BaseE2ETest {
   @DisplayName("Saving the profile")
   void savingStoresTheNewAddressAndDateAndKeepsTheCustomerLoggedIn() {
     // The suite's shop keeps its accounts across tests, so both addresses are this run's own.
-    long run = System.currentTimeMillis();
+    UUID run = UUID.randomUUID();
     String email = "anna.schmidt." + run + "@example.com";
     String newEmail = "anna.meyer." + run + "@example.com";
     try (BrowserContext registration = browser.newContext()) {
@@ -42,7 +43,7 @@ class ProfileE2ETest extends BaseE2ETest {
   @DisplayName("Taken address is refused in the profile")
   void anAddressAnotherAccountUsesIsRefusedAndStaysInTheField() {
     // The suite's shop keeps its accounts across tests, so both addresses are this run's own.
-    long run = System.currentTimeMillis();
+    UUID run = UUID.randomUUID();
     String annasEmail = "anna.schmidt." + run + "@example.com";
     String bensEmail = "ben.weber." + run + "@example.com";
     try (BrowserContext registration = browser.newContext()) {
