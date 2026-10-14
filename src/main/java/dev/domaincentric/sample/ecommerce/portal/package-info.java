@@ -10,7 +10,7 @@
 @BoundedContext(
     name = "Portal",
     description = "Web portal, user interface composition, and cross-context views")
-@ApplicationModule(allowedDependencies = {"sharedkernel", "infrastructure"})
+@ApplicationModule(allowedDependencies = {})
 package dev.domaincentric.sample.ecommerce.portal;
 
 import dev.domaincentric.dca.buildingblocks.ddd.strategic.BoundedContext;

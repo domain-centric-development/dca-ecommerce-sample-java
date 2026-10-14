@@ -18,7 +18,7 @@
 @BoundedContext(
     name = "Backoffice",
     description = "Operating this application: event publication log, dashboards, operator views")
-@ApplicationModule(allowedDependencies = {"sharedkernel", "infrastructure"})
+@ApplicationModule(allowedDependencies = {"infrastructure"})
 package dev.domaincentric.sample.ecommerce.backoffice;
 
 import dev.domaincentric.dca.buildingblocks.ddd.strategic.BoundedContext;
