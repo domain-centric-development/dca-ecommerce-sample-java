@@ -528,7 +528,8 @@ try again later." when the provider is unavailable.
 ### PaymentResult
 
 **Definition:** What the payment provider made of a payment operation, as checkout understands it. A payment
-request carries the checkout session's total amount and currency to the provider; its outcome is one of:
+request carries the checkout session's total amount and currency and the checkout reference to the provider; its
+outcome is one of:
 
 - `SUCCEEDED` — an **authorized payment**: the provider accepted it and gave a payment reference. Only then
   does the session record its `PaymentSelection` and publish `PaymentSubmitted`.
@@ -544,6 +545,21 @@ request carries the checkout session's total amount and currency to the provider
 **Notes:** The **payment stand-in** (`MockPaymentProvider`, id `mock`) authorizes every payment and takes
 payments where no provider address is configured. The provider's contract has no confirmation or cancellation;
 the REST adapter answers both with `REFUSED` without asking the provider.
+
+---
+
+### Checkout reference (merchantReference)
+
+**Definition:** The checkout session's id as text, sent in every payment request of that checkout so the provider
+and the shop can match a payment to it; a second attempt of the same checkout carries the same reference.
+
+**Type:** Concept (field of the payment request to the provider)
+
+**Related terms:** `CheckoutSessionId`, `PaymentResult`.
+
+**Notes:** Kept apart from the **payment reference** the provider answers with (`PaymentSelection`) and from the
+**order reference** of a completed session (`CheckoutSession.complete`). `merchantReference` is the provider's word;
+it stays in the REST adapter's request, the `PaymentProvider` port passes the `CheckoutSessionId`.
 
 ## Features
 

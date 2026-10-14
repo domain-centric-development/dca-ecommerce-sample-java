@@ -11,6 +11,8 @@ public class ConfirmationPage extends BasePage {
 
   private static final String URL_PATTERN = "/checkout/confirmation";
   private static final String CONFIRMATION_MESSAGE = "confirmation-message";
+  private static final String ORDER_REFERENCE = ".confirmation__reference";
+  private static final String ORDER_REFERENCE_LABEL = "Order Reference:";
 
   /**
    * Creates a new ConfirmationPage and waits for it to load.
@@ -38,5 +40,15 @@ public class ConfirmationPage extends BasePage {
    */
   public boolean isOrderConfirmed() {
     return exists(CONFIRMATION_MESSAGE);
+  }
+
+  /**
+   * Reads the order reference the page shows — the checkout session's id.
+   *
+   * @return the reference without its label
+   */
+  public String orderReference() {
+    String shown = page.locator(ORDER_REFERENCE).textContent().trim();
+    return shown.substring(ORDER_REFERENCE_LABEL.length()).trim();
   }
 }

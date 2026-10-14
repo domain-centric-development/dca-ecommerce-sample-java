@@ -1,5 +1,7 @@
 package dev.domaincentric.sample.ecommerce.e2e;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -58,6 +60,35 @@ class ProviderPaymentE2ETest extends BaseE2ETest {
         0,
         new BigDecimal(total[0]).compareTo(new BigDecimal(request.get("amount").asText())),
         "the payment request is for the checkout session's total " + review.total());
+    assertEquals(total[1], request.get("currency").asText(), "the payment request's currency");
+  }
+
+  @Test
+  @DisplayName("The payment request names its checkout")
+  void thePaymentRequestCarriesTheCheckoutReference() throws Exception {
+    PaymentPage payment = checkoutAtThePaymentStep();
+    paymentProvider.stubFor(post("/payments").willReturn(ShopUnderTest.authorized()));
+
+    ReviewPage review = payment.selectFirstPaymentProvider().continueToReview();
+
+    String shownTotal = review.total();
+    String[] total = shownTotal.split("\\s+");
+    String checkoutReference = review.placeOrder().orderReference();
+    List<LoggedRequest> requests =
+        paymentProvider.findAll(
+            postRequestedFor(urlEqualTo("/payments"))
+                .withRequestBody(
+                    matchingJsonPath("$.merchantReference", equalTo(checkoutReference))));
+    assertEquals(
+        1,
+        requests.size(),
+        "the payment provider received one payment request carrying the checkout reference "
+            + checkoutReference);
+    JsonNode request = new ObjectMapper().readTree(requests.getFirst().getBodyAsString());
+    assertEquals(
+        0,
+        new BigDecimal(total[0]).compareTo(new BigDecimal(request.get("amount").asText())),
+        "the payment request is for the checkout session's total " + shownTotal);
     assertEquals(total[1], request.get("currency").asText(), "the payment request's currency");
   }
 

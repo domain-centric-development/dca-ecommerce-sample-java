@@ -25,10 +25,11 @@ import org.springframework.web.client.RestClientException;
  * The payment provider behind its REST contract — the anti-corruption layer between checkout and
  * the Payment Service Provider.
  *
- * <p>A payment is {@code POST /payments} with the amount and the currency. {@code 201} with a
- * payment reference means authorized, {@code 402} means refused. No answer within two seconds, no
- * connection, or any other answer counts as unavailable. The provider's wire types stay in this
- * class; the port sees only {@link PaymentResult}.
+ * <p>A payment is {@code POST /payments} with the amount, the currency and the checkout reference
+ * as {@code merchantReference}: the checkout session's id, so the provider can match every request
+ * of one checkout to it. {@code 201} with a payment reference means authorized, {@code 402} means
+ * refused. No answer within two seconds, no connection, or any other answer counts as unavailable.
+ * The provider's wire types stay in this class; the port sees only {@link PaymentResult}.
  *
  * <p>The contract knows no confirmation and no cancellation, so both answer with a refusal and call
  * nothing.
@@ -78,7 +79,10 @@ public class RestPaymentProvider implements PaymentProvider {
   @Override
   public PaymentResult initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
     final PaymentRequest request =
-        new PaymentRequest(amount.amount().toPlainString(), amount.currency().getCurrencyCode());
+        new PaymentRequest(
+            amount.amount().toPlainString(),
+            amount.currency().getCurrencyCode(),
+            sessionId.value());
     try {
       return restClient
           .post()
@@ -132,8 +136,11 @@ public class RestPaymentProvider implements PaymentProvider {
     return true;
   }
 
-  /** The provider's payment request. */
-  record PaymentRequest(String amount, String currency) {}
+  /**
+   * The provider's payment request; {@code merchantReference} is the checkout reference, the same
+   * in every request of one checkout.
+   */
+  record PaymentRequest(String amount, String currency, String merchantReference) {}
 
   /** The provider's answer to an authorized payment. */
   record PaymentAuthorization(@Nullable String reference) {}
