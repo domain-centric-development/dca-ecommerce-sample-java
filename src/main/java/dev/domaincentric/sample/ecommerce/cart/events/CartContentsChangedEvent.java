@@ -18,12 +18,30 @@ public record CartContentsChangedEvent(
     UUID eventId, UUID cartId, ChangeType changeType, Instant occurredOn)
     implements IntegrationEvent {
 
-  /** The type of change that occurred in the cart. */
+  /**
+   * The type of change that occurred in the cart. Each value spells the code it is published as, so
+   * renaming a value never changes what a consumer reads.
+   */
   public enum ChangeType {
-    ITEM_ADDED,
-    ITEM_REMOVED,
-    QUANTITY_CHANGED,
-    CART_CLEARED
+    ITEM_ADDED("ITEM_ADDED"),
+    ITEM_REMOVED("ITEM_REMOVED"),
+    QUANTITY_CHANGED("QUANTITY_CHANGED"),
+    CART_CLEARED("CART_CLEARED");
+
+    private final String code;
+
+    ChangeType(final String code) {
+      this.code = code;
+    }
+
+    /**
+     * The spelling this value is published as.
+     *
+     * @return the code
+     */
+    public String code() {
+      return code;
+    }
   }
 
   /** Creates a new event with the given cart ID and change type. */
