@@ -13,10 +13,13 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * The catalogue a partner application reads from the running shop: a plain HTTP client without a
- * token asks {@code GET /api/products}. No browser: the actor is another application.
+ * token asks {@code GET /api/products}. No browser: the actor is another application. The shop is
+ * one of its own, started with nothing but the seed: the shop the suite drives also holds the
+ * products other tests create.
  */
 @DisplayName("Catalogue API E2E Tests")
 class CatalogueApiE2ETest {
@@ -24,10 +27,17 @@ class CatalogueApiE2ETest {
   @Test
   @DisplayName("Listing returns the range in name order")
   void listingReturnsTheSeededRangeInOrdinalNameOrder() throws Exception {
+    try (ConfigurableApplicationContext shop = ShopUnderTest.startedWith("catalogue_api_e2e")) {
+      listingIsTheSeededRangeInOrdinalNameOrder(ShopUnderTest.baseUrlOf(shop));
+    }
+  }
+
+  private static void listingIsTheSeededRangeInOrdinalNameOrder(final String shopUrl)
+      throws Exception {
     final HttpResponse<String> response =
         HttpClient.newHttpClient()
             .send(
-                HttpRequest.newBuilder(URI.create(ShopUnderTest.baseUrl() + "/api/products"))
+                HttpRequest.newBuilder(URI.create(shopUrl + "/api/products"))
                     .header("Accept", "application/json")
                     .GET()
                     .build(),

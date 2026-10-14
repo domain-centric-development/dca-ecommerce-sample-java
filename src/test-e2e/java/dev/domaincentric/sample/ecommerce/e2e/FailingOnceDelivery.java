@@ -1,6 +1,5 @@
 package dev.domaincentric.sample.ecommerce.e2e;
 
-import dev.domaincentric.dca.buildingblocks.ddd.tactical.IntegrationEvent;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
@@ -53,7 +52,4 @@ public class FailingOnceDelivery {
       throw new IllegalStateException("passing hiccup");
     }
   }
-
-  /** The event whose delivery fails once. */
-  public record PassingHiccup(UUID eventId, Instant occurredOn) implements IntegrationEvent {}
 }

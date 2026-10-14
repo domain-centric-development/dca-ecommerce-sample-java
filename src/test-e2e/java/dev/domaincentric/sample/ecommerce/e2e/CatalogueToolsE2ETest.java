@@ -16,13 +16,17 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * The catalogue an AI assistant reads from the running shop: an MCP client without credentials
  * calls the shop's {@code all-products} tool at {@code /mcp}. No browser: the actor is an
- * assistant.
+ * assistant. The shop is one of its own, started with nothing but the seed: the shop the suite
+ * drives also holds the products other tests create and the stock their orders took. Price and
+ * stock follow the seed by event, so the answer is awaited.
  */
 @DisplayName("Catalogue tools E2E Tests")
 class CatalogueToolsE2ETest {
@@ -30,7 +34,17 @@ class CatalogueToolsE2ETest {
   @Test
   @DisplayName("All products lists the range with price and stock")
   void allProductsListsTheSeededRangeWithPriceAndStock() throws Exception {
-    final JsonNode products = callAllProducts();
+    try (ConfigurableApplicationContext shop = ShopUnderTest.startedWith("catalogue_tools_e2e")) {
+      final String shopUrl = ShopUnderTest.baseUrlOf(shop);
+      Awaitility.await()
+          .atMost(Duration.ofSeconds(15))
+          .untilAsserted(() -> allProductsIsTheSeededRangeWithPriceAndStock(shopUrl));
+    }
+  }
+
+  private static void allProductsIsTheSeededRangeWithPriceAndStock(final String shopUrl)
+      throws Exception {
+    final JsonNode products = callAllProducts(shopUrl);
 
     final List<String> names = new ArrayList<>();
     products.forEach(product -> names.add(product.get("name").asText()));
@@ -50,12 +64,9 @@ class CatalogueToolsE2ETest {
     assertTrue(ddd.get("isAvailable").asBoolean(), "is available");
   }
 
-  private static JsonNode callAllProducts() throws Exception {
+  private static JsonNode callAllProducts(final String shopUrl) throws Exception {
     final McpSyncClient client =
-        McpClient.sync(
-                HttpClientStreamableHttpTransport.builder(ShopUnderTest.baseUrl())
-                    .endpoint("/mcp")
-                    .build())
+        McpClient.sync(HttpClientStreamableHttpTransport.builder(shopUrl).endpoint("/mcp").build())
             .requestTimeout(Duration.ofSeconds(30))
             .build();
     try {

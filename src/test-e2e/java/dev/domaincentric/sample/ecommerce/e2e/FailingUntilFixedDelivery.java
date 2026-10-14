@@ -1,6 +1,5 @@
 package dev.domaincentric.sample.ecommerce.e2e;
 
-import dev.domaincentric.dca.buildingblocks.ddd.tactical.IntegrationEvent;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
@@ -62,7 +61,4 @@ public class FailingUntilFixedDelivery {
       throw new IllegalStateException("lasting hiccup");
     }
   }
-
-  /** The event whose delivery fails until it is fixed. */
-  public record LastingHiccup(UUID eventId, Instant occurredOn) implements IntegrationEvent {}
 }
