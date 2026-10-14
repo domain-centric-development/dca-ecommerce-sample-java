@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.StepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
@@ -98,6 +99,9 @@ public class ConfirmationPageController {
       redirectAttributes.addFlashAttribute("orderConfirmed", true);
       return "redirect:/checkout/confirmation";
 
+    } catch (CheckoutStepNotCompletedException e) {
+      // The step shown instead says it; the redirect carries it to whichever instance answers
+      return CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, StepNotice.EARLIER_STEPS_FIRST);
     } catch (UseCaseException | DomainException | IllegalArgumentException e) {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
@@ -173,8 +177,6 @@ public class ConfirmationPageController {
               + " item(s) unavailable or out of stock.";
       case CheckoutSessionNotFoundException e -> "Checkout session not found";
       case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
-      case CheckoutStepNotCompletedException e ->
-          "Please complete the previous checkout steps first.";
       case CheckoutStepOutOfOrderException e -> "Please review your order before placing it.";
       default -> "Your order could not be placed. Please try again.";
     };

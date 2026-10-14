@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.StepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
@@ -17,6 +18,8 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -67,12 +70,17 @@ public class BuyerInfoPageController {
    * and displays the buyer info form. If no active session is found, redirects to cart with an
    * error.
    *
+   * @param noticeCode the code of the notice a redirect brought along, if any
    * @param model the Spring MVC model
    * @param redirectAttributes for passing flash messages on error
    * @return the buyer.pug template or redirect on error
    */
   @GetMapping("/buyer")
-  public String showBuyerInfoForm(final Model model, final RedirectAttributes redirectAttributes) {
+  public String showBuyerInfoForm(
+      @RequestParam(name = StepNotice.PARAMETER, required = false)
+          final @Nullable String noticeCode,
+      final Model model,
+      final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -97,9 +105,13 @@ public class BuyerInfoPageController {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
       return "redirect:/cart";
     }
+    final Optional<StepNotice> notice = StepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
-      return CheckoutRoutes.redirectFor(result.stepAccess());
+      return notice
+          .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
+          .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
     }
+    notice.ifPresent(n -> model.addAttribute("error", n.sentence()));
 
     // Convert to page-specific ViewModel
     final BuyerInfoPageViewModel viewModel = BuyerInfoPageViewModel.fromSnapshot(result.session());

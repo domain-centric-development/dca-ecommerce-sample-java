@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.StepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -9,10 +10,13 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -54,12 +58,17 @@ public class ReviewPageController {
    * and displays all collected information including buyer info, delivery details, payment method,
    * and order summary for final review before purchase confirmation.
    *
+   * @param noticeCode the code of the notice a redirect brought along, if any
    * @param model the Spring MVC model
    * @param redirectAttributes for passing flash messages on error
    * @return the review.pug template or redirect on error
    */
   @GetMapping("/review")
-  public String showReviewPage(final Model model, final RedirectAttributes redirectAttributes) {
+  public String showReviewPage(
+      @RequestParam(name = StepNotice.PARAMETER, required = false)
+          final @Nullable String noticeCode,
+      final Model model,
+      final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -84,9 +93,13 @@ public class ReviewPageController {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
       return "redirect:/cart";
     }
+    final Optional<StepNotice> notice = StepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
-      return CheckoutRoutes.redirectFor(result.stepAccess());
+      return notice
+          .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
+          .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
     }
+    notice.ifPresent(n -> model.addAttribute("error", n.sentence()));
 
     // Convert to page-specific ViewModel
     final ReviewPageViewModel viewModel = ReviewPageViewModel.fromSnapshot(result.session());

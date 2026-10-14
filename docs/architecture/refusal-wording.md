@@ -135,6 +135,11 @@ Buyer, delivery and payment step:
 |---|---|
 | `CheckoutStepNotCompletedException`, `CheckoutStepOutOfOrderException` | Please complete the previous checkout steps first. |
 
+On the delivery and payment step, and on placing the order, this sentence is shown on the step that is still open.
+The redirect carries it as the query parameter `notice=earlier-steps-first` and not in the session, so any instance
+of the shop that answers can show it. A step that may not be shown passes the notice on to the step it sends the
+guest to instead. Only a known code is shown; any other value of `notice` is ignored.
+
 | Step | Argument exception | Any other refusal |
 |---|---|---|
 | buyer (`/checkout/buyer`) | Please check the details you entered. | Your details could not be saved. Please try again. |

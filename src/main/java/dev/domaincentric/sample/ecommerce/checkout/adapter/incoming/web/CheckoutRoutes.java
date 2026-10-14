@@ -30,6 +30,32 @@ public final class CheckoutRoutes {
   }
 
   /**
+   * The Spring MVC redirect for a denied step access, carrying a notice to the step shown instead.
+   * The cart is not a checkout page: a redirect there carries none.
+   *
+   * @param access a decision that is not granted
+   * @param notice the notice the step shown instead says
+   * @return {@code redirect:} followed by the cart or the page of the step with the notice
+   */
+  public static String redirectFor(final StepAccess access, final StepNotice notice) {
+    if (access.granted() || access.isBackToCart()) {
+      return redirectFor(access);
+    }
+    return redirectTo(access.redirectStep(), notice);
+  }
+
+  /**
+   * The Spring MVC redirect to a step's page, carrying a notice.
+   *
+   * @param step the step
+   * @param notice the notice the page says
+   * @return {@code redirect:} followed by the step's page with the notice
+   */
+  public static String redirectTo(final CheckoutStep step, final StepNotice notice) {
+    return "redirect:" + pathOf(step) + "?" + StepNotice.PARAMETER + "=" + notice.code();
+  }
+
+  /**
    * The page of a checkout step.
    *
    * @param step the step

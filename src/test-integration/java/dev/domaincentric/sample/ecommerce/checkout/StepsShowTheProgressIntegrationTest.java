@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jsoup.Jsoup;
@@ -40,6 +41,8 @@ class StepsShowTheProgressIntegrationTest {
   private static final String PAYMENT_STEP = "/checkout/payment";
   private static final String REVIEW_STEP = "/checkout/review";
   private static final String CONFIRMATION = "/checkout/confirmation";
+  private static final String PREVIOUS_STEPS_FIRST =
+      "Please complete the previous checkout steps first.";
 
   @Autowired private MockMvc mockMvc;
 
@@ -118,9 +121,11 @@ class StepsShowTheProgressIntegrationTest {
         .param("shippingCost", "4.99")
         .param("currencyCode", "EUR");
 
-    final String landing = landingOf(perform(delivery));
+    final Landing landing = landingOf(perform(delivery));
 
-    assertThat(landing).isEqualTo(BUYER_STEP);
+    assertThat(landing.path()).isEqualTo(BUYER_STEP);
+    assertThat(landing.page().select("[data-test=buyer-error-message]").text())
+        .isEqualTo(PREVIOUS_STEPS_FIRST);
     assertThat(perform(get(REVIEW_STEP)).getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
   }
 
@@ -129,9 +134,12 @@ class StepsShowTheProgressIntegrationTest {
   void placeOrderSentFromThePaymentStepEndsOnThePaymentStep() throws Exception {
     final Element paymentForm = paymentStep().selectFirst("[data-test=payment-form]");
 
-    final String landing = landingOf(perform(withHiddenFieldsOf(paymentForm, "/checkout/confirm")));
+    final Landing landing =
+        landingOf(perform(withHiddenFieldsOf(paymentForm, "/checkout/confirm")));
 
-    assertThat(landing).isEqualTo(PAYMENT_STEP);
+    assertThat(landing.path()).isEqualTo(PAYMENT_STEP);
+    assertThat(landing.page().select("[data-test=payment-error-message]").text())
+        .isEqualTo(PREVIOUS_STEPS_FIRST);
     final MvcResult confirmation = perform(get(CONFIRMATION));
     assertThat(confirmation.getResponse().getRedirectedUrl()).isNotEqualTo(CONFIRMATION);
     assertThat(confirmation.getResponse().getContentAsString())
@@ -148,17 +156,24 @@ class StepsShowTheProgressIntegrationTest {
     return request;
   }
 
-  /** Follows the redirects of a response to the page that finally answers, and returns its path. */
-  private String landingOf(final MvcResult response) throws Exception {
+  /** The page a chain of redirects finally answers with, and its path without the query. */
+  private record Landing(String path, Document page) {}
+
+  /**
+   * Follows the redirects of a response to the page that finally answers — with nothing but the
+   * cookies, as a second instance of the shop would see each request.
+   */
+  private Landing landingOf(final MvcResult response) throws Exception {
     MvcResult current = response;
-    String path = null;
+    String url = null;
     for (int hops = 0; current.getResponse().getRedirectedUrl() != null; hops++) {
-      assertThat(hops).as("redirects from " + path).isLessThan(5);
-      path = current.getResponse().getRedirectedUrl();
-      current = perform(get(path));
+      assertThat(hops).as("redirects from " + url).isLessThan(5);
+      url = current.getResponse().getRedirectedUrl();
+      current = perform(get(url));
     }
-    assertThat(current.getResponse().getStatus()).as("GET " + path).isEqualTo(200);
-    return path;
+    assertThat(current.getResponse().getStatus()).as("GET " + url).isEqualTo(200);
+    return new Landing(
+        URI.create(url).getPath(), Jsoup.parse(current.getResponse().getContentAsString()));
   }
 
   /**

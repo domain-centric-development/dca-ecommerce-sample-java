@@ -37,5 +37,33 @@ class CheckoutRoutesTest {
   void grantedAccessHasNoRedirect() {
     assertThrows(
         IllegalArgumentException.class, () -> CheckoutRoutes.redirectFor(StepAccess.grant()));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> CheckoutRoutes.redirectFor(StepAccess.grant(), StepNotice.EARLIER_STEPS_FIRST));
+  }
+
+  @Test
+  @DisplayName("a denied step carries the notice to the step shown instead")
+  void aDeniedStepCarriesTheNoticeToTheStepShownInstead() {
+    assertEquals(
+        "redirect:/checkout/buyer?notice=earlier-steps-first",
+        CheckoutRoutes.redirectFor(
+            StepAccess.redirectTo(CheckoutStep.BUYER_INFO), StepNotice.EARLIER_STEPS_FIRST));
+  }
+
+  @Test
+  @DisplayName("back to cart carries no notice")
+  void backToCartCarriesNoNotice() {
+    assertEquals(
+        "redirect:/cart",
+        CheckoutRoutes.redirectFor(StepAccess.backToCart(), StepNotice.EARLIER_STEPS_FIRST));
+  }
+
+  @Test
+  @DisplayName("a redirect to a step carries the notice")
+  void aRedirectToAStepCarriesTheNotice() {
+    assertEquals(
+        "redirect:/checkout/review?notice=earlier-steps-first",
+        CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, StepNotice.EARLIER_STEPS_FIRST));
   }
 }

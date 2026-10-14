@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.StepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersResult;
@@ -24,6 +25,8 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotC
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.NothingToPayException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -82,12 +85,17 @@ public class PaymentPageController {
    * and available payment providers, then displays the payment form. If no active session is found,
    * redirects to cart with an error.
    *
+   * @param noticeCode the code of the notice a redirect brought along, if any
    * @param model the Spring MVC model
    * @param redirectAttributes for passing flash messages on error
    * @return the payment.pug template or redirect on error
    */
   @GetMapping("/payment")
-  public String showPaymentForm(final Model model, final RedirectAttributes redirectAttributes) {
+  public String showPaymentForm(
+      @RequestParam(name = StepNotice.PARAMETER, required = false)
+          final @Nullable String noticeCode,
+      final Model model,
+      final RedirectAttributes redirectAttributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -112,9 +120,13 @@ public class PaymentPageController {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
       return "redirect:/cart";
     }
+    final Optional<StepNotice> notice = StepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
-      return CheckoutRoutes.redirectFor(result.stepAccess());
+      return notice
+          .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
+          .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
     }
+    notice.ifPresent(n -> model.addAttribute("error", n.sentence()));
 
     // Convert to page-specific ViewModel
     final PaymentPageViewModel viewModel = PaymentPageViewModel.fromSnapshot(result.session());
@@ -162,6 +174,9 @@ public class PaymentPageController {
 
       return "redirect:/checkout/review";
 
+    } catch (CheckoutStepNotCompletedException | CheckoutStepOutOfOrderException e) {
+      // The step shown instead says it; the redirect carries it to whichever instance answers
+      return CheckoutRoutes.redirectTo(CheckoutStep.PAYMENT, StepNotice.EARLIER_STEPS_FIRST);
     } catch (UseCaseException | DomainException | IllegalArgumentException e) {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
@@ -184,10 +199,6 @@ public class PaymentPageController {
       case NothingToPayException e -> "There is nothing to pay for this order.";
       case CheckoutSessionNotFoundException e -> "Checkout session not found";
       case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
-      case CheckoutStepNotCompletedException e ->
-          "Please complete the previous checkout steps first.";
-      case CheckoutStepOutOfOrderException e ->
-          "Please complete the previous checkout steps first.";
       case IllegalArgumentException e -> "Please choose a way to pay.";
       default -> "Your payment selection could not be saved. Please try again.";
     };
