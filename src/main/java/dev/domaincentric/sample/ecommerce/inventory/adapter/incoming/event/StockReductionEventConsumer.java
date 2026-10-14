@@ -42,13 +42,12 @@ public class StockReductionEventConsumer {
   @ApplicationModuleListener
   void on(final StockReductionTrigger event) {
     log.info(
-        "Reducing stock for {} line items after checkout confirmation",
-        event.orderLineItems().size());
+        "Reducing stock for {} line items after checkout confirmation", event.lineItems().size());
 
     final ReduceStockResult result =
         reduceStockInputPort.execute(
             new ReduceStockCommand(
-                event.orderLineItems().stream()
+                event.lineItems().stream()
                     .map(
                         item ->
                             new ReduceStockCommand.Line(item.productId().value(), item.quantity()))

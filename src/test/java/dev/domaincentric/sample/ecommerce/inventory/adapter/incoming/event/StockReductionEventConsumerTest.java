@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockCommand;
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockResult;
 import dev.domaincentric.sample.ecommerce.inventory.events.StockReductionTrigger;
-import dev.domaincentric.sample.ecommerce.inventory.events.StockReductionTrigger.OrderLineItem;
+import dev.domaincentric.sample.ecommerce.inventory.events.StockReductionTrigger.StockReductionLineItem;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ class StockReductionEventConsumerTest {
         new Trigger(
             eventId,
             Instant.now(),
-            List.of(new OrderLineItem(first, 2), new OrderLineItem(second, 1))));
+            List.of(new StockReductionLineItem(first, 2), new StockReductionLineItem(second, 1))));
 
     assertEquals(
         List.of(
@@ -47,6 +47,6 @@ class StockReductionEventConsumerTest {
         executed);
   }
 
-  private record Trigger(UUID eventId, Instant occurredOn, List<OrderLineItem> orderLineItems)
+  private record Trigger(UUID eventId, Instant occurredOn, List<StockReductionLineItem> lineItems)
       implements StockReductionTrigger {}
 }

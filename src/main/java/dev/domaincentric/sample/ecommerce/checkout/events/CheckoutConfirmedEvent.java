@@ -50,9 +50,9 @@ public record CheckoutConfirmedEvent(
   }
 
   @Override
-  public List<OrderLineItem> orderLineItems() {
+  public List<StockReductionLineItem> lineItems() {
     return items.stream()
-        .map(item -> new OrderLineItem(item.productId(), item.quantity()))
+        .map(item -> new StockReductionLineItem(item.productId(), item.quantity()))
         .toList();
   }
 }

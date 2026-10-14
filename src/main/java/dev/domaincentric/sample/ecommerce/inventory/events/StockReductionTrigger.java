@@ -8,9 +8,9 @@ import java.util.List;
  * Interface for events that trigger stock reduction.
  *
  * <p>This is the consumer-side interface for the Interface Inversion pattern. The Inventory module
- * defines what it needs (a list of order line items), and the producing module (Checkout)
- * implements this interface on its event. This way the Inventory module listens to its own
- * interface, avoiding a dependency on the Checkout module.
+ * defines what it needs (the lines whose stock goes down, in its own words), and the producing
+ * module (Checkout) implements this interface on its event. This way the Inventory module listens
+ * to its own interface, avoiding a dependency on the Checkout module.
  *
  * <p>Extends {@link IntegrationEvent}: delivery is at least once, so the consumer needs the event's
  * identity ({@code eventId()}) to recognise a redelivery, not only the payload.
@@ -21,7 +21,7 @@ import java.util.List;
 public interface StockReductionTrigger extends IntegrationEvent {
 
   /** The line items for which stock should be reduced. */
-  List<OrderLineItem> orderLineItems();
+  List<StockReductionLineItem> lineItems();
 
   /**
    * A single line item to reduce stock for.
@@ -29,5 +29,5 @@ public interface StockReductionTrigger extends IntegrationEvent {
    * @param productId the product ID
    * @param quantity the quantity to reduce
    */
-  record OrderLineItem(ProductId productId, int quantity) {}
+  record StockReductionLineItem(ProductId productId, int quantity) {}
 }

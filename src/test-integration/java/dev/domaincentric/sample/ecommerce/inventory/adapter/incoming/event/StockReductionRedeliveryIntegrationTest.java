@@ -7,7 +7,7 @@ import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.Redu
 import dev.domaincentric.sample.ecommerce.inventory.application.shared.StockLevelRepository;
 import dev.domaincentric.sample.ecommerce.inventory.domain.model.StockLevel;
 import dev.domaincentric.sample.ecommerce.inventory.events.StockReductionTrigger;
-import dev.domaincentric.sample.ecommerce.inventory.events.StockReductionTrigger.OrderLineItem;
+import dev.domaincentric.sample.ecommerce.inventory.events.StockReductionTrigger.StockReductionLineItem;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.time.Instant;
 import java.util.List;
@@ -48,7 +48,8 @@ class StockReductionRedeliveryIntegrationTest {
     final ProductId product = ProductId.generate();
     stockLevels.save(StockLevel.create(product, INITIAL_STOCK));
     final Trigger confirmation =
-        new Trigger(UUID.randomUUID(), Instant.now(), List.of(new OrderLineItem(product, 3)));
+        new Trigger(
+            UUID.randomUUID(), Instant.now(), List.of(new StockReductionLineItem(product, 3)));
 
     consumer.on(confirmation);
     consumer.on(confirmation);
@@ -61,7 +62,7 @@ class StockReductionRedeliveryIntegrationTest {
   void twoConfirmationsReduceStockTwice() {
     final ProductId product = ProductId.generate();
     stockLevels.save(StockLevel.create(product, INITIAL_STOCK));
-    final List<OrderLineItem> lines = List.of(new OrderLineItem(product, 3));
+    final List<StockReductionLineItem> lines = List.of(new StockReductionLineItem(product, 3));
 
     consumer.on(new Trigger(UUID.randomUUID(), Instant.now(), lines));
     consumer.on(new Trigger(UUID.randomUUID(), Instant.now(), lines));
@@ -73,6 +74,6 @@ class StockReductionRedeliveryIntegrationTest {
     return stockLevels.findByProductId(product).orElseThrow().availableQuantity().value();
   }
 
-  private record Trigger(UUID eventId, Instant occurredOn, List<OrderLineItem> orderLineItems)
+  private record Trigger(UUID eventId, Instant occurredOn, List<StockReductionLineItem> lineItems)
       implements StockReductionTrigger {}
 }

@@ -114,7 +114,7 @@ public class StockReductionEventConsumer {
   void on(final StockReductionTrigger event) {
     reduceStockInputPort.execute(
         new ReduceStockCommand(
-            event.orderLineItems().stream()
+            event.lineItems().stream()
                 .map(item -> new ReduceStockCommand.Line(item.productId().value(), item.quantity()))
                 .toList(),
             event.eventId()));

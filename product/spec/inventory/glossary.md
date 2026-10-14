@@ -234,8 +234,9 @@ whose stock must go down. Owned here and implemented by Checkout's `CheckoutConf
 lines and the event's `eventId()` to the `ReduceStock` use case in one command (the contract extends
 `IntegrationEvent`). The use case reduces the lines in one transaction, skips an event `ProcessedEvents` has
 already recorded for its effect, `reduce-stock`, and records it there — a redelivered order never reduces stock
-twice, while `set-stock-level` for the same event id is a different effect and still happens. Its
-`OrderLineItem` wording is an open issue — see below.
+twice, while `set-stock-level` for the same event id is a different effect and still happens. The trigger
+names its lines in Inventory's words — `lineItems()`, each a `StockReductionLineItem` (product and quantity
+whose stock goes down) — not in Checkout's: the data comes from the order, the names do not.
 
 ---
 
@@ -330,22 +331,16 @@ business before the model is consolidated:
    - or a clean separation via `StockReserved` / `StockReleased` /
      `StockIncreased` / `StockDecreased`, which already exist anyway.
 
-3. **`StockReductionTrigger.OrderLineItem`** is **Checkout language** and does
-   not belong in the Inventory context. From an Inventory perspective, the
-   trigger of a stock reduction should be generic (e.g. "shipment order",
-   "reservation release") — correlation to the order ID happens via
-   integration events, not via borrowed terms.
-
-4. **Arithmetic on `StockQuantity`** is currently done in the aggregate.
+3. **Arithmetic on `StockQuantity`** is currently done in the aggregate.
    Candidate for moving addition and subtraction into the value object.
 
-5. **Which quantity is "low"?** `AvailableQuantityBelow` compares the
+4. **Which quantity is "low"?** `AvailableQuantityBelow` compares the
    available quantity, so a stock level of 4 with 4 units reserved is not low
    at a threshold of 4. Whether the operator means available quantity or
    unreserved quantity (available-to-promise) is unanswered; both readings are
    in this glossary.
 
-6. **Whose threshold?** One threshold is supplied per question. Whether a stock
+5. **Whose threshold?** One threshold is supplied per question. Whether a stock
    level should instead carry its own reorder level is unanswered.
 
 ---
