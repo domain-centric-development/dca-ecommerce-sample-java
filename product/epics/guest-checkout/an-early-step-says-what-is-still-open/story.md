@@ -1,7 +1,9 @@
 ---
 id: an-early-step-says-what-is-still-open
 epic: guest-checkout
-status: approved
+status: delivered
+delivered: 2026-10-14T05:06:13Z
+delivered_by: gate
 context: checkout
 feature: steps
 title: A step sent too early says that the earlier steps come first
