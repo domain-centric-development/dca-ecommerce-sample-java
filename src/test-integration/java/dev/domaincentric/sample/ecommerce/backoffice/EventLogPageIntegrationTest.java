@@ -6,11 +6,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import dev.domaincentric.sample.ecommerce.backoffice.RetryAFailedDeliveryIntegrationTest.LoneFailure;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import java.net.URI;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,16 +22,24 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.util.HtmlUtils;
 
 /**
  * The event publication log as the logged-in operator gets it from the wired application: one entry
  * per event and listener with its state and dates, the summary, the breadcrumb and the refresh
- * link.
+ * link. An event whose listener fails until it is fixed gives the log an incomplete entry beside
+ * the completed ones of the start-up.
  */
-@SpringBootTest(classes = EcommerceSampleApplication.class)
+@SpringBootTest(
+    classes = {
+      EcommerceSampleApplication.class,
+      RetryAFailedDeliveryIntegrationTest.Listeners.class
+    })
 @AutoConfigureMockMvc
 @DisplayName("Backoffice event log page")
 class EventLogPageIntegrationTest {
@@ -48,7 +59,12 @@ class EventLogPageIntegrationTest {
       Pattern.compile(
           "<a[^>]*\\bhref=\"([^\"]*)\"[^>]*data-test=\"event-log-refresh\"[^>]*>([^<]*)<");
 
+  /** How long a published event may take to appear in the log. */
+  private static final long LISTING_TIMEOUT_MILLIS = 10_000;
+
   @Autowired private MockMvc mockMvc;
+  @Autowired private ApplicationEventPublisher publisher;
+  @Autowired private PlatformTransactionManager transactions;
 
   private MockHttpSession operator;
 
@@ -69,18 +85,22 @@ class EventLogPageIntegrationTest {
   @Test
   @DisplayName("Entry shows listener state and dates")
   void everyEntryShowsItsBadgeListenerAndDates() throws Exception {
-    final List<String> entries = entries(page(EVENT_LOG));
+    final List<String> entries = entries(pageListing(publishAnEventItsListenerFails()));
 
-    assertThat(entries).isNotEmpty();
+    assertThat(entries.stream().map(entry -> text(dataTest("event-status"), entry)))
+        .as("the log holds a completed and an incomplete entry")
+        .contains("Completed", "Incomplete");
     for (final String entry : entries) {
       final String badge = text(dataTest("event-status"), entry);
       assertThat(badge).isIn("Completed", "Incomplete");
-      assertThat(detailLabels(entry)).startsWith("Listener", "Published");
       assertThat(text(dataTest("event-listener"), entry)).isNotBlank();
       assertThat(text(dataTest("event-publication-date"), entry)).matches(DATE_TIME);
       if (badge.equals("Completed")) {
         assertThat(detailLabels(entry)).containsExactly("Listener", "Published", "Completed");
         assertThat(text(dataTest("event-completion-date"), entry)).matches(DATE_TIME);
+      } else {
+        assertThat(detailLabels(entry)).containsExactly("Listener", "Published");
+        assertThat(entry).doesNotContain("data-test=\"event-completion-date\"");
       }
     }
   }
@@ -130,6 +150,26 @@ class EventLogPageIntegrationTest {
     assertThat(refresh.group(1)).isEqualTo(EVENT_LOG);
     assertThat(reloaded).contains("data-test=\"event-log-summary\"");
     assertThat(entries(reloaded)).isNotEmpty();
+  }
+
+  /** Publishes an event whose one listener fails, and answers its id. */
+  private UUID publishAnEventItsListenerFails() {
+    final LoneFailure event = new LoneFailure(UUID.randomUUID(), Instant.now());
+    new TransactionTemplate(transactions)
+        .executeWithoutResult(status -> publisher.publishEvent(event));
+    return event.eventId();
+  }
+
+  /** The log page once it lists an entry of the event, failing when it does not in time. */
+  private String pageListing(final UUID eventId) throws Exception {
+    final long deadline = System.currentTimeMillis() + LISTING_TIMEOUT_MILLIS;
+    String page = page(EVENT_LOG);
+    while (!page.contains(eventId.toString()) && System.currentTimeMillis() < deadline) {
+      Thread.sleep(100);
+      page = page(EVENT_LOG);
+    }
+    assertThat(page).as("the log lists the published event").contains(eventId.toString());
+    return page;
   }
 
   /** The markup of every entry of the log, one string per entry. */
