@@ -18,6 +18,7 @@ public class SiteHeader extends BasePage {
   private static final String LOGOUT_BUTTON = "logout-button";
   private static final String MY_ACCOUNT_LINK = "nav-my-account-link";
   private static final String BASKET_TRIGGER = "mini-basket-trigger";
+  private static final String BASKET_COUNT = "mini-basket-count";
   private static final String BASKET_DROPDOWN = "mini-basket-dropdown";
   private static final String BASKET_VIEW_CART = "mini-basket-view-cart-link";
   // The dropdown's lines and total carry no data-test; adopting the header changes no template.
@@ -108,6 +109,17 @@ public class SiteHeader extends BasePage {
   public HomePage followLogo() {
     click(LOGO);
     return new HomePage(page);
+  }
+
+  /**
+   * The badge on the header's cart entry.
+   *
+   * @return the badge text, trimmed
+   */
+  public String basketCount() {
+    return page.locator("[data-test='" + BASKET_TRIGGER + "'] [data-test='" + BASKET_COUNT + "']")
+        .textContent()
+        .strip();
   }
 
   /**

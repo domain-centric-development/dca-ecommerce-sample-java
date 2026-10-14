@@ -148,6 +148,9 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── getorcreateactivecart/
 │   │   │   ├── GetOrCreateActiveCartInputPort, GetOrCreateActiveCartUseCase
 │   │   │   ├── GetOrCreateActiveCartCommand, GetOrCreateActiveCartResult
+│   │   ├── removecartitem/
+│   │   │   ├── RemoveCartItemInputPort, RemoveCartItemUseCase
+│   │   │   ├── RemoveCartItemCommand, RemoveCartItemResult
 │   │   ├── removeitemfromcart/
 │   │   │   ├── RemoveItemFromCartInputPort, RemoveItemFromCartUseCase
 │   │   │   ├── RemoveItemFromCartCommand, RemoveItemFromCartResult

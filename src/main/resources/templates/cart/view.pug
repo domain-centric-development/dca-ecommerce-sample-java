@@ -51,6 +51,13 @@ block content
               else if !item.hasSufficientStock()
                 .stock-alert.stock-alert--warning(data-test="stock-alert") Insufficient stock available
 
+            if shoppingCart.status() === 'ACTIVE'
+              form.cart__item-remove(method="post" action="/cart/remove-item" data-test="cart-item-remove-form")
+                if _csrf
+                  input(type="hidden" name=_csrf.parameterName value=_csrf.token)
+                input(type="hidden" name="cartItemId" value=item.itemId())
+                button.btn.btn--secondary.btn--sm(type="submit" data-test="cart-item-remove-button") Remove
+
       .cart__total
         .cart__total-row
           span Subtotal

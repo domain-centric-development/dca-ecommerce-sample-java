@@ -16,6 +16,8 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemInputPort;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartNotModifiableException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
@@ -53,6 +55,7 @@ public class CartPageController {
   private final GetActiveCartInputPort getActiveCartUseCase;
   private final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase;
   private final AddItemToCartInputPort addItemToCartUseCase;
+  private final RemoveCartItemInputPort removeCartItemUseCase;
   private final IdentityProvider identityProvider;
 
   public CartPageController(
@@ -60,11 +63,13 @@ public class CartPageController {
       final GetActiveCartInputPort getActiveCartUseCase,
       final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase,
       final AddItemToCartInputPort addItemToCartUseCase,
+      final RemoveCartItemInputPort removeCartItemUseCase,
       final IdentityProvider identityProvider) {
     this.getCartByIdUseCase = getCartByIdUseCase;
     this.getActiveCartUseCase = getActiveCartUseCase;
     this.getOrCreateActiveCartUseCase = getOrCreateActiveCartUseCase;
     this.addItemToCartUseCase = addItemToCartUseCase;
+    this.removeCartItemUseCase = removeCartItemUseCase;
     this.identityProvider = identityProvider;
   }
 
@@ -152,6 +157,34 @@ public class CartPageController {
       // object with.
       return redirectFor(e, attributes);
     }
+  }
+
+  /**
+   * Handles "Remove" on a line of the cart page: takes the line out of the current user's active
+   * cart, whatever its quantity, and leads back to the cart page.
+   *
+   * <p>The cart is the caller's own, never one the request names. A line that cart does not hold —
+   * already removed, malformed, another visitor's — changes nothing: the page shows the cart as it
+   * is, without a notice.
+   *
+   * @param cartItemId the ID of the line to remove
+   * @return redirect to cart view
+   */
+  @PostMapping("/remove-item")
+  public String removeCartItem(@RequestParam final String cartItemId) {
+    final String customerId = identityProvider.getCurrentIdentity().userId().value();
+
+    final Optional<String> activeCartId =
+        getActiveCartUseCase.execute(new GetActiveCartQuery(customerId)).cartId();
+    if (activeCartId.isPresent()) {
+      try {
+        removeCartItemUseCase.execute(
+            new RemoveCartItemCommand(activeCartId.get(), customerId, cartItemId));
+      } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
+        // The cart stays as it is; the page shows it.
+      }
+    }
+    return "redirect:" + CART_PATH;
   }
 
   /**

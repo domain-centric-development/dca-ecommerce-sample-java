@@ -246,7 +246,12 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   │   ├── AddItemToCartUseCase.java
 │   │   │   │   ├── AddItemToCartCommand.java
 │   │   │   │   └── AddItemToCartResult.java
-│   │   │   └── removeitemfromcart/       # Use case: Remove Item from Cart
+│   │   │   ├── removecartitem/           # Use case: Remove Cart Item (a line, by its id — the cart page)
+│   │   │   │   ├── RemoveCartItemInputPort.java
+│   │   │   │   ├── RemoveCartItemUseCase.java
+│   │   │   │   ├── RemoveCartItemCommand.java
+│   │   │   │   └── RemoveCartItemResult.java
+│   │   │   └── removeitemfromcart/       # Use case: Remove Item from Cart (by product — the API)
 │   │   │       ├── RemoveItemFromCartInputPort.java
 │   │   │       ├── RemoveItemFromCartUseCase.java
 │   │   │       ├── RemoveItemFromCartCommand.java

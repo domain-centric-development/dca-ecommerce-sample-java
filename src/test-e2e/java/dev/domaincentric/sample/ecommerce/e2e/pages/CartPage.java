@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.e2e.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.WaitForSelectorState;
 
 /**
  * Page object for the shopping cart page.
@@ -15,6 +16,7 @@ public class CartPage extends BasePage {
   private static final String CHECKOUT_BUTTON = "cart-checkout-button";
   private static final String SUCCESS_MESSAGE = "cart-success-message";
   private static final String ERROR_MESSAGE = "cart-error-message";
+  private static final String REMOVE_BUTTON = "cart-item-remove-button";
 
   /**
    * Creates a new CartPage and waits for it to load.
@@ -162,6 +164,43 @@ public class CartPage extends BasePage {
       page.reload();
     }
     return warning.count() == 0 ? "" : warning.textContent().strip();
+  }
+
+  /**
+   * The names of the cart lines, in display order.
+   *
+   * @return one name per cart line
+   */
+  public java.util.List<String> lineNames() {
+    return page
+        .locator("[data-test='" + CART_ITEM + "'] [data-test='cart-item-name']")
+        .allTextContents()
+        .stream()
+        .map(String::strip)
+        .toList();
+  }
+
+  /**
+   * The "Remove" button of a cart line.
+   *
+   * @param productName the name the line shows
+   * @return the button's locator
+   */
+  public Locator removeButtonOf(String productName) {
+    return lineOf(productName).locator("[data-test='" + REMOVE_BUTTON + "']");
+  }
+
+  /**
+   * Presses "Remove" on a cart line and waits for the cart page without that line.
+   *
+   * @param productName the name the line shows
+   * @return the cart page the shop leads back to
+   */
+  public CartPage remove(String productName) {
+    removeButtonOf(productName).click();
+    lineOf(productName)
+        .waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED));
+    return new CartPage(page, shopUrl);
   }
 
   private Locator lineOf(String productName) {
