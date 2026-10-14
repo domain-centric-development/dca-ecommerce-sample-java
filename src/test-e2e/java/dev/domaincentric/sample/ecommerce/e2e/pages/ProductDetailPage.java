@@ -28,14 +28,38 @@ public class ProductDetailPage extends BasePage {
   }
 
   /**
+   * Creates the product page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public ProductDetailPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+    waitFor(PRODUCT_DETAIL);
+  }
+
+  /**
+   * Opens a product's page in a shop the test started itself.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   * @param path the product page's path, as {@link #shownPath()} answers it
+   * @return a new ProductDetailPage
+   */
+  public static ProductDetailPage navigateTo(Page page, String shopUrl, String path) {
+    page.navigate(shopUrl + path);
+    return new ProductDetailPage(page, shopUrl);
+  }
+
+  /**
    * Adds the current product to the shopping cart.
    *
    * @return the CartPage after adding the product
    */
   public CartPage addToCart() {
     click(ADD_TO_CART_BUTTON);
-    page.waitForURL(BASE_URL + "/cart**");
-    return new CartPage(page);
+    page.waitForURL(shopUrl + "/cart**");
+    return new CartPage(page, shopUrl);
   }
 
   /**
@@ -46,7 +70,7 @@ public class ProductDetailPage extends BasePage {
    */
   public ProductDetailPage addToCartAndStay() {
     click(ADD_TO_CART_BUTTON);
-    page.waitForURL(BASE_URL + "/cart**");
+    page.waitForURL(shopUrl + "/cart**");
     return this;
   }
 
@@ -57,7 +81,7 @@ public class ProductDetailPage extends BasePage {
    */
   public ProductCatalogPage backToCatalog() {
     click(BACK_LINK);
-    return new ProductCatalogPage(page);
+    return new ProductCatalogPage(page, shopUrl);
   }
 
   /**

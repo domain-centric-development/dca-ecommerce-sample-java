@@ -30,6 +30,16 @@ public class BuyerInfoPage extends BasePage {
   }
 
   /**
+   * Creates this page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public BuyerInfoPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+  }
+
+  /**
    * Fills the email field.
    *
    * @param email the email address
@@ -94,7 +104,7 @@ public class BuyerInfoPage extends BasePage {
    */
   public DeliveryPage continueToDelivery() {
     click(CONTINUE_BUTTON);
-    return new DeliveryPage(page);
+    return new DeliveryPage(page, shopUrl);
   }
 
   /**

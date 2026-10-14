@@ -22,6 +22,16 @@ public class ConfirmationPage extends BasePage {
   }
 
   /**
+   * Creates this page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public ConfirmationPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+  }
+
+  /**
    * Checks if the order confirmation message is displayed.
    *
    * @return true if the confirmation message is visible

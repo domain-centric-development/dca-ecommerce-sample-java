@@ -23,6 +23,16 @@ public class PaymentPage extends BasePage {
   }
 
   /**
+   * Creates this page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public PaymentPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+  }
+
+  /**
    * Selects the first available payment provider.
    *
    * @return this page for method chaining
@@ -56,6 +66,6 @@ public class PaymentPage extends BasePage {
    */
   public ReviewPage continueToReview() {
     click(CONTINUE_BUTTON);
-    return new ReviewPage(page);
+    return new ReviewPage(page, shopUrl);
   }
 }

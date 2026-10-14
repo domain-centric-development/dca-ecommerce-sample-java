@@ -25,6 +25,16 @@ public class ReviewPage extends BasePage {
   }
 
   /**
+   * Creates this page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public ReviewPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+  }
+
+  /**
    * Checks if the page displays the expected email.
    *
    * @param email the expected email address
@@ -74,6 +84,6 @@ public class ReviewPage extends BasePage {
    */
   public ConfirmationPage placeOrder() {
     click(PLACE_ORDER_BUTTON);
-    return new ConfirmationPage(page);
+    return new ConfirmationPage(page, shopUrl);
   }
 }

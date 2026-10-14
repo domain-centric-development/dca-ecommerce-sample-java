@@ -19,6 +19,9 @@ public abstract class BasePage {
   protected static final String BASE_URL = ShopUnderTest.baseUrl();
   protected final Page page;
 
+  /** The base URL of the shop this page belongs to: the suite's shop, or one a test started. */
+  protected final String shopUrl;
+
   /**
    * Creates a new page object and validates the current URL matches the expected pattern.
    *
@@ -26,8 +29,7 @@ public abstract class BasePage {
    * @param expectedUrlPattern glob pattern for the expected URL (e.g., "/products/*")
    */
   protected BasePage(Page page, String expectedUrlPattern) {
-    this.page = page;
-    page.waitForURL(BASE_URL + expectedUrlPattern);
+    this(page, BASE_URL, expectedUrlPattern);
   }
 
   /**
@@ -40,6 +42,7 @@ public abstract class BasePage {
    */
   protected BasePage(Page page, String shopUrl, String expectedUrlPattern) {
     this.page = page;
+    this.shopUrl = shopUrl;
     page.waitForURL(shopUrl + expectedUrlPattern);
   }
 
@@ -51,6 +54,7 @@ public abstract class BasePage {
    */
   protected BasePage(Page page) {
     this.page = page;
+    this.shopUrl = BASE_URL;
   }
 
   /**
@@ -127,7 +131,7 @@ public abstract class BasePage {
   }
 
   protected void navigateTo(String path) {
-    page.navigate(BASE_URL + path);
+    page.navigate(shopUrl + path);
   }
 
   /**
@@ -136,7 +140,7 @@ public abstract class BasePage {
    * @return the current path
    */
   protected String getCurrentPath() {
-    return page.url().replace(BASE_URL, "");
+    return page.url().replace(shopUrl, "");
   }
 
   /**

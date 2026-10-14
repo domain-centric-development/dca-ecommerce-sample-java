@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.e2e;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 import dev.domaincentric.sample.ecommerce.e2e.pages.CartPage;
+import dev.domaincentric.sample.ecommerce.e2e.pages.ProductCatalogPage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,24 +55,14 @@ class NoOpenCheckoutE2ETest extends BaseE2ETest {
 
   /**
    * A guest who put "Domain-Driven Design" into the cart of that shop, started the checkout and
-   * submitted the buyer step. The page objects know only the suite's shop, so the walk is spelt
-   * out.
+   * submitted the buyer step.
    */
   private void aGuestOnTheDeliveryStepOf(final String shopUrl) {
-    page.navigate(shopUrl + "/products");
-    page.locator(
-            "[data-test='product-card']:has([data-test='product-card-title']:text-is('Domain-Driven"
-                + " Design')) [data-test='view-product']")
-        .click();
-    page.locator("[data-test='product-add-to-cart-button']").click();
-    page.waitForURL(shopUrl + "/cart**");
-    page.locator("[data-test='cart-checkout-button']").click();
-    page.waitForURL(shopUrl + "/checkout/buyer");
-    page.locator("input[name='email']").fill("jane@example.com");
-    page.locator("input[name='firstName']").fill("Jane");
-    page.locator("input[name='lastName']").fill("Doe");
-    page.locator("input[name='phone']").fill("+49 30 1234567");
-    page.locator("[data-test='buyer-continue-button']").click();
-    assertThat(page).hasURL(shopUrl + "/checkout/delivery");
+    ProductCatalogPage.navigateTo(page, shopUrl)
+        .viewProductNamed("Domain-Driven Design")
+        .addToCart()
+        .proceedToCheckout()
+        .fillBuyerInfo("jane@example.com", "Jane", "Doe", "+49 30 1234567")
+        .continueToDelivery();
   }
 }

@@ -77,7 +77,7 @@ public class ProductCatalogPage extends BasePage {
    */
   public ProductDetailPage viewFirstProduct() {
     clickFirst(VIEW_DETAILS_LINK);
-    return new ProductDetailPage(page);
+    return new ProductDetailPage(page, shopUrl);
   }
 
   /**
@@ -88,7 +88,7 @@ public class ProductCatalogPage extends BasePage {
    */
   public ProductDetailPage viewProduct(int index) {
     page.locator("[data-test='" + VIEW_DETAILS_LINK + "']").nth(index).click();
-    return new ProductDetailPage(page);
+    return new ProductDetailPage(page, shopUrl);
   }
 
   /**
@@ -99,7 +99,7 @@ public class ProductCatalogPage extends BasePage {
    */
   public ProductDetailPage viewProductNamed(String name) {
     cardNamed(name).locator("[data-test='" + VIEW_DETAILS_LINK + "']").click();
-    return new ProductDetailPage(page);
+    return new ProductDetailPage(page, shopUrl);
   }
 
   /**

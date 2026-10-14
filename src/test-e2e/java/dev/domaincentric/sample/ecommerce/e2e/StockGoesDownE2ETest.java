@@ -3,46 +3,51 @@ package dev.domaincentric.sample.ecommerce.e2e;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.domaincentric.sample.ecommerce.e2e.pages.CartPage;
+import dev.domaincentric.sample.ecommerce.e2e.pages.ProductCatalogPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.ProductDetailPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.ReviewPage;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * A placed order lowers the stock its product page shows, shortly after the order. The scenario
- * names the seeded "Wooden Hexagon Desk Model" with its stock of 8; the test orders a product of
- * its own, created with the same stock, so no other test's order changes what it reads.
+ * A placed order lowers the stock its product page shows, shortly after the order. The test runs a
+ * shop of its own, started with nothing but the seed: it reads the seeded stock of the "Wooden
+ * Hexagon Desk Model" exactly and uses some of it up, which the suite's shop keeps for other tests.
  */
 @DisplayName("A placed order lowers the stock")
 class StockGoesDownE2ETest extends BaseE2ETest {
 
+  private static final String DESK_MODEL = "Wooden Hexagon Desk Model";
+
   @Test
   @DisplayName("Stock goes down by the quantity bought")
-  void placingAnOrderLowersTheStockByTheQuantityBought() throws Exception {
-    final OwnProduct deskModel = OwnProduct.stocked("Stock Goes Down Desk Model", 8);
-    navigateTo(deskModel.path());
-    final ProductDetailPage product = new ProductDetailPage(page);
-    assertEquals(
-        "8 units available",
-        product.metaValue("Availability"),
-        "The desk model starts with the stock it was created with");
-    product.addToCart();
-    navigateTo(deskModel.path());
-    new ProductDetailPage(page).addToCart();
-    final ReviewPage review = guestFromTheCartToTheReview();
+  void placingAnOrderLowersTheStockByTheQuantityBought() {
+    try (ConfigurableApplicationContext shop = ShopUnderTest.startedWith("stock_goes_down_e2e")) {
+      final String shopUrl = ShopUnderTest.baseUrlOf(shop);
+      final ProductDetailPage product =
+          ProductCatalogPage.navigateTo(page, shopUrl).viewProductNamed(DESK_MODEL);
+      final String productPath = product.shownPath();
+      assertEquals(
+          "8 units available",
+          product.metaValue("Availability"),
+          "The desk model starts with its seeded stock");
+      product.addToCart();
+      ProductDetailPage.navigateTo(page, shopUrl, productPath).addToCart();
+      final ReviewPage review = guestFromTheCartToTheReview(shopUrl);
 
-    review.placeOrder();
+      review.placeOrder();
 
-    navigateTo(deskModel.path());
-    assertEquals(
-        "6 units available",
-        new ProductDetailPage(page)
-            .metaValueOnceItReads("Availability", "6 units available", Duration.ofSeconds(15)));
+      assertEquals(
+          "6 units available",
+          ProductDetailPage.navigateTo(page, shopUrl, productPath)
+              .metaValueOnceItReads("Availability", "6 units available", Duration.ofSeconds(15)));
+    }
   }
 
-  private ReviewPage guestFromTheCartToTheReview() {
-    return CartPage.navigateTo(page)
+  private ReviewPage guestFromTheCartToTheReview(final String shopUrl) {
+    return CartPage.navigateTo(page, shopUrl)
         .proceedToCheckout()
         .fillBuyerInfo("jane@example.com", "Jane", "Doe", "+49 30 1234567")
         .continueToDelivery()

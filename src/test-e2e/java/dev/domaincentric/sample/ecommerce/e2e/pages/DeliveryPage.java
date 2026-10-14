@@ -25,6 +25,16 @@ public class DeliveryPage extends BasePage {
   }
 
   /**
+   * Creates this page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public DeliveryPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+  }
+
+  /**
    * Fills the street address field.
    *
    * @param street the street address
@@ -136,7 +146,7 @@ public class DeliveryPage extends BasePage {
    */
   public PaymentPage continueToPayment() {
     click(CONTINUE_BUTTON);
-    return new PaymentPage(page);
+    return new PaymentPage(page, shopUrl);
   }
 
   /**
@@ -146,7 +156,7 @@ public class DeliveryPage extends BasePage {
    */
   public BuyerInfoPage goBack() {
     click(BACK_LINK);
-    return new BuyerInfoPage(page);
+    return new BuyerInfoPage(page, shopUrl);
   }
 
   /**

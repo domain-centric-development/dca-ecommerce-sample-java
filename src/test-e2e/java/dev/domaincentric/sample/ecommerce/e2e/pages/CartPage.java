@@ -26,6 +26,16 @@ public class CartPage extends BasePage {
   }
 
   /**
+   * Creates the cart page of a shop the test started itself and waits for it to load.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public CartPage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+  }
+
+  /**
    * Navigates to the cart and creates a page object.
    *
    * @param page the Playwright page instance
@@ -37,6 +47,18 @@ public class CartPage extends BasePage {
   }
 
   /**
+   * Navigates to the cart of a shop the test started itself.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   * @return a new CartPage
+   */
+  public static CartPage navigateTo(Page page, String shopUrl) {
+    page.navigate(shopUrl + "/cart");
+    return new CartPage(page, shopUrl);
+  }
+
+  /**
    * Waits for cart items to be displayed and proceeds to checkout.
    *
    * @return the BuyerInfoPage to enter buyer information
@@ -44,7 +66,7 @@ public class CartPage extends BasePage {
   public BuyerInfoPage proceedToCheckout() {
     waitFor(CART_ITEM);
     click(CHECKOUT_BUTTON);
-    return new BuyerInfoPage(page);
+    return new BuyerInfoPage(page, shopUrl);
   }
 
   /**
