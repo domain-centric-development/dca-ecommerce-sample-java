@@ -42,7 +42,7 @@ class ChangedAddressLoginIntegrationTest {
 
     final String afterLogin = visitor.logIn("/login", NEW_EMAIL, PASSWORD);
 
-    assertThat(afterLogin).isEqualTo("/cart");
+    assertThat(afterLogin).isEqualTo("/cart?notice=welcome-back");
     assertThat(element(visitor.page(afterLogin), "user-greeting").text())
         .isEqualTo("Welcome, " + NEW_EMAIL);
   }

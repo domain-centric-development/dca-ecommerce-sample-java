@@ -8,9 +8,6 @@ block content
       if logoutSuccess
         .alert.alert--success(data-test="logout-success-message") You have been successfully logged out.
 
-      if message
-        .alert.alert--success(data-test="login-success-message")= message
-
       if error
         .alert.alert--error(data-test="login-error-message")= error
 

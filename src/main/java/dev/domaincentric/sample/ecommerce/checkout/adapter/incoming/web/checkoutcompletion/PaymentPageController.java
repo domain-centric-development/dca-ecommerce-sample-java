@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersInputPort;
@@ -33,7 +34,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the payment method page in checkout.
@@ -53,11 +53,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/checkout")
 public class PaymentPageController {
-
-  private static final String PAYMENT_REFUSED =
-      "The payment was refused. Please choose another way to pay.";
-  private static final String PROVIDER_UNAVAILABLE =
-      "The payment provider is not available right now. Please try again later.";
 
   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
@@ -87,15 +82,13 @@ public class PaymentPageController {
    *
    * @param noticeCode the code of the notice a redirect brought along, if any
    * @param model the Spring MVC model
-   * @param redirectAttributes for passing flash messages on error
    * @return the payment.pug template or redirect on error
    */
   @GetMapping("/payment")
   public String showPaymentForm(
       @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
           final @Nullable String noticeCode,
-      final Model model,
-      final RedirectAttributes redirectAttributes) {
+      final Model model) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -106,8 +99,7 @@ public class PaymentPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No active checkout session found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -117,8 +109,7 @@ public class PaymentPageController {
                 activeSession.sessionId(), customerId, CheckoutStep.PAYMENT));
 
     if (!result.found()) {
-      redirectAttributes.addFlashAttribute("error", "Checkout session not found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
     }
     final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
@@ -126,7 +117,7 @@ public class PaymentPageController {
           .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
           .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
     }
-    notice.ifPresent(n -> model.addAttribute("error", n.sentence()));
+    notice.flatMap(n -> n.sentence(null)).ifPresent(text -> model.addAttribute("error", text));
 
     // Convert to page-specific ViewModel
     final PaymentPageViewModel viewModel = PaymentPageViewModel.fromSnapshot(result.session());
@@ -148,12 +139,10 @@ public class PaymentPageController {
    * success.
    *
    * @param providerId the selected payment provider ID
-   * @param redirectAttributes for passing flash messages
    * @return redirect to review step or back to payment on error
    */
   @PostMapping("/payment")
-  public String submitPayment(
-      @RequestParam final String providerId, final RedirectAttributes redirectAttributes) {
+  public String submitPayment(@RequestParam final String providerId) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -164,8 +153,7 @@ public class PaymentPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No active checkout session found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
     try {
@@ -182,26 +170,24 @@ public class PaymentPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", messageFor(e));
-      return "redirect:/checkout/payment";
+      return CheckoutRoutes.redirectTo(CheckoutStep.PAYMENT, noticeFor(e));
     }
   }
 
   /**
-   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
-   * The failure's message is for the log, never for the customer.
+   * The notice for a refusal: chosen by the failure's type. The failure's message is for the log,
+   * never for the customer.
    */
-  private static String messageFor(final RuntimeException failure) {
+  private static CheckoutStepNotice noticeFor(final RuntimeException failure) {
     return switch (failure) {
-      case PaymentInitiationFailedException e -> PAYMENT_REFUSED;
-      case PaymentProviderUnavailableException e -> PROVIDER_UNAVAILABLE;
-      case PaymentProviderNotFoundException e ->
-          "This way to pay is not offered. Please choose another one.";
-      case NothingToPayException e -> "There is nothing to pay for this order.";
-      case CheckoutSessionNotFoundException e -> "Checkout session not found";
-      case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
-      case IllegalArgumentException e -> "Please choose a way to pay.";
-      default -> "Your payment selection could not be saved. Please try again.";
+      case PaymentInitiationFailedException e -> CheckoutStepNotice.PAYMENT_REFUSED;
+      case PaymentProviderUnavailableException e -> CheckoutStepNotice.PAYMENT_PROVIDER_UNAVAILABLE;
+      case PaymentProviderNotFoundException e -> CheckoutStepNotice.PAYMENT_METHOD_NOT_OFFERED;
+      case NothingToPayException e -> CheckoutStepNotice.NOTHING_TO_PAY;
+      case CheckoutSessionNotFoundException e -> CheckoutStepNotice.SESSION_NOT_FOUND;
+      case CheckoutNotModifiableException e -> CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE;
+      case IllegalArgumentException e -> CheckoutStepNotice.PAYMENT_METHOD_MISSING;
+      default -> CheckoutStepNotice.PAYMENT_NOT_SAVED;
     };
   }
 }

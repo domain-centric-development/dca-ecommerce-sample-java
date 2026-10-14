@@ -199,7 +199,8 @@ class BuyerStepKnowsWhoIsBuyingIntegrationTest {
       for (final Element field : method.select("input[name]")) {
         delivery.param(field.attr("name"), field.val());
       }
-      assertThat(perform(delivery).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
+      assertThat(URI.create(perform(delivery).getResponse().getRedirectedUrl()).getPath())
+          .isEqualTo(PAYMENT_STEP);
 
       final Element paymentForm = page(PAYMENT_STEP).selectFirst("[data-test=payment-form]");
       final MockHttpServletRequestBuilder payment =
@@ -214,11 +215,13 @@ class BuyerStepKnowsWhoIsBuyingIntegrationTest {
               .findFirst()
               .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
       payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-      assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
+      assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
+          .isEqualTo(REVIEW_STEP);
 
       final MvcResult placed =
           submit(page(REVIEW_STEP).selectFirst("[data-test=review-confirm-form]"));
-      assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(CONFIRMATION);
+      assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
+          .isEqualTo(CONFIRMATION);
       return page(CONFIRMATION);
     }
 
@@ -241,14 +244,13 @@ class BuyerStepKnowsWhoIsBuyingIntegrationTest {
       while (target != null) {
         // The redirect is encoded already; a URI keeps it from being encoded twice.
         final MockHttpServletRequestBuilder hop = get(URI.create(target));
-        if (!current.getFlashMap().isEmpty()) {
-          hop.flashAttrs(current.getFlashMap());
-        }
         current = perform(hop);
         final String next = current.getResponse().getRedirectedUrl();
         if (next == null) {
           assertThat(current.getResponse().getStatus()).as("GET " + target).isEqualTo(200);
-          return new Landing(target, Jsoup.parse(current.getResponse().getContentAsString()));
+          return new Landing(
+              URI.create(target).getPath(),
+              Jsoup.parse(current.getResponse().getContentAsString()));
         }
         target = next;
       }

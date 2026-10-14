@@ -71,7 +71,8 @@ class CartAtLoginIntegrationTest {
     guest.addToCart("Domain-Driven Design");
     final MvcResult started =
         guest.submit(guest.page(CART).selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
+    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(BUYER_STEP);
 
     final Landing landed = guest.logIn("/login?returnUrl=" + BUYER_STEP, email);
 
@@ -91,7 +92,8 @@ class CartAtLoginIntegrationTest {
     final MvcResult started =
         visitor.submit(visitor.page(CART).selectFirst("[data-test=cart-checkout-form]"));
 
-    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
+    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(BUYER_STEP);
     assertThat(visitor.page(BUYER_STEP).selectFirst("[data-test=buyer-form]")).isNotNull();
   }
 
@@ -177,14 +179,13 @@ class CartAtLoginIntegrationTest {
       while (target != null) {
         // The redirect is encoded already; a URI keeps it from being encoded twice.
         final MockHttpServletRequestBuilder hop = get(URI.create(target));
-        if (!current.getFlashMap().isEmpty()) {
-          hop.flashAttrs(current.getFlashMap());
-        }
         current = perform(hop);
         final String next = current.getResponse().getRedirectedUrl();
         if (next == null) {
           assertThat(current.getResponse().getStatus()).as("GET " + target).isEqualTo(200);
-          return new Landing(target, Jsoup.parse(current.getResponse().getContentAsString()));
+          return new Landing(
+              URI.create(target).getPath(),
+              Jsoup.parse(current.getResponse().getContentAsString()));
         }
         target = next;
       }

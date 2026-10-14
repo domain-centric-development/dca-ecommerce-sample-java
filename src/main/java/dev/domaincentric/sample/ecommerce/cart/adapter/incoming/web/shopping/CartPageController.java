@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.CartPageNotice;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
@@ -18,13 +19,13 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartNotModifiableException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for rendering shopping cart pages using Pug templates.
@@ -45,6 +46,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/cart")
 public class CartPageController {
+
+  private static final String CART_PATH = "/cart";
 
   private final GetCartByIdInputPort getCartByIdUseCase;
   private final GetActiveCartInputPort getActiveCartUseCase;
@@ -71,11 +74,20 @@ public class CartPageController {
    * <p>Returns the cart details rendered using the Pug template. The user's identity is obtained
    * from the JWT token via IdentityProvider.
    *
+   * @param noticeCode the code of the notice a redirect brought along, if any
+   * @param count the number that notice names, if any
    * @param model Spring MVC model to pass data to the view
    * @return view name "cart/view" which resolves to templates/cart/view.pug
    */
   @GetMapping
-  public String showCart(final Model model) {
+  public String showCart(
+      @RequestParam(name = CartPageNotice.PARAMETER, required = false)
+          final @Nullable String noticeCode,
+      @RequestParam(name = CartPageNotice.COUNT_PARAMETER, required = false)
+          final @Nullable Integer count,
+      final Model model) {
+    CartPageNotice.show(model, noticeCode, count);
+
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
@@ -118,14 +130,11 @@ public class CartPageController {
    *
    * @param productId the product ID to add
    * @param quantity the quantity to add (default: 1)
-   * @param redirectAttributes for passing flash messages
    * @return redirect to cart view
    */
   @PostMapping("/add-product")
   public String addProductToCart(
-      @RequestParam final String productId,
-      @RequestParam(defaultValue = "1") final int quantity,
-      final RedirectAttributes redirectAttributes) {
+      @RequestParam final String productId, @RequestParam(defaultValue = "1") final int quantity) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -140,30 +149,28 @@ public class CartPageController {
         new AddItemToCartCommand(cartResponse.cartId(), customerId, productId, quantity);
     try {
       addItemToCartUseCase.execute(command);
-      redirectAttributes.addFlashAttribute("message", "Product added to cart!");
+      return CartPageNotice.PRODUCT_ADDED.redirectTo(CART_PATH);
     } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
       // The context's own refusals, plus the argument exception a form field still reaches a value
       // object with.
-      redirectAttributes.addFlashAttribute("error", messageFor(e));
+      return redirectFor(e);
     }
-
-    // Redirect to cart view
-    return "redirect:/cart";
   }
 
   /**
-   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
-   * The failure's message is for the log, never for the customer.
+   * The cart page with the notice for a refusal: chosen by the failure's type, the number it names
+   * taken from its values. The failure's message is for the log, never for the customer.
    */
-  private static String messageFor(final RuntimeException failure) {
+  private static String redirectFor(final RuntimeException failure) {
     return switch (failure) {
       case InsufficientArticleStockException e ->
-          "There is not enough stock to add " + e.requested() + " of this product.";
-      case ArticleNotAvailableException e -> "This product is no longer available.";
-      case CartNotFoundException e -> "Your cart could not be found.";
-      case CartNotModifiableException e -> "This cart can no longer be changed.";
-      case IllegalArgumentException e -> "Please enter a valid quantity.";
-      default -> "The product could not be added to the cart. Please try again.";
+          CartPageNotice.NOT_ENOUGH_STOCK.redirectTo(CART_PATH, e.requested());
+      case ArticleNotAvailableException e ->
+          CartPageNotice.PRODUCT_UNAVAILABLE.redirectTo(CART_PATH);
+      case CartNotFoundException e -> CartPageNotice.CART_NOT_FOUND.redirectTo(CART_PATH);
+      case CartNotModifiableException e -> CartPageNotice.CART_NOT_MODIFIABLE.redirectTo(CART_PATH);
+      case IllegalArgumentException e -> CartPageNotice.INVALID_QUANTITY.redirectTo(CART_PATH);
+      default -> CartPageNotice.PRODUCT_NOT_ADDED.redirectTo(CART_PATH);
     };
   }
 }

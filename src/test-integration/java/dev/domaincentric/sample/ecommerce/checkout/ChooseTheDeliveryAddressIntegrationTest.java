@@ -5,7 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpSession;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jsoup.Jsoup;
@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -51,7 +50,8 @@ class ChooseTheDeliveryAddressIntegrationTest {
     cookies.clear();
     addToCart("Domain-Driven Design");
     final MvcResult started = submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
+    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(BUYER_STEP);
 
     final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
     buyerForm.selectFirst("input[name=email]").val("jane@example.com");
@@ -59,7 +59,8 @@ class ChooseTheDeliveryAddressIntegrationTest {
     buyerForm.selectFirst("input[name=lastName]").val("Doe");
     buyerForm.selectFirst("input[name=phone]").val("+49 30 1234567");
     final MvcResult buyerSent = submit(buyerForm);
-    assertThat(buyerSent.getResponse().getRedirectedUrl()).isEqualTo(DELIVERY_STEP);
+    assertThat(URI.create(buyerSent.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(DELIVERY_STEP);
   }
 
   @Test
@@ -205,13 +206,11 @@ class ChooseTheDeliveryAddressIntegrationTest {
     final MockHttpServletRequestBuilder request = MockMvcRequestBuilders.post(form.attr("action"));
     values.forEach(request::param);
     final MvcResult posted = perform(request);
-    assertThat(posted.getResponse().getRedirectedUrl()).isEqualTo(DELIVERY_STEP);
+    assertThat(URI.create(posted.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(DELIVERY_STEP);
 
-    final MockHttpServletRequestBuilder follow = get(DELIVERY_STEP);
-    final HttpSession session = posted.getRequest().getSession(false);
-    if (session != null) {
-      follow.session((MockHttpSession) session);
-    }
+    final MockHttpServletRequestBuilder follow =
+        get(URI.create(posted.getResponse().getRedirectedUrl()));
     final MvcResult landed = perform(follow);
     assertThat(landed.getResponse().getStatus()).isEqualTo(200);
     return Jsoup.parse(landed.getResponse().getContentAsString());

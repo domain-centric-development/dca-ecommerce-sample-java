@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplicat
 import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
 import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import jakarta.servlet.http.Cookie;
+import java.net.URI;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -97,7 +98,7 @@ class OrderCheckedAgainstStockIntegrationTest {
 
     final MvcResult proceeded = guest.submit(outdatedForm);
 
-    assertThat(proceeded.getResponse().getRedirectedUrl()).isEqualTo(CART);
+    assertThat(URI.create(proceeded.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
     assertThat(cartErrorOn(guest.followed(proceeded)))
         .startsWith("Cannot start checkout, 1 item(s) unavailable or out of stock");
   }
@@ -116,7 +117,7 @@ class OrderCheckedAgainstStockIntegrationTest {
 
     final MvcResult proceeded = guest.submit(outdatedForm);
 
-    assertThat(proceeded.getResponse().getRedirectedUrl()).isEqualTo(CART);
+    assertThat(URI.create(proceeded.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
     assertThat(cartErrorOn(guest.followed(proceeded))).isEqualTo("Cannot check out an empty cart.");
   }
 
@@ -131,12 +132,14 @@ class OrderCheckedAgainstStockIntegrationTest {
 
     final MvcResult placed = guest.submit(confirmForm);
 
-    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
+    assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(REVIEW_STEP);
     final Document review = guest.followed(placed);
     assertThat(review.selectFirst("[data-test=review-error-message]")).isNotNull();
     assertThat(review.selectFirst("[data-test=review-error-message]").text()).isNotBlank();
     assertThat(review.selectFirst("[data-test=confirmation-title]")).isNull();
-    assertThat(guest.perform(get(CONFIRMATION)).getResponse().getRedirectedUrl())
+    assertThat(
+            URI.create(guest.perform(get(CONFIRMATION)).getResponse().getRedirectedUrl()).getPath())
         .as("no confirmed order to show")
         .isEqualTo(CART);
   }
@@ -170,7 +173,8 @@ class OrderCheckedAgainstStockIntegrationTest {
     void placeTheOrderFromTheCart() throws Exception {
       final MvcResult placed =
           submit(walkToTheReview().selectFirst("[data-test=review-confirm-form]"));
-      assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(CONFIRMATION);
+      assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
+          .isEqualTo(CONFIRMATION);
       page(CONFIRMATION);
     }
 
@@ -180,7 +184,8 @@ class OrderCheckedAgainstStockIntegrationTest {
      */
     Document walkToTheReview() throws Exception {
       final MvcResult started = submit(page(CART).selectFirst("[data-test=cart-checkout-form]"));
-      assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
+      assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
+          .isEqualTo(BUYER_STEP);
 
       final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
       buyerForm.selectFirst("input[name=email]").val("jane@example.com");
@@ -208,7 +213,8 @@ class OrderCheckedAgainstStockIntegrationTest {
       for (final Element field : method.select("input[name]")) {
         delivery.param(field.attr("name"), field.val());
       }
-      assertThat(perform(delivery).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
+      assertThat(URI.create(perform(delivery).getResponse().getRedirectedUrl()).getPath())
+          .isEqualTo(PAYMENT_STEP);
 
       final Element paymentForm = page(PAYMENT_STEP).selectFirst("[data-test=payment-form]");
       final MockHttpServletRequestBuilder payment =
@@ -223,7 +229,8 @@ class OrderCheckedAgainstStockIntegrationTest {
               .findFirst()
               .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
       payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-      assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
+      assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
+          .isEqualTo(REVIEW_STEP);
 
       return page(REVIEW_STEP);
     }
@@ -277,7 +284,7 @@ class OrderCheckedAgainstStockIntegrationTest {
     /** Follows a redirect with the messages it carries, as the browser would. */
     Document followed(final MvcResult redirect) throws Exception {
       final String target = redirect.getResponse().getRedirectedUrl();
-      final MvcResult result = perform(get(target).flashAttrs(redirect.getFlashMap()));
+      final MvcResult result = perform(get(URI.create(target)));
       assertThat(result.getResponse().getStatus()).as("GET " + target).isEqualTo(200);
       return Jsoup.parse(result.getResponse().getContentAsString());
     }

@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.cartrecovery;
 
+import dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.CartPageNotice;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.getcartmergeoptions.GetCartMergeOptionsResult;
@@ -10,13 +11,13 @@ import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecar
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartInputPort;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for cart merge options page.
@@ -33,6 +34,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/cart/merge")
 public class CartMergePageController {
+
+  private static final String CART_PATH = "/cart";
 
   private final GetCartMergeOptionsInputPort getCartMergeOptionsUseCase;
   private final MergeCartsInputPort mergeCartsUseCase;
@@ -59,7 +62,7 @@ public class CartMergePageController {
    * @param model Spring MVC model
    * @param anonymousUserId the anonymous user ID (passed via URL from login)
    * @param returnUrl optional URL to redirect to after merge
-   * @param redirectAttributes for passing flash messages
+   * @param noticeCode the code of the notice a redirect brought along, if any
    * @return view name "cart/merge-options" or redirect if no merge needed
    */
   @GetMapping
@@ -67,7 +70,8 @@ public class CartMergePageController {
       final Model model,
       @RequestParam final String anonymousUserId,
       @RequestParam(required = false) final String returnUrl,
-      final RedirectAttributes redirectAttributes) {
+      @RequestParam(name = CartPageNotice.PARAMETER, required = false)
+          final @Nullable String noticeCode) {
 
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String registeredUserId = identity.userId().value();
@@ -85,18 +89,14 @@ public class CartMergePageController {
       // case is idempotent, so the other cases pass through it untouched.
       recoverCartUseCase.execute(new RecoverCartCommand(anonymousUserId, registeredUserId));
 
-      redirectAttributes.addFlashAttribute("message", "Welcome back!");
-
-      if (returnUrl != null && !returnUrl.isBlank()) {
-        return "redirect:" + returnUrl;
-      }
-      return "redirect:/cart";
+      return redirectAfterLogin(returnUrl, CartPageNotice.WELCOME_BACK);
     }
 
     // Convert to page-specific ViewModel
     final CartMergePageViewModel viewModel =
         CartMergePageViewModel.fromResult(options, anonymousUserId, returnUrl);
 
+    CartPageNotice.show(model, noticeCode, null);
     model.addAttribute("cartMerge", viewModel);
     model.addAttribute("title", "Cart Merge Options");
 
@@ -109,15 +109,13 @@ public class CartMergePageController {
    * @param strategy the chosen merge strategy
    * @param anonymousUserId the anonymous user ID (from hidden form field)
    * @param returnUrl optional URL to redirect to after merge
-   * @param redirectAttributes for passing flash messages
    * @return redirect to return URL or cart
    */
   @PostMapping
   public String handleMergeDecision(
       @RequestParam final String strategy,
       @RequestParam final String anonymousUserId,
-      @RequestParam(required = false) final String returnUrl,
-      final RedirectAttributes redirectAttributes) {
+      @RequestParam(required = false) final String returnUrl) {
 
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String registeredUserId = identity.userId().value();
@@ -127,10 +125,10 @@ public class CartMergePageController {
     try {
       mergeStrategy = CartMergeStrategy.valueOf(strategy);
     } catch (final IllegalArgumentException e) {
-      redirectAttributes.addFlashAttribute("error", "Invalid merge option selected");
-      return "redirect:/cart/merge?anonymousUserId="
-          + anonymousUserId
-          + (returnUrl != null ? "&returnUrl=" + returnUrl : "");
+      return CartPageNotice.INVALID_MERGE_OPTION.redirectTo(
+          "/cart/merge?anonymousUserId="
+              + anonymousUserId
+              + (returnUrl != null ? "&returnUrl=" + returnUrl : ""));
     }
 
     // Execute merge
@@ -138,19 +136,25 @@ public class CartMergePageController {
         new MergeCartsCommand(anonymousUserId, registeredUserId, mergeStrategy);
     final MergeCartsResult response = mergeCartsUseCase.execute(command);
 
-    // Add success message based on strategy
-    final String message =
+    // The notice the cart page shows for the chosen strategy
+    final CartPageNotice notice =
         switch (mergeStrategy) {
-          case MERGE_BOTH -> "Carts merged successfully!";
-          case USE_ACCOUNT_CART -> "Using your account cart.";
-          case USE_ANONYMOUS_CART -> "Using your recent cart.";
+          case MERGE_BOTH -> CartPageNotice.CARTS_MERGED;
+          case USE_ACCOUNT_CART -> CartPageNotice.ACCOUNT_CART_USED;
+          case USE_ANONYMOUS_CART -> CartPageNotice.RECENT_CART_USED;
         };
-    redirectAttributes.addFlashAttribute("message", message);
+    return redirectAfterLogin(returnUrl, notice);
+  }
 
-    // Redirect to return URL or cart
-    if (returnUrl != null && !returnUrl.isBlank()) {
+  /**
+   * Where the login leads once the carts are settled: the page it came from, or the cart. Only the
+   * cart page knows the cart's notices, so only a redirect there carries one.
+   */
+  private static String redirectAfterLogin(
+      final @Nullable String returnUrl, final CartPageNotice notice) {
+    if (returnUrl != null && !returnUrl.isBlank() && !CART_PATH.equals(returnUrl)) {
       return "redirect:" + returnUrl;
     }
-    return "redirect:/cart";
+    return notice.redirectTo(CART_PATH);
   }
 }

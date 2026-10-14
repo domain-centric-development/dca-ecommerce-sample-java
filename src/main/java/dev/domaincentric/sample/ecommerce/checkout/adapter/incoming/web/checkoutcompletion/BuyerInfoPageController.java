@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
@@ -26,7 +27,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the buyer information page in checkout.
@@ -72,15 +72,13 @@ public class BuyerInfoPageController {
    *
    * @param noticeCode the code of the notice a redirect brought along, if any
    * @param model the Spring MVC model
-   * @param redirectAttributes for passing flash messages on error
    * @return the buyer.pug template or redirect on error
    */
   @GetMapping("/buyer")
   public String showBuyerInfoForm(
       @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
           final @Nullable String noticeCode,
-      final Model model,
-      final RedirectAttributes redirectAttributes) {
+      final Model model) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -91,8 +89,7 @@ public class BuyerInfoPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No active checkout session found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -102,8 +99,7 @@ public class BuyerInfoPageController {
                 activeSession.sessionId(), customerId, CheckoutStep.BUYER_INFO));
 
     if (!result.found()) {
-      redirectAttributes.addFlashAttribute("error", "Checkout session not found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
     }
     final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
@@ -111,7 +107,7 @@ public class BuyerInfoPageController {
           .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
           .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
     }
-    notice.ifPresent(n -> model.addAttribute("error", n.sentence()));
+    notice.flatMap(n -> n.sentence(null)).ifPresent(text -> model.addAttribute("error", text));
 
     // Convert to page-specific ViewModel
     final BuyerInfoPageViewModel viewModel = BuyerInfoPageViewModel.fromSnapshot(result.session());
@@ -133,7 +129,6 @@ public class BuyerInfoPageController {
    * @param firstName the buyer's first name
    * @param lastName the buyer's last name
    * @param phone the buyer's phone number
-   * @param redirectAttributes for passing flash messages
    * @return redirect to delivery step or back to buyer info on error
    */
   @PostMapping("/buyer")
@@ -141,8 +136,7 @@ public class BuyerInfoPageController {
       @RequestParam final String email,
       @RequestParam final String firstName,
       @RequestParam final String lastName,
-      @RequestParam final String phone,
-      final RedirectAttributes redirectAttributes) {
+      @RequestParam final String phone) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -153,8 +147,7 @@ public class BuyerInfoPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No active checkout session found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
     try {
@@ -168,25 +161,22 @@ public class BuyerInfoPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", messageFor(e));
-      return "redirect:/checkout/buyer";
+      return CheckoutRoutes.redirectTo(CheckoutStep.BUYER_INFO, noticeFor(e));
     }
   }
 
   /**
-   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
-   * The failure's message is for the log, never for the customer.
+   * The notice for a refusal: chosen by the failure's type. The failure's message is for the log,
+   * never for the customer.
    */
-  private static String messageFor(final RuntimeException failure) {
+  private static CheckoutStepNotice noticeFor(final RuntimeException failure) {
     return switch (failure) {
-      case CheckoutSessionNotFoundException e -> "Checkout session not found";
-      case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
-      case CheckoutStepNotCompletedException e ->
-          "Please complete the previous checkout steps first.";
-      case CheckoutStepOutOfOrderException e ->
-          "Please complete the previous checkout steps first.";
-      case IllegalArgumentException e -> "Please check the details you entered.";
-      default -> "Your details could not be saved. Please try again.";
+      case CheckoutSessionNotFoundException e -> CheckoutStepNotice.SESSION_NOT_FOUND;
+      case CheckoutNotModifiableException e -> CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE;
+      case CheckoutStepNotCompletedException e -> CheckoutStepNotice.EARLIER_STEPS_FIRST;
+      case CheckoutStepOutOfOrderException e -> CheckoutStepNotice.EARLIER_STEPS_FIRST;
+      case IllegalArgumentException e -> CheckoutStepNotice.INVALID_BUYER_DETAILS;
+      default -> CheckoutStepNotice.BUYER_DETAILS_NOT_SAVED;
     };
   }
 }

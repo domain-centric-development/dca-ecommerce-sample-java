@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
@@ -27,7 +28,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for order confirmation in checkout.
@@ -73,11 +73,10 @@ public class ConfirmationPageController {
    * <p>This endpoint finds the active checkout session for the current user (via JWT identity),
    * processes the order confirmation, and redirects to the confirmation page on success.
    *
-   * @param redirectAttributes for passing flash messages
    * @return redirect to confirmation page or back to review on error
    */
   @PostMapping("/confirm")
-  public String confirmOrder(final RedirectAttributes redirectAttributes) {
+  public String confirmOrder() {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -88,15 +87,13 @@ public class ConfirmationPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No active checkout session found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
     try {
       confirmCheckoutInputPort.execute(
           new ConfirmCheckoutCommand(activeSession.sessionId(), customerId));
 
-      redirectAttributes.addFlashAttribute("orderConfirmed", true);
       return "redirect:/checkout/confirmation";
 
     } catch (CheckoutStepNotCompletedException e) {
@@ -106,8 +103,7 @@ public class ConfirmationPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", messageFor(e));
-      return "redirect:/checkout/review";
+      return redirectToReviewFor(e);
     }
   }
 
@@ -119,12 +115,10 @@ public class ConfirmationPageController {
    * after the checkout has been confirmed.
    *
    * @param model the Spring MVC model
-   * @param redirectAttributes for passing flash messages on error
    * @return the confirmation.pug template or redirect on error
    */
   @GetMapping("/confirmation")
-  public String showConfirmationPage(
-      final Model model, final RedirectAttributes redirectAttributes) {
+  public String showConfirmationPage(final Model model) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -136,8 +130,7 @@ public class ConfirmationPageController {
             GetConfirmedCheckoutSessionQuery.of(customerId));
 
     if (!confirmedSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No confirmed order found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_CONFIRMED_ORDER);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -147,12 +140,11 @@ public class ConfirmationPageController {
                 confirmedSession.sessionId(), customerId, CheckoutStep.CONFIRMATION));
 
     if (!result.found()) {
-      redirectAttributes.addFlashAttribute("error", "Checkout session not found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
     }
     if (!result.stepAccess().granted()) {
-      redirectAttributes.addFlashAttribute("error", "Order has not been confirmed yet");
-      return CheckoutRoutes.redirectFor(result.stepAccess());
+      return CheckoutRoutes.redirectFor(
+          result.stepAccess(), CheckoutStepNotice.ORDER_NOT_CONFIRMED);
     }
 
     // Convert to page-specific ViewModel
@@ -166,19 +158,25 @@ public class ConfirmationPageController {
   }
 
   /**
-   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
-   * The failure's message is for the log, never for the customer.
+   * The review page with the notice for a refusal: chosen by the failure's type, the number it
+   * names taken from its values. The failure's message is for the log, never for the customer.
    */
-  private static String messageFor(final RuntimeException failure) {
+  private static String redirectToReviewFor(final RuntimeException failure) {
     return switch (failure) {
       case CheckoutValidationException e ->
-          "Cannot place the order, "
-              + e.validation().errors().size()
-              + " item(s) unavailable or out of stock.";
-      case CheckoutSessionNotFoundException e -> "Checkout session not found";
-      case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
-      case CheckoutStepOutOfOrderException e -> "Please review your order before placing it.";
-      default -> "Your order could not be placed. Please try again.";
+          CheckoutRoutes.redirectTo(
+              CheckoutStep.REVIEW,
+              CheckoutStepNotice.ITEMS_UNAVAILABLE,
+              e.validation().errors().size());
+      case CheckoutSessionNotFoundException e ->
+          CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, CheckoutStepNotice.SESSION_NOT_FOUND);
+      case CheckoutNotModifiableException e ->
+          CheckoutRoutes.redirectTo(
+              CheckoutStep.REVIEW, CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE);
+      case CheckoutStepOutOfOrderException e ->
+          CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, CheckoutStepNotice.REVIEW_FIRST);
+      default ->
+          CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, CheckoutStepNotice.ORDER_NOT_PLACED);
     };
   }
 }

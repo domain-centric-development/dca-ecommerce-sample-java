@@ -13,13 +13,13 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.Identi
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
 import java.time.LocalDate;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the "My Profile" page of the account area.
@@ -46,17 +46,12 @@ public class ProfilePageController {
 
   static final String TITLE = "My Profile";
 
-  static final String PROFILE_UPDATED = "Your profile has been updated.";
-
   static final String EMAIL_ALREADY_IN_USE = "This email address is already registered";
 
   static final String EMAIL_INVALID = "Please enter a valid email address.";
 
   static final String DATE_OF_BIRTH_INVALID =
       "Please enter a date of birth that is not in the future.";
-
-  /** Name of the flash attribute carrying the success message across the redirect. */
-  private static final String FLASH_MESSAGE = "message";
 
   private static final String LOGIN_REDIRECT =
       AccountLoginRedirect.toLoginWithReturnUrl(PROFILE_PATH);
@@ -83,11 +78,15 @@ public class ProfilePageController {
   /**
    * Displays the profile page.
    *
-   * @param model Spring MVC model (carries the flash attribute {@code message} after a redirect)
+   * @param noticeCode the code of the notice a redirect brought along, if any
+   * @param model Spring MVC model
    * @return view name {@value #VIEW_NAME}, or a redirect to the login page
    */
   @GetMapping
-  public String showProfilePage(final Model model) {
+  public String showProfilePage(
+      @RequestParam(name = AccountPageNotice.PARAMETER, required = false)
+          final @Nullable String noticeCode,
+      final Model model) {
     final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
@@ -96,20 +95,25 @@ public class ProfilePageController {
     final GetProfileResult result =
         getProfileUseCase.execute(new GetProfileQuery(identity.userId().value()));
 
-    return result.profile().map(profile -> renderProfile(model, profile)).orElse(LOGIN_REDIRECT);
+    return result
+        .profile()
+        .map(profile -> renderProfile(model, profile, AccountPageNotice.fromCode(noticeCode)))
+        .orElse(LOGIN_REDIRECT);
   }
 
-  private static String renderProfile(final Model model, final Profile profile) {
-    final Object flashMessage = model.getAttribute(FLASH_MESSAGE);
+  private static String renderProfile(
+      final Model model, final Profile profile, final Optional<AccountPageNotice> notice) {
     return render(
         model,
-        flashMessage == null
-            ? ProfilePageViewModel.of(profile.fullName(), profile.email(), profile.dateOfBirth())
-            : ProfilePageViewModel.withSuccess(
-                profile.fullName(),
-                profile.email(),
-                profile.dateOfBirth(),
-                String.valueOf(flashMessage)));
+        notice
+            .map(
+                n ->
+                    ProfilePageViewModel.withSuccess(
+                        profile.fullName(), profile.email(), profile.dateOfBirth(), n.sentence()))
+            .orElseGet(
+                () ->
+                    ProfilePageViewModel.of(
+                        profile.fullName(), profile.email(), profile.dateOfBirth())));
   }
 
   /**
@@ -118,15 +122,11 @@ public class ProfilePageController {
    * @param email the submitted email address
    * @param dateOfBirth the submitted date of birth of the account's owner, as the browser sent it
    * @param model Spring MVC model, used on the error re-render path
-   * @param redirectAttributes flash attributes, used on the success redirect path
    * @return view name {@value #VIEW_NAME} on error, a redirect otherwise
    */
   @PostMapping
   public String handleProfileUpdate(
-      @RequestParam final String email,
-      @RequestParam final String dateOfBirth,
-      final Model model,
-      final RedirectAttributes redirectAttributes) {
+      @RequestParam final String email, @RequestParam final String dateOfBirth, final Model model) {
     final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
@@ -144,8 +144,7 @@ public class ProfilePageController {
     return switch (result.outcome()) {
       case CHANGED -> {
         reIssueToken(identity, result.profile().orElseThrow().email());
-        redirectAttributes.addFlashAttribute(FLASH_MESSAGE, PROFILE_UPDATED);
-        yield "redirect:" + PROFILE_PATH;
+        yield AccountPageNotice.PROFILE_UPDATED.redirectTo(PROFILE_PATH);
       }
       case ACCOUNT_NOT_ACCESSIBLE -> LOGIN_REDIRECT;
       case EMAIL_ALREADY_IN_USE ->

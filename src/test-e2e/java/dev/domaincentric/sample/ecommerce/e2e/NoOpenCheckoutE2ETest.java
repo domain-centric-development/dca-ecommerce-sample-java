@@ -32,7 +32,7 @@ class NoOpenCheckoutE2ETest extends BaseE2ETest {
   void theBuyerStepWithoutACheckoutLeadsToTheCartWithAMessage() {
     navigateTo("/checkout/buyer");
 
-    assertThat(page).hasURL(BASE_URL + "/cart");
+    assertThat(page).hasURL(PageAddress.of(BASE_URL + "/cart"));
     assertThat(new CartPage(page).errorMessage()).hasText("No active checkout session found");
   }
 
@@ -47,7 +47,7 @@ class NoOpenCheckoutE2ETest extends BaseE2ETest {
 
     page.navigate(restarted + "/checkout/delivery");
 
-    assertThat(page).hasURL(restarted + "/cart");
+    assertThat(page).hasURL(PageAddress.of(restarted + "/cart"));
     assertThat(page.locator("[data-test='cart-error-message']"))
         .hasText("No active checkout session found");
   }
@@ -66,7 +66,7 @@ class NoOpenCheckoutE2ETest extends BaseE2ETest {
     page.locator("[data-test='product-add-to-cart-button']").click();
     page.waitForURL(shopUrl + "/cart**");
     page.locator("[data-test='cart-checkout-button']").click();
-    page.waitForURL(shopUrl + "/checkout/buyer");
+    page.waitForURL(PageAddress.of(shopUrl + "/checkout/buyer"));
     page.locator("input[name='email']").fill("jane@example.com");
     page.locator("input[name='firstName']").fill("Jane");
     page.locator("input[name='lastName']").fill("Doe");

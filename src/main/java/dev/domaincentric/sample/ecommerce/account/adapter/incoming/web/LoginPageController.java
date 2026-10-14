@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for login page.
@@ -83,7 +82,6 @@ public class LoginPageController {
    * @param email the user's email
    * @param password the user's password
    * @param returnUrl optional URL to redirect to after login
-   * @param redirectAttributes for passing flash messages
    * @param model Spring MVC model
    * @return redirect to cart merge page on success, login page on failure
    */
@@ -92,7 +90,6 @@ public class LoginPageController {
       @RequestParam final String email,
       @RequestParam final String password,
       @RequestParam(required = false) final String returnUrl,
-      final RedirectAttributes redirectAttributes,
       final Model model) {
 
     // Capture anonymous user ID before authentication changes the identity

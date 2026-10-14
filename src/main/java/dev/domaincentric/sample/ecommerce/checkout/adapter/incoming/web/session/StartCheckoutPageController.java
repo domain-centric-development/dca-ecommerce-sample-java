@@ -2,6 +2,8 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.session
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.ArticleNotAvailableException;
@@ -15,7 +17,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for initiating checkout from a cart.
@@ -61,12 +62,10 @@ public class StartCheckoutPageController {
    * must not be reachable through a link (prefetching, crawlers, CSRF via GET).
    *
    * @param cartId the cart ID to start checkout from
-   * @param redirectAttributes for passing flash messages on error
    * @return redirect to buyer info step at /checkout/buyer
    */
   @PostMapping("/start")
-  public String startCheckout(
-      @RequestParam final String cartId, final RedirectAttributes redirectAttributes) {
+  public String startCheckout(@RequestParam final String cartId) {
 
     try {
       startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, currentCustomerId()));
@@ -76,27 +75,25 @@ public class StartCheckoutPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", messageFor(e));
-      return "redirect:/cart";
+      return redirectFor(e);
     }
   }
 
   /**
-   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
-   * The failure's message is for the log, never for the customer.
+   * The cart page with the notice for a refusal: chosen by the failure's type, the number it names
+   * taken from its values. The failure's message is for the log, never for the customer.
    */
-  private static String messageFor(final RuntimeException failure) {
+  private static String redirectFor(final RuntimeException failure) {
     return switch (failure) {
-      case CartNotAvailableException e -> "Your cart could not be found.";
-      case CartNotActiveException e -> "This cart can no longer be checked out.";
-      case EmptyCartException e -> "Cannot check out an empty cart.";
-      case EmptyCheckoutException e -> "Cannot check out an empty cart.";
-      case ArticleNotAvailableException e -> "A product in your cart is no longer available.";
+      case CartNotAvailableException e -> CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_FOUND);
+      case CartNotActiveException e -> CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_CHECKABLE);
+      case EmptyCartException e -> CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART);
+      case EmptyCheckoutException e -> CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART);
+      case ArticleNotAvailableException e ->
+          CheckoutRoutes.redirectToCart(CartNotice.CART_PRODUCT_UNAVAILABLE);
       case CheckoutItemsUnavailableException e ->
-          "Cannot start checkout, "
-              + e.productIds().size()
-              + " item(s) unavailable or out of stock.";
-      default -> "The checkout could not be started. Please try again.";
+          CheckoutRoutes.redirectToCart(CartNotice.ITEMS_UNAVAILABLE, e.productIds().size());
+      default -> CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_STARTED);
     };
   }
 }

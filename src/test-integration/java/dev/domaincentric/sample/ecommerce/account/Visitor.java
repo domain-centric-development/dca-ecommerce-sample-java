@@ -6,14 +6,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpSession;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -140,15 +138,10 @@ final class Visitor {
     keep(posted.getResponse());
     final String target = posted.getResponse().getRedirectedUrl();
     final var follow = withCookies(get(URI.create(target)));
-    // The browser's session cookie carries the flash message; MockMvc hands the session on.
-    final HttpSession session = posted.getRequest().getSession(false);
-    if (session != null) {
-      follow.session((MockHttpSession) session);
-    }
     final MockHttpServletResponse landed =
         mockMvc.perform(follow).andExpect(status().isOk()).andReturn().getResponse();
     keep(landed);
-    return new Landing(target, landed.getContentAsString());
+    return new Landing(URI.create(target).getPath(), landed.getContentAsString());
   }
 
   /**

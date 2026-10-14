@@ -78,7 +78,7 @@ class HeaderBasketIntegrationTest {
     final String landedOn = addToCart("Domain-Driven Design");
     final Document cart = page(landedOn);
 
-    assertThat(landedOn).isEqualTo("/cart");
+    assertThat(landedOn).isEqualTo("/cart?notice=product-added");
     assertThat(badge(cart)).isEqualTo("2");
   }
 

@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +103,8 @@ class GoBackToAnEarlierStepIntegrationTest {
 
     final MvcResult resubmitted = submitDelivery(delivery, "Express Shipping");
 
-    assertThat(resubmitted.getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
+    assertThat(URI.create(resubmitted.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(PAYMENT_STEP);
     assertThat(totalsOf(page(PAYMENT_STEP).selectFirst(".order-summary")))
         .contains("Shipping 9.99 EUR", "Total 64.98 EUR");
   }
@@ -135,7 +137,8 @@ class GoBackToAnEarlierStepIntegrationTest {
 
     final MvcResult resubmitted = submit(buyerForm);
 
-    assertThat(resubmitted.getResponse().getRedirectedUrl()).isEqualTo(DELIVERY_STEP);
+    assertThat(URI.create(resubmitted.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(DELIVERY_STEP);
     assertThat(addressOf(page(DELIVERY_STEP)))
         .containsExactly("Hauptstrasse 1", "Berlin", "10115", "Germany");
     final Element buyer = page(REVIEW_STEP).selectFirst("[data-test=review-buyer-section]");
@@ -209,7 +212,8 @@ class GoBackToAnEarlierStepIntegrationTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
     payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-    assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
+    assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(REVIEW_STEP);
 
     return page(REVIEW_STEP);
   }
@@ -221,7 +225,8 @@ class GoBackToAnEarlierStepIntegrationTest {
   private Document paymentStepAfterStandardShipping() throws Exception {
     addToCart("Domain-Driven Design");
     final MvcResult started = submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
+    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(BUYER_STEP);
 
     final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
     buyerForm.selectFirst("input[name=email]").val("jane@example.com");

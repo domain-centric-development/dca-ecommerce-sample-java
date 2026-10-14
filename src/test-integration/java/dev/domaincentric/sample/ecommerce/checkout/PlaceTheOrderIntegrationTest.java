@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -164,7 +165,8 @@ class PlaceTheOrderIntegrationTest {
   /** The guest presses "Place Order" on the review step and lands on the confirmation page. */
   private Document placeTheOrder() throws Exception {
     final MvcResult placed = submit(reviewStep().selectFirst("[data-test=review-confirm-form]"));
-    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(CONFIRMATION);
+    assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(CONFIRMATION);
     return page(CONFIRMATION);
   }
 
@@ -175,7 +177,8 @@ class PlaceTheOrderIntegrationTest {
   private Document reviewStep() throws Exception {
     addToCart("Domain-Driven Design");
     final MvcResult started = submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
+    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(BUYER_STEP);
 
     final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
     buyerForm.selectFirst("input[name=email]").val("jane@example.com");
@@ -203,7 +206,8 @@ class PlaceTheOrderIntegrationTest {
     for (final Element field : method.select("input[name]")) {
       delivery.param(field.attr("name"), field.val());
     }
-    assertThat(perform(delivery).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
+    assertThat(URI.create(perform(delivery).getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(PAYMENT_STEP);
 
     final Element paymentForm = page(PAYMENT_STEP).selectFirst("[data-test=payment-form]");
     final MockHttpServletRequestBuilder payment =
@@ -217,7 +221,8 @@ class PlaceTheOrderIntegrationTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
     payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-    assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
+    assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(REVIEW_STEP);
 
     return page(REVIEW_STEP);
   }

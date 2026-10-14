@@ -223,14 +223,13 @@ class CartAcrossTheSessionIntegrationTest {
       while (target != null) {
         // The redirect is encoded already; a URI keeps it from being encoded twice.
         final MockHttpServletRequestBuilder hop = get(URI.create(target));
-        if (!current.getFlashMap().isEmpty()) {
-          hop.flashAttrs(current.getFlashMap());
-        }
         current = perform(hop);
         final String next = current.getResponse().getRedirectedUrl();
         if (next == null) {
           assertThat(current.getResponse().getStatus()).as("GET " + target).isEqualTo(200);
-          return new Landing(target, Jsoup.parse(current.getResponse().getContentAsString()));
+          return new Landing(
+              URI.create(target).getPath(),
+              Jsoup.parse(current.getResponse().getContentAsString()));
         }
         target = next;
       }

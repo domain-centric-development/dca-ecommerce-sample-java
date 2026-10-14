@@ -50,7 +50,7 @@ class OrderCheckedAgainstStockE2ETest extends BaseE2ETest {
 
     review.pressPlaceOrder();
 
-    assertThat(page).hasURL(BASE_URL + "/checkout/review");
+    assertThat(page).hasURL(PageAddress.of(BASE_URL + "/checkout/review"));
     assertThat(review.errorMessage()).isVisible();
     assertThat(page.locator("[data-test='confirmation-title']")).hasCount(0);
     assertEquals(

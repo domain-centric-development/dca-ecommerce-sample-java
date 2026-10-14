@@ -25,7 +25,7 @@ class AnotherVisitorsCheckoutE2ETest extends BaseE2ETest {
 
       stranger.navigate(BASE_URL + "/checkout/buyer");
 
-      assertThat(stranger).hasURL(BASE_URL + "/cart");
+      assertThat(stranger).hasURL(PageAddress.of(BASE_URL + "/cart"));
       assertThat(new CartPage(stranger).errorMessage()).hasText("No active checkout session found");
       assertThat(stranger.locator("[data-test='order-summary-item']")).hasCount(0);
       assertThat(stranger.locator("input[value='jane@example.com']")).hasCount(0);

@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +55,7 @@ class StrangersCartCheckoutIntegrationTest {
 
     final MvcResult refused = stranger.submit(strangersForm);
 
-    assertThat(refused.getResponse().getRedirectedUrl()).isEqualTo(CART);
+    assertThat(URI.create(refused.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
     assertThat(errorOn(stranger.followed(refused))).isEqualTo("Your cart could not be found.");
     final Document ownersBuyerStep = owner.page(BUYER_STEP);
     assertThat(summaryOf(ownersBuyerStep)).containsExactly("Domain-Driven Design x1");
@@ -132,7 +133,7 @@ class StrangersCartCheckoutIntegrationTest {
     /** Follows a redirect with the messages it carries, as the browser would. */
     Document followed(final MvcResult redirect) throws Exception {
       final String target = redirect.getResponse().getRedirectedUrl();
-      final MvcResult result = perform(get(target).flashAttrs(redirect.getFlashMap()));
+      final MvcResult result = perform(get(URI.create(target)));
       assertThat(result.getResponse().getStatus()).as("GET " + target).isEqualTo(200);
       return Jsoup.parse(result.getResponse().getContentAsString());
     }

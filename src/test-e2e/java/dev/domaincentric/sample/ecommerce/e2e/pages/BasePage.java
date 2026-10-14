@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
 import com.microsoft.playwright.Page;
+import dev.domaincentric.sample.ecommerce.e2e.PageAddress;
 import dev.domaincentric.sample.ecommerce.e2e.ShopUnderTest;
 
 /**
@@ -27,7 +28,7 @@ public abstract class BasePage {
    */
   protected BasePage(Page page, String expectedUrlPattern) {
     this.page = page;
-    page.waitForURL(BASE_URL + expectedUrlPattern);
+    page.waitForURL(PageAddress.of(BASE_URL + expectedUrlPattern));
   }
 
   /**
@@ -40,7 +41,7 @@ public abstract class BasePage {
    */
   protected BasePage(Page page, String shopUrl, String expectedUrlPattern) {
     this.page = page;
-    page.waitForURL(shopUrl + expectedUrlPattern);
+    page.waitForURL(PageAddress.of(shopUrl + expectedUrlPattern));
   }
 
   /**
@@ -131,12 +132,15 @@ public abstract class BasePage {
   }
 
   /**
-   * Gets the current page URL path (without base URL).
+   * Gets the current page URL path (without base URL and without the query a redirect's notice
+   * adds).
    *
    * @return the current path
    */
   protected String getCurrentPath() {
-    return page.url().replace(BASE_URL, "");
+    final String path = page.url().replace(BASE_URL, "");
+    final int query = path.indexOf('?');
+    return query < 0 ? path : path.substring(0, query);
   }
 
   /**

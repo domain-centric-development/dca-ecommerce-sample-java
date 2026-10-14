@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -129,7 +130,8 @@ class CartAfterTheOrderIntegrationTest {
   /** Presses "Proceed to Checkout" on the cart page; the shop sends the guest to the buyer step. */
   private void startTheCheckout() throws Exception {
     final MvcResult started = submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
+    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(BUYER_STEP);
   }
 
   /**
@@ -165,7 +167,8 @@ class CartAfterTheOrderIntegrationTest {
     for (final Element field : method.select("input[name]")) {
       delivery.param(field.attr("name"), field.val());
     }
-    assertThat(perform(delivery).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
+    assertThat(URI.create(perform(delivery).getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(PAYMENT_STEP);
 
     final Element paymentForm = page(PAYMENT_STEP).selectFirst("[data-test=payment-form]");
     final MockHttpServletRequestBuilder payment =
@@ -179,11 +182,13 @@ class CartAfterTheOrderIntegrationTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
     payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-    assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
+    assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(REVIEW_STEP);
 
     final MvcResult placed =
         submit(page(REVIEW_STEP).selectFirst("[data-test=review-confirm-form]"));
-    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(CONFIRMATION);
+    assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo(CONFIRMATION);
   }
 
   /** Presses "Add to Cart" on the product page of the product with that name, that many times. */

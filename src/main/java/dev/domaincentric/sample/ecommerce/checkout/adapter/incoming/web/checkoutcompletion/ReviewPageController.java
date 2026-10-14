@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
@@ -17,7 +18,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the order review page in checkout.
@@ -59,16 +59,17 @@ public class ReviewPageController {
    * and order summary for final review before purchase confirmation.
    *
    * @param noticeCode the code of the notice a redirect brought along, if any
+   * @param count the number that notice names, if any
    * @param model the Spring MVC model
-   * @param redirectAttributes for passing flash messages on error
    * @return the review.pug template or redirect on error
    */
   @GetMapping("/review")
   public String showReviewPage(
       @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
           final @Nullable String noticeCode,
-      final Model model,
-      final RedirectAttributes redirectAttributes) {
+      @RequestParam(name = CheckoutStepNotice.COUNT_PARAMETER, required = false)
+          final @Nullable Integer count,
+      final Model model) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -79,8 +80,7 @@ public class ReviewPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No active checkout session found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -90,8 +90,7 @@ public class ReviewPageController {
                 activeSession.sessionId(), customerId, CheckoutStep.REVIEW));
 
     if (!result.found()) {
-      redirectAttributes.addFlashAttribute("error", "Checkout session not found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
     }
     final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
@@ -99,7 +98,7 @@ public class ReviewPageController {
           .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
           .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
     }
-    notice.ifPresent(n -> model.addAttribute("error", n.sentence()));
+    notice.flatMap(n -> n.sentence(count)).ifPresent(text -> model.addAttribute("error", text));
 
     // Convert to page-specific ViewModel
     final ReviewPageViewModel viewModel = ReviewPageViewModel.fromSnapshot(result.session());

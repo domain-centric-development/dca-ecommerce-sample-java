@@ -71,7 +71,7 @@ class CsrfProtectionIntegrationTest {
                 .param("productId", productId)
                 .param("quantity", "1"))
         .andExpect(status().is3xxRedirection())
-        .andExpect(header().string("Location", "/cart"));
+        .andExpect(header().string("Location", "/cart?notice=product-added"));
   }
 
   @Test

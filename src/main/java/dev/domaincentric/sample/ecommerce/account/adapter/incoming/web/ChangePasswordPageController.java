@@ -9,13 +9,13 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the "Change Password" page of the account area.
@@ -49,12 +49,7 @@ public class ChangePasswordPageController {
 
   static final String CONFIRMATION_MISMATCH = "New password and confirmation do not match";
 
-  static final String PASSWORD_CHANGED = "Your password has been changed.";
-
   static final String CURRENT_PASSWORD_INVALID = "Current password is not correct";
-
-  /** Name of the flash attribute carrying the success message across the redirect. */
-  private static final String FLASH_MESSAGE = "message";
 
   private static final String LOGIN_REDIRECT =
       AccountLoginRedirect.toLoginWithReturnUrl(CHANGE_PASSWORD_PATH);
@@ -78,11 +73,15 @@ public class ChangePasswordPageController {
    * <p>The account overview is queried as an accessibility gate only; its projection is discarded
    * so that no account data reaches this page's model.
    *
-   * @param model Spring MVC model (carries the flash attribute {@code message} after a redirect)
+   * @param noticeCode the code of the notice a redirect brought along, if any
+   * @param model Spring MVC model
    * @return view name {@value #VIEW_NAME}, or a redirect to the login page
    */
   @GetMapping
-  public String showChangePasswordPage(final Model model) {
+  public String showChangePasswordPage(
+      @RequestParam(name = AccountPageNotice.PARAMETER, required = false)
+          final @Nullable String noticeCode,
+      final Model model) {
     final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
@@ -96,12 +95,11 @@ public class ChangePasswordPageController {
       return LOGIN_REDIRECT;
     }
 
-    final Object flashMessage = model.getAttribute(FLASH_MESSAGE);
     return render(
         model,
-        flashMessage == null
-            ? ChangePasswordPageViewModel.blank()
-            : ChangePasswordPageViewModel.withSuccess(String.valueOf(flashMessage)));
+        AccountPageNotice.fromCode(noticeCode)
+            .map(notice -> ChangePasswordPageViewModel.withSuccess(notice.sentence()))
+            .orElseGet(ChangePasswordPageViewModel::blank));
   }
 
   /**
@@ -111,7 +109,6 @@ public class ChangePasswordPageController {
    * @param newPassword the new plaintext password
    * @param confirmPassword the confirmation of the new plaintext password
    * @param model Spring MVC model, used on the error re-render path
-   * @param redirectAttributes flash attributes, used on the success redirect path
    * @return view name {@value #VIEW_NAME} on error, a redirect otherwise
    */
   @PostMapping
@@ -119,8 +116,7 @@ public class ChangePasswordPageController {
       @RequestParam final String currentPassword,
       @RequestParam final String newPassword,
       @RequestParam final String confirmPassword,
-      final Model model,
-      final RedirectAttributes redirectAttributes) {
+      final Model model) {
     final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
@@ -135,10 +131,7 @@ public class ChangePasswordPageController {
             new ChangePasswordCommand(identity.userId().value(), currentPassword, newPassword));
 
     return switch (result.outcome()) {
-      case CHANGED -> {
-        redirectAttributes.addFlashAttribute(FLASH_MESSAGE, PASSWORD_CHANGED);
-        yield "redirect:" + CHANGE_PASSWORD_PATH;
-      }
+      case CHANGED -> AccountPageNotice.PASSWORD_CHANGED.redirectTo(CHANGE_PASSWORD_PATH);
       case ACCOUNT_NOT_ACCESSIBLE -> LOGIN_REDIRECT;
       case CURRENT_PASSWORD_INVALID ->
           render(model, ChangePasswordPageViewModel.withError(CURRENT_PASSWORD_INVALID));

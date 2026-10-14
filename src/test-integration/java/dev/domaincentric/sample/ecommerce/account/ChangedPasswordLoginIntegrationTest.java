@@ -43,7 +43,7 @@ class ChangedPasswordLoginIntegrationTest {
 
     final String afterLogin = visitor.logIn("/login", EMAIL, NEW_PASSWORD);
 
-    assertThat(afterLogin).isEqualTo("/cart");
+    assertThat(afterLogin).isEqualTo("/cart?notice=welcome-back");
     assertThat(element(visitor.page(afterLogin), "user-greeting").text())
         .isEqualTo("Welcome, " + EMAIL);
   }

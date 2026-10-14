@@ -11,6 +11,7 @@ import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jsoup.Jsoup;
@@ -130,14 +131,16 @@ class ProviderPaymentIntegrationTest {
 
   /** The form post went back to the payment page, and the review step is still closed. */
   private void assertStaysAtThePaymentStep(final MvcResult payment) throws Exception {
-    assertThat(payment.getResponse().getRedirectedUrl()).isEqualTo("/checkout/payment");
-    assertThat(perform(get("/checkout/review")).getResponse().getRedirectedUrl())
+    assertThat(URI.create(payment.getResponse().getRedirectedUrl()).getPath())
+        .isEqualTo("/checkout/payment");
+    assertThat(
+            URI.create(perform(get("/checkout/review")).getResponse().getRedirectedUrl()).getPath())
         .isEqualTo("/checkout/payment");
   }
 
   /** The payment page the redirect leads to, with the message the redirect carried. */
   private String errorShownAfter(final MvcResult payment) throws Exception {
-    final MvcResult page = perform(get("/checkout/payment").flashAttrs(payment.getFlashMap()));
+    final MvcResult page = perform(get(URI.create(payment.getResponse().getRedirectedUrl())));
     final Element error =
         Jsoup.parse(page.getResponse().getContentAsString())
             .selectFirst("[data-test=payment-error-message]");

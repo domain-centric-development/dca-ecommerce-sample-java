@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions.GetShippingOptionsInputPort;
@@ -30,7 +31,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the delivery/shipping address page in checkout.
@@ -79,15 +79,13 @@ public class DeliveryPageController {
    *
    * @param noticeCode the code of the notice a redirect brought along, if any
    * @param model the Spring MVC model
-   * @param redirectAttributes for passing flash messages on error
    * @return the delivery.pug template or redirect on error
    */
   @GetMapping("/delivery")
   public String showDeliveryForm(
       @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
           final @Nullable String noticeCode,
-      final Model model,
-      final RedirectAttributes redirectAttributes) {
+      final Model model) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -98,8 +96,7 @@ public class DeliveryPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No active checkout session found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -109,8 +106,7 @@ public class DeliveryPageController {
                 activeSession.sessionId(), customerId, CheckoutStep.DELIVERY));
 
     if (!result.found()) {
-      redirectAttributes.addFlashAttribute("error", "Checkout session not found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
     }
     final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
@@ -118,7 +114,7 @@ public class DeliveryPageController {
           .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
           .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
     }
-    notice.ifPresent(n -> model.addAttribute("error", n.sentence()));
+    notice.flatMap(n -> n.sentence(null)).ifPresent(text -> model.addAttribute("error", text));
 
     // Convert to page-specific ViewModel
     final DeliveryPageViewModel viewModel = DeliveryPageViewModel.fromSnapshot(result.session());
@@ -150,7 +146,6 @@ public class DeliveryPageController {
    * @param estimatedDelivery the estimated delivery time
    * @param shippingCost the shipping cost
    * @param currencyCode the currency code for shipping cost
-   * @param redirectAttributes for passing flash messages
    * @return redirect to payment step or back to delivery on error
    */
   @PostMapping("/delivery")
@@ -165,8 +160,7 @@ public class DeliveryPageController {
       @RequestParam final String shippingOptionName,
       @RequestParam final String estimatedDelivery,
       @RequestParam final BigDecimal shippingCost,
-      @RequestParam final String currencyCode,
-      final RedirectAttributes redirectAttributes) {
+      @RequestParam final String currencyCode) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -177,8 +171,7 @@ public class DeliveryPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      redirectAttributes.addFlashAttribute("error", "No active checkout session found");
-      return "redirect:/cart";
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
     try {
@@ -208,21 +201,20 @@ public class DeliveryPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      redirectAttributes.addFlashAttribute("error", messageFor(e));
-      return "redirect:/checkout/delivery";
+      return CheckoutRoutes.redirectTo(CheckoutStep.DELIVERY, noticeFor(e));
     }
   }
 
   /**
-   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
-   * The failure's message is for the log, never for the customer.
+   * The notice for a refusal: chosen by the failure's type. The failure's message is for the log,
+   * never for the customer.
    */
-  private static String messageFor(final RuntimeException failure) {
+  private static CheckoutStepNotice noticeFor(final RuntimeException failure) {
     return switch (failure) {
-      case CheckoutSessionNotFoundException e -> "Checkout session not found";
-      case CheckoutNotModifiableException e -> "This checkout can no longer be changed.";
-      case IllegalArgumentException e -> "Please check the delivery address you entered.";
-      default -> "Your delivery details could not be saved. Please try again.";
+      case CheckoutSessionNotFoundException e -> CheckoutStepNotice.SESSION_NOT_FOUND;
+      case CheckoutNotModifiableException e -> CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE;
+      case IllegalArgumentException e -> CheckoutStepNotice.INVALID_DELIVERY_ADDRESS;
+      default -> CheckoutStepNotice.DELIVERY_NOT_SAVED;
     };
   }
 }

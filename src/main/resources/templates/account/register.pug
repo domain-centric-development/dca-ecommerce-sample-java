@@ -5,9 +5,6 @@ block content
     .auth__card
       h2.auth__title Create Account
 
-      if message
-        .alert.alert--success(data-test="register-success-message")= message
-
       if error
         .alert.alert--error(data-test="register-error-message")= error
 

@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for registration page.
@@ -76,7 +75,6 @@ public class RegisterPageController {
    * @param lastName the owner's last name
    * @param dateOfBirth the owner's date of birth, as the browser sent it
    * @param returnUrl optional URL to redirect to after registration
-   * @param redirectAttributes for passing flash messages
    * @param model Spring MVC model
    * @return redirect to home or returnUrl on success, register page on failure
    */
@@ -89,7 +87,6 @@ public class RegisterPageController {
       @RequestParam final String lastName,
       @RequestParam final String dateOfBirth,
       @RequestParam(required = false) final String returnUrl,
-      final RedirectAttributes redirectAttributes,
       final Model model) {
 
     final Submission submission =
@@ -122,8 +119,6 @@ public class RegisterPageController {
               UserId.of(result.userId()), result.email(), result.roles());
 
       identitySession.setRegisteredIdentity(token);
-
-      redirectAttributes.addFlashAttribute("message", "Account created successfully! Welcome!");
 
       if (returnUrl != null && !returnUrl.isBlank()) {
         return "redirect:" + returnUrl;

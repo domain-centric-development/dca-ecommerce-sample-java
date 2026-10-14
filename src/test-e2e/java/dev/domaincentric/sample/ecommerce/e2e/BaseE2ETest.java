@@ -184,16 +184,19 @@ public abstract class BaseE2ETest {
    * @param urlPattern the URL pattern to wait for (can be a glob pattern)
    */
   protected void waitForUrl(String urlPattern) {
-    page.waitForURL(BASE_URL + urlPattern);
+    page.waitForURL(PageAddress.of(BASE_URL + urlPattern));
   }
 
   /**
-   * Gets the current page URL path (without base URL).
+   * Gets the current page URL path (without base URL and without the query a redirect's notice
+   * adds).
    *
    * @return the current path
    */
   protected String getCurrentPath() {
-    return page.url().replace(BASE_URL, "");
+    final String path = page.url().replace(BASE_URL, "");
+    final int query = path.indexOf('?');
+    return query < 0 ? path : path.substring(0, query);
   }
 
   /**

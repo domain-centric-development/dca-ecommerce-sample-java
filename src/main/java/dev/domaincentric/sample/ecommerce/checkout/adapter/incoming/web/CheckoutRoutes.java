@@ -56,6 +56,41 @@ public final class CheckoutRoutes {
   }
 
   /**
+   * The Spring MVC redirect to a step's page, carrying a notice and the number it names.
+   *
+   * @param step the step
+   * @param notice the notice the page says
+   * @param count the number the notice names
+   * @return {@code redirect:} followed by the step's page with the notice and the number
+   */
+  public static String redirectTo(
+      final CheckoutStep step, final CheckoutStepNotice notice, final int count) {
+    return redirectTo(step, notice) + "&" + CheckoutStepNotice.COUNT_PARAMETER + "=" + count;
+  }
+
+  /**
+   * The Spring MVC redirect to the cart page, carrying a notice the cart page knows.
+   *
+   * @param notice the notice the cart page says
+   * @return {@code redirect:} followed by the cart's page with the notice
+   */
+  public static String redirectToCart(final CartNotice notice) {
+    return "redirect:" + CART + "?" + CheckoutStepNotice.PARAMETER + "=" + notice.code();
+  }
+
+  /**
+   * The Spring MVC redirect to the cart page, carrying a notice the cart page knows and the number
+   * it names.
+   *
+   * @param notice the notice the cart page says
+   * @param count the number the notice names
+   * @return {@code redirect:} followed by the cart's page with the notice and the number
+   */
+  public static String redirectToCart(final CartNotice notice, final int count) {
+    return redirectToCart(notice) + "&" + CheckoutStepNotice.COUNT_PARAMETER + "=" + count;
+  }
+
+  /**
    * The page of a checkout step.
    *
    * @param step the step

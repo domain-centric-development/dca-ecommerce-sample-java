@@ -57,7 +57,7 @@ class CartMergeChoiceIntegrationTest {
 
     final Landing landed = carts.guest().logIn(carts.email());
 
-    assertThat(landed.path()).startsWith(MERGE_PAGE + "?");
+    assertThat(landed.path()).isEqualTo(MERGE_PAGE);
     assertThat(textOf(landed.page(), ".merge-options__title")).isEqualTo("Your Cart Has Items");
     assertThat(textOf(landed.page(), ".merge-options__intro"))
         .isEqualTo(
@@ -150,7 +150,7 @@ class CartMergeChoiceIntegrationTest {
 
     final Landing landed = carts.guest().choose(mergePage.page(), "KEEP_BOTH_APART");
 
-    assertThat(landed.path()).startsWith(MERGE_PAGE + "?");
+    assertThat(landed.path()).isEqualTo(MERGE_PAGE);
     assertThat(textOf(landed.page(), ".merge-options__title")).isEqualTo("Your Cart Has Items");
     assertThat(textOf(landed.page(), "[data-test=merge-error-message]"))
         .isEqualTo("Invalid merge option selected");
@@ -300,14 +300,13 @@ class CartMergeChoiceIntegrationTest {
       while (target != null) {
         // The redirect is encoded already; a URI keeps it from being encoded twice.
         final MockHttpServletRequestBuilder hop = get(URI.create(target));
-        if (!current.getFlashMap().isEmpty()) {
-          hop.flashAttrs(current.getFlashMap());
-        }
         current = perform(hop);
         final String next = current.getResponse().getRedirectedUrl();
         if (next == null) {
           assertThat(current.getResponse().getStatus()).as("GET " + target).isEqualTo(200);
-          return new Landing(target, Jsoup.parse(current.getResponse().getContentAsString()));
+          return new Landing(
+              URI.create(target).getPath(),
+              Jsoup.parse(current.getResponse().getContentAsString()));
         }
         target = next;
       }

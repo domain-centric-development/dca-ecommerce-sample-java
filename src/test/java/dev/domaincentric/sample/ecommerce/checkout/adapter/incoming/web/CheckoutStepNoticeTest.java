@@ -15,8 +15,17 @@ class CheckoutStepNoticeTest {
         Optional.of(CheckoutStepNotice.EARLIER_STEPS_FIRST),
         CheckoutStepNotice.fromCode("earlier-steps-first"));
     assertEquals(
-        "Please complete the previous checkout steps first.",
-        CheckoutStepNotice.EARLIER_STEPS_FIRST.sentence());
+        Optional.of("Please complete the previous checkout steps first."),
+        CheckoutStepNotice.EARLIER_STEPS_FIRST.sentence(null));
+  }
+
+  @Test
+  @DisplayName("a notice that names a number words it, and says nothing without one")
+  void aNoticeThatNamesANumberWordsIt() {
+    assertEquals(
+        Optional.of("Cannot place the order, 2 item(s) unavailable or out of stock."),
+        CheckoutStepNotice.ITEMS_UNAVAILABLE.sentence(2));
+    assertEquals(Optional.empty(), CheckoutStepNotice.ITEMS_UNAVAILABLE.sentence(null));
   }
 
   @Test

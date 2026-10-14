@@ -28,8 +28,10 @@ needs lives in one instance's memory. A message for the page a redirect leads to
 fixed code in its URL (`?notice=<code>`), never as the sentence and never in a server session: the page turns the code
 into its own sentence and shows nothing for a code it does not know. The valid codes are one enum in the incoming
 web adapter, each value with its code and its sentence; reading the parameter is a lookup in that enum, never a
-switch over strings. The checkout steps' notices are `CheckoutStepNotice`. What must outlast a request lives in the
-database or in a cookie every instance can read.
+switch over strings. The checkout steps' notices are `CheckoutStepNotice`, the cart pages' `CartPageNotice`, the
+account pages' `AccountPageNotice`; the checkout sends the customer back to the cart with the cart page's codes
+(`CartNotice`). A notice that names a number carries it beside the code (`&count=<n>`). What must outlast a request
+lives in the database or in a cookie every instance can read.
 
 ## Two shops, one shop
 
