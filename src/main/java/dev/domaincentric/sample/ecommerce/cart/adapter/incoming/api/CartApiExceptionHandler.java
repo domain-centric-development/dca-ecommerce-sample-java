@@ -98,7 +98,8 @@ public class CartApiExceptionHandler {
   }
 
   /**
-   * A value the caller sent is not acceptable to a value object. The one mapping that stays
+   * A value the caller sent is not acceptable to a value object, or a product id that does not
+   * parse in {@link ShoppingCartResource} — a malformed call either way. The one mapping that stays
    * imprecise: this is also the type a defect in this application raises, and nothing in the type
    * tells the two apart. Moving each such check into request validation removes the ambiguity, one
    * field at a time.

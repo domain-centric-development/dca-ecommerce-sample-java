@@ -146,11 +146,34 @@ class ShoppingCartApiIntegrationTest {
     final String token = register("ada-adds-unknown@example.com");
     final String cartId = open(token).get("cartId").asText();
 
-    add(token, cartId, "no-such-product", 1)
+    add(token, cartId, "00000000-0000-4000-8000-000000000001", 1)
         .andExpect(status().isNotFound())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(jsonPath("$.title").value("Article not available"))
-        .andExpect(jsonPath("$.detail").value("There is no article for product no-such-product."));
+        .andExpect(
+            jsonPath("$.detail")
+                .value("There is no article for product 00000000-0000-4000-8000-000000000001."));
+  }
+
+  @Test
+  @DisplayName("Removing a malformed product id is a bad request")
+  void removingAProductIdThatIsNoUuidIsABadRequestAndLeavesTheCartAsItWas() throws Exception {
+    final String token = register("ada-removes-malformed@example.com");
+    final JsonNode cart = open(token);
+    final String cartId = cart.get("cartId").asText();
+    final String ddd = productIdOf("Domain-Driven Design");
+    add(token, cartId, ddd, 1).andExpect(status().isOk());
+
+    mockMvc
+        .perform(
+            delete("/api/carts/" + cartId + "/items/no-such-product")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.title").value("Unacceptable value"))
+        .andExpect(jsonPath("$.detail").doesNotExist());
+
+    assertThat(linesOf(cartId, cart.get("customerId").asText())).containsExactly(ddd + " x 1");
   }
 
   @Test

@@ -799,7 +799,7 @@ context's own `*ApiExceptionHandler`. The status follows what went wrong, not wh
 | `404` | the addressed thing is not there, or not the caller's — a cart, a session, an article, a position in a cart |
 | `409` | a conflict with existing state — a stock keeping unit already in use, a second active cart, a cart that no longer takes changes |
 | `422` | the request was understood and a rule refused it — a password below the strength rules, a checkout step that has no data yet |
-| `400` | a value the model does not accept at all — a malformed stock keeping unit, a blank name |
+| `400` | a value that is malformed — a stock keeping unit or a blank name the model does not accept, a product id in a cart route that is no UUID |
 
 ```json
 { "type": "about:blank", "title": "Stock keeping unit already in use", "status": 409,

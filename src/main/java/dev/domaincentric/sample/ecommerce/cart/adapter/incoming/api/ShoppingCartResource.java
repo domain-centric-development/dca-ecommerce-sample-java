@@ -20,6 +20,7 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import jakarta.validation.Valid;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -130,7 +131,7 @@ public class ShoppingCartResource {
 
     final AddItemToCartCommand input =
         new AddItemToCartCommand(
-            cartId, currentCustomerId(), request.productId(), request.quantity());
+            cartId, currentCustomerId(), parsedProductId(request.productId()), request.quantity());
 
     final AddItemToCartResult output = addItemToCart.execute(input);
     return ResponseEntity.ok(converter.toDto(output));
@@ -145,10 +146,21 @@ public class ShoppingCartResource {
     }
 
     final RemoveItemFromCartCommand input =
-        new RemoveItemFromCartCommand(cartId, currentCustomerId(), productId);
+        new RemoveItemFromCartCommand(cartId, currentCustomerId(), parsedProductId(productId));
     final RemoveItemFromCartResult output = removeItemFromCart.execute(input);
 
     return ResponseEntity.ok(converter.toDto(output));
+  }
+
+  /**
+   * The product id the caller sent, parsed here: text that is no UUID is a malformed call, answered
+   * {@code 400} by {@link CartApiExceptionHandler} without reaching the use case — never a product
+   * that does not exist.
+   *
+   * @throws IllegalArgumentException when the text does not parse
+   */
+  private static String parsedProductId(final String productId) {
+    return UUID.fromString(productId).toString();
   }
 
   private String currentCustomerId() {

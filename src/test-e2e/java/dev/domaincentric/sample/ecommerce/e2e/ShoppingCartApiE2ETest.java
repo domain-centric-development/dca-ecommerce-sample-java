@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.e2e;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -87,6 +88,37 @@ class ShoppingCartApiE2ETest {
     assertEquals(
         "Requested 9 of product " + productId + ", more than is in stock.",
         problem.path("detail").asText());
+    final JsonNode cart =
+        JSON.readTree(send(authorized(token, "/api/carts/" + cartId).GET()).body());
+    assertTrue(cart.path("items").isArray(), cart.toString());
+    assertEquals(0, cart.path("items").size(), "the cart is still empty");
+  }
+
+  @Test
+  @DisplayName("A malformed product id is a bad request")
+  void addingAProductIdThatIsNoUuidIsABadRequestAndLeavesTheCartEmpty() throws Exception {
+    final String token = registeredToken();
+    final String cartId =
+        JSON.readTree(send(authorized(token, "/api/carts").POST(noBody())).body())
+            .get("cartId")
+            .asText();
+
+    final HttpResponse<String> response =
+        send(
+            authorized(token, "/api/carts/" + cartId + "/items")
+                .header("Content-Type", "application/json")
+                .POST(
+                    HttpRequest.BodyPublishers.ofString(
+                        """
+                        {"productId":"no-such-product","quantity":1}""")));
+
+    assertEquals(400, response.statusCode(), response.body());
+    assertEquals(
+        "application/problem+json",
+        response.headers().firstValue("Content-Type").orElse("").split(";")[0]);
+    final JsonNode problem = JSON.readTree(response.body());
+    assertEquals("Unacceptable value", problem.path("title").asText());
+    assertFalse(problem.has("detail"), "the problem carries a detail: " + problem);
     final JsonNode cart =
         JSON.readTree(send(authorized(token, "/api/carts/" + cartId).GET()).body());
     assertTrue(cart.path("items").isArray(), cart.toString());
