@@ -11,6 +11,7 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Email;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Owner;
+import dev.domaincentric.sample.ecommerce.account.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -59,7 +60,7 @@ abstract class AccountRepositoryContractTest {
         UserId.of(USER_ID),
         HashedPassword.of("hashed:OldPassw0rd"),
         AccountStatus.ACTIVE,
-        Set.of("CUSTOMER"),
+        Set.of(Role.CUSTOMER),
         Instant.parse("2026-01-01T00:00:00Z"),
         Instant.parse("2026-07-31T08:15:30Z"));
   }
@@ -80,7 +81,7 @@ abstract class AccountRepositoryContractTest {
     assertEquals(UserId.of(USER_ID), loaded.linkedUserId());
     assertEquals(HashedPassword.of("hashed:OldPassw0rd"), loaded.password());
     assertEquals(AccountStatus.ACTIVE, loaded.status());
-    assertEquals(Set.of("CUSTOMER"), loaded.roles());
+    assertEquals(Set.of(Role.CUSTOMER), loaded.roles());
     assertEquals(Instant.parse("2026-01-01T00:00:00Z"), loaded.createdAt());
     assertEquals(Instant.parse("2026-07-31T08:15:30Z"), loaded.lastLoginAt());
   }
@@ -96,7 +97,7 @@ abstract class AccountRepositoryContractTest {
             UserId.of("user-0001"),
             HashedPassword.of("hashed:Passw0rd"),
             AccountStatus.ACTIVE,
-            Set.of("CUSTOMER"),
+            Set.of(Role.CUSTOMER),
             Instant.parse("2026-01-01T00:00:00Z"),
             null);
     repository.save(neverLoggedIn);

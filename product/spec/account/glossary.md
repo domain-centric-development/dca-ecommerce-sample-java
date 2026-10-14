@@ -22,7 +22,7 @@ authentication, roles, and the lifecycle (active, suspended, closed).
 **Identity:** `AccountId`
 
 **Related terms:** `Email`, `Owner`, `HashedPassword`, `AccountStatus`, `UserId`,
-`PasswordHasher`, `Role` (planned).
+`PasswordHasher`, `Role`.
 
 **Operations:** `register` (the account comes into existence, linked to the caller's `UserId`),
 `reconstitute` (restores a stored account; no rule re-evaluated, no event), `checkPassword` (a
@@ -36,9 +36,7 @@ operation on the aggregate accepts an `Owner` or mentions a name, so the only wa
 system is `register`. The date of birth of that same owner may be corrected later
 (`changeOwnerDateOfBirth`). Distinct from the buyer's name in the `checkout` context (`BuyerInfo`),
 which is per-order shipping data and freely editable — same words, different concept, different
-lifecycle. `roles` is currently a `Set<String>`. Planned
-cleanup: introduce a `Role` Value Object (instead of `String`) to enforce valid values and improve
-domain vocabulary. On registration the
+lifecycle. `roles` is a set of `Role`; registration grants `Role.CUSTOMER`. On registration the
 `UserId` from the JWT is preserved unchanged to guarantee cart/checkout continuity across the
 guest → account transition.
 
@@ -154,13 +152,15 @@ without it is forbidden.
 staff"); `cart/shopping` — the rule "Only staff list every cart; a stranger is challenged, a customer is
 forbidden" (`staff-list-every-cart`).
 
-**Type:** Value Object with the fixed values customer and staff — today still a `String` in `Account.roles`
-(e.g. `CUSTOMER`).
+**Type:** Value Object (Enum `Role`: `CUSTOMER`, `STAFF`), held by `Account.roles` as a set.
+
+**Operations:** `code` (the role's fixed spelling in the token's `roles` claim and in the stored role set:
+`CUSTOMER`, `STAFF`), `fromCode` (the role a code names; an unknown code is refused).
 
 **Synonyms (avoid):** raw `String` role.
 
-**Notes:** A fixed set of values is a type, not a string: `Set<String> roles` becomes `Set<Role>`, which rules
-out typos at compile time.
+**Notes:** A fixed set of values is a type, not a string: the compiler rules out a misspelt role. Outside the
+domain a role travels by its code, never by the member's name.
 
 ### Token (planned)
 
@@ -289,8 +289,6 @@ because it is consumed by domain code and expressed in domain language.
 
 ## Open issues from DCA review
 
-- **`Role` as a VO instead of `String`** — replace `Account.roles : Set<String>` with
-  `Set<Role>`.
 - **Introduce `Token` as a VO** if tokens have business relevance (e.g. refresh,
   password reset).
 - **Polysemy `CustomerId` (cart, checkout) vs `UserId` (sharedkernel) vs `AccountId`** —

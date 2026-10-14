@@ -8,7 +8,7 @@ import java.util.Set;
  * @param accountId the new account's ID
  * @param userId the user's ID (to be used in JWT)
  * @param email the registered email
- * @param roles the user's roles
+ * @param roles the codes of the user's roles ({@code Role#code()})
  */
 public record RegisterAccountResult(
     String accountId, String userId, String email, Set<String> roles) {

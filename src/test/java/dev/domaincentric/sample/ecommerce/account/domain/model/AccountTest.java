@@ -51,7 +51,7 @@ class AccountTest {
         UserId.of("user-4711"),
         HashedPassword.of("hashed:OldPassw0rd"),
         status,
-        Set.of("CUSTOMER"),
+        Set.of(Role.CUSTOMER),
         CREATED_AT,
         Instant.parse("2026-07-31T08:15:30Z"));
   }

@@ -13,6 +13,7 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Email;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Owner;
+import dev.domaincentric.sample.ecommerce.account.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -146,7 +147,7 @@ class GetAccountOverviewUseCaseTest {
         UserId.of(LINKED_USER_ID),
         HashedPassword.of(PASSWORD_HASH),
         status,
-        Set.of("CUSTOMER"),
+        Set.of(Role.CUSTOMER),
         Instant.parse("2026-01-01T00:00:00Z"),
         LAST_LOGIN);
   }

@@ -14,7 +14,7 @@ import dev.domaincentric.sample.ecommerce.account.domain.gateway.PasswordHasher;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -67,7 +67,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
   private final UserId linkedUserId;
   private HashedPassword password;
   private AccountStatus status;
-  private Set<String> roles;
+  private final Set<Role> roles;
   private final Instant createdAt;
   private Instant lastLoginAt;
 
@@ -77,7 +77,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
       final Owner owner,
       final UserId linkedUserId,
       final HashedPassword password,
-      final Set<String> roles,
+      final Set<Role> roles,
       final Instant createdAt) {
     this.id = id;
     this.email = email;
@@ -87,7 +87,8 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
     this.linkedUserId = linkedUserId;
     this.password = password;
     this.status = AccountStatus.ACTIVE;
-    this.roles = new HashSet<>(roles);
+    this.roles = EnumSet.noneOf(Role.class);
+    this.roles.addAll(roles);
     this.createdAt = createdAt;
   }
 
@@ -128,7 +129,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
 
     // UserId remains unchanged - no prefix conversion needed
     // This preserves cart and checkout session data
-    final Set<String> defaultRoles = Set.of("CUSTOMER");
+    final Set<Role> defaultRoles = Set.of(Role.CUSTOMER);
 
     final Account account =
         new Account(
@@ -164,7 +165,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
       final UserId linkedUserId,
       final HashedPassword hashedPassword,
       final AccountStatus status,
-      final Set<String> roles,
+      final Set<Role> roles,
       final Instant createdAt,
       final Instant lastLoginAt) {
     final Account account =
@@ -195,7 +196,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
     return status;
   }
 
-  public Set<String> roles() {
+  public Set<Role> roles() {
     return Set.copyOf(roles);
   }
 
@@ -351,7 +352,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
    *
    * @param role the role to add
    */
-  public void addRole(final String role) {
+  public void addRole(final Role role) {
     this.roles.add(role);
   }
 
@@ -360,7 +361,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
    *
    * @param role the role to remove
    */
-  public void removeRole(final String role) {
+  public void removeRole(final Role role) {
     this.roles.remove(role);
   }
 }

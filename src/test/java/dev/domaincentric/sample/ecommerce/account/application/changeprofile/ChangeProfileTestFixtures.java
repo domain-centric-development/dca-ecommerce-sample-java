@@ -11,6 +11,7 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Email;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Owner;
+import dev.domaincentric.sample.ecommerce.account.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -57,7 +58,7 @@ final class ChangeProfileTestFixtures {
             UserId.of(USER_ID),
             HashedPassword.fromPlaintext(PASSWORD, hasher),
             status,
-            Set.of("CUSTOMER"),
+            Set.of(Role.CUSTOMER),
             Instant.parse("2026-01-01T00:00:00Z"),
             Instant.parse("2026-07-31T08:15:30Z"));
     return account;
@@ -79,7 +80,7 @@ final class ChangeProfileTestFixtures {
             UserId.of("user-0815"),
             HashedPassword.fromPlaintext("OtherPassw0rd", hasher),
             AccountStatus.ACTIVE,
-            Set.of("CUSTOMER"),
+            Set.of(Role.CUSTOMER),
             Instant.parse("2026-01-01T00:00:00Z"),
             Instant.parse("2026-07-31T08:15:30Z"));
     return account;

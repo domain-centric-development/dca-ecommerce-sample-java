@@ -7,13 +7,14 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Email;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Owner;
+import dev.domaincentric.sample.ecommerce.account.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.annotation.Profile;
@@ -30,8 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code save} loses the change here — which is the point: the in-memory alternative used to return
  * the stored instance itself, and silently made the omission work.
  *
- * <p>The roles live in their own table because a {@code Set<String>} has no natural column. They
- * are replaced wholesale on save, in the same transaction as the account row.
+ * <p>The roles live in their own table, each by its {@code Role#code()}, because a set has no
+ * natural column. They are replaced wholesale on save, in the same transaction as the account row.
  */
 @Profile("!inmemory")
 @Repository
@@ -88,9 +89,11 @@ public class JdbcAccountRepository implements AccountRepository {
     // Replaced wholesale rather than diffed: roles are a set, and a set has no update semantics
     // beyond "these are the members now".
     jdbcTemplate.update("DELETE FROM account_roles WHERE account_id = ?", account.id().value());
-    for (final String role : account.roles()) {
+    for (final Role role : account.roles()) {
       jdbcTemplate.update(
-          "INSERT INTO account_roles (account_id, role) VALUES (?, ?)", account.id().value(), role);
+          "INSERT INTO account_roles (account_id, role) VALUES (?, ?)",
+          account.id().value(),
+          role.code());
     }
 
     return account;
@@ -152,11 +155,12 @@ public class JdbcAccountRepository implements AccountRepository {
         row.lastLoginAt());
   }
 
-  private Set<String> rolesOf(final AccountId accountId) {
-    return new HashSet<>(
-        jdbcTemplate.queryForList(
-            "SELECT role FROM account_roles WHERE account_id = ?",
-            String.class,
-            accountId.value()));
+  private Set<Role> rolesOf(final AccountId accountId) {
+    return jdbcTemplate
+        .queryForList(
+            "SELECT role FROM account_roles WHERE account_id = ?", String.class, accountId.value())
+        .stream()
+        .map(Role::fromCode)
+        .collect(Collectors.toSet());
   }
 }

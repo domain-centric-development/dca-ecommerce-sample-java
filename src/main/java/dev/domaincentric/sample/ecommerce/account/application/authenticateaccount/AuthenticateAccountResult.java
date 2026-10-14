@@ -8,7 +8,7 @@ import java.util.Set;
  * @param success whether authentication was successful
  * @param userId the user's ID (for JWT generation)
  * @param email the user's email
- * @param roles the user's roles
+ * @param roles the codes of the user's roles ({@code Role#code()})
  * @param errorMessage error message if authentication failed
  */
 public record AuthenticateAccountResult(

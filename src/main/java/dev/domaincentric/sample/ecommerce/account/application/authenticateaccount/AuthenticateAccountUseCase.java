@@ -5,7 +5,10 @@ import dev.domaincentric.sample.ecommerce.account.application.shared.AccountRepo
 import dev.domaincentric.sample.ecommerce.account.domain.gateway.PasswordHasher;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Account;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Email;
+import dev.domaincentric.sample.ecommerce.account.domain.model.Role;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -103,6 +106,10 @@ public class AuthenticateAccountUseCase implements AuthenticateAccountInputPort 
     LOG.info("Successful login for user: {}", account.linkedUserId().value());
 
     return AuthenticateAccountResult.success(
-        account.linkedUserId().value(), account.email().value(), account.roles());
+        account.linkedUserId().value(), account.email().value(), roleCodesOf(account));
+  }
+
+  private static Set<String> roleCodesOf(final Account account) {
+    return account.roles().stream().map(Role::code).collect(Collectors.toUnmodifiableSet());
   }
 }

@@ -6,7 +6,10 @@ import dev.domaincentric.sample.ecommerce.account.domain.gateway.PasswordHasher;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Account;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Email;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Owner;
+import dev.domaincentric.sample.ecommerce.account.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,6 +84,10 @@ public class RegisterAccountUseCase implements RegisterAccountInputPort {
         account.id().value(),
         account.linkedUserId().value(),
         account.email().value(),
-        account.roles());
+        roleCodesOf(account));
+  }
+
+  private static Set<String> roleCodesOf(final Account account) {
+    return account.roles().stream().map(Role::code).collect(Collectors.toUnmodifiableSet());
   }
 }
