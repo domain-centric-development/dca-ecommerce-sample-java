@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtProperties;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtTokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import jakarta.servlet.http.Cookie;
 import java.util.Set;
@@ -67,7 +68,7 @@ class RestartedShopIntegrationTest {
     browser.holds(
         new Cookie(
             jwtProperties.sessionCookieName(),
-            tokenService.generateRegisteredToken(customer, EMAIL, Set.of("CUSTOMER"))));
+            tokenService.generateRegisteredToken(customer, EMAIL, Set.of(Role.CUSTOMER))));
     return browser;
   }
 }

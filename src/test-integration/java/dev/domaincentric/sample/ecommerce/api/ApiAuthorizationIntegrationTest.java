@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Base64;
 import java.util.Set;
@@ -199,7 +199,7 @@ class ApiAuthorizationIntegrationTest {
     return tokenService.generateRegisteredToken(
         UserId.of(claims.get("sub").asText()),
         claims.get("email").asText(),
-        Set.of(IdentityProvider.Identity.ROLE_CUSTOMER, IdentityProvider.Identity.ROLE_STAFF));
+        Set.of(Role.CUSTOMER, Role.STAFF));
   }
 
   private static JsonNode claimsOf(final String jwt) throws Exception {

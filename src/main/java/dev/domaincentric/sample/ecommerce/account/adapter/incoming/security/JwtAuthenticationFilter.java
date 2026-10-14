@@ -269,7 +269,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
    */
   private void setSecurityContext(final IdentityProvider.Identity identity) {
     final var authorities =
-        identity.roles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role)).toList();
+        identity.roles().stream()
+            .map(role -> new SimpleGrantedAuthority("ROLE_" + role.code()))
+            .toList();
 
     SecurityContextHolder.getContext()
         .setAuthentication(

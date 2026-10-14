@@ -11,10 +11,11 @@ import dev.domaincentric.sample.ecommerce.account.domain.event.AccountReactivate
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountRegistered;
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountSuspended;
 import dev.domaincentric.sample.ecommerce.account.domain.gateway.PasswordHasher;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -87,7 +88,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
     this.linkedUserId = linkedUserId;
     this.password = password;
     this.status = AccountStatus.ACTIVE;
-    this.roles = EnumSet.noneOf(Role.class);
+    this.roles = new HashSet<>();
     this.roles.addAll(roles);
     this.createdAt = createdAt;
   }

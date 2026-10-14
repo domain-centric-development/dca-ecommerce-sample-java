@@ -157,7 +157,10 @@ without it is forbidden.
 staff"); `cart/shopping` — the rule "Only staff list every cart; a stranger is challenged, a customer is
 forbidden" (`staff-list-every-cart`).
 
-**Type:** Value Object (Enum `Role`: `CUSTOMER`, `STAFF`), held by `Account.roles` as a set.
+**Type:** Value Object with the fixed values customer and staff — `Role.CUSTOMER` and `Role.STAFF` are its only
+instances, and an account's roles are a set of them. It lives in the shared kernel, because the adapters of other
+contexts (the product and cart APIs) guard on it through the identity that carries the roles; a code no role
+carries is dropped when a token is read.
 
 **Operations:** `code` (the role's fixed spelling in the token's `roles` claim and in the stored role set:
 `CUSTOMER`, `STAFF`), `fromCode` (the role a code names; an unknown code is refused).

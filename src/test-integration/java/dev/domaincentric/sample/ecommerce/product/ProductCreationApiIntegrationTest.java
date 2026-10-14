@@ -11,7 +11,7 @@ import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.Toke
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductCommand;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductInputPort;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -134,6 +134,6 @@ class ProductCreationApiIntegrationTest {
     return tokenService.generateRegisteredToken(
         UserId.of(claims.path("sub").asText()),
         claims.path("email").asText(),
-        Set.of(IdentityProvider.Identity.ROLE_CUSTOMER, IdentityProvider.Identity.ROLE_STAFF));
+        Set.of(Role.CUSTOMER, Role.STAFF));
   }
 }

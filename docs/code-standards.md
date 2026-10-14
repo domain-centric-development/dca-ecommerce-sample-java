@@ -74,8 +74,8 @@ where its inputs are** (ADR-036) — the discriminator is whether the check need
 feels "business" or "technical":
 
 - **Claims only** → the incoming adapter. `POST /api/products` and `GET /api/carts` require
-  `IdentityProvider.Identity#hasRole(ROLE_STAFF)`. That is a property of the exposure: the same use case is
-  legitimate for a console or batch job with no HTTP identity.
+  the staff role — `@PreAuthorize("hasRole('STAFF')")`, the code of the shared kernel's `Role.STAFF`. That is a
+  property of the exposure: the same use case is legitimate for a console or batch job with no HTTP identity.
 - **Ownership of a resource** → the use case, always, because no adapter may be the only thing standing between a
   caller and a stranger's data. The caller is part of the command (`GetCartByIdQuery(cartId, customerId)`,
   `CheckoutCartCommand(cartId, customerId)`, `StartCheckoutCommand(cartId, customerId)`) and the use case asks a

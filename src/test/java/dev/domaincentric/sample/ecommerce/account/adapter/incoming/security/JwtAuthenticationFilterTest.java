@@ -11,6 +11,7 @@ import dev.domaincentric.sample.ecommerce.account.application.isaccountregistere
 import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredQuery;
 import dev.domaincentric.sample.ecommerce.account.application.isaccountregistered.IsAccountRegisteredResult;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import jakarta.servlet.http.Cookie;
 import java.util.HashSet;
@@ -88,7 +89,7 @@ class JwtAuthenticationFilterTest {
   private Cookie sessionCookieFor(final UserId userId) {
     accounts.register(userId);
     return new Cookie(
-        SESSION_COOKIE, tokenService.generateRegisteredToken(userId, EMAIL, Set.of("CUSTOMER")));
+        SESSION_COOKIE, tokenService.generateRegisteredToken(userId, EMAIL, Set.of(Role.CUSTOMER)));
   }
 
   // ------------------------------------------------- the four states
@@ -189,7 +190,8 @@ class JwtAuthenticationFilterTest {
     accounts.register(visitor);
     final Cookie legacy =
         new Cookie(
-            IDENTITY_COOKIE, tokenService.generateRegisteredToken(visitor, EMAIL, Set.of("ADMIN")));
+            IDENTITY_COOKIE,
+            tokenService.generateRegisteredToken(visitor, EMAIL, Set.of(Role.STAFF)));
 
     final IdentityProvider.Identity identity = runFilter(legacy);
 
@@ -299,7 +301,7 @@ class JwtAuthenticationFilterTest {
 
     new JwtIdentitySession(properties, tokenService, response)
         .setRegisteredIdentity(
-            tokenService.generateRegisteredToken(accountUserId, EMAIL, Set.of("CUSTOMER")));
+            tokenService.generateRegisteredToken(accountUserId, EMAIL, Set.of(Role.CUSTOMER)));
 
     final UserId storedIdentity = userIdInCookie(response, IDENTITY_COOKIE);
     assertEquals(accountUserId, storedIdentity, "the identity must follow the account");

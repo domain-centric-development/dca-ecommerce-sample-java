@@ -11,6 +11,7 @@ import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProf
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -102,7 +103,7 @@ final class AccountWebTestFixtures {
 
     @Override
     public String generateRegisteredToken(
-        final UserId userId, final String email, final Set<String> roles) {
+        final UserId userId, final String email, final Set<Role> roles) {
       final IssuedToken token = new IssuedToken(userId, email, Set.copyOf(roles));
       issuedTokens.add(token);
       return "token-for-" + email;
@@ -113,7 +114,7 @@ final class AccountWebTestFixtures {
     }
 
     /** The claims a token was generated for. */
-    record IssuedToken(UserId userId, String email, Set<String> roles) {}
+    record IssuedToken(UserId userId, String email, Set<Role> roles) {}
   }
 
   /** Test double for the identity session, recording the tokens it was handed. */
@@ -143,7 +144,7 @@ final class AccountWebTestFixtures {
 
   /** Test double for an identity, depending on the port only. */
   record TestIdentity(
-      UserId userId, IdentityProvider.IdentityType type, Optional<String> email, Set<String> roles)
+      UserId userId, IdentityProvider.IdentityType type, Optional<String> email, Set<Role> roles)
       implements IdentityProvider.Identity {
 
     static TestIdentity anonymous(final UserId userId) {
@@ -152,7 +153,7 @@ final class AccountWebTestFixtures {
 
     static TestIdentity registered(final UserId userId, final String email) {
       return new TestIdentity(
-          userId, TestIdentityType.REGISTERED, Optional.of(email), Set.of(ROLE_CUSTOMER));
+          userId, TestIdentityType.REGISTERED, Optional.of(email), Set.of(Role.CUSTOMER));
     }
   }
 

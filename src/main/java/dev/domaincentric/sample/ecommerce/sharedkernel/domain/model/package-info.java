@@ -10,6 +10,8 @@
  *   <li>{@link Money} - Monetary value with currency
  *   <li>{@link Price} - Product price (wraps Money with business rules)
  *   <li>{@link ProductId} - Product identifier (cross-context reference)
+ *   <li>{@link Role} - What an account may do beyond shopping (granted by account, guarded on by
+ *       other contexts)
  *   <li>{@link UserId} - User identifier (cross-context reference)
  * </ul>
  *

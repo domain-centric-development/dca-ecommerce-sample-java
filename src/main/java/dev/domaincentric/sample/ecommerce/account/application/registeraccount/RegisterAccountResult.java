@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.account.application.registeraccount;
 
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import java.util.Set;
 
 /**
@@ -8,10 +9,10 @@ import java.util.Set;
  * @param accountId the new account's ID
  * @param userId the user's ID (to be used in JWT)
  * @param email the registered email
- * @param roles the codes of the user's roles ({@code Role#code()})
+ * @param roles the user's roles
  */
 public record RegisterAccountResult(
-    String accountId, String userId, String email, Set<String> roles) {
+    String accountId, String userId, String email, Set<Role> roles) {
 
   /**
    * Creates a successful registration response.
@@ -23,7 +24,7 @@ public record RegisterAccountResult(
    * @return a new response
    */
   public static RegisterAccountResult of(
-      final String accountId, final String userId, final String email, final Set<String> roles) {
+      final String accountId, final String userId, final String email, final Set<Role> roles) {
     return new RegisterAccountResult(accountId, userId, email, roles);
   }
 }

@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.account.application.authenticateaccount;
 
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import java.util.Set;
 
 /**
@@ -8,11 +9,11 @@ import java.util.Set;
  * @param success whether authentication was successful
  * @param userId the user's ID (for JWT generation)
  * @param email the user's email
- * @param roles the codes of the user's roles ({@code Role#code()})
+ * @param roles the user's roles
  * @param errorMessage error message if authentication failed
  */
 public record AuthenticateAccountResult(
-    boolean success, String userId, String email, Set<String> roles, String errorMessage) {
+    boolean success, String userId, String email, Set<Role> roles, String errorMessage) {
 
   /**
    * Creates a successful authentication response.
@@ -23,7 +24,7 @@ public record AuthenticateAccountResult(
    * @return a successful response
    */
   public static AuthenticateAccountResult success(
-      final String userId, final String email, final Set<String> roles) {
+      final String userId, final String email, final Set<Role> roles) {
     return new AuthenticateAccountResult(true, userId, email, roles, null);
   }
 

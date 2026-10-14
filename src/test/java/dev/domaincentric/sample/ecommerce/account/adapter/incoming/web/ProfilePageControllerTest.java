@@ -21,6 +21,7 @@ import dev.domaincentric.sample.ecommerce.account.application.changeprofile.Chan
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileQuery;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult.Profile;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -276,7 +277,7 @@ class ProfilePageControllerTest {
         NEW_EMAIL.toUpperCase(Locale.ROOT), NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertEquals(
-        List.of(new IssuedToken(UserId.of(USER_ID), NEW_EMAIL, Set.of("CUSTOMER"))),
+        List.of(new IssuedToken(UserId.of(USER_ID), NEW_EMAIL, Set.of(Role.CUSTOMER))),
         tokenService.issuedTokens(),
         "the new token keeps the userId and roles and claims the stored, normalised email");
     assertEquals(

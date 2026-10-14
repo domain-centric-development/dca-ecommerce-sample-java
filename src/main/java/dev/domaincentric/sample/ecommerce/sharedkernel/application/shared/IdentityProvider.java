@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.sharedkernel.application.shared;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.OutputPort;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Optional;
 import java.util.Set;
@@ -73,16 +74,6 @@ public interface IdentityProvider extends OutputPort {
    */
   interface Identity {
 
-    /** Default role for registered customers. */
-    String ROLE_CUSTOMER = "CUSTOMER";
-
-    /**
-     * Operator role. It guards what a shopper must never reach — listing every customer's cart,
-     * creating a product — and no registration path hands it out: an account only gets it by being
-     * given it.
-     */
-    String ROLE_STAFF = "STAFF";
-
     /** The user's unique identifier (always present). */
     UserId userId();
 
@@ -92,8 +83,8 @@ public interface IdentityProvider extends OutputPort {
     /** The user's email (only present for registered users). */
     Optional<String> email();
 
-    /** The user's roles (typically empty for anonymous, contains CUSTOMER for registered). */
-    Set<String> roles();
+    /** The user's roles (empty for anonymous, contains {@link Role#CUSTOMER} for registered). */
+    Set<Role> roles();
 
     /**
      * Checks if this is an anonymous identity.
@@ -119,7 +110,7 @@ public interface IdentityProvider extends OutputPort {
      * @param role the role to check
      * @return true if the identity has the role
      */
-    default boolean hasRole(final String role) {
+    default boolean hasRole(final Role role) {
       return roles().contains(role);
     }
   }

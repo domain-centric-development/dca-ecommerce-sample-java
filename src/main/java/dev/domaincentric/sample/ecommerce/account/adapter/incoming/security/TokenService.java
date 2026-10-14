@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
 
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Set;
 
@@ -28,8 +29,8 @@ public interface TokenService {
    *
    * @param userId the user's unique identifier
    * @param email the user's email address
-   * @param roles the user's roles (e.g., "CUSTOMER")
+   * @param roles the user's roles
    * @return the generated token string
    */
-  String generateRegisteredToken(UserId userId, String email, Set<String> roles);
+  String generateRegisteredToken(UserId userId, String email, Set<Role> roles);
 }

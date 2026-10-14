@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -116,6 +116,6 @@ class ProductCreationApiE2ETest {
         .generateRegisteredToken(
             UserId.of(claims.path("sub").asText()),
             claims.path("email").asText(),
-            Set.of(IdentityProvider.Identity.ROLE_CUSTOMER, IdentityProvider.Identity.ROLE_STAFF));
+            Set.of(Role.CUSTOMER, Role.STAFF));
   }
 }

@@ -8,7 +8,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
-import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Optional;
 import java.util.Set;
@@ -137,11 +137,7 @@ public final class ShopUnderTest {
                 started
                     .getBean(TokenService.class)
                     .generateRegisteredToken(
-                        UserId.of(userId),
-                        email,
-                        Set.of(
-                            IdentityProvider.Identity.ROLE_CUSTOMER,
-                            IdentityProvider.Identity.ROLE_STAFF)));
+                        UserId.of(userId), email, Set.of(Role.CUSTOMER, Role.STAFF)));
   }
 
   private static WireMockServer authorizingPaymentProvider() {

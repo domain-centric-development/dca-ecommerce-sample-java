@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
 
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -9,10 +10,10 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +95,7 @@ public class JwtTokenService implements TokenService {
    */
   @Override
   public String generateRegisteredToken(
-      final UserId userId, final String email, final Set<String> roles) {
+      final UserId userId, final String email, final Set<Role> roles) {
     final Date now = new Date();
     final Date expiration = new Date(now.getTime() + properties.registeredExpirationMs());
 
@@ -102,7 +103,7 @@ public class JwtTokenService implements TokenService {
         .subject(userId.value())
         .claim(CLAIM_TYPE, TYPE_REGISTERED)
         .claim(CLAIM_EMAIL, email)
-        .claim(CLAIM_ROLES, roles.stream().toList())
+        .claim(CLAIM_ROLES, roles.stream().map(Role::code).toList())
         .issuer(properties.issuer())
         .issuedAt(now)
         .expiration(expiration)
@@ -219,7 +220,13 @@ public class JwtTokenService implements TokenService {
       final String email = claims.get(CLAIM_EMAIL, String.class);
       @SuppressWarnings("unchecked")
       final List<String> rolesList = claims.get(CLAIM_ROLES, List.class);
-      final Set<String> roles = rolesList != null ? new HashSet<>(rolesList) : Set.of();
+      // A code no role carries is dropped: the token grants only roles there are.
+      final Set<Role> roles =
+          rolesList != null
+              ? Role.all().stream()
+                  .filter(role -> rolesList.contains(role.code()))
+                  .collect(Collectors.toUnmodifiableSet())
+              : Set.of();
 
       if (email == null || email.isBlank()) {
         throw new IllegalArgumentException("Registered JWT missing email claim");

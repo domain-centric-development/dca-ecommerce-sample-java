@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.security;
 
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Optional;
 import java.util.Set;
@@ -17,7 +18,7 @@ import java.util.Set;
  * @param roles the user's roles (typically empty for anonymous, contains CUSTOMER for registered)
  */
 public record JwtIdentity(
-    UserId userId, JwtIdentityType type, Optional<String> email, Set<String> roles)
+    UserId userId, JwtIdentityType type, Optional<String> email, Set<Role> roles)
     implements IdentityProvider.Identity {
 
   public JwtIdentity {
@@ -54,7 +55,7 @@ public record JwtIdentity(
    * @return a new registered identity
    */
   public static JwtIdentity registered(
-      final UserId userId, final String email, final Set<String> roles) {
+      final UserId userId, final String email, final Set<Role> roles) {
     return new JwtIdentity(userId, JwtIdentityType.REGISTERED, Optional.of(email), roles);
   }
 
@@ -66,6 +67,6 @@ public record JwtIdentity(
    * @return a new registered identity with CUSTOMER role
    */
   public static JwtIdentity registeredCustomer(final UserId userId, final String email) {
-    return registered(userId, email, Set.of(ROLE_CUSTOMER));
+    return registered(userId, email, Set.of(Role.CUSTOMER));
   }
 }
