@@ -82,7 +82,7 @@ public class JdbcAccountRepository implements AccountRepository {
         account.owner().dateOfBirth(),
         account.linkedUserId().value(),
         account.password().hash(),
-        account.status().name(),
+        columnOf(account.status()),
         Timestamp.from(account.createdAt()),
         account.lastLoginAt() == null ? null : Timestamp.from(account.lastLoginAt()));
 
@@ -133,7 +133,7 @@ public class JdbcAccountRepository implements AccountRepository {
                 rs.getDate("date_of_birth").toLocalDate()),
             UserId.of(rs.getString("linked_user_id")),
             HashedPassword.fromHash(rs.getString("password_hash")),
-            AccountStatus.valueOf(rs.getString("status")),
+            statusOf(rs.getString("status")),
             rs.getTimestamp("created_at").toInstant(),
             toInstant(rs.getTimestamp("last_login_at")));
   }
@@ -162,5 +162,23 @@ public class JdbcAccountRepository implements AccountRepository {
         .stream()
         .map(Role::fromCode)
         .collect(Collectors.toSet());
+  }
+
+  /** The stored spelling of a status, written out per value as every stored account carries it. */
+  private static String columnOf(final AccountStatus status) {
+    return switch (status) {
+      case ACTIVE -> "ACTIVE";
+      case SUSPENDED -> "SUSPENDED";
+      case CLOSED -> "CLOSED";
+    };
+  }
+
+  private static AccountStatus statusOf(final String value) {
+    return switch (value) {
+      case "ACTIVE" -> AccountStatus.ACTIVE;
+      case "SUSPENDED" -> AccountStatus.SUSPENDED;
+      case "CLOSED" -> AccountStatus.CLOSED;
+      default -> throw new IllegalStateException("Unknown stored account status: " + value);
+    };
   }
 }

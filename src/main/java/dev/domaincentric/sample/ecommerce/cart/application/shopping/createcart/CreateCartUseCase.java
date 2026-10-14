@@ -45,6 +45,6 @@ public class CreateCartUseCase implements CreateCartInputPort {
 
     // Map to output
     return new CreateCartResult(
-        cart.id().value().toString(), cart.customerId().value(), cart.status().name());
+        cart.id().value().toString(), cart.customerId().value(), cart.status());
   }
 }

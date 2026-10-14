@@ -144,6 +144,9 @@ blocked), `CLOSED` (permanently ended).
 
 **Operations:** `canLogin`, `isTerminal`.
 
+**Notes:** The store spells each status by its own written-out code (`ACTIVE`, `SUSPENDED`, `CLOSED`), never by the
+member name.
+
 ### Role
 
 **Definition:** What an account may do beyond shopping. Two roles: **customer** — every registered account

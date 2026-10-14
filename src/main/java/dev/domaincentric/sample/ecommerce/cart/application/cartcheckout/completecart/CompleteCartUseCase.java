@@ -51,7 +51,7 @@ public class CompleteCartUseCase implements CompleteCartInputPort {
 
     final UUID eventId = input.eventId();
     if (eventId != null && processedEvents.contains(EFFECT, eventId)) {
-      return new CompleteCartResult(cart.id().value().toString(), cart.status().name(), true);
+      return new CompleteCartResult(cart.id().value().toString(), cart.status(), true);
     }
 
     // Complete cart (business logic validates status)
@@ -65,6 +65,6 @@ public class CompleteCartUseCase implements CompleteCartInputPort {
       processedEvents.markProcessed(EFFECT, eventId);
     }
 
-    return new CompleteCartResult(cart.id().value().toString(), cart.status().name(), false);
+    return new CompleteCartResult(cart.id().value().toString(), cart.status(), false);
   }
 }

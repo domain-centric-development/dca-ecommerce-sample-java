@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.LineItemSnapshot;
 import java.math.BigDecimal;
@@ -25,12 +26,23 @@ public record ReviewPageViewModel(
   public static ReviewPageViewModel fromSnapshot(final CheckoutCartSnapshot snapshot) {
     return new ReviewPageViewModel(
         snapshot.sessionId().value(),
-        snapshot.step().name(),
+        stepOf(snapshot.step()),
         snapshot.lineItems().stream().map(LineItemViewModel::fromSnapshot).toList(),
         TotalsViewModel.fromSnapshot(snapshot),
         BuyerInfoViewModel.fromSnapshot(snapshot),
         DeliveryViewModel.fromSnapshot(snapshot),
         PaymentViewModel.fromSnapshot(snapshot));
+  }
+
+  /** The step as the page names it, written out per value. */
+  private static String stepOf(final CheckoutStep step) {
+    return switch (step) {
+      case BUYER_INFO -> "BUYER_INFO";
+      case DELIVERY -> "DELIVERY";
+      case PAYMENT -> "PAYMENT";
+      case REVIEW -> "REVIEW";
+      case CONFIRMATION -> "CONFIRMATION";
+    };
   }
 
   /** Line item for display. */

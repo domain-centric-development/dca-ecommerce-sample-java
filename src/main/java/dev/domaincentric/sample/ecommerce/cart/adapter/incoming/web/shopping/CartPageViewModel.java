@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.CartTotals;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
 import java.math.BigDecimal;
@@ -32,7 +33,7 @@ public record CartPageViewModel(
 
     return new CartPageViewModel(
         cart.cartId().value(),
-        cart.status().name(),
+        statusOf(cart.status()),
         lineItems,
         TotalsViewModel.from(totals),
         cart.items().size(),
@@ -47,6 +48,15 @@ public record CartPageViewModel(
    */
   public static CartPageViewModel empty() {
     return new CartPageViewModel(null, "ACTIVE", List.of(), null, 0, 0, false, false);
+  }
+
+  /** The status as the cart view names it, written out per value. */
+  private static String statusOf(final CartStatus status) {
+    return switch (status) {
+      case ACTIVE -> "ACTIVE";
+      case COMPLETED -> "COMPLETED";
+      case ABANDONED -> "ABANDONED";
+    };
   }
 
   /** Checks if the cart is empty. */

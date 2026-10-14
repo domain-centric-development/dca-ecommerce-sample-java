@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.jpa;
 
 import dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.ActiveCartClaim;
+import dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.CartStatusColumn;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.*;
@@ -58,7 +59,7 @@ public class JpaShoppingCartRepository implements ShoppingCartRepository {
   public Optional<ShoppingCart> findActiveCartByCustomerId(final CustomerId customerId) {
     return cartRepo
         .findFirstByCustomerIdAndStatusOrderByUpdatedAtDesc(
-            customerId.value(), CartStatus.ACTIVE.name())
+            customerId.value(), CartStatusColumn.valueOf(CartStatus.ACTIVE))
         .map(this::toDomain);
   }
 
@@ -136,7 +137,7 @@ public class JpaShoppingCartRepository implements ShoppingCartRepository {
     return ShoppingCart.reconstitute(
         CartId.of(entity.getId()),
         CustomerId.of(entity.getCustomerId()),
-        CartStatus.valueOf(entity.getStatus()),
+        CartStatusColumn.statusOf(entity.getStatus()),
         storedItems);
   }
 
@@ -144,7 +145,7 @@ public class JpaShoppingCartRepository implements ShoppingCartRepository {
     final CartEntity e = new CartEntity();
     e.setId(cart.id().value());
     e.setCustomerId(cart.customerId().value());
-    e.setStatus(cart.status().name());
+    e.setStatus(CartStatusColumn.valueOf(cart.status()));
 
     final List<CartItemEntity> itemEntities = new ArrayList<>();
     for (final CartItem item : cart.items()) {

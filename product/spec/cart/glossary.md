@@ -112,6 +112,9 @@ protection against values ≤ 0.
 
 ACTIVE/Active permits editing before, during and after snapshot checkout. ABANDONED/Abandoned rejects edits. COMPLETED/Completed is a legacy whole-cart state, not a transition caused by the current checkout flow. There is no checked-out state: a cart is never locked by Checkout.
 
+The API and the store spell each status by its own written-out code (`ACTIVE`, `COMPLETED`, `ABANDONED`), never by
+the member name.
+
 ### ArticlePrice
 
 **Definition:** Snapshot of price, availability, and stock level of an article

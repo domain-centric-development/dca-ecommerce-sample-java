@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.jdbc;
 
+import dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.CartStatusColumn;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.specification.*;
@@ -31,7 +32,7 @@ public class CartSpecToJdbc implements CartSpecificationVisitor<CartSpecToJdbc.J
 
   @Override
   public JdbcPredicate visit(ActiveCart spec) {
-    return new JdbcPredicate("c.status = ?", List.of(CartStatus.ACTIVE.name()));
+    return new JdbcPredicate("c.status = ?", List.of(CartStatusColumn.valueOf(CartStatus.ACTIVE)));
   }
 
   @Override

@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.jpa;
 
+import dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.persistence.CartStatusColumn;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.specification.*;
@@ -25,7 +26,8 @@ public class CartSpecToJpa implements CartSpecificationVisitor<Specification<Car
 
   @Override
   public Specification<CartEntity> visit(ActiveCart spec) {
-    return (root, query, cb) -> cb.equal(root.get("status"), CartStatus.ACTIVE.name());
+    return (root, query, cb) ->
+        cb.equal(root.get("status"), CartStatusColumn.valueOf(CartStatus.ACTIVE));
   }
 
   @Override

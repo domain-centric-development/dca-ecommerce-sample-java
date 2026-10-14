@@ -79,7 +79,7 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
             "SELECT id, customer_id, status FROM carts WHERE customer_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1",
             cartRowMapper(),
             customerId.value(),
-            CartStatus.ACTIVE.name());
+            CartStatusColumn.valueOf(CartStatus.ACTIVE));
     return rows.stream().findFirst().map(this::toDomain);
   }
 
@@ -106,7 +106,7 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
           "MERGE INTO carts (id, customer_id, status, updated_at) KEY(id) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
           cart.id().value(),
           cart.customerId().value(),
-          cart.status().name());
+          CartStatusColumn.valueOf(cart.status()));
     } catch (final DuplicateKeyException violation) {
       // The database states the rule; this adapter only translates its answer into the failure the
       // port declares - and only that one: any other constraint it might ever refuse keeps
@@ -188,7 +188,7 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
         new CartRow(
             CartId.of(rs.getString("id")),
             CustomerId.of(rs.getString("customer_id")),
-            CartStatus.valueOf(rs.getString("status")));
+            CartStatusColumn.statusOf(rs.getString("status")));
   }
 
   private List<ShoppingCart> toDomain(final List<CartRow> rows) {

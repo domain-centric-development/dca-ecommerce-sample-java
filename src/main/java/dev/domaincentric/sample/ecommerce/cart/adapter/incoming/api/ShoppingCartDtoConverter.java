@@ -5,6 +5,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shared.CartItemSummar
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.createcart.CreateCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartResult;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -26,7 +27,7 @@ public final class ShoppingCartDtoConverter {
         output.cartId(),
         output.customerId(),
         List.of(), // New cart has no items
-        output.status(),
+        spell(output.status()),
         null,
         null,
         0);
@@ -42,7 +43,7 @@ public final class ShoppingCartDtoConverter {
         cart.cartId().value(),
         cart.customerId().value(),
         items,
-        cart.status().name(),
+        spell(cart.status()),
         total.amount(),
         total.currency().getCurrencyCode(),
         items.size());
@@ -85,7 +86,7 @@ public final class ShoppingCartDtoConverter {
                     new ShoppingCartListDto.CartSummaryDto(
                         cart.cartId(),
                         cart.customerId(),
-                        cart.status(),
+                        spell(cart.status()),
                         cart.itemCount(),
                         cart.total().amount(),
                         cart.total().currency().getCurrencyCode()))
@@ -112,5 +113,17 @@ public final class ShoppingCartDtoConverter {
         item.quantity(),
         item.unitPrice().amount(),
         item.unitPrice().currency().getCurrencyCode());
+  }
+
+  /**
+   * Every answer spells a cart's status the same way, upper-case. Each value's spelling is written
+   * out, so renaming a member never changes what a client reads.
+   */
+  private static String spell(final CartStatus status) {
+    return switch (status) {
+      case ACTIVE -> "ACTIVE";
+      case COMPLETED -> "COMPLETED";
+      case ABANDONED -> "ABANDONED";
+    };
   }
 }

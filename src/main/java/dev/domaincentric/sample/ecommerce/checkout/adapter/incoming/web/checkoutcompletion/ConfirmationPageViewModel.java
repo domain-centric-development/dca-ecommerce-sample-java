@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionStatus;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.LineItemSnapshot;
 import java.math.BigDecimal;
@@ -25,13 +26,25 @@ public record ConfirmationPageViewModel(
   public static ConfirmationPageViewModel fromSnapshot(final CheckoutCartSnapshot snapshot) {
     return new ConfirmationPageViewModel(
         snapshot.sessionId().value(),
-        snapshot.status().name(),
+        statusOf(snapshot.status()),
         snapshot.orderReference(),
         snapshot.lineItems().stream().map(LineItemViewModel::fromSnapshot).toList(),
         TotalsViewModel.fromSnapshot(snapshot),
         BuyerInfoViewModel.fromSnapshot(snapshot),
         DeliveryViewModel.fromSnapshot(snapshot),
         PaymentViewModel.fromSnapshot(snapshot));
+  }
+
+  /** The status as the page names it, written out per value. */
+  private static String statusOf(final CheckoutSessionStatus status) {
+    return switch (status) {
+      case ACTIVE -> "ACTIVE";
+      case CONFIRMED -> "CONFIRMED";
+      case COMPLETED -> "COMPLETED";
+      case ABANDONED -> "ABANDONED";
+      case EXPIRED -> "EXPIRED";
+      case SUPERSEDED -> "SUPERSEDED";
+    };
   }
 
   /** Line item for order display. */

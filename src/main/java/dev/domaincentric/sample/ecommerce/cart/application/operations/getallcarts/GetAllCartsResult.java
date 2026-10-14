@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts;
 
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.List;
@@ -26,13 +27,13 @@ public record GetAllCartsResult(List<CartSummary> carts) {
    * @param total the total amount
    */
   public record CartSummary(
-      String cartId, String customerId, String status, int itemCount, Money total) {
+      String cartId, String customerId, CartStatus status, int itemCount, Money total) {
 
     static CartSummary from(final ShoppingCart cart) {
       return new CartSummary(
           cart.id().value(),
           cart.customerId().value(),
-          cart.status().name(),
+          cart.status(),
           cart.items().size(),
           cart.calculateTotal());
     }
