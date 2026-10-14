@@ -31,6 +31,13 @@ web adapter, each value with its code and its sentence; reading the parameter is
 switch over strings. The checkout steps' notices are `CheckoutStepNotice`. What must outlast a request lives in the
 database or in a cookie every instance can read.
 
+## Two shops, one shop
+
+This shop has a twin in the other language that implements the same specification. Where a plan shapes an
+element differently from the twin (another mechanism, another split, another name), the plan's `## Notes`
+answers three questions, "none" included: does the knowledge catalog need a node, could a rule check it, would
+a marker make it checkable. The difference is closed at that source before it is closed in the code.
+
 ## Integrations
 
 A payment provider over REST, outbound. A payment is `POST /payments` with the body
