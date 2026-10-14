@@ -35,20 +35,13 @@ class ProductCreationApiE2ETest {
       final String staffToken = staffToken(shop);
 
       final HttpResponse<String> response =
-          HttpClient.newHttpClient()
-              .send(
-                  HttpRequest.newBuilder(
-                          URI.create(ShopUnderTest.baseUrlOf(shop) + "/api/products"))
-                      .header("Authorization", "Bearer " + staffToken)
-                      .header("Content-Type", "application/json")
-                      .POST(
-                          HttpRequest.BodyPublishers.ofString(
-                              """
-                              {"sku":"MUG-002","name":"Aggregate Mug",\
-                              "description":"A mug with a consistency boundary.","imageUrl":"",\
-                              "price":14.99,"category":"Desk & Office","stock":12}"""))
-                      .build(),
-                  HttpResponse.BodyHandlers.ofString());
+          createProduct(
+              shop,
+              staffToken,
+              """
+              {"sku":"MUG-002","name":"Aggregate Mug",\
+              "description":"A mug with a consistency boundary.","imageUrl":"",\
+              "price":14.99,"category":"Desk & Office","stock":12}""");
 
       assertEquals(201, response.statusCode(), "status");
       final JsonNode product = new ObjectMapper().readTree(response.body());
@@ -69,24 +62,31 @@ class ProductCreationApiE2ETest {
       final String staffToken = staffToken(shop);
 
       final HttpResponse<String> response =
-          HttpClient.newHttpClient()
-              .send(
-                  HttpRequest.newBuilder(
-                          URI.create(ShopUnderTest.baseUrlOf(shop) + "/api/products"))
-                      .header("Authorization", "Bearer " + staffToken)
-                      .header("Content-Type", "application/json")
-                      .POST(
-                          HttpRequest.BodyPublishers.ofString(
-                              """
-                              {"sku":"ROUND-001","name":"Rounding Mug",\
-                              "price":14.995,"category":"Desk & Office","stock":5}"""))
-                      .build(),
-                  HttpResponse.BodyHandlers.ofString());
+          createProduct(
+              shop,
+              staffToken,
+              """
+              {"sku":"ROUND-001","name":"Rounding Mug",\
+              "price":14.995,"category":"Desk & Office","stock":5}""");
 
       assertEquals(201, response.statusCode(), "status: " + response.body());
       final JsonNode product = new ObjectMapper().readTree(response.body());
       assertEquals(15.00, product.path("price").asDouble(), "price: " + product);
     }
+  }
+
+  /** Sends {@code POST /api/products} with the staff token and the product as JSON. */
+  private static HttpResponse<String> createProduct(
+      final ConfigurableApplicationContext shop, final String staffToken, final String product)
+      throws Exception {
+    return HttpClient.newHttpClient()
+        .send(
+            HttpRequest.newBuilder(URI.create(ShopUnderTest.baseUrlOf(shop) + "/api/products"))
+                .header("Authorization", "Bearer " + staffToken)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(product))
+                .build(),
+            HttpResponse.BodyHandlers.ofString());
   }
 
   /**
