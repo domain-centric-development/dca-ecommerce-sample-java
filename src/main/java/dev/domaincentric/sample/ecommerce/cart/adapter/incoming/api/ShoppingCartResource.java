@@ -9,11 +9,10 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocar
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.createcart.CreateCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.createcart.CreateCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.createcart.CreateCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartResult;
@@ -49,7 +48,7 @@ public class ShoppingCartResource {
   private final CreateCartInputPort createCart;
   private final GetAllCartsInputPort getAllCarts;
   private final GetCartByIdInputPort getCartById;
-  private final GetOrCreateActiveCartInputPort getOrCreateActiveCart;
+  private final GetActiveCartInputPort getActiveCart;
   private final AddItemToCartInputPort addItemToCart;
   private final RemoveItemFromCartInputPort removeItemFromCart;
   private final ShoppingCartDtoConverter converter;
@@ -59,7 +58,7 @@ public class ShoppingCartResource {
       final CreateCartInputPort createCart,
       final GetAllCartsInputPort getAllCarts,
       final GetCartByIdInputPort getCartById,
-      final GetOrCreateActiveCartInputPort getOrCreateActiveCart,
+      final GetActiveCartInputPort getActiveCart,
       final AddItemToCartInputPort addItemToCart,
       final RemoveItemFromCartInputPort removeItemFromCart,
       final ShoppingCartDtoConverter converter,
@@ -67,7 +66,7 @@ public class ShoppingCartResource {
     this.createCart = createCart;
     this.getAllCarts = getAllCarts;
     this.getCartById = getCartById;
-    this.getOrCreateActiveCart = getOrCreateActiveCart;
+    this.getActiveCart = getActiveCart;
     this.addItemToCart = addItemToCart;
     this.removeItemFromCart = removeItemFromCart;
     this.converter = converter;
@@ -104,21 +103,21 @@ public class ShoppingCartResource {
 
   /**
    * The caller's active cart. The customer id in the path must name the caller; any other value is
-   * treated as a cart that does not exist for them.
+   * treated as a cart that does not exist for them. A read never opens a cart: a caller without an
+   * active cart gets {@code 404} and opens one with {@code POST /api/carts}.
    */
   @GetMapping("/customer/{customerId}/active")
-  public ResponseEntity<ShoppingCartDto> getOrCreateActiveCart(
-      @PathVariable final String customerId) {
+  public ResponseEntity<ShoppingCartDto> getActiveCart(@PathVariable final String customerId) {
     if (!currentCustomerId().equals(customerId)) {
       return ResponseEntity.notFound().build();
     }
 
-    final var response =
-        getOrCreateActiveCart.execute(new GetOrCreateActiveCartCommand(currentCustomerId()));
-
-    final GetCartByIdResult result =
-        getCartById.execute(new GetCartByIdQuery(response.cartId(), currentCustomerId()));
-    return ResponseEntity.ok(converter.toDto(result.cart().orElseThrow()));
+    return getActiveCart
+        .execute(new GetActiveCartQuery(customerId))
+        .cartId()
+        .flatMap(this::ownCart)
+        .map(cart -> ResponseEntity.ok(converter.toDto(cart)))
+        .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   @PostMapping("/{cartId}/items")

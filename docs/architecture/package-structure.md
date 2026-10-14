@@ -142,6 +142,9 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── getcartbyid/
 │   │   │   ├── GetCartByIdInputPort, GetCartByIdUseCase
 │   │   │   ├── GetCartByIdQuery, GetCartByIdResult
+│   │   ├── getactivecart/
+│   │   │   ├── GetActiveCartInputPort, GetActiveCartUseCase
+│   │   │   ├── GetActiveCartQuery, GetActiveCartResult
 │   │   ├── getorcreateactivecart/
 │   │   │   ├── GetOrCreateActiveCartInputPort, GetOrCreateActiveCartUseCase
 │   │   │   ├── GetOrCreateActiveCartCommand, GetOrCreateActiveCartResult

@@ -2,17 +2,16 @@ package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ui.Model;
@@ -47,15 +46,15 @@ public class MiniBasketControllerAdvice {
 
   private static final Logger LOG = LoggerFactory.getLogger(MiniBasketControllerAdvice.class);
 
-  private final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase;
+  private final GetActiveCartInputPort getActiveCartUseCase;
   private final GetCartByIdInputPort getCartByIdUseCase;
   private final IdentityProvider identityProvider;
 
   public MiniBasketControllerAdvice(
-      final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase,
+      final GetActiveCartInputPort getActiveCartUseCase,
       final GetCartByIdInputPort getCartByIdUseCase,
       final IdentityProvider identityProvider) {
-    this.getOrCreateActiveCartUseCase = getOrCreateActiveCartUseCase;
+    this.getActiveCartUseCase = getActiveCartUseCase;
     this.getCartByIdUseCase = getCartByIdUseCase;
     this.identityProvider = identityProvider;
   }
@@ -83,15 +82,17 @@ public class MiniBasketControllerAdvice {
     model.addAttribute("identity", identity);
 
     try {
-      final GetOrCreateActiveCartResult cartRef =
-          getOrCreateActiveCartUseCase.execute(
-              new GetOrCreateActiveCartCommand(identity.userId().value()));
+      final String customerId = identity.userId().value();
+      final Optional<EnrichedCart> activeCart =
+          getActiveCartUseCase
+              .execute(new GetActiveCartQuery(customerId))
+              .cartId()
+              .flatMap(
+                  cartId ->
+                      getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)).cart());
 
-      final GetCartByIdResult result =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartRef.cartId(), cartRef.customerId()));
-
-      if (result.found()) {
-        final EnrichedCart cart = result.cart().orElseThrow();
+      if (activeCart.isPresent()) {
+        final EnrichedCart cart = activeCart.get();
         populateMiniBasket(model, cart);
         return;
       }

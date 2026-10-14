@@ -7,6 +7,8 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocar
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.ArticleNotAvailableException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.InsufficientArticleStockException;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
@@ -15,6 +17,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartNotModifiableException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import java.util.Optional;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,16 +47,19 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class CartPageController {
 
   private final GetCartByIdInputPort getCartByIdUseCase;
+  private final GetActiveCartInputPort getActiveCartUseCase;
   private final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase;
   private final AddItemToCartInputPort addItemToCartUseCase;
   private final IdentityProvider identityProvider;
 
   public CartPageController(
       final GetCartByIdInputPort getCartByIdUseCase,
+      final GetActiveCartInputPort getActiveCartUseCase,
       final GetOrCreateActiveCartInputPort getOrCreateActiveCartUseCase,
       final AddItemToCartInputPort addItemToCartUseCase,
       final IdentityProvider identityProvider) {
     this.getCartByIdUseCase = getCartByIdUseCase;
+    this.getActiveCartUseCase = getActiveCartUseCase;
     this.getOrCreateActiveCartUseCase = getOrCreateActiveCartUseCase;
     this.addItemToCartUseCase = addItemToCartUseCase;
     this.identityProvider = identityProvider;
@@ -73,13 +79,17 @@ public class CartPageController {
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
-    // Get or create active cart for the current user
-    final GetOrCreateActiveCartResult cartResponse =
-        getOrCreateActiveCartUseCase.execute(new GetOrCreateActiveCartCommand(customerId));
+    // A visitor without an active cart sees an empty one; showing the page opens no cart.
+    final Optional<String> activeCartId =
+        getActiveCartUseCase.execute(new GetActiveCartQuery(customerId)).cartId();
+    if (activeCartId.isEmpty()) {
+      model.addAttribute("shoppingCart", CartPageViewModel.empty());
+      model.addAttribute("title", "Shopping Cart");
+      return "cart/view";
+    }
 
-    // Fetch cart details
     final GetCartByIdResult result =
-        getCartByIdUseCase.execute(new GetCartByIdQuery(cartResponse.cartId(), customerId));
+        getCartByIdUseCase.execute(new GetCartByIdQuery(activeCartId.get(), customerId));
 
     if (!result.found()) {
       return "error/404";

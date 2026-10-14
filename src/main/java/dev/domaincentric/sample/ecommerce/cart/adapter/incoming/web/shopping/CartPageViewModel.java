@@ -14,10 +14,10 @@ import org.jspecify.annotations.Nullable;
  * alerts, and checkout eligibility.
  */
 public record CartPageViewModel(
-    String cartId,
+    @Nullable String cartId,
     String status,
     List<LineItemViewModel> lineItems,
-    TotalsViewModel totals,
+    @Nullable TotalsViewModel totals,
     int itemCount,
     int totalQuantity,
     boolean hasAnyPriceChanges,
@@ -39,6 +39,14 @@ public record CartPageViewModel(
         totalQuantity,
         cart.hasAnyPriceChanges(),
         cart.isValidForCheckout());
+  }
+
+  /**
+   * The page of a visitor who has no active cart: empty, like a cart that holds nothing. Its status
+   * is the one an opened cart would have.
+   */
+  public static CartPageViewModel empty() {
+    return new CartPageViewModel(null, "ACTIVE", List.of(), null, 0, 0, false, false);
   }
 
   /** Checks if the cart is empty. */

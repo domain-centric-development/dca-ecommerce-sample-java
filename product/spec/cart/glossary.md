@@ -17,10 +17,14 @@ The Cart context groups its use cases into four features — domain-named naviga
 
 | Feature | Meaning | Use cases |
 |---------|---------|-----------|
-| `shopping` | Filling and reading the shopping cart while the customer shops | `createcart`, `getorcreateactivecart`, `getcartbyid`, `additemtocart`, `removeitemfromcart` |
+| `shopping` | Filling and reading the shopping cart while the customer shops | `createcart`, `getactivecart`, `getorcreateactivecart`, `getcartbyid`, `additemtocart`, `removeitemfromcart` |
 | `cartrecovery` | Recovering a guest cart on login — offering and applying a merge | `recovercart`, `getcartmergeoptions`, `mergecarts` |
 | `cartcheckout` | Reconciling the cart once Checkout confirms an order — the purchased units leave the cart (`completecart`) | `completecart` |
 | `operations` | Operating the shop — staff-only views across all carts | `getallcarts` |
+
+`getactivecart` is the query a page or a `GET` asks — it never opens a cart, and a customer without an active
+cart gets none (the cart page then shows an empty cart, the API answers `404`); `getorcreateactivecart` is the
+command that opens one when a change needs it, as adding a product does.
 
 `application/shared/` stays context-wide (`ShoppingCartRepository`, `ArticleDataPort`). The web
 adapters mirror `shopping` and `cartrecovery`; the REST resource serves every feature and stays under

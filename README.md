@@ -226,6 +226,11 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   │   ├── CreateCartUseCase.java
 │   │   │   │   ├── CreateCartCommand.java
 │   │   │   │   └── CreateCartResult.java
+│   │   │   ├── getactivecart/            # Use case: Get Active Cart (a query; opens no cart)
+│   │   │   │   ├── GetActiveCartInputPort.java
+│   │   │   │   ├── GetActiveCartUseCase.java
+│   │   │   │   ├── GetActiveCartQuery.java
+│   │   │   │   └── GetActiveCartResult.java
 │   │   │   ├── getorcreateactivecart/    # Use case: Get or Create Active Cart
 │   │   │   │   ├── GetOrCreateActiveCartInputPort.java
 │   │   │   │   ├── GetOrCreateActiveCartUseCase.java
