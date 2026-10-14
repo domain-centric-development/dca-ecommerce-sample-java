@@ -26,12 +26,14 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 /**
  * Unit tests for {@link ProfilePageController}.
@@ -69,6 +71,8 @@ class ProfilePageControllerTest {
   private ProfilePageController controller;
   private Model model;
 
+  private RedirectAttributesModelMap attributes;
+
   @BeforeEach
   void setUp() {
     getProfile = new TestGetProfile();
@@ -80,6 +84,7 @@ class ProfilePageControllerTest {
         new ProfilePageController(
             getProfile, changeProfile, identityProvider, tokenService, identitySession);
     model = new ExtendedModelMap();
+    attributes = new RedirectAttributesModelMap();
   }
 
   private void givenRegisteredIdentityWithAccessibleAccount() {
@@ -96,7 +101,7 @@ class ProfilePageControllerTest {
   void anonymousGetRedirectsToLogin() {
     identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
-    final String viewName = controller.showProfilePage(null, model);
+    final String viewName = controller.showProfilePage(model);
 
     assertNotEquals(
         ProfilePageController.VIEW_NAME,
@@ -114,7 +119,7 @@ class ProfilePageControllerTest {
   void anonymousGetDoesNotReadProfile() {
     identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
-    controller.showProfilePage(null, model);
+    controller.showProfilePage(model);
 
     assertTrue(
         getProfile.receivedQueries().isEmpty(),
@@ -127,7 +132,7 @@ class ProfilePageControllerTest {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getProfile.setResult(GetProfileResult.notFound());
 
-    assertEquals(LOGIN_REDIRECT, controller.showProfilePage(null, model));
+    assertEquals(LOGIN_REDIRECT, controller.showProfilePage(model));
     assertNull(
         model.getAttribute(ProfilePageController.MODEL_ATTRIBUTE),
         "no profile data may reach the model without an accessible account");
@@ -138,7 +143,7 @@ class ProfilePageControllerTest {
   void getWithAccessibleAccountRendersView() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    assertEquals("account/profile", controller.showProfilePage(null, model));
+    assertEquals("account/profile", controller.showProfilePage(model));
     assertEquals(
         List.of(new GetProfileQuery(USER_ID)),
         getProfile.receivedQueries(),
@@ -150,7 +155,7 @@ class ProfilePageControllerTest {
   void getSetsTitle() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showProfilePage(null, model);
+    controller.showProfilePage(model);
 
     assertEquals("My Profile", model.getAttribute("title"));
   }
@@ -160,7 +165,7 @@ class ProfilePageControllerTest {
   void getPreFillsStoredValues() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showProfilePage(null, model);
+    controller.showProfilePage(model);
 
     assertEquals(EMAIL, viewModel(model).email());
     assertEquals("1990-05-17", viewModel(model).dateOfBirth());
@@ -171,7 +176,7 @@ class ProfilePageControllerTest {
   void getExposesOwnerName() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showProfilePage(null, model);
+    controller.showProfilePage(model);
 
     assertEquals(FULL_NAME, viewModel(model).fullName());
   }
@@ -181,7 +186,8 @@ class ProfilePageControllerTest {
   void getWordsTheNoticeAsSuccessMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showProfilePage("profile-updated", model);
+    model.addAttribute(AccountPageNotice.KEY, "profile-updated");
+    controller.showProfilePage(model);
 
     assertEquals(
         "Your profile has been updated.",
@@ -194,7 +200,7 @@ class ProfilePageControllerTest {
   void getWithoutANoticeExposesNoSuccessMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showProfilePage(null, model);
+    controller.showProfilePage(model);
 
     assertNull(viewModel(model).successMessage());
   }
@@ -207,7 +213,7 @@ class ProfilePageControllerTest {
     identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
     final String viewName =
-        controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model);
+        controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertEquals(LOGIN_REDIRECT, viewName);
     assertTrue(
@@ -222,7 +228,7 @@ class ProfilePageControllerTest {
     changeProfile.setResult(
         ChangeProfileResult.changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
 
-    controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model);
+    controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertEquals(
         List.of(new ChangeProfileCommand(USER_ID, NEW_EMAIL, NEW_DATE_OF_BIRTH)),
@@ -236,7 +242,7 @@ class ProfilePageControllerTest {
     changeProfile.setResult(ChangeProfileResult.accountNotAccessible());
 
     final String viewName =
-        controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model);
+        controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertEquals(LOGIN_REDIRECT, viewName);
     assertEquals("/account/profile", queryParameter(viewName, "returnUrl"));
@@ -250,9 +256,13 @@ class ProfilePageControllerTest {
         ChangeProfileResult.changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
 
     final String viewName =
-        controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model);
+        controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
-    assertEquals("redirect:/account/profile?notice=profile-updated", viewName);
+    assertEquals("redirect:/account/profile", viewName);
+    assertEquals(
+        Map.of(AccountPageNotice.KEY, "profile-updated"),
+        attributes.getFlashAttributes(),
+        "the notice travels as a flash attribute, never in the address");
   }
 
   @Test
@@ -263,7 +273,7 @@ class ProfilePageControllerTest {
         ChangeProfileResult.changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
 
     controller.handleProfileUpdate(
-        NEW_EMAIL.toUpperCase(Locale.ROOT), NEW_DATE_OF_BIRTH_INPUT, model);
+        NEW_EMAIL.toUpperCase(Locale.ROOT), NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertEquals(
         List.of(new IssuedToken(UserId.of(USER_ID), NEW_EMAIL, Set.of("CUSTOMER"))),
@@ -283,7 +293,8 @@ class ProfilePageControllerTest {
     changeProfile.setResult(ChangeProfileResult.emailAlreadyInUse());
 
     final String viewName =
-        controller.handleProfileUpdate("taken@example.com", NEW_DATE_OF_BIRTH_INPUT, model);
+        controller.handleProfileUpdate(
+            "taken@example.com", NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertEquals("account/profile", viewName);
     assertEquals("This email address is already registered", viewModel(model).errorMessage());
@@ -305,7 +316,7 @@ class ProfilePageControllerTest {
     changeProfile.setResult(ChangeProfileResult.emailInvalid());
 
     final String viewName =
-        controller.handleProfileUpdate("not-an-email", NEW_DATE_OF_BIRTH_INPUT, model);
+        controller.handleProfileUpdate("not-an-email", NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertEquals("account/profile", viewName);
     assertEquals("Please enter a valid email address.", viewModel(model).errorMessage());
@@ -318,7 +329,7 @@ class ProfilePageControllerTest {
     givenRegisteredIdentityWithAccessibleAccount();
     changeProfile.setResult(ChangeProfileResult.emailAlreadyInUse());
 
-    controller.handleProfileUpdate("taken@example.com", NEW_DATE_OF_BIRTH_INPUT, model);
+    controller.handleProfileUpdate("taken@example.com", NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertTrue(
         tokenService.issuedTokens().isEmpty(), "a rejected change must not re-issue the token");
@@ -331,7 +342,7 @@ class ProfilePageControllerTest {
     givenRegisteredIdentityWithAccessibleAccount();
     changeProfile.setResult(ChangeProfileResult.emailInvalid());
 
-    controller.handleProfileUpdate("nope", NEW_DATE_OF_BIRTH_INPUT, model);
+    controller.handleProfileUpdate("nope", NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
     assertNull(viewModel(model).successMessage());
   }
@@ -341,7 +352,8 @@ class ProfilePageControllerTest {
   void unreadableDateReRendersForm() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    final String viewName = controller.handleProfileUpdate(NEW_EMAIL, "not-a-date", model);
+    final String viewName =
+        controller.handleProfileUpdate(NEW_EMAIL, "not-a-date", model, attributes);
 
     assertEquals("account/profile", viewName);
     assertFalse(
@@ -360,7 +372,8 @@ class ProfilePageControllerTest {
   void blankDateReRendersForm() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    assertEquals("account/profile", controller.handleProfileUpdate(NEW_EMAIL, "", model));
+    assertEquals(
+        "account/profile", controller.handleProfileUpdate(NEW_EMAIL, "", model, attributes));
     assertTrue(changeProfile.receivedCommands().isEmpty());
   }
 

@@ -49,8 +49,7 @@ class EnterBuyerDetailsIntegrationTest {
     cookies.clear();
     addToCart("Domain-Driven Design");
     final MvcResult started = submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
   }
 
   @Test
@@ -119,7 +118,7 @@ class EnterBuyerDetailsIntegrationTest {
     final MockHttpServletRequestBuilder request = MockMvcRequestBuilders.post(form.attr("action"));
     values.forEach(request::param);
     final MvcResult posted = perform(request);
-    assertThat(URI.create(posted.getResponse().getRedirectedUrl()).getPath()).isEqualTo(BUYER_STEP);
+    assertThat(posted.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
 
     final MockHttpServletRequestBuilder follow =
         get(URI.create(posted.getResponse().getRedirectedUrl()));

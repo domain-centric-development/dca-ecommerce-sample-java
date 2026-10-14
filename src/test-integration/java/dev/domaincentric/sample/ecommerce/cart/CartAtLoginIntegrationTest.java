@@ -71,8 +71,7 @@ class CartAtLoginIntegrationTest {
     guest.addToCart("Domain-Driven Design");
     final MvcResult started =
         guest.submit(guest.page(CART).selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
 
     final Landing landed = guest.logIn("/login?returnUrl=" + BUYER_STEP, email);
 
@@ -92,8 +91,7 @@ class CartAtLoginIntegrationTest {
     final MvcResult started =
         visitor.submit(visitor.page(CART).selectFirst("[data-test=cart-checkout-form]"));
 
-    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
     assertThat(visitor.page(BUYER_STEP).selectFirst("[data-test=buyer-form]")).isNotNull();
   }
 

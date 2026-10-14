@@ -1,7 +1,6 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
 import com.microsoft.playwright.Page;
-import dev.domaincentric.sample.ecommerce.e2e.PageAddress;
 
 /**
  * Page object for the cart merge options page.
@@ -115,7 +114,7 @@ public class CartMergePage extends BasePage {
    */
   public CartPage submitMerge() {
     click(MERGE_SUBMIT_BUTTON);
-    page.waitForURL(PageAddress.of(BASE_URL + "/cart"));
+    page.waitForURL(BASE_URL + "/cart");
     return new CartPage(page);
   }
 

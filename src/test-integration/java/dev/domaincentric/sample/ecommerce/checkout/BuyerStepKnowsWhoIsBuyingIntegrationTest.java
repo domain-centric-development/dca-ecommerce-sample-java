@@ -199,8 +199,7 @@ class BuyerStepKnowsWhoIsBuyingIntegrationTest {
       for (final Element field : method.select("input[name]")) {
         delivery.param(field.attr("name"), field.val());
       }
-      assertThat(URI.create(perform(delivery).getResponse().getRedirectedUrl()).getPath())
-          .isEqualTo(PAYMENT_STEP);
+      assertThat(perform(delivery).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
 
       final Element paymentForm = page(PAYMENT_STEP).selectFirst("[data-test=payment-form]");
       final MockHttpServletRequestBuilder payment =
@@ -215,13 +214,11 @@ class BuyerStepKnowsWhoIsBuyingIntegrationTest {
               .findFirst()
               .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
       payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-      assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
-          .isEqualTo(REVIEW_STEP);
+      assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
 
       final MvcResult placed =
           submit(page(REVIEW_STEP).selectFirst("[data-test=review-confirm-form]"));
-      assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
-          .isEqualTo(CONFIRMATION);
+      assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(CONFIRMATION);
       return page(CONFIRMATION);
     }
 

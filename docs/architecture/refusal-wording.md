@@ -135,10 +135,11 @@ Buyer, delivery and payment step:
 |---|---|
 | `CheckoutStepNotCompletedException`, `CheckoutStepOutOfOrderException` | Please complete the previous checkout steps first. |
 
-On the delivery and payment step, and on placing the order, this sentence is shown on the step that is still open.
-The redirect carries it as the query parameter `notice=earlier-steps-first` and not in the session, so any instance
-of the shop that answers can show it. A step that may not be shown passes the notice on to the step it sends the
-guest to instead. Only a known code is shown; any other value of `notice` is ignored.
+On the delivery and payment step, and on placing the order, this sentence is shown on the step that is still open:
+the refused submission asks the domain which step that is and sends the guest there directly. The redirect hands it
+the code `earlier-steps-first` in the sealed notice cookie, addressed to that step's page — not in the address and
+not in the session, so any instance of the shop that answers can show it. A step that may not be shown passes no
+notice on; it only redirects. Only a known code is shown; any other code is ignored.
 
 | Step | Argument exception | Any other refusal |
 |---|---|---|

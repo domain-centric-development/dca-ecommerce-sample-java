@@ -71,7 +71,7 @@ class RefusedPasswordChangeIntegrationTest {
 
     final String afterLogin = visitor.logIn("/login", EMAIL, PASSWORD);
 
-    assertThat(afterLogin).isEqualTo("/cart?notice=welcome-back");
+    assertThat(afterLogin).isEqualTo("/cart");
     assertThat(element(visitor.page(afterLogin), "user-greeting").text())
         .isEqualTo("Welcome, " + EMAIL);
   }

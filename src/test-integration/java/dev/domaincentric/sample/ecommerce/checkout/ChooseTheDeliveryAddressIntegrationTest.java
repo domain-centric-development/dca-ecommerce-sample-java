@@ -50,8 +50,7 @@ class ChooseTheDeliveryAddressIntegrationTest {
     cookies.clear();
     addToCart("Domain-Driven Design");
     final MvcResult started = submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
 
     final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
     buyerForm.selectFirst("input[name=email]").val("jane@example.com");
@@ -59,8 +58,7 @@ class ChooseTheDeliveryAddressIntegrationTest {
     buyerForm.selectFirst("input[name=lastName]").val("Doe");
     buyerForm.selectFirst("input[name=phone]").val("+49 30 1234567");
     final MvcResult buyerSent = submit(buyerForm);
-    assertThat(URI.create(buyerSent.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(DELIVERY_STEP);
+    assertThat(buyerSent.getResponse().getRedirectedUrl()).isEqualTo(DELIVERY_STEP);
   }
 
   @Test
@@ -206,8 +204,7 @@ class ChooseTheDeliveryAddressIntegrationTest {
     final MockHttpServletRequestBuilder request = MockMvcRequestBuilders.post(form.attr("action"));
     values.forEach(request::param);
     final MvcResult posted = perform(request);
-    assertThat(URI.create(posted.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(DELIVERY_STEP);
+    assertThat(posted.getResponse().getRedirectedUrl()).isEqualTo(DELIVERY_STEP);
 
     final MockHttpServletRequestBuilder follow =
         get(URI.create(posted.getResponse().getRedirectedUrl()));

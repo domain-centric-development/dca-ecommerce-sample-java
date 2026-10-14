@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
-import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions.GetShippingOptionsInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions.GetShippingOptionsQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions.GetShippingOptionsResult;
@@ -15,16 +14,17 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.math.BigDecimal;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the delivery/shipping address page in checkout.
@@ -71,15 +71,12 @@ public class DeliveryPageController {
    * and available shipping options, then displays the delivery form. If no active session is found,
    * redirects to cart with an error.
    *
-   * @param noticeCode the code of the notice a redirect brought along, if any
-   * @param model the Spring MVC model
+   * @param model the Spring MVC model, holding the notice a redirect handed the page, if any
+   * @param attributes the attributes of a redirect away from the page
    * @return the delivery.pug template or redirect on error
    */
   @GetMapping("/delivery")
-  public String showDeliveryForm(
-      @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
-          final @Nullable String noticeCode,
-      final Model model) {
+  public String showDeliveryForm(final Model model, final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -90,7 +87,7 @@ public class DeliveryPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -100,10 +97,9 @@ public class DeliveryPageController {
                 activeSession.sessionId(), customerId, CheckoutStep.DELIVERY));
 
     if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
     }
-    final Optional<String> denied =
-        CheckoutStepPage.redirectIfDenied(result.stepAccess(), noticeCode, null, model);
+    final Optional<String> denied = CheckoutStepPage.redirectIfDenied(result.stepAccess(), model);
     if (denied.isPresent()) {
       return denied.get();
     }
@@ -152,7 +148,8 @@ public class DeliveryPageController {
       @RequestParam final String shippingOptionName,
       @RequestParam final String estimatedDelivery,
       @RequestParam final BigDecimal shippingCost,
-      @RequestParam final String currencyCode) {
+      @RequestParam final String currencyCode,
+      final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -163,11 +160,13 @@ public class DeliveryPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     return CheckoutStepPage.submitting(
         CheckoutStep.DELIVERY,
+        () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.DELIVERY),
+        attributes,
         () -> {
           submitDeliveryInputPort.execute(
               new SubmitDeliveryCommand(
@@ -187,5 +186,13 @@ public class DeliveryPageController {
 
           return "redirect:/checkout/payment";
         });
+  }
+
+  /** The domain's decision whether the step may be opened, for a submission sent too early. */
+  private StepAccess stepAccess(
+      final String sessionId, final String customerId, final CheckoutStep step) {
+    return getCheckoutSessionInputPort
+        .execute(GetCheckoutSessionQuery.forStep(sessionId, customerId, step))
+        .stepAccess();
   }
 }

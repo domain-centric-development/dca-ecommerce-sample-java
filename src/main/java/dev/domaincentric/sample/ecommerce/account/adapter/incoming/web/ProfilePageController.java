@@ -13,13 +13,13 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.Identi
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
 import java.time.LocalDate;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the "My Profile" page of the account area.
@@ -78,15 +78,11 @@ public class ProfilePageController {
   /**
    * Displays the profile page.
    *
-   * @param noticeCode the code of the notice a redirect brought along, if any
-   * @param model Spring MVC model
+   * @param model Spring MVC model, holding the notice a redirect handed the page, if any
    * @return view name {@value #VIEW_NAME}, or a redirect to the login page
    */
   @GetMapping
-  public String showProfilePage(
-      @RequestParam(name = AccountPageNotice.PARAMETER, required = false)
-          final @Nullable String noticeCode,
-      final Model model) {
+  public String showProfilePage(final Model model) {
     final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
@@ -97,7 +93,7 @@ public class ProfilePageController {
 
     return result
         .profile()
-        .map(profile -> renderProfile(model, profile, AccountPageNotice.fromCode(noticeCode)))
+        .map(profile -> renderProfile(model, profile, AccountPageNotice.in(model)))
         .orElse(LOGIN_REDIRECT);
   }
 
@@ -122,11 +118,15 @@ public class ProfilePageController {
    * @param email the submitted email address
    * @param dateOfBirth the submitted date of birth of the account's owner, as the browser sent it
    * @param model Spring MVC model, used on the error re-render path
+   * @param attributes the redirect's attributes, which take the page's notice
    * @return view name {@value #VIEW_NAME} on error, a redirect otherwise
    */
   @PostMapping
   public String handleProfileUpdate(
-      @RequestParam final String email, @RequestParam final String dateOfBirth, final Model model) {
+      @RequestParam final String email,
+      @RequestParam final String dateOfBirth,
+      final Model model,
+      final RedirectAttributes attributes) {
     final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
@@ -144,7 +144,7 @@ public class ProfilePageController {
     return switch (result.outcome()) {
       case CHANGED -> {
         reIssueToken(identity, result.profile().orElseThrow().email());
-        yield AccountPageNotice.PROFILE_UPDATED.redirectTo(PROFILE_PATH);
+        yield AccountPageNotice.PROFILE_UPDATED.redirectTo(PROFILE_PATH, attributes);
       }
       case ACCOUNT_NOT_ACCESSIBLE -> LOGIN_REDIRECT;
       case EMAIL_ALREADY_IN_USE ->

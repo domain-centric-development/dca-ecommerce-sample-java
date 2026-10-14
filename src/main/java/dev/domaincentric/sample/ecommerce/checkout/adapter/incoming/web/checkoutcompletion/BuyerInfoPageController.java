@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
-import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
@@ -12,15 +11,16 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the buyer information page in checkout.
@@ -64,15 +64,12 @@ public class BuyerInfoPageController {
    * and displays the buyer info form. If no active session is found, redirects to cart with an
    * error.
    *
-   * @param noticeCode the code of the notice a redirect brought along, if any
-   * @param model the Spring MVC model
+   * @param model the Spring MVC model, holding the notice a redirect handed the page, if any
+   * @param attributes the attributes of a redirect away from the page
    * @return the buyer.pug template or redirect on error
    */
   @GetMapping("/buyer")
-  public String showBuyerInfoForm(
-      @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
-          final @Nullable String noticeCode,
-      final Model model) {
+  public String showBuyerInfoForm(final Model model, final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -83,7 +80,7 @@ public class BuyerInfoPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -93,10 +90,9 @@ public class BuyerInfoPageController {
                 activeSession.sessionId(), customerId, CheckoutStep.BUYER_INFO));
 
     if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
     }
-    final Optional<String> denied =
-        CheckoutStepPage.redirectIfDenied(result.stepAccess(), noticeCode, null, model);
+    final Optional<String> denied = CheckoutStepPage.redirectIfDenied(result.stepAccess(), model);
     if (denied.isPresent()) {
       return denied.get();
     }
@@ -128,7 +124,8 @@ public class BuyerInfoPageController {
       @RequestParam final String email,
       @RequestParam final String firstName,
       @RequestParam final String lastName,
-      @RequestParam final String phone) {
+      @RequestParam final String phone,
+      final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -139,11 +136,13 @@ public class BuyerInfoPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     return CheckoutStepPage.submitting(
         CheckoutStep.BUYER_INFO,
+        () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.BUYER_INFO),
+        attributes,
         () -> {
           submitBuyerInfoInputPort.execute(
               new SubmitBuyerInfoCommand(
@@ -151,5 +150,13 @@ public class BuyerInfoPageController {
 
           return "redirect:/checkout/delivery";
         });
+  }
+
+  /** The domain's decision whether the step may be opened, for a submission sent too early. */
+  private StepAccess stepAccess(
+      final String sessionId, final String customerId, final CheckoutStep step) {
+    return getCheckoutSessionInputPort
+        .execute(GetCheckoutSessionQuery.forStep(sessionId, customerId, step))
+        .stepAccess();
   }
 }

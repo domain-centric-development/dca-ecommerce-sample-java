@@ -19,13 +19,13 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartNotModifiableException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for rendering shopping cart pages using Pug templates.
@@ -74,19 +74,13 @@ public class CartPageController {
    * <p>Returns the cart details rendered using the Pug template. The user's identity is obtained
    * from the JWT token via IdentityProvider.
    *
-   * @param noticeCode the code of the notice a redirect brought along, if any
-   * @param count the number that notice names, if any
-   * @param model Spring MVC model to pass data to the view
+   * @param model Spring MVC model to pass data to the view, holding the notice a redirect handed
+   *     the page, if any
    * @return view name "cart/view" which resolves to templates/cart/view.pug
    */
   @GetMapping
-  public String showCart(
-      @RequestParam(name = CartPageNotice.PARAMETER, required = false)
-          final @Nullable String noticeCode,
-      @RequestParam(name = CartPageNotice.COUNT_PARAMETER, required = false)
-          final @Nullable Integer count,
-      final Model model) {
-    CartPageNotice.show(model, noticeCode, count);
+  public String showCart(final Model model) {
+    CartPageNotice.show(model);
 
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
@@ -130,11 +124,14 @@ public class CartPageController {
    *
    * @param productId the product ID to add
    * @param quantity the quantity to add (default: 1)
+   * @param attributes the redirect's attributes, which take the cart page's notice
    * @return redirect to cart view
    */
   @PostMapping("/add-product")
   public String addProductToCart(
-      @RequestParam final String productId, @RequestParam(defaultValue = "1") final int quantity) {
+      @RequestParam final String productId,
+      @RequestParam(defaultValue = "1") final int quantity,
+      final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -149,11 +146,11 @@ public class CartPageController {
         new AddItemToCartCommand(cartResponse.cartId(), customerId, productId, quantity);
     try {
       addItemToCartUseCase.execute(command);
-      return CartPageNotice.PRODUCT_ADDED.redirectTo(CART_PATH);
+      return CartPageNotice.PRODUCT_ADDED.redirectTo(CART_PATH, attributes);
     } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
       // The context's own refusals, plus the argument exception a form field still reaches a value
       // object with.
-      return redirectFor(e);
+      return redirectFor(e, attributes);
     }
   }
 
@@ -161,16 +158,20 @@ public class CartPageController {
    * The cart page with the notice for a refusal: chosen by the failure's type, the number it names
    * taken from its values. The failure's message is for the log, never for the customer.
    */
-  private static String redirectFor(final RuntimeException failure) {
+  private static String redirectFor(
+      final RuntimeException failure, final RedirectAttributes attributes) {
     return switch (failure) {
       case InsufficientArticleStockException e ->
-          CartPageNotice.NOT_ENOUGH_STOCK.redirectTo(CART_PATH, e.requested());
+          CartPageNotice.NOT_ENOUGH_STOCK.redirectTo(CART_PATH, e.requested(), attributes);
       case ArticleNotAvailableException e ->
-          CartPageNotice.PRODUCT_UNAVAILABLE.redirectTo(CART_PATH);
-      case CartNotFoundException e -> CartPageNotice.CART_NOT_FOUND.redirectTo(CART_PATH);
-      case CartNotModifiableException e -> CartPageNotice.CART_NOT_MODIFIABLE.redirectTo(CART_PATH);
-      case IllegalArgumentException e -> CartPageNotice.INVALID_QUANTITY.redirectTo(CART_PATH);
-      default -> CartPageNotice.PRODUCT_NOT_ADDED.redirectTo(CART_PATH);
+          CartPageNotice.PRODUCT_UNAVAILABLE.redirectTo(CART_PATH, attributes);
+      case CartNotFoundException e ->
+          CartPageNotice.CART_NOT_FOUND.redirectTo(CART_PATH, attributes);
+      case CartNotModifiableException e ->
+          CartPageNotice.CART_NOT_MODIFIABLE.redirectTo(CART_PATH, attributes);
+      case IllegalArgumentException e ->
+          CartPageNotice.INVALID_QUANTITY.redirectTo(CART_PATH, attributes);
+      default -> CartPageNotice.PRODUCT_NOT_ADDED.redirectTo(CART_PATH, attributes);
     };
   }
 }

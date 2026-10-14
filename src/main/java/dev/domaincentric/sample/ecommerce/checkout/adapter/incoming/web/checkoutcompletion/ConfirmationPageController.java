@@ -15,12 +15,14 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfir
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for order confirmation in checkout.
@@ -69,7 +71,7 @@ public class ConfirmationPageController {
    * @return redirect to confirmation page or back to review on error
    */
   @PostMapping("/confirm")
-  public String confirmOrder() {
+  public String confirmOrder(final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -80,11 +82,13 @@ public class ConfirmationPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     return CheckoutStepPage.submitting(
         CheckoutStep.REVIEW,
+        () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.REVIEW),
+        attributes,
         () -> {
           confirmCheckoutInputPort.execute(
               new ConfirmCheckoutCommand(activeSession.sessionId(), customerId));
@@ -101,10 +105,11 @@ public class ConfirmationPageController {
    * after the checkout has been confirmed.
    *
    * @param model the Spring MVC model
+   * @param attributes the attributes of a redirect away from the page
    * @return the confirmation.pug template or redirect on error
    */
   @GetMapping("/confirmation")
-  public String showConfirmationPage(final Model model) {
+  public String showConfirmationPage(final Model model, final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -116,7 +121,7 @@ public class ConfirmationPageController {
             GetConfirmedCheckoutSessionQuery.of(customerId));
 
     if (!confirmedSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_CONFIRMED_ORDER);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_CONFIRMED_ORDER, attributes);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -126,11 +131,13 @@ public class ConfirmationPageController {
                 confirmedSession.sessionId(), customerId, CheckoutStep.CONFIRMATION));
 
     if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
     }
     if (!result.stepAccess().granted()) {
+      // Its own refusal, never one handed on. Not reachable today: the session looked up above is
+      // confirmed or completed, and the domain grants either the confirmation.
       return CheckoutRoutes.redirectFor(
-          result.stepAccess(), CheckoutStepNotice.ORDER_NOT_CONFIRMED);
+          result.stepAccess(), CheckoutStepNotice.ORDER_NOT_CONFIRMED, attributes);
     }
 
     // Convert to page-specific ViewModel
@@ -141,5 +148,13 @@ public class ConfirmationPageController {
     model.addAttribute("title", "Order Confirmed - Thank You!");
 
     return "checkout/confirmation";
+  }
+
+  /** The domain's decision whether the step may be opened, for a submission sent too early. */
+  private StepAccess stepAccess(
+      final String sessionId, final String customerId, final CheckoutStep step) {
+    return getCheckoutSessionInputPort
+        .execute(GetCheckoutSessionQuery.forStep(sessionId, customerId, step))
+        .stepAccess();
   }
 }

@@ -25,11 +25,13 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 /**
  * Unit tests for {@link ChangePasswordPageController}.
@@ -59,6 +61,8 @@ class ChangePasswordPageControllerTest {
   private ChangePasswordPageController controller;
   private Model model;
 
+  private RedirectAttributesModelMap attributes;
+
   @BeforeEach
   void setUp() {
     changePassword = new TestChangePassword();
@@ -67,6 +71,7 @@ class ChangePasswordPageControllerTest {
     controller =
         new ChangePasswordPageController(changePassword, getAccountOverview, identityProvider);
     model = new ExtendedModelMap();
+    attributes = new RedirectAttributesModelMap();
   }
 
   private void givenRegisteredIdentityWithAccessibleAccount() {
@@ -81,7 +86,7 @@ class ChangePasswordPageControllerTest {
   void anonymousGetRedirectsToLogin() {
     identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
-    final String viewName = controller.showChangePasswordPage(null, model);
+    final String viewName = controller.showChangePasswordPage(model);
 
     assertNotEquals(
         ChangePasswordPageController.VIEW_NAME,
@@ -95,7 +100,7 @@ class ChangePasswordPageControllerTest {
   void anonymousGetDoesNotInvokePort() {
     identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
-    controller.showChangePasswordPage(null, model);
+    controller.showChangePasswordPage(model);
 
     assertTrue(
         changePassword.receivedCommands().isEmpty(),
@@ -108,7 +113,7 @@ class ChangePasswordPageControllerTest {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getAccountOverview.setResult(GetAccountOverviewResult.notFound());
 
-    assertEquals(LOGIN_REDIRECT, controller.showChangePasswordPage(null, model));
+    assertEquals(LOGIN_REDIRECT, controller.showChangePasswordPage(model));
   }
 
   @Test
@@ -116,7 +121,7 @@ class ChangePasswordPageControllerTest {
   void getWithAccessibleAccountRendersView() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    assertEquals("account/change-password", controller.showChangePasswordPage(null, model));
+    assertEquals("account/change-password", controller.showChangePasswordPage(model));
     assertEquals(
         List.of(new GetAccountOverviewQuery(USER_ID)),
         getAccountOverview.receivedQueries(),
@@ -128,7 +133,7 @@ class ChangePasswordPageControllerTest {
   void getDiscardsAccountProjection() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showChangePasswordPage(null, model);
+    controller.showChangePasswordPage(model);
 
     for (final Object attribute : model.asMap().values()) {
       assertFalse(
@@ -143,7 +148,7 @@ class ChangePasswordPageControllerTest {
   void getSetsTitle() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showChangePasswordPage(null, model);
+    controller.showChangePasswordPage(model);
 
     assertEquals("Change Password", model.getAttribute("title"));
   }
@@ -153,7 +158,7 @@ class ChangePasswordPageControllerTest {
   void getExposesViewModel() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showChangePasswordPage(null, model);
+    controller.showChangePasswordPage(model);
 
     assertInstanceOf(
         ChangePasswordPageViewModel.class,
@@ -166,7 +171,8 @@ class ChangePasswordPageControllerTest {
   void getWordsTheNoticeAsSuccessMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showChangePasswordPage("password-changed", model);
+    model.addAttribute(AccountPageNotice.KEY, "password-changed");
+    controller.showChangePasswordPage(model);
 
     assertEquals(
         "Your password has been changed.",
@@ -179,7 +185,7 @@ class ChangePasswordPageControllerTest {
   void getWithoutANoticeExposesNoSuccessMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.showChangePasswordPage(null, model);
+    controller.showChangePasswordPage(model);
 
     assertEquals(null, viewModel(model).successMessage());
   }
@@ -191,7 +197,7 @@ class ChangePasswordPageControllerTest {
   void anonymousPostRedirectsToLogin() {
     identityProvider.setIdentity(TestIdentity.anonymous(UserId.of(USER_ID)));
 
-    final String viewName = controller.handleChangePassword(CURRENT, NEW, NEW, model);
+    final String viewName = controller.handleChangePassword(CURRENT, NEW, NEW, model, attributes);
 
     assertEquals(LOGIN_REDIRECT, viewName);
     assertTrue(
@@ -204,7 +210,8 @@ class ChangePasswordPageControllerTest {
   void confirmationMismatchReRendersWithoutInvokingPort() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    final String viewName = controller.handleChangePassword(CURRENT, NEW, "Different1", model);
+    final String viewName =
+        controller.handleChangePassword(CURRENT, NEW, "Different1", model, attributes);
 
     assertEquals("account/change-password", viewName);
     assertTrue(
@@ -217,7 +224,7 @@ class ChangePasswordPageControllerTest {
   void confirmationMismatchExposesMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
 
-    controller.handleChangePassword(CURRENT, NEW, "Different1", model);
+    controller.handleChangePassword(CURRENT, NEW, "Different1", model, attributes);
 
     assertEquals("New password and confirmation do not match", viewModel(model).errorMessage());
   }
@@ -228,7 +235,7 @@ class ChangePasswordPageControllerTest {
     givenRegisteredIdentityWithAccessibleAccount();
     changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
 
-    controller.handleChangePassword("WrongPassw0rd", NEW, "Different1", model);
+    controller.handleChangePassword("WrongPassw0rd", NEW, "Different1", model, attributes);
 
     assertEquals("New password and confirmation do not match", viewModel(model).errorMessage());
     assertTrue(
@@ -243,7 +250,7 @@ class ChangePasswordPageControllerTest {
     changePassword.setResult(ChangePasswordResult.newPasswordRejected(PasswordRule.NO_DIGIT));
 
     final String viewName =
-        controller.handleChangePassword(CURRENT, "Weakpassword", "Weakpassword", model);
+        controller.handleChangePassword(CURRENT, "Weakpassword", "Weakpassword", model, attributes);
 
     assertEquals("account/change-password", viewName);
     assertEquals("Password must contain a digit.", viewModel(model).errorMessage());
@@ -255,7 +262,8 @@ class ChangePasswordPageControllerTest {
     givenRegisteredIdentityWithAccessibleAccount();
     changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
 
-    final String viewName = controller.handleChangePassword("WrongPassw0rd", NEW, NEW, model);
+    final String viewName =
+        controller.handleChangePassword("WrongPassw0rd", NEW, NEW, model, attributes);
 
     assertEquals("account/change-password", viewName);
     assertEquals("Current password is not correct", viewModel(model).errorMessage());
@@ -267,7 +275,7 @@ class ChangePasswordPageControllerTest {
     givenRegisteredIdentityWithAccessibleAccount();
     changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
 
-    controller.handleChangePassword("WrongPassw0rd", NEW, NEW, model);
+    controller.handleChangePassword("WrongPassw0rd", NEW, NEW, model, attributes);
 
     for (final Object attribute : model.asMap().values()) {
       final String rendered = String.valueOf(attribute);
@@ -283,9 +291,13 @@ class ChangePasswordPageControllerTest {
     givenRegisteredIdentityWithAccessibleAccount();
     changePassword.setResult(ChangePasswordResult.changed());
 
-    final String viewName = controller.handleChangePassword(CURRENT, NEW, NEW, model);
+    final String viewName = controller.handleChangePassword(CURRENT, NEW, NEW, model, attributes);
 
-    assertEquals("redirect:/account/change-password?notice=password-changed", viewName);
+    assertEquals("redirect:/account/change-password", viewName);
+    assertEquals(
+        Map.of(AccountPageNotice.KEY, "password-changed"),
+        attributes.getFlashAttributes(),
+        "the notice travels as a flash attribute, never in the address");
     assertEquals(
         List.of(new ChangePasswordCommand(USER_ID, CURRENT, NEW)),
         changePassword.receivedCommands(),
@@ -298,7 +310,7 @@ class ChangePasswordPageControllerTest {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     changePassword.setResult(ChangePasswordResult.accountNotAccessible());
 
-    final String viewName = controller.handleChangePassword(CURRENT, NEW, NEW, model);
+    final String viewName = controller.handleChangePassword(CURRENT, NEW, NEW, model, attributes);
 
     assertEquals(LOGIN_REDIRECT, viewName);
     assertEquals(

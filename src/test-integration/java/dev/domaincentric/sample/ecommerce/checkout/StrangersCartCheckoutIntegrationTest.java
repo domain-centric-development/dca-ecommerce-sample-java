@@ -55,7 +55,7 @@ class StrangersCartCheckoutIntegrationTest {
 
     final MvcResult refused = stranger.submit(strangersForm);
 
-    assertThat(URI.create(refused.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
+    assertThat(refused.getResponse().getRedirectedUrl()).isEqualTo(CART);
     assertThat(errorOn(stranger.followed(refused))).isEqualTo("Your cart could not be found.");
     final Document ownersBuyerStep = owner.page(BUYER_STEP);
     assertThat(summaryOf(ownersBuyerStep)).containsExactly("Domain-Driven Design x1");

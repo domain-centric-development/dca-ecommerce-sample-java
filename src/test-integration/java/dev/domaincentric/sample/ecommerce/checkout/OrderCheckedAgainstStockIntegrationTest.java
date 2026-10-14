@@ -98,7 +98,7 @@ class OrderCheckedAgainstStockIntegrationTest {
 
     final MvcResult proceeded = guest.submit(outdatedForm);
 
-    assertThat(URI.create(proceeded.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
+    assertThat(proceeded.getResponse().getRedirectedUrl()).isEqualTo(CART);
     assertThat(cartErrorOn(guest.followed(proceeded)))
         .startsWith("Cannot start checkout, 1 item(s) unavailable or out of stock");
   }
@@ -117,7 +117,7 @@ class OrderCheckedAgainstStockIntegrationTest {
 
     final MvcResult proceeded = guest.submit(outdatedForm);
 
-    assertThat(URI.create(proceeded.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
+    assertThat(proceeded.getResponse().getRedirectedUrl()).isEqualTo(CART);
     assertThat(cartErrorOn(guest.followed(proceeded))).isEqualTo("Cannot check out an empty cart.");
   }
 
@@ -132,14 +132,12 @@ class OrderCheckedAgainstStockIntegrationTest {
 
     final MvcResult placed = guest.submit(confirmForm);
 
-    assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(REVIEW_STEP);
+    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
     final Document review = guest.followed(placed);
     assertThat(review.selectFirst("[data-test=review-error-message]")).isNotNull();
     assertThat(review.selectFirst("[data-test=review-error-message]").text()).isNotBlank();
     assertThat(review.selectFirst("[data-test=confirmation-title]")).isNull();
-    assertThat(
-            URI.create(guest.perform(get(CONFIRMATION)).getResponse().getRedirectedUrl()).getPath())
+    assertThat(guest.perform(get(CONFIRMATION)).getResponse().getRedirectedUrl())
         .as("no confirmed order to show")
         .isEqualTo(CART);
   }
@@ -173,8 +171,7 @@ class OrderCheckedAgainstStockIntegrationTest {
     void placeTheOrderFromTheCart() throws Exception {
       final MvcResult placed =
           submit(walkToTheReview().selectFirst("[data-test=review-confirm-form]"));
-      assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
-          .isEqualTo(CONFIRMATION);
+      assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(CONFIRMATION);
       page(CONFIRMATION);
     }
 
@@ -184,8 +181,7 @@ class OrderCheckedAgainstStockIntegrationTest {
      */
     Document walkToTheReview() throws Exception {
       final MvcResult started = submit(page(CART).selectFirst("[data-test=cart-checkout-form]"));
-      assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-          .isEqualTo(BUYER_STEP);
+      assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
 
       final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
       buyerForm.selectFirst("input[name=email]").val("jane@example.com");
@@ -213,8 +209,7 @@ class OrderCheckedAgainstStockIntegrationTest {
       for (final Element field : method.select("input[name]")) {
         delivery.param(field.attr("name"), field.val());
       }
-      assertThat(URI.create(perform(delivery).getResponse().getRedirectedUrl()).getPath())
-          .isEqualTo(PAYMENT_STEP);
+      assertThat(perform(delivery).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
 
       final Element paymentForm = page(PAYMENT_STEP).selectFirst("[data-test=payment-form]");
       final MockHttpServletRequestBuilder payment =
@@ -229,8 +224,7 @@ class OrderCheckedAgainstStockIntegrationTest {
               .findFirst()
               .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
       payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-      assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
-          .isEqualTo(REVIEW_STEP);
+      assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
 
       return page(REVIEW_STEP);
     }

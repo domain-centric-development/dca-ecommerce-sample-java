@@ -59,7 +59,7 @@ class NoOpenCheckoutIntegrationTest {
   void theReviewWithoutACheckoutLeadsToTheCartWithAMessage() throws Exception {
     final MvcResult review = perform(get(REVIEW_STEP));
 
-    assertThat(URI.create(review.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
+    assertThat(review.getResponse().getRedirectedUrl()).isEqualTo(CART);
     assertThat(errorOn(followed(review))).isEqualTo("No active checkout session found");
   }
 
@@ -70,7 +70,7 @@ class NoOpenCheckoutIntegrationTest {
 
     final MvcResult buyer = perform(get(BUYER_STEP));
 
-    assertThat(URI.create(buyer.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
+    assertThat(buyer.getResponse().getRedirectedUrl()).isEqualTo(CART);
     assertThat(errorOn(followed(buyer))).isEqualTo("No active checkout session found");
   }
 
@@ -93,7 +93,7 @@ class NoOpenCheckoutIntegrationTest {
   void theConfirmationWithoutAnOrderLeadsToTheCartWithAMessage() throws Exception {
     final MvcResult confirmation = perform(get(CONFIRMATION));
 
-    assertThat(URI.create(confirmation.getResponse().getRedirectedUrl()).getPath()).isEqualTo(CART);
+    assertThat(confirmation.getResponse().getRedirectedUrl()).isEqualTo(CART);
     assertThat(errorOn(followed(confirmation))).isEqualTo("No confirmed order found");
   }
 
@@ -130,8 +130,7 @@ class NoOpenCheckoutIntegrationTest {
   private void placeTheOrder() throws Exception {
     addToCart("Domain-Driven Design");
     final MvcResult started = submit(page(CART).selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
 
     final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
     buyerForm.selectFirst("input[name=email]").val("jane@example.com");
@@ -159,8 +158,7 @@ class NoOpenCheckoutIntegrationTest {
     for (final Element field : method.select("input[name]")) {
       delivery.param(field.attr("name"), field.val());
     }
-    assertThat(URI.create(perform(delivery).getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(PAYMENT_STEP);
+    assertThat(perform(delivery).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
 
     final Element paymentForm = page(PAYMENT_STEP).selectFirst("[data-test=payment-form]");
     final MockHttpServletRequestBuilder payment =
@@ -174,13 +172,11 @@ class NoOpenCheckoutIntegrationTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
     payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-    assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(REVIEW_STEP);
+    assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
 
     final MvcResult placed =
         submit(page(REVIEW_STEP).selectFirst("[data-test=review-confirm-form]"));
-    assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(CONFIRMATION);
+    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(CONFIRMATION);
     page(CONFIRMATION);
   }
 

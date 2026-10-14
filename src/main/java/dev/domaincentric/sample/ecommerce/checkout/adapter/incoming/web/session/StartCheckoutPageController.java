@@ -17,6 +17,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for initiating checkout from a cart.
@@ -62,10 +63,12 @@ public class StartCheckoutPageController {
    * must not be reachable through a link (prefetching, crawlers, CSRF via GET).
    *
    * @param cartId the cart ID to start checkout from
+   * @param attributes the redirect's attributes, which take the cart page's notice on a refusal
    * @return redirect to buyer info step at /checkout/buyer
    */
   @PostMapping("/start")
-  public String startCheckout(@RequestParam final String cartId) {
+  public String startCheckout(
+      @RequestParam final String cartId, final RedirectAttributes attributes) {
 
     try {
       startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, currentCustomerId()));
@@ -75,7 +78,7 @@ public class StartCheckoutPageController {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      return redirectFor(e);
+      return redirectFor(e, attributes);
     }
   }
 
@@ -83,17 +86,22 @@ public class StartCheckoutPageController {
    * The cart page with the notice for a refusal: chosen by the failure's type, the number it names
    * taken from its values. The failure's message is for the log, never for the customer.
    */
-  private static String redirectFor(final RuntimeException failure) {
+  private static String redirectFor(
+      final RuntimeException failure, final RedirectAttributes attributes) {
     return switch (failure) {
-      case CartNotAvailableException e -> CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_FOUND);
-      case CartNotActiveException e -> CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_CHECKABLE);
-      case EmptyCartException e -> CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART);
-      case EmptyCheckoutException e -> CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART);
+      case CartNotAvailableException e ->
+          CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_FOUND, attributes);
+      case CartNotActiveException e ->
+          CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_CHECKABLE, attributes);
+      case EmptyCartException e -> CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART, attributes);
+      case EmptyCheckoutException e ->
+          CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART, attributes);
       case ArticleNotAvailableException e ->
-          CheckoutRoutes.redirectToCart(CartNotice.CART_PRODUCT_UNAVAILABLE);
+          CheckoutRoutes.redirectToCart(CartNotice.CART_PRODUCT_UNAVAILABLE, attributes);
       case CheckoutItemsUnavailableException e ->
-          CheckoutRoutes.redirectToCart(CartNotice.ITEMS_UNAVAILABLE, e.productIds().size());
-      default -> CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_STARTED);
+          CheckoutRoutes.redirectToCart(
+              CartNotice.ITEMS_UNAVAILABLE, e.productIds().size(), attributes);
+      default -> CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_STARTED, attributes);
     };
   }
 }

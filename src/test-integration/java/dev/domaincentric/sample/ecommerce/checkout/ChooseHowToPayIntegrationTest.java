@@ -111,8 +111,7 @@ class ChooseHowToPayIntegrationTest {
     }
     request.param("providerId", "paypal");
     final MvcResult posted = perform(request);
-    assertThat(URI.create(posted.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(PAYMENT_STEP);
+    assertThat(posted.getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
 
     final Document landed = follow(posted, PAYMENT_STEP);
 
@@ -134,8 +133,7 @@ class ChooseHowToPayIntegrationTest {
   private Document paymentStepAfterChoosing(final String shippingMethod) throws Exception {
     addToCart("Domain-Driven Design");
     final MvcResult started = submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
 
     final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
     buyerForm.selectFirst("input[name=email]").val("jane@example.com");
@@ -163,8 +161,7 @@ class ChooseHowToPayIntegrationTest {
     for (final Element field : method.select("input[name]")) {
       delivery.param(field.attr("name"), field.val());
     }
-    assertThat(URI.create(perform(delivery).getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(PAYMENT_STEP);
+    assertThat(perform(delivery).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
 
     return page(PAYMENT_STEP);
   }

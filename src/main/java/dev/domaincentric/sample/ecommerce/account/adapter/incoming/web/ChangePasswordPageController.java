@@ -9,13 +9,13 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider.Identity;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the "Change Password" page of the account area.
@@ -73,15 +73,11 @@ public class ChangePasswordPageController {
    * <p>The account overview is queried as an accessibility gate only; its projection is discarded
    * so that no account data reaches this page's model.
    *
-   * @param noticeCode the code of the notice a redirect brought along, if any
-   * @param model Spring MVC model
+   * @param model Spring MVC model, holding the notice a redirect handed the page, if any
    * @return view name {@value #VIEW_NAME}, or a redirect to the login page
    */
   @GetMapping
-  public String showChangePasswordPage(
-      @RequestParam(name = AccountPageNotice.PARAMETER, required = false)
-          final @Nullable String noticeCode,
-      final Model model) {
+  public String showChangePasswordPage(final Model model) {
     final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
@@ -97,7 +93,7 @@ public class ChangePasswordPageController {
 
     return render(
         model,
-        AccountPageNotice.fromCode(noticeCode)
+        AccountPageNotice.in(model)
             .map(notice -> ChangePasswordPageViewModel.withSuccess(notice.sentence()))
             .orElseGet(ChangePasswordPageViewModel::blank));
   }
@@ -109,6 +105,7 @@ public class ChangePasswordPageController {
    * @param newPassword the new plaintext password
    * @param confirmPassword the confirmation of the new plaintext password
    * @param model Spring MVC model, used on the error re-render path
+   * @param attributes the redirect's attributes, which take the page's notice
    * @return view name {@value #VIEW_NAME} on error, a redirect otherwise
    */
   @PostMapping
@@ -116,7 +113,8 @@ public class ChangePasswordPageController {
       @RequestParam final String currentPassword,
       @RequestParam final String newPassword,
       @RequestParam final String confirmPassword,
-      final Model model) {
+      final Model model,
+      final RedirectAttributes attributes) {
     final Identity identity = identityProvider.getCurrentIdentity();
     if (identity.isAnonymous()) {
       return LOGIN_REDIRECT;
@@ -131,7 +129,8 @@ public class ChangePasswordPageController {
             new ChangePasswordCommand(identity.userId().value(), currentPassword, newPassword));
 
     return switch (result.outcome()) {
-      case CHANGED -> AccountPageNotice.PASSWORD_CHANGED.redirectTo(CHANGE_PASSWORD_PATH);
+      case CHANGED ->
+          AccountPageNotice.PASSWORD_CHANGED.redirectTo(CHANGE_PASSWORD_PATH, attributes);
       case ACCOUNT_NOT_ACCESSIBLE -> LOGIN_REDIRECT;
       case CURRENT_PASSWORD_INVALID ->
           render(model, ChangePasswordPageViewModel.withError(CURRENT_PASSWORD_INVALID));

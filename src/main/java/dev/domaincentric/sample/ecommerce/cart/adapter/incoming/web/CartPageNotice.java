@@ -4,19 +4,19 @@ import java.util.Arrays;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * A sentence a cart page — the cart or the merge page — shows after a redirect led the customer
  * there.
  *
- * <p>The shop runs as several instances without sticky sessions, so the notice travels with the
- * redirect as the query parameter {@value #PARAMETER}: only its code, never the text, so a URL
- * cannot make a page say anything else. A notice that names a number carries it beside the code
- * ({@value #COUNT_PARAMETER}); the page words the sentence. A code the page does not know, or a
- * number it needs and does not get, shows nothing.
+ * <p>The notice travels with the redirect as a flash attribute, which the shop keeps in a sealed
+ * cookie addressed to the page the redirect leads to: only its code ({@value #KEY}), never the
+ * text, and the number a sentence names beside it ({@value #COUNT_KEY}); the page words the
+ * sentence. A code the page does not know, or a number it needs and does not get, shows nothing.
  *
- * <p>The checkout sends the customer back to the cart with some of these codes; it knows them as
- * the cart page's address, the sentences stay here.
+ * <p>The checkout sends the customer back to the cart with some of these codes; it knows them, and
+ * the two attributes, as the cart page's contract, the sentences stay here.
  */
 public enum CartPageNotice {
   PRODUCT_ADDED("product-added", Kind.SUCCESS, "Product added to cart!"),
@@ -49,11 +49,11 @@ public enum CartPageNotice {
   CHECKOUT_NOT_STARTED(
       "checkout-not-started", Kind.ERROR, "The checkout could not be started. Please try again.");
 
-  /** The query parameter that carries a notice's code. */
-  public static final String PARAMETER = "notice";
+  /** The flash attribute that carries a cart page notice's code. */
+  public static final String KEY = "notice.cart";
 
-  /** The query parameter that carries the number a notice names. */
-  public static final String COUNT_PARAMETER = "count";
+  /** The flash attribute that carries the number a notice names. */
+  public static final String COUNT_KEY = "notice.count";
 
   /** Whether the page shows a notice as a success or as an error. */
   public enum Kind {
@@ -74,7 +74,7 @@ public enum CartPageNotice {
   /**
    * The notice with that code.
    *
-   * @param code the parameter's value, absent when the request carries none
+   * @param code the code a redirect carried, absent when it carried none
    * @return the notice, or empty for an absent or unknown code
    */
   public static Optional<CartPageNotice> fromCode(final @Nullable String code) {
@@ -82,20 +82,17 @@ public enum CartPageNotice {
   }
 
   /**
-   * Puts the sentence of the notice a request names on the page's model: a success as {@code
-   * message}, an error as {@code error}. An unknown code, or a missing number, puts nothing.
+   * Puts the sentence of the notice a redirect handed the page on the page's model: a success as
+   * {@code message}, an error as {@code error}. An unknown code, or a missing number, puts nothing.
    *
-   * @param model the page's model
-   * @param code the notice parameter's value, if any
-   * @param count the count parameter's value, if any
+   * @param model the page's model, where Spring puts the flash attributes addressed to the page
    */
-  public static void show(
-      final Model model, final @Nullable String code, final @Nullable Integer count) {
-    fromCode(code)
+  public static void show(final Model model) {
+    fromCode(model.getAttribute(KEY) instanceof String code ? code : null)
         .ifPresent(
             notice ->
                 notice
-                    .sentence(count)
+                    .sentence(model.getAttribute(COUNT_KEY) instanceof Integer count ? count : null)
                     .ifPresent(
                         text ->
                             model.addAttribute(
@@ -105,8 +102,8 @@ public enum CartPageNotice {
   /**
    * The sentence the page shows.
    *
-   * @param count the number the address carried, if any
-   * @return the sentence, or empty for a notice that names a number the address did not carry
+   * @param count the number the redirect carried, if any
+   * @return the sentence, or empty for a notice that names a number the redirect did not carry
    */
   public Optional<String> sentence(final @Nullable Integer count) {
     if (!namesANumber()) {
@@ -116,24 +113,29 @@ public enum CartPageNotice {
   }
 
   /**
-   * The Spring MVC redirect to a cart page, carrying this notice.
+   * The Spring MVC redirect to a cart page, handing it this notice.
    *
-   * @param path the page's path; a query it already has is kept
-   * @return {@code redirect:} followed by the path with the notice
+   * @param path the page's path, with the query it needs
+   * @param attributes the redirect's attributes, which take the notice
+   * @return {@code redirect:} followed by the path
    */
-  public String redirectTo(final String path) {
-    return "redirect:" + path + (path.contains("?") ? "&" : "?") + PARAMETER + "=" + code;
+  public String redirectTo(final String path, final RedirectAttributes attributes) {
+    attributes.addFlashAttribute(KEY, code);
+    return "redirect:" + path;
   }
 
   /**
-   * The Spring MVC redirect to a cart page, carrying this notice and the number it names.
+   * The Spring MVC redirect to a cart page, handing it this notice and the number it names.
    *
-   * @param path the page's path; a query it already has is kept
+   * @param path the page's path, with the query it needs
    * @param count the number the sentence names
-   * @return {@code redirect:} followed by the path with the notice and the number
+   * @param attributes the redirect's attributes, which take the notice
+   * @return {@code redirect:} followed by the path
    */
-  public String redirectTo(final String path, final int count) {
-    return redirectTo(path) + "&" + COUNT_PARAMETER + "=" + count;
+  public String redirectTo(
+      final String path, final int count, final RedirectAttributes attributes) {
+    attributes.addFlashAttribute(COUNT_KEY, count);
+    return redirectTo(path, attributes);
   }
 
   public String code() {

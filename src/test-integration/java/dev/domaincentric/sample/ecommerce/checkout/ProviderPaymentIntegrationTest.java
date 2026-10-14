@@ -131,10 +131,8 @@ class ProviderPaymentIntegrationTest {
 
   /** The form post went back to the payment page, and the review step is still closed. */
   private void assertStaysAtThePaymentStep(final MvcResult payment) throws Exception {
-    assertThat(URI.create(payment.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo("/checkout/payment");
-    assertThat(
-            URI.create(perform(get("/checkout/review")).getResponse().getRedirectedUrl()).getPath())
+    assertThat(payment.getResponse().getRedirectedUrl()).isEqualTo("/checkout/payment");
+    assertThat(perform(get("/checkout/review")).getResponse().getRedirectedUrl())
         .isEqualTo("/checkout/payment");
   }
 

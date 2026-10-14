@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
-import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersResult;
@@ -15,15 +14,16 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the payment method page in checkout.
@@ -70,15 +70,12 @@ public class PaymentPageController {
    * and available payment providers, then displays the payment form. If no active session is found,
    * redirects to cart with an error.
    *
-   * @param noticeCode the code of the notice a redirect brought along, if any
-   * @param model the Spring MVC model
+   * @param model the Spring MVC model, holding the notice a redirect handed the page, if any
+   * @param attributes the attributes of a redirect away from the page
    * @return the payment.pug template or redirect on error
    */
   @GetMapping("/payment")
-  public String showPaymentForm(
-      @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
-          final @Nullable String noticeCode,
-      final Model model) {
+  public String showPaymentForm(final Model model, final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -89,7 +86,7 @@ public class PaymentPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -99,10 +96,9 @@ public class PaymentPageController {
                 activeSession.sessionId(), customerId, CheckoutStep.PAYMENT));
 
     if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
     }
-    final Optional<String> denied =
-        CheckoutStepPage.redirectIfDenied(result.stepAccess(), noticeCode, null, model);
+    final Optional<String> denied = CheckoutStepPage.redirectIfDenied(result.stepAccess(), model);
     if (denied.isPresent()) {
       return denied.get();
     }
@@ -130,7 +126,8 @@ public class PaymentPageController {
    * @return redirect to review step or back to payment on error
    */
   @PostMapping("/payment")
-  public String submitPayment(@RequestParam final String providerId) {
+  public String submitPayment(
+      @RequestParam final String providerId, final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -141,16 +138,26 @@ public class PaymentPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     return CheckoutStepPage.submitting(
         CheckoutStep.PAYMENT,
+        () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.PAYMENT),
+        attributes,
         () -> {
           submitPaymentInputPort.execute(
               new SubmitPaymentCommand(activeSession.sessionId(), customerId, providerId));
 
           return "redirect:/checkout/review";
         });
+  }
+
+  /** The domain's decision whether the step may be opened, for a submission sent too early. */
+  private StepAccess stepAccess(
+      final String sessionId, final String customerId, final CheckoutStep step) {
+    return getCheckoutSessionInputPort
+        .execute(GetCheckoutSessionQuery.forStep(sessionId, customerId, step))
+        .stepAccess();
   }
 }

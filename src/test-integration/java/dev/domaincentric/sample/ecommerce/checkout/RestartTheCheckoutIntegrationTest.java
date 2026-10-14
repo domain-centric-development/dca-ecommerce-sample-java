@@ -5,7 +5,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
-import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jsoup.Jsoup;
@@ -87,8 +86,7 @@ class RestartTheCheckoutIntegrationTest {
                 "firstName", "Jane",
                 "lastName", "Doe",
                 "phone", "+49 30 1234567"));
-    assertThat(URI.create(submitted.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo("/checkout/delivery");
+    assertThat(submitted.getResponse().getRedirectedUrl()).isEqualTo("/checkout/delivery");
     page("/cart");
 
     proceedToCheckout();
@@ -109,8 +107,7 @@ class RestartTheCheckoutIntegrationTest {
   private void proceedToCheckout() throws Exception {
     final MvcResult started =
         submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"), Map.of());
-    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
   }
 
   /** Presses "Add to Cart" on the product page of the product with that name, that many times. */

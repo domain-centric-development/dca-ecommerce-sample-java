@@ -75,8 +75,7 @@ class StepsShowTheProgressIntegrationTest {
 
     final MvcResult placed = submit(confirmForm);
 
-    assertThat(URI.create(placed.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(CONFIRMATION);
+    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(CONFIRMATION);
     final Element progress = page(CONFIRMATION).selectFirst("[data-test=checkout-progress]");
     assertThat(progress.select(".checkout__step .checkout__step-label").eachText())
         .containsExactly("Buyer Info", "Delivery", "Payment", "Confirmed");
@@ -91,8 +90,7 @@ class StepsShowTheProgressIntegrationTest {
 
     final MvcResult opened = perform(get(REVIEW_STEP));
 
-    assertThat(URI.create(opened.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(DELIVERY_STEP);
+    assertThat(opened.getResponse().getRedirectedUrl()).isEqualTo(DELIVERY_STEP);
     assertThat(page(DELIVERY_STEP).selectFirst("[data-test=delivery-form]")).isNotNull();
   }
 
@@ -103,7 +101,7 @@ class StepsShowTheProgressIntegrationTest {
 
     final MvcResult opened = perform(get(PAYMENT_STEP));
 
-    assertThat(URI.create(opened.getResponse().getRedirectedUrl()).getPath()).isEqualTo(BUYER_STEP);
+    assertThat(opened.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
     assertThat(page(BUYER_STEP).selectFirst("[data-test=buyer-form]")).isNotNull();
   }
 
@@ -128,8 +126,7 @@ class StepsShowTheProgressIntegrationTest {
     assertThat(landing.path()).isEqualTo(BUYER_STEP);
     assertThat(landing.page().select("[data-test=buyer-error-message]").text())
         .isEqualTo(PREVIOUS_STEPS_FIRST);
-    assertThat(URI.create(perform(get(REVIEW_STEP)).getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(perform(get(REVIEW_STEP)).getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
   }
 
   @Test
@@ -196,8 +193,7 @@ class StepsShowTheProgressIntegrationTest {
             .findFirst()
             .orElseThrow(() -> new AssertionError("no provider named Mock Payment (Test)"));
     payment.param("providerId", provider.selectFirst("input[name=providerId]").val());
-    assertThat(URI.create(perform(payment).getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(REVIEW_STEP);
+    assertThat(perform(payment).getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
 
     return page(REVIEW_STEP);
   }
@@ -227,8 +223,7 @@ class StepsShowTheProgressIntegrationTest {
     for (final Element field : method.select("input[name]")) {
       request.param(field.attr("name"), field.val());
     }
-    assertThat(URI.create(perform(request).getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(PAYMENT_STEP);
+    assertThat(perform(request).getResponse().getRedirectedUrl()).isEqualTo(PAYMENT_STEP);
 
     return page(PAYMENT_STEP);
   }
@@ -249,8 +244,7 @@ class StepsShowTheProgressIntegrationTest {
   private Document buyerStepJustStarted() throws Exception {
     addToCart("Domain-Driven Design");
     final MvcResult started = submit(page("/cart").selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(URI.create(started.getResponse().getRedirectedUrl()).getPath())
-        .isEqualTo(BUYER_STEP);
+    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
 
     return page(BUYER_STEP);
   }

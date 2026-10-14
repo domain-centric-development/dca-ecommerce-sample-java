@@ -16,12 +16,13 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidati
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.NothingToPayException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
+import java.util.function.Supplier;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * What every checkout step page does the same way: it opens only when the domain grants the step,
- * and it turns a refused submission into the redirect back to the step with its notice.
+ * and it turns a refused submission into the redirect with its notice.
  *
  * <p>A refusal is translated here, once: the step controllers call {@link #submitting} with their
  * use-case call and never catch a refusal themselves. What a refusal looks like to the customer is
@@ -44,58 +45,73 @@ final class CheckoutStepPage {
 
   /**
    * The redirect for a step the domain did not grant, or nothing for a granted one — which then
-   * shows the notice the request carried as its error.
+   * shows the notice a redirect handed it as its error.
+   *
+   * <p>A denied step passes no notice on: a notice belongs to the page it was addressed to, and the
+   * step shown instead says nothing it was not sent.
    *
    * @param access the domain's decision for the step
-   * @param noticeCode the code of the notice a redirect brought along, if any
-   * @param count the number that notice names, if any
-   * @param model the page's model
+   * @param model the page's model, holding the notice a redirect handed the page, if any
    * @return the redirect to the step or the cart shown instead, or empty when the step opens
    */
-  static Optional<String> redirectIfDenied(
-      final StepAccess access,
-      final @Nullable String noticeCode,
-      final @Nullable Integer count,
-      final Model model) {
-    final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
+  static Optional<String> redirectIfDenied(final StepAccess access, final Model model) {
     if (!access.granted()) {
-      return Optional.of(
-          notice
-              .map(n -> CheckoutRoutes.redirectFor(access, n))
-              .orElseGet(() -> CheckoutRoutes.redirectFor(access)));
+      return Optional.of(CheckoutRoutes.redirectFor(access));
     }
-    notice.flatMap(n -> n.sentence(count)).ifPresent(text -> model.addAttribute("error", text));
+    CheckoutStepNotice.sentenceIn(model).ifPresent(text -> model.addAttribute("error", text));
     return Optional.empty();
   }
 
   /**
-   * Submits a step, and turns a refusal into the redirect back to that step with its notice.
+   * Submits a step, and turns a refusal into the redirect with its notice: back to the step, or —
+   * for a step sent before the earlier ones are done — to the step still open, which says why.
    *
    * @param step the step the submission belongs to
+   * @param access the domain's decision for the step, asked only when the submission came too early
+   * @param attributes the redirect's attributes, which take the notice
    * @param submission the use-case call
-   * @return the redirect the submission leads to, or back to the step with the refusal's notice
+   * @return the redirect the submission leads to, or the one with the refusal's notice
    */
-  static String submitting(final CheckoutStep step, final Submission submission) {
+  static String submitting(
+      final CheckoutStep step,
+      final Supplier<StepAccess> access,
+      final RedirectAttributes attributes,
+      final Submission submission) {
     try {
       return submission.submit();
     } catch (UseCaseException | DomainException | IllegalArgumentException refusal) {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each
       // field moved into request validation is one reason less to catch it.
-      return redirectFor(step, refusal);
+      return redirectFor(step, refusal, access, attributes);
     }
   }
 
   /**
-   * The redirect back to a step for a refusal of its submission, carrying the notice the step shows
-   * and the number it names.
+   * The redirect for a refusal of a step's submission, handing on the notice the page shows and the
+   * number it names. A submission sent too early goes to the step the domain sends the customer to
+   * — the step itself would only pass them on, and a denied step passes no notice on.
    */
-  private static String redirectFor(final CheckoutStep step, final RuntimeException refusal) {
+  private static String redirectFor(
+      final CheckoutStep step,
+      final RuntimeException refusal,
+      final Supplier<StepAccess> access,
+      final RedirectAttributes attributes) {
+    if (refusal instanceof CheckoutStepNotCompletedException
+        || refusal instanceof CheckoutStepOutOfOrderException) {
+      final StepAccess stillOpen = access.get();
+      if (!stillOpen.granted()) {
+        return CheckoutRoutes.redirectFor(stillOpen, noticeFor(step, refusal), attributes);
+      }
+    }
     if (step == CheckoutStep.REVIEW && refusal instanceof CheckoutValidationException invalid) {
       return CheckoutRoutes.redirectTo(
-          step, CheckoutStepNotice.ITEMS_UNAVAILABLE, invalid.validation().errors().size());
+          step,
+          CheckoutStepNotice.ITEMS_UNAVAILABLE,
+          invalid.validation().errors().size(),
+          attributes);
     }
-    return CheckoutRoutes.redirectTo(step, noticeFor(step, refusal));
+    return CheckoutRoutes.redirectTo(step, noticeFor(step, refusal), attributes);
   }
 
   /**

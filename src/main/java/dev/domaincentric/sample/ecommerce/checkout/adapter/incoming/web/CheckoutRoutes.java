@@ -2,12 +2,14 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web;
 
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * The routes of the checkout pages, and how a {@link StepAccess} decision maps onto them.
  *
  * <p>The domain answers in steps; this is where a step becomes a URL. {@code BUYER_INFO} is served
- * at {@code /checkout/buyer}.
+ * at {@code /checkout/buyer}. A notice for the page a redirect leads to goes into the redirect's
+ * flash attributes, never into the address.
  */
 public final class CheckoutRoutes {
 
@@ -30,64 +32,84 @@ public final class CheckoutRoutes {
   }
 
   /**
-   * The Spring MVC redirect for a denied step access, carrying a notice to the step shown instead.
-   * The cart is not a checkout page: a redirect there carries none.
+   * The Spring MVC redirect for a denied step access, handing a notice to the step shown instead.
+   * The cart is not a checkout page: a redirect there hands it none.
    *
    * @param access a decision that is not granted
    * @param notice the notice the step shown instead says
-   * @return {@code redirect:} followed by the cart or the page of the step with the notice
+   * @param attributes the redirect's attributes, which take the notice
+   * @return {@code redirect:} followed by the cart or the page of the step
    */
-  public static String redirectFor(final StepAccess access, final CheckoutStepNotice notice) {
+  public static String redirectFor(
+      final StepAccess access,
+      final CheckoutStepNotice notice,
+      final RedirectAttributes attributes) {
     if (access.granted() || access.isBackToCart()) {
       return redirectFor(access);
     }
-    return redirectTo(access.redirectStep(), notice);
+    return redirectTo(access.redirectStep(), notice, attributes);
   }
 
   /**
-   * The Spring MVC redirect to a step's page, carrying a notice.
+   * The Spring MVC redirect to a step's page, handing it a notice.
    *
    * @param step the step
    * @param notice the notice the page says
-   * @return {@code redirect:} followed by the step's page with the notice
-   */
-  public static String redirectTo(final CheckoutStep step, final CheckoutStepNotice notice) {
-    return "redirect:" + pathOf(step) + "?" + CheckoutStepNotice.PARAMETER + "=" + notice.code();
-  }
-
-  /**
-   * The Spring MVC redirect to a step's page, carrying a notice and the number it names.
-   *
-   * @param step the step
-   * @param notice the notice the page says
-   * @param count the number the notice names
-   * @return {@code redirect:} followed by the step's page with the notice and the number
+   * @param attributes the redirect's attributes, which take the notice
+   * @return {@code redirect:} followed by the step's page
    */
   public static String redirectTo(
-      final CheckoutStep step, final CheckoutStepNotice notice, final int count) {
-    return redirectTo(step, notice) + "&" + CheckoutStepNotice.COUNT_PARAMETER + "=" + count;
+      final CheckoutStep step,
+      final CheckoutStepNotice notice,
+      final RedirectAttributes attributes) {
+    notice.addTo(attributes);
+    return "redirect:" + pathOf(step);
   }
 
   /**
-   * The Spring MVC redirect to the cart page, carrying a notice the cart page knows.
+   * The Spring MVC redirect to a step's page, handing it a notice and the number it names.
+   *
+   * @param step the step
+   * @param notice the notice the page says
+   * @param count the number the notice names
+   * @param attributes the redirect's attributes, which take the notice
+   * @return {@code redirect:} followed by the step's page
+   */
+  public static String redirectTo(
+      final CheckoutStep step,
+      final CheckoutStepNotice notice,
+      final int count,
+      final RedirectAttributes attributes) {
+    notice.addTo(attributes, count);
+    return "redirect:" + pathOf(step);
+  }
+
+  /**
+   * The Spring MVC redirect to the cart page, handing it a notice the cart page knows.
    *
    * @param notice the notice the cart page says
-   * @return {@code redirect:} followed by the cart's page with the notice
+   * @param attributes the redirect's attributes, which take the notice
+   * @return {@code redirect:} followed by the cart's page
    */
-  public static String redirectToCart(final CartNotice notice) {
-    return "redirect:" + CART + "?" + CheckoutStepNotice.PARAMETER + "=" + notice.code();
+  public static String redirectToCart(
+      final CartNotice notice, final RedirectAttributes attributes) {
+    notice.addTo(attributes);
+    return "redirect:" + CART;
   }
 
   /**
-   * The Spring MVC redirect to the cart page, carrying a notice the cart page knows and the number
-   * it names.
+   * The Spring MVC redirect to the cart page, handing it a notice the cart page knows and the
+   * number it names.
    *
    * @param notice the notice the cart page says
    * @param count the number the notice names
-   * @return {@code redirect:} followed by the cart's page with the notice and the number
+   * @param attributes the redirect's attributes, which take the notice
+   * @return {@code redirect:} followed by the cart's page
    */
-  public static String redirectToCart(final CartNotice notice, final int count) {
-    return redirectToCart(notice) + "&" + CheckoutStepNotice.COUNT_PARAMETER + "=" + count;
+  public static String redirectToCart(
+      final CartNotice notice, final int count, final RedirectAttributes attributes) {
+    notice.addTo(attributes, count);
+    return "redirect:" + CART;
   }
 
   /**

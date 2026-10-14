@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
-import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -12,12 +11,11 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for the order review page in checkout.
@@ -58,18 +56,12 @@ public class ReviewPageController {
    * and displays all collected information including buyer info, delivery details, payment method,
    * and order summary for final review before purchase confirmation.
    *
-   * @param noticeCode the code of the notice a redirect brought along, if any
-   * @param count the number that notice names, if any
-   * @param model the Spring MVC model
+   * @param model the Spring MVC model, holding the notice a redirect handed the page, if any
+   * @param attributes the attributes of a redirect away from the page
    * @return the review.pug template or redirect on error
    */
   @GetMapping("/review")
-  public String showReviewPage(
-      @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
-          final @Nullable String noticeCode,
-      @RequestParam(name = CheckoutStepNotice.COUNT_PARAMETER, required = false)
-          final @Nullable Integer count,
-      final Model model) {
+  public String showReviewPage(final Model model, final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -80,7 +72,7 @@ public class ReviewPageController {
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
 
     if (!activeSession.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
+      return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
@@ -90,10 +82,9 @@ public class ReviewPageController {
                 activeSession.sessionId(), customerId, CheckoutStep.REVIEW));
 
     if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
     }
-    final Optional<String> denied =
-        CheckoutStepPage.redirectIfDenied(result.stepAccess(), noticeCode, count, model);
+    final Optional<String> denied = CheckoutStepPage.redirectIfDenied(result.stepAccess(), model);
     if (denied.isPresent()) {
       return denied.get();
     }
