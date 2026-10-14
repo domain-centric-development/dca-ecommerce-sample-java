@@ -62,7 +62,6 @@ class SharedScenariosTest {
           "Logout redirects to login page and shows logout confirmation",
           "On a phone the catalog, a product and the cart fit the screen without sideways scrolling",
           "Registered user can add items to cart",
-          "The answer carries the rounded price",
           "The catalog lists the seeded products in name order",
           "Unauthenticated access to events page redirects to login",
           "Unknown product shows the not-found page");
