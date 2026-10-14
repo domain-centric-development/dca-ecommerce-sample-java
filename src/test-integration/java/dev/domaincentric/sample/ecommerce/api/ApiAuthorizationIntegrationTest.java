@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.api;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -106,10 +107,23 @@ class ApiAuthorizationIntegrationTest {
             .getResponse()
             .getContentAsString();
     final String cartId = JSON.readTree(created).get("cartId").asText();
+    final String ddd = productIdOf("Domain-Driven Design");
+    mockMvc
+        .perform(
+            post("/api/carts/" + cartId + "/items")
+                .header("Authorization", "Bearer " + mine)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"productId":"%s","quantity":2}"""
+                        .formatted(ddd)))
+        .andExpect(status().isOk());
 
     mockMvc
         .perform(get("/api/carts/" + cartId).header("Authorization", "Bearer " + mine))
-        .andExpect(status().isOk());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].productId").value(ddd))
+        .andExpect(jsonPath("$.items[0].quantity").value(2));
 
     // Not 403: telling a stranger they are forbidden confirms the id exists.
     mockMvc
@@ -138,6 +152,23 @@ class ApiAuthorizationIntegrationTest {
                 .content(newProduct()))
         .andExpect(status().isUnauthorized())
         .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
+  }
+
+  /** The id of the catalogue's product with this name, as the API lists it. */
+  private String productIdOf(final String name) throws Exception {
+    final String body =
+        mockMvc
+            .perform(get("/api/products"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    for (final JsonNode product : JSON.readTree(body)) {
+      if (name.equals(product.get("name").asText())) {
+        return product.get("id").asText();
+      }
+    }
+    throw new AssertionError("no product named " + name);
   }
 
   /** Registers an account through the API and returns its token. */
