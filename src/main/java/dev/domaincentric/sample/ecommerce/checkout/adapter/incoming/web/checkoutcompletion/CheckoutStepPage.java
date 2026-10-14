@@ -1,7 +1,9 @@
-package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
@@ -25,13 +27,13 @@ import org.springframework.ui.Model;
  * use-case call and never catch a refusal themselves. What a refusal looks like to the customer is
  * decided in {@link #noticeFor}.
  */
-public final class CheckoutStepPage {
+final class CheckoutStepPage {
 
   private CheckoutStepPage() {}
 
   /** A step's submission: the use-case call and the redirect it leads to when accepted. */
   @FunctionalInterface
-  public interface Submission {
+  interface Submission {
     /**
      * Submits the step.
      *
@@ -50,7 +52,7 @@ public final class CheckoutStepPage {
    * @param model the page's model
    * @return the redirect to the step or the cart shown instead, or empty when the step opens
    */
-  public static Optional<String> redirectIfDenied(
+  static Optional<String> redirectIfDenied(
       final StepAccess access,
       final @Nullable String noticeCode,
       final @Nullable Integer count,
@@ -73,7 +75,7 @@ public final class CheckoutStepPage {
    * @param submission the use-case call
    * @return the redirect the submission leads to, or back to the step with the refusal's notice
    */
-  public static String submitting(final CheckoutStep step, final Submission submission) {
+  static String submitting(final CheckoutStep step, final Submission submission) {
     try {
       return submission.submit();
     } catch (UseCaseException | DomainException | IllegalArgumentException refusal) {

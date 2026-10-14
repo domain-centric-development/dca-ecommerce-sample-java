@@ -3,7 +3,6 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
-import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepPage;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;

@@ -1,7 +1,8 @@
-package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web;
+package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
