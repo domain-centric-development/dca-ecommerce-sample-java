@@ -39,7 +39,8 @@ class CheckoutRoutesTest {
         IllegalArgumentException.class, () -> CheckoutRoutes.redirectFor(StepAccess.grant()));
     assertThrows(
         IllegalArgumentException.class,
-        () -> CheckoutRoutes.redirectFor(StepAccess.grant(), StepNotice.EARLIER_STEPS_FIRST));
+        () ->
+            CheckoutRoutes.redirectFor(StepAccess.grant(), CheckoutStepNotice.EARLIER_STEPS_FIRST));
   }
 
   @Test
@@ -48,7 +49,8 @@ class CheckoutRoutesTest {
     assertEquals(
         "redirect:/checkout/buyer?notice=earlier-steps-first",
         CheckoutRoutes.redirectFor(
-            StepAccess.redirectTo(CheckoutStep.BUYER_INFO), StepNotice.EARLIER_STEPS_FIRST));
+            StepAccess.redirectTo(CheckoutStep.BUYER_INFO),
+            CheckoutStepNotice.EARLIER_STEPS_FIRST));
   }
 
   @Test
@@ -56,7 +58,8 @@ class CheckoutRoutesTest {
   void backToCartCarriesNoNotice() {
     assertEquals(
         "redirect:/cart",
-        CheckoutRoutes.redirectFor(StepAccess.backToCart(), StepNotice.EARLIER_STEPS_FIRST));
+        CheckoutRoutes.redirectFor(
+            StepAccess.backToCart(), CheckoutStepNotice.EARLIER_STEPS_FIRST));
   }
 
   @Test
@@ -64,6 +67,6 @@ class CheckoutRoutesTest {
   void aRedirectToAStepCarriesTheNotice() {
     assertEquals(
         "redirect:/checkout/review?notice=earlier-steps-first",
-        CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, StepNotice.EARLIER_STEPS_FIRST));
+        CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, CheckoutStepNotice.EARLIER_STEPS_FIRST));
   }
 }

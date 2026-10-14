@@ -3,7 +3,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
-import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.StepNotice;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersResult;
@@ -92,7 +92,7 @@ public class PaymentPageController {
    */
   @GetMapping("/payment")
   public String showPaymentForm(
-      @RequestParam(name = StepNotice.PARAMETER, required = false)
+      @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
           final @Nullable String noticeCode,
       final Model model,
       final RedirectAttributes redirectAttributes) {
@@ -120,7 +120,7 @@ public class PaymentPageController {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
       return "redirect:/cart";
     }
-    final Optional<StepNotice> notice = StepNotice.fromCode(noticeCode);
+    final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
       return notice
           .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
@@ -176,7 +176,8 @@ public class PaymentPageController {
 
     } catch (CheckoutStepNotCompletedException | CheckoutStepOutOfOrderException e) {
       // The step shown instead says it; the redirect carries it to whichever instance answers
-      return CheckoutRoutes.redirectTo(CheckoutStep.PAYMENT, StepNotice.EARLIER_STEPS_FIRST);
+      return CheckoutRoutes.redirectTo(
+          CheckoutStep.PAYMENT, CheckoutStepNotice.EARLIER_STEPS_FIRST);
     } catch (UseCaseException | DomainException | IllegalArgumentException e) {
       // The two base types are the checkout's own refusals. IllegalArgumentException is still
       // here because a form field the customer typed reaches a value object unvalidated; each

@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
  * redirect as the query parameter {@value #PARAMETER}: only its code, never the text, so a URL
  * cannot make a page say anything else.
  */
-public enum StepNotice {
+public enum CheckoutStepNotice {
   EARLIER_STEPS_FIRST("earlier-steps-first", "Please complete the previous checkout steps first.");
 
   /** The query parameter that carries a notice's code. */
@@ -20,7 +20,7 @@ public enum StepNotice {
   private final String code;
   private final String sentence;
 
-  StepNotice(final String code, final String sentence) {
+  CheckoutStepNotice(final String code, final String sentence) {
     this.code = code;
     this.sentence = sentence;
   }
@@ -31,7 +31,7 @@ public enum StepNotice {
    * @param code the parameter's value, absent when the request carries none
    * @return the notice, or empty for an absent or unknown code
    */
-  public static Optional<StepNotice> fromCode(final @Nullable String code) {
+  public static Optional<CheckoutStepNotice> fromCode(final @Nullable String code) {
     return Arrays.stream(values()).filter(notice -> notice.code.equals(code)).findFirst();
   }
 

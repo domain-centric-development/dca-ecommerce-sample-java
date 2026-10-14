@@ -37,7 +37,7 @@ public final class CheckoutRoutes {
    * @param notice the notice the step shown instead says
    * @return {@code redirect:} followed by the cart or the page of the step with the notice
    */
-  public static String redirectFor(final StepAccess access, final StepNotice notice) {
+  public static String redirectFor(final StepAccess access, final CheckoutStepNotice notice) {
     if (access.granted() || access.isBackToCart()) {
       return redirectFor(access);
     }
@@ -51,8 +51,8 @@ public final class CheckoutRoutes {
    * @param notice the notice the page says
    * @return {@code redirect:} followed by the step's page with the notice
    */
-  public static String redirectTo(final CheckoutStep step, final StepNotice notice) {
-    return "redirect:" + pathOf(step) + "?" + StepNotice.PARAMETER + "=" + notice.code();
+  public static String redirectTo(final CheckoutStep step, final CheckoutStepNotice notice) {
+    return "redirect:" + pathOf(step) + "?" + CheckoutStepNotice.PARAMETER + "=" + notice.code();
   }
 
   /**

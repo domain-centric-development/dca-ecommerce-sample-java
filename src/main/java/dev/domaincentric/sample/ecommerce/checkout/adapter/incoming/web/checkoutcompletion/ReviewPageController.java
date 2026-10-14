@@ -1,7 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
-import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.StepNotice;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -65,7 +65,7 @@ public class ReviewPageController {
    */
   @GetMapping("/review")
   public String showReviewPage(
-      @RequestParam(name = StepNotice.PARAMETER, required = false)
+      @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
           final @Nullable String noticeCode,
       final Model model,
       final RedirectAttributes redirectAttributes) {
@@ -93,7 +93,7 @@ public class ReviewPageController {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
       return "redirect:/cart";
     }
-    final Optional<StepNotice> notice = StepNotice.fromCode(noticeCode);
+    final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
       return notice
           .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))

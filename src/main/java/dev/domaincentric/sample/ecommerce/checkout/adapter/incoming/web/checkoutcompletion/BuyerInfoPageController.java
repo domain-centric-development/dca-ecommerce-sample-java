@@ -3,7 +3,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
-import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.StepNotice;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
@@ -77,7 +77,7 @@ public class BuyerInfoPageController {
    */
   @GetMapping("/buyer")
   public String showBuyerInfoForm(
-      @RequestParam(name = StepNotice.PARAMETER, required = false)
+      @RequestParam(name = CheckoutStepNotice.PARAMETER, required = false)
           final @Nullable String noticeCode,
       final Model model,
       final RedirectAttributes redirectAttributes) {
@@ -105,7 +105,7 @@ public class BuyerInfoPageController {
       redirectAttributes.addFlashAttribute("error", "Checkout session not found");
       return "redirect:/cart";
     }
-    final Optional<StepNotice> notice = StepNotice.fromCode(noticeCode);
+    final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
     if (!result.stepAccess().granted()) {
       return notice
           .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
