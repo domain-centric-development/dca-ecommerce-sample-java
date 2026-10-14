@@ -1,7 +1,7 @@
 ---
 id: a-place-order-with-the-review-open-asks-for-it
 epic: guest-checkout
-status: draft
+status: approved
 context: checkout
 feature: steps
 title: A Place Order sent while the review is open asks for the review
@@ -21,7 +21,7 @@ review and say so, so that I place an order only after I have seen it.
 
 #### place-order-with-the-review-open-asks-for-the-review (happy path)
 - Given a guest whose review step is open to them, but who has not placed the order from it
-- When a "Place Order" is sent to the shop
+- When a "Place Order" is sent to the shop from another step page than the review
 - Then the guest ends on the review step at `/checkout/review`
 - And the page says "Please review your order before placing it."
 - And no confirmation is shown: the order is not placed
@@ -33,13 +33,10 @@ review and say so, so that I place an order only after I have seen it.
 
 ## Assumptions
 
-- open: Which state of the checkout is "the review is open to the guest, but the order is refused"? In both shops
-  the review opens once the buyer, delivery and payment steps are submitted, and from then on a "Place Order" is
-  accepted, whichever step page it is sent from; while one of the three is missing, it is refused with "Please
-  complete the previous checkout steps first." Both shops carry "Please review your order before placing it." for a
-  "Place Order" refused out of order, but no way through the pages reaches it. Is (a) a "Place Order" accepted only
-  from the review page — then the shop has to learn that the guest is on it without a page that only opens changing
-  state —, (b) the sentence dropped from both shops, as nothing reaches it, or (c) another state meant?
+- answered: a — a "Place Order" is accepted only from the review page, the last check before the order. Sent from any
+  other step page, with the review open, it leads to the review with "Please review your order before placing it."
+  Opening the review page changes no state: the review's own form carries what tells the shop it was sent from there.
+  (user, 2026-10-14)
 
 ## Notes
 
