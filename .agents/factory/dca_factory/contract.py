@@ -234,7 +234,7 @@ SELECTOR = re.compile(r"^([\w.]+)#([\w]+)$")
 CONTRACT = 22
 
 
-VERSION = "0.82.0"
+VERSION = "0.83.1"
 
 
 def split_front(text):
@@ -876,6 +876,41 @@ def decision_state(text):
     return "draft", answer
 
 
+#: One option of a record's `## Options`, in every form a stage writes it: an optional list marker, optional bold,
+#: the label (`a`, `B`, `1`, `(a)`), then `.` `)` `:` or a dash (` — ` ` – ` ` - `) before the text — `- a: …`,
+#: `- **a — …** …`, `- **b.** …`, `1) …`. The canonical form, the one the template and the stages write, is `- a: …`.
+OPTION_LINE = re.compile(r"^(?:-\s*|[*+]\s+)?(?:\*\*)?\(?([A-Za-z0-9]{1,3})(?:\*\*)?(?:[.):]|\s+[\u2014\u2013-](?=\s|$))\s*(.*)$")
+
+
+def plain(text):
+    """Markdown bold taken out and runs of white space made one: how an option reads outside its record."""
+    return " ".join(text.replace("**", "").split())
+
+
+def decision_options(text):
+    """[{key, line, text}] — the options of a record's `## Options`, the one reader every view and the gate use:
+    `key` the label as written, `line` the option's first line, `text` with its continuation lines, both plain."""
+    options = []
+    for raw in section_of(text, "options") or []:
+        match = OPTION_LINE.match(raw.strip())
+        if match:
+            options.append(dict(key=match.group(1), line=plain(match.group(2)), text=plain(match.group(2))))
+        elif options and raw.strip():
+            options[-1]["text"] = plain(options[-1]["text"] + " " + raw)
+    return options
+
+
+def recommended_option(text, options=None):
+    """The key of the option the record's `## Recommendation` opens with (`a — …`, `**b.**`, `Option 1.`), when it
+    names one of its options; else None."""
+    options = decision_options(text) if options is None else options
+    lines = [line.strip() for line in section_of(text, "recommendation") or [] if line.strip()]
+    first = re.match(r"^[*`\s]*(?:option\s+)?\(?([A-Za-z0-9]{1,3})\b", lines[0], re.I) if lines else None
+    if not first:
+        return None
+    return next((o["key"] for o in options if o["key"].lower() == first.group(1).lower()), None)
+
+
 def read_decisions(store, story_id):
     """[(path, front, body, state, answer)] for every record that names this story, in id order.
 
@@ -989,6 +1024,14 @@ def git(cwd, *args, env=None):
     if completed.returncode == 0:
         return 0, completed.stdout.strip()
     return completed.returncode, (completed.stdout + completed.stderr).strip()
+
+
+def git_identity(cwd):
+    """`-c user.name=… -c user.email=…` where the repository names no committer — a factory commit must not
+    fail on a machine that never committed."""
+    if git(cwd, "config", "user.email")[1].strip():
+        return []
+    return ["-c", "user.name=dca-factory", "-c", "user.email=dca-factory@localhost"]
 
 
 # Several stories are a loop over one story run, and the loop needs to know what comes next without

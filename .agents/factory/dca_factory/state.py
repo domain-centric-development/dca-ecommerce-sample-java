@@ -17,9 +17,9 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from .contract import (
-    ADOPT_ORDER, CRITERION, DECISIONS_DIR, decisions_store, DEFAULTS, delivered_by, delivered_on, depends_on, duplicate_ids,
+    ADOPT_ORDER, CRITERION, decision_options, DECISIONS_DIR, decisions_store, DEFAULTS, delivered_by, delivered_on, depends_on, duplicate_ids,
     EPIC_FILE, epic_folder, epic_graph, epic_order, evidence_dir, evidence_rel, factory_home, file_digest, find_story,
-    GateError, git, in_worktree, is_delivered, JOURNAL, JOURNEY_ORDER, order_for, layout_hint, MAX_ROUNDS, needs_human_ids,
+    GateError, git, in_worktree, is_delivered, JOURNAL, JOURNEY_ORDER, order_for, layout_hint, plain, MAX_ROUNDS, needs_human_ids,
     OWNED_DIGEST, place, PLACES_REL, POST_GATED, PROFILE_FILE, read_front_matter, read_profile, read_text, records_of,
     resolve_profile, resume_stage, section_of, SHARED_WINDOWS, shown, split_front, STAGE_FILES, STAGE_ORDER, STATE_KEYS, story_digest,
     STORY_BRANCH, STORY_FILE, story_files, story_folder, story_id_of, story_kind, WINDOW_DIGEST, worktree_owned)
@@ -237,9 +237,6 @@ def owned_changes(runs, story_id, story_path=None):
     return sorted(part for part in set(before) | set(now) if before.get(part) != now.get(part))
 
 
-OPTION_LINE = re.compile(r"^(?:[-*]\s*)?\(?([A-Za-z0-9]{1,3})[.):]\s+(.*)$")
-
-
 def answer_sentence(body, answer):
     """The sentence an answered record leaves in its story — deterministic: where the answer names an option of the
     record's `## Options` by its label (`a`, `B`, `option b`), that option's first line; else the answer itself.
@@ -247,12 +244,8 @@ def answer_sentence(body, answer):
     given = " ".join(str(answer.get("answer", "")).split())
     label = re.sub(r"^(?:option\s+)", "", given, flags=re.I).strip(" .):*")
     if re.fullmatch(r"[A-Za-z0-9]{1,3}", label or ""):
-        for line in section_of(body, "options") or []:
-            match = OPTION_LINE.match(line.strip())
-            if match and match.group(1).lower() == label.lower():
-                given = match.group(2)
-                break
-    return " ".join(given.replace("**", "").split())
+        given = next((o["line"] for o in decision_options(body) if o["key"].lower() == label.lower()), given)
+    return plain(given)
 
 
 def write_answered(story_path, runs, rid, sentence):
@@ -1612,7 +1605,8 @@ def free_id(cwd, epics, config, target, prefix):
 
 
 def running_stages(runs):
-    """[(story, stage, started)] for every stage whose journal shows a start and no end yet.
+    """[(story, stage, started)] for every stage whose journal shows a start and no end yet — or, where no stage
+    runs, the runner's own step (`step-start`/`step-end`: integrate, merge, format), which no stage's reader counts.
 
     The journal knows that a stage began, not whether its process is still alive: a stage whose
     runner was killed reads the same, which is why the start time is shown with it."""
@@ -1621,7 +1615,7 @@ def running_stages(runs):
         journal = os.path.join(evidence_dir(runs, story), "journal.tsv")
         if not os.path.isfile(journal):
             continue
-        open_stage = None
+        open_stage, steps = None, []
         # By time, not by position: a union merge interleaves two branches' lines.
         for line in sorted(read_text(journal).splitlines(), key=lambda l: parse_time(l.split("\t")[0])
                            or datetime.min.replace(tzinfo=timezone.utc)):
@@ -1632,8 +1626,13 @@ def running_stages(runs):
                 open_stage = (parts[2], parts[0])
             elif parts[1] == "stage-end" and open_stage and parts[2] == open_stage[0]:
                 open_stage = None
-        if open_stage:
-            found.append((story, open_stage[0], open_stage[1]))
+            elif parts[1] == "step-start":
+                steps.append((parts[2], parts[0]))
+            elif parts[1] == "step-end":
+                steps = [step for step in steps if step[0] != parts[2]]
+        running = open_stage or (steps[-1] if steps else None)
+        if running:
+            found.append((story, running[0], running[1]))
     return found
 
 
