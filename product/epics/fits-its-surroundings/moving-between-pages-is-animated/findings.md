@@ -9,4 +9,4 @@ The judge's confirmed defects that did not block the story, kept for a later sto
 
 | # | Perspective | File:line | Severity | Defect | Fix | Status |
 |---|---|---|---|---|---|---|
-| 1 | clean-code | src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/PageTransitionE2ETest.java:178 | minor | The reduced-motion test builds its context from `new Browser.NewContextOptions()`, which bypasses the base class's `contextOptions()` hook (`BaseE2ETest.java:111`) | Build it from `contextOptions().setReducedMotion(ReducedMotion.REDUCE)` | open |
+| 1 | clean-code | src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/PageTransitionE2ETest.java:178 | minor | The reduced-motion test builds its context from `new Browser.NewContextOptions()`, which bypasses the base class's `contextOptions()` hook (`BaseE2ETest.java:111`) | Build it from `contextOptions().setReducedMotion(ReducedMotion.REDUCE)` | done (c137d3a) |

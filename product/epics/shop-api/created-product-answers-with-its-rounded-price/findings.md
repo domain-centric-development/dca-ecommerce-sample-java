@@ -9,4 +9,4 @@ The judge's confirmed defects that did not block the story, kept for a later sto
 
 | # | Perspective | File:line | Severity | Defect | Fix | Status |
 |---|---|---|---|---|---|---|
-| 1 | clean-code | src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductCreationApiE2ETest.java:71 | minor | the `POST /api/products` request block repeats lines 37-51 line for line, apart from the body | extract `createProduct(shop, staffToken, body)` and call it from both tests | open |
+| 1 | clean-code | src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProductCreationApiE2ETest.java:71 | minor | the `POST /api/products` request block repeats lines 37-51 line for line, apart from the body | extract `createProduct(shop, staffToken, body)` and call it from both tests | done (60772ca) |
