@@ -4,12 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
+import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -21,14 +23,26 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The end-user suite implements the scenarios of this shop's specification ({@code
- * product/spec/**}{@code /scenarios.md}): every browser test carries a scenario's title as its
- * display name, no title names two tests, and every scenario whose {@code Test:} line names a
+ * product/spec/**}{@code /scenarios.md}): every browser test carries a known scenario's title as
+ * its display name, no title names two tests, and every scenario whose {@code Test:} line names a
  * browser test names one that exists. A scenario's title is its {@code Title:} line, else its key
- * in words. Checked against the sources of {@code src/test-e2e}, so it holds without a running shop
- * or a browser, on every build.
+ * in words. A known title is a scenario's of the specification or an acceptance criterion's of a
+ * story not yet delivered ({@code product/epics/**}{@code /story.md}, {@code status:} neither
+ * {@code delivered} nor {@code superseded}): its scenario reaches the specification only when the
+ * gate delivers the story, and its browser test exists before that. The uniqueness of titles and
+ * the {@code Test:} lines are checked on the specification alone. Checked against the sources of
+ * {@code src/test-e2e}, so it holds without a running shop or a browser, on every build.
  */
 class SharedScenariosTest {
   static final Path SPECIFICATION = Path.of("product/spec");
+  static final Path EPICS = Path.of("product/epics");
+
+  /** The states of a story whose criteria are no title to come: delivered, or replaced. */
+  static final Set<String> SETTLED = Set.of("delivered", "superseded");
+
+  /** The marker after a criterion's key that names the happy path; not part of the key. */
+  static final Pattern HAPPY_PATH = Pattern.compile("\\s+\\(happy path\\)\\s*$");
+
   static final Path E2E_SOURCES = Path.of("src/test-e2e/java");
 
   /** How a {@code Test:} line names a browser test: {@code package.Class#method}. */
@@ -78,6 +92,8 @@ class SharedScenariosTest {
     Set<String> titles = new HashSet<>();
     for (Scenario scenario : scenarios()) titles.add(scenario.title());
     assertFalse(titles.isEmpty(), "product/spec holds no scenario");
+    Set<String> known = new HashSet<>(titles);
+    known.addAll(storyTitles());
 
     List<String> bound = new ArrayList<>();
     int tests = 0;
@@ -90,11 +106,14 @@ class SharedScenariosTest {
 
     var unknown = new TreeSet<String>();
     for (String title : bound) {
-      if (!titles.contains(title) && !TITLED_AFTER_THE_SHARED_SPECIFICATION.contains(title)) {
+      if (!known.contains(title) && !TITLED_AFTER_THE_SHARED_SPECIFICATION.contains(title)) {
         unknown.add(title);
       }
     }
-    assertEquals(Set.of(), unknown, "browser tests whose title is no scenario of product/spec");
+    assertEquals(
+        Set.of(),
+        unknown,
+        "browser tests whose title is no scenario of product/spec or of a story not yet delivered");
 
     var duplicates = new TreeMap<String, Integer>();
     for (String title : bound) duplicates.merge(title, 1, Integer::sum);
@@ -117,6 +136,38 @@ class SharedScenariosTest {
   }
 
   @Test
+  void aStoryNotYetDeliveredNamesItsCriteriaAsScenarios() {
+    List<String> story =
+        List.of(
+            "---",
+            "id: a-story",
+            "status: approved",
+            "---",
+            "",
+            "# A story",
+            "",
+            "## Acceptance criteria",
+            "",
+            "### Rule: one rule",
+            "",
+            "#### takes-the-line-out (happy path)",
+            "- Given a cart",
+            "",
+            "#### keeps-the-order",
+            "Title: The other lines keep their order",
+            "- Given a cart",
+            "",
+            "## Out of scope",
+            "",
+            "#### not-a-criterion");
+
+    assertEquals("approved", status(story));
+    assertEquals(
+        List.of("Takes the line out", "The other lines keep their order"),
+        storyScenariosIn(story).stream().map(Scenario::title).toList());
+  }
+
+  @Test
   void everyBrowserTestAScenarioNamesExists() throws IOException {
     Set<String> browserTests = new HashSet<>();
     for (Path source : e2eSources()) browserTests.addAll(browserTestsIn(Files.readString(source)));
@@ -134,38 +185,91 @@ class SharedScenariosTest {
 
   /**
    * Each scenario's title with the tests its {@code Test:} lines name, read from every {@code
-   * scenarios.md} below {@code product/spec}: a {@code #### key} heading, an optional Title line,
-   * the Test lines. Two contexts may hold a scenario of the same title; only a browser test's title
-   * has to be unique.
+   * scenarios.md} below {@code product/spec}. Two contexts may hold a scenario of the same title;
+   * only a browser test's title has to be unique.
    */
   static List<Scenario> scenarios() throws IOException {
-    List<Path> files;
-    try (Stream<Path> walk = Files.walk(SPECIFICATION)) {
-      files = walk.filter(p -> p.getFileName().toString().equals("scenarios.md")).sorted().toList();
-    }
     var scenarios = new ArrayList<Scenario>();
-    for (Path file : files) {
-      String key = null;
-      String title = null;
-      List<String> tests = new ArrayList<>();
-      var lines = new ArrayList<>(Files.readAllLines(file));
-      lines.add("#### ");
-      for (String line : lines) {
-        if (line.startsWith("#### ") || line.startsWith("### ")) {
-          if (key != null) scenarios.add(new Scenario(title != null ? title : inWords(key), tests));
-          key = line.startsWith("#### ") && line.length() > 5 ? line.substring(5).trim() : null;
-          title = null;
-          tests = new ArrayList<>();
-        } else if (key != null && line.startsWith("Title:")) {
-          title = line.substring(6).trim();
-        } else if (key != null && line.startsWith("Test:")) {
-          Arrays.stream(line.substring(5).split("[ ,;]+"))
-              .filter(name -> !name.isEmpty())
-              .forEach(tests::add);
-        }
+    for (Path file : filesNamed(SPECIFICATION, "scenarios.md")) {
+      scenarios.addAll(scenariosIn(Files.readAllLines(file)));
+    }
+    return scenarios;
+  }
+
+  /**
+   * The titles of the acceptance criteria of every story below {@code product/epics} that is not
+   * delivered yet: the scenarios the gate will add to the specification when it delivers the story.
+   */
+  static List<String> storyTitles() throws IOException {
+    var titles = new ArrayList<String>();
+    for (Path file : filesNamed(EPICS, "story.md")) {
+      List<String> lines = Files.readAllLines(file);
+      if (SETTLED.contains(status(lines).toLowerCase(Locale.ROOT))) continue;
+      for (Scenario scenario : storyScenariosIn(lines)) titles.add(scenario.title());
+    }
+    return titles;
+  }
+
+  /** A story's {@code status:} from its front matter, empty without one. */
+  static String status(List<String> lines) {
+    if (lines.isEmpty() || !lines.get(0).trim().equals("---")) return "";
+    for (String line : lines.subList(1, lines.size())) {
+      if (line.trim().equals("---")) break;
+      if (line.startsWith("status:")) return line.substring(7).trim();
+    }
+    return "";
+  }
+
+  /**
+   * The scenarios of a story's {@code ## Acceptance criteria} section, read like a {@code
+   * scenarios.md}; a key's trailing {@code (happy path)} marker is not part of it.
+   */
+  static List<Scenario> storyScenariosIn(List<String> lines) {
+    var criteria = new ArrayList<String>();
+    boolean inCriteria = false;
+    for (String line : lines) {
+      if (line.startsWith("## ")) {
+        inCriteria = line.startsWith("## Acceptance criteria");
+      } else if (inCriteria) {
+        criteria.add(line.startsWith("#### ") ? HAPPY_PATH.matcher(line).replaceAll("") : line);
+      }
+    }
+    return scenariosIn(criteria);
+  }
+
+  /**
+   * The scenarios of one document: a {@code #### key} heading, an optional Title line, the Test
+   * lines; a {@code ###} heading ends a scenario.
+   */
+  static List<Scenario> scenariosIn(List<String> document) {
+    var scenarios = new ArrayList<Scenario>();
+    String key = null;
+    String title = null;
+    List<String> tests = new ArrayList<>();
+    var lines = new ArrayList<>(document);
+    lines.add("#### ");
+    for (String line : lines) {
+      if (line.startsWith("#### ") || line.startsWith("### ")) {
+        if (key != null) scenarios.add(new Scenario(title != null ? title : inWords(key), tests));
+        key = line.startsWith("#### ") && line.length() > 5 ? line.substring(5).trim() : null;
+        title = null;
+        tests = new ArrayList<>();
+      } else if (key != null && line.startsWith("Title:")) {
+        title = line.substring(6).trim();
+      } else if (key != null && line.startsWith("Test:")) {
+        Arrays.stream(line.substring(5).split("[ ,;]+"))
+            .filter(name -> !name.isEmpty())
+            .forEach(tests::add);
       }
     }
     return scenarios;
+  }
+
+  /** The files of one name below a root, which may be a link (a story worktree links the epics). */
+  static List<Path> filesNamed(Path root, String name) throws IOException {
+    try (Stream<Path> walk = Files.walk(root, FileVisitOption.FOLLOW_LINKS)) {
+      return walk.filter(p -> p.getFileName().toString().equals(name)).sorted().toList();
+    }
   }
 
   /**
