@@ -84,7 +84,7 @@ class IsAccountRegisteredUseCaseTest {
         Email.of("jane.doe@example.com"),
         Owner.of("Jane", "Doe", LocalDate.of(1990, 5, 17)),
         UserId.of(USER_ID),
-        HashedPassword.of("hashed:OldPassw0rd"),
+        HashedPassword.fromHash("hashed:OldPassw0rd"),
         status,
         Set.of(Role.CUSTOMER),
         Instant.parse("2026-01-01T00:00:00Z"),

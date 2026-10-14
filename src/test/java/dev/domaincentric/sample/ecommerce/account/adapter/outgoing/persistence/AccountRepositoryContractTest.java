@@ -58,7 +58,7 @@ abstract class AccountRepositoryContractTest {
         Email.of(email),
         OWNER,
         UserId.of(USER_ID),
-        HashedPassword.of("hashed:OldPassw0rd"),
+        HashedPassword.fromHash("hashed:OldPassw0rd"),
         AccountStatus.ACTIVE,
         Set.of(Role.CUSTOMER),
         Instant.parse("2026-01-01T00:00:00Z"),
@@ -79,7 +79,7 @@ abstract class AccountRepositoryContractTest {
     assertEquals(Email.of(EMAIL), loaded.email());
     assertEquals(OWNER, loaded.owner());
     assertEquals(UserId.of(USER_ID), loaded.linkedUserId());
-    assertEquals(HashedPassword.of("hashed:OldPassw0rd"), loaded.password());
+    assertEquals(HashedPassword.fromHash("hashed:OldPassw0rd"), loaded.password());
     assertEquals(AccountStatus.ACTIVE, loaded.status());
     assertEquals(Set.of(Role.CUSTOMER), loaded.roles());
     assertEquals(Instant.parse("2026-01-01T00:00:00Z"), loaded.createdAt());
@@ -95,7 +95,7 @@ abstract class AccountRepositoryContractTest {
             Email.of("newcomer@example.com"),
             OWNER,
             UserId.of("user-0001"),
-            HashedPassword.of("hashed:Passw0rd"),
+            HashedPassword.fromHash("hashed:Passw0rd"),
             AccountStatus.ACTIVE,
             Set.of(Role.CUSTOMER),
             Instant.parse("2026-01-01T00:00:00Z"),

@@ -25,7 +25,7 @@ import java.nio.charset.StandardCharsets;
  * boolean valid = password.matches("MyP@ssw0rd!", hasher);
  *
  * // Restore from persistence
- * HashedPassword restored = HashedPassword.of("$2a$12$...");
+ * HashedPassword restored = HashedPassword.fromHash("$2a$12$...");
  * }</pre>
  *
  * <p>{@link #toString()} never reveals the hash.
@@ -66,23 +66,14 @@ public record HashedPassword(String hash) implements Value {
   }
 
   /**
-   * Creates a HashedPassword from an existing hash string.
-   *
-   * @param hash the existing hash
-   * @return a HashedPassword wrapping the hash
-   */
-  public static HashedPassword of(final String hash) {
-    return new HashedPassword(hash);
-  }
-
-  /**
-   * Alias for {@link #of(String)} - restores a HashedPassword from storage.
+   * Restores a HashedPassword from a hash made earlier, as storage keeps it. No strength rule runs:
+   * the plaintext is gone, and the rule held when the hash was made.
    *
    * @param hash the existing hash
    * @return a HashedPassword wrapping the hash
    */
   public static HashedPassword fromHash(final String hash) {
-    return of(hash);
+    return new HashedPassword(hash);
   }
 
   /**

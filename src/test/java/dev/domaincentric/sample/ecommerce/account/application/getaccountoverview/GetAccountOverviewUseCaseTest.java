@@ -145,7 +145,7 @@ class GetAccountOverviewUseCaseTest {
         Email.of(EMAIL),
         OWNER,
         UserId.of(LINKED_USER_ID),
-        HashedPassword.of(PASSWORD_HASH),
+        HashedPassword.fromHash(PASSWORD_HASH),
         status,
         Set.of(Role.CUSTOMER),
         Instant.parse("2026-01-01T00:00:00Z"),

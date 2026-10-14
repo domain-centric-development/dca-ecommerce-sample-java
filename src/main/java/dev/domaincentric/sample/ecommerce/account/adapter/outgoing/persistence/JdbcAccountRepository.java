@@ -132,7 +132,7 @@ public class JdbcAccountRepository implements AccountRepository {
                 rs.getString("last_name"),
                 rs.getDate("date_of_birth").toLocalDate()),
             UserId.of(rs.getString("linked_user_id")),
-            HashedPassword.of(rs.getString("password_hash")),
+            HashedPassword.fromHash(rs.getString("password_hash")),
             AccountStatus.valueOf(rs.getString("status")),
             rs.getTimestamp("created_at").toInstant(),
             toInstant(rs.getTimestamp("last_login_at")));

@@ -85,7 +85,8 @@ the actual cryptographic operation to the `PasswordHasher` domain gateway.
 
 **Related terms:** `PasswordHasher` (Domain Gateway in `account.domain.gateway`).
 
-**Operations:** `fromPlaintext`, `of`, `fromHash`, `matches`, `validatePasswordStrength`.
+**Operations:** `fromPlaintext` (from input: the strength rules run, the gateway hashes), `fromHash`
+(from storage: the stored hash taken as given), `matches`, `validatePasswordStrength`.
 
 **Notes:** `toString()` is deliberately masked. The rules themselves are named below as **Password
 Policy**; change them there and here together.

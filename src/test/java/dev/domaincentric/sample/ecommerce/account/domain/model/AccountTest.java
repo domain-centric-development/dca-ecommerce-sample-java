@@ -49,7 +49,7 @@ class AccountTest {
         Email.of(EMAIL),
         OWNER,
         UserId.of("user-4711"),
-        HashedPassword.of("hashed:OldPassw0rd"),
+        HashedPassword.fromHash("hashed:OldPassw0rd"),
         status,
         Set.of(Role.CUSTOMER),
         CREATED_AT,

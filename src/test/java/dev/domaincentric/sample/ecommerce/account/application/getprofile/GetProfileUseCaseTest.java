@@ -61,7 +61,7 @@ class GetProfileUseCaseTest {
             Email.of(EMAIL),
             Owner.of(FIRST_NAME, LAST_NAME, DATE_OF_BIRTH),
             UserId.of(USER_ID),
-            HashedPassword.of("hashed:OldPassw0rd"),
+            HashedPassword.fromHash("hashed:OldPassw0rd"),
             status,
             Set.of(Role.CUSTOMER),
             Instant.parse("2026-01-01T00:00:00Z"),

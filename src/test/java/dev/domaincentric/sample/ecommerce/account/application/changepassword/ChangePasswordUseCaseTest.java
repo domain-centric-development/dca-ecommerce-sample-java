@@ -98,7 +98,7 @@ class ChangePasswordUseCaseTest {
     assertEquals(1, accountRepository.saveCount(), "the account is saved exactly once");
     final Account saved = accountRepository.savedAccounts().getFirst();
     assertEquals(
-        HashedPassword.of(passwordHasher.hash(NEW_PASSWORD)),
+        HashedPassword.fromHash(passwordHasher.hash(NEW_PASSWORD)),
         saved.password(),
         "the saved account must carry the hash of the new password");
     assertTrue(
