@@ -1,10 +1,7 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
-import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Page object for the product detail page.
@@ -19,39 +16,6 @@ public class ProductDetailPage extends BasePage {
   private static final String BACK_LINK = "product-back-link";
   private static final String TITLE = "product-detail-title";
   private static final String PRICE = "product-detail-price";
-
-  /**
-   * Records, when a page is revealed, whether a transition between pages ran and which of the
-   * transition's parts were animated at that moment; {@link #reveal()} reads it.
-   */
-  private static final String RECORD_THE_REVEAL =
-      """
-      window.addEventListener('pagereveal', (event) => {
-        const transition = event.viewTransition;
-        if (!transition) {
-          window.revealedTransition = { ran: false, animated: [] };
-          return;
-        }
-        transition.ready.then(
-          () => {
-            window.revealedTransition = {
-              ran: true,
-              animated: document.getAnimations()
-                .map((animation) => animation.effect && animation.effect.pseudoElement)
-                .filter((part) => part && part.startsWith('::view-transition'))
-            };
-          },
-          () => { window.revealedTransition = { ran: false, animated: [] }; });
-      });
-      """;
-
-  /**
-   * How the page was revealed.
-   *
-   * @param ran whether a transition between the pages ran
-   * @param animatedParts the parts of the transition that were animated
-   */
-  public record Reveal(boolean ran, List<String> animatedParts) {}
 
   /**
    * Creates a new ProductDetailPage and waits for it to load.
@@ -192,31 +156,6 @@ public class ProductDetailPage extends BasePage {
    */
   public String shownPath() {
     return getCurrentPath();
-  }
-
-  /**
-   * Makes every page the context opens record how it was revealed, for {@link #reveal()}. Called
-   * before the first page of the context is opened.
-   *
-   * @param context the browser context of the test
-   */
-  public static void recordRevealsIn(BrowserContext context) {
-    context.addInitScript(RECORD_THE_REVEAL);
-  }
-
-  /**
-   * How this page was revealed, once it has recorded it.
-   *
-   * @return whether a transition ran and which of its parts animated
-   */
-  @SuppressWarnings("unchecked")
-  public Reveal reveal() {
-    page.waitForFunction("() => window.revealedTransition !== undefined");
-    final Map<String, Object> recorded =
-        (Map<String, Object>) page.evaluate("() => window.revealedTransition");
-    return new Reveal(
-        Boolean.TRUE.equals(recorded.get("ran")),
-        List.copyOf((List<String>) recorded.get("animated")));
   }
 
   /**

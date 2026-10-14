@@ -68,12 +68,10 @@ class SharedScenariosTest {
           "Unknown product shows the not-found page");
 
   /**
-   * Titles two browser tests carry, waiting for the decision which one stays: "Reduced motion means
-   * no animation" is {@code PageTransitionE2ETest}'s (the one the scenario names) and {@code
-   * ReducedMotionE2ETest}'s (the .NET twin's port). The list only shrinks: a title that one test
-   * carries again fails until it is taken off.
+   * Titles two browser tests carry, waiting for the decision which one stays. The list only
+   * shrinks: a title that one test carries again fails until it is taken off.
    */
-  static final Set<String> TITLES_ON_TWO_TESTS = Set.of("Reduced motion means no animation");
+  static final Set<String> TITLES_ON_TWO_TESTS = Set.of();
 
   /**
    * One {@code @DisplayName(...)}, its string possibly split over several literals, each of which
