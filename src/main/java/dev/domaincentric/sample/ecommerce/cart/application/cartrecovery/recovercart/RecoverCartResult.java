@@ -8,7 +8,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Output model for recovering cart on login.
+ * Output model for recovering a guest cart.
  *
  * @param cartId the resulting cart ID (registered user's cart)
  * @param customerId the registered user's customer ID
@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
  * @param itemsMerged number of items merged from anonymous cart
  * @param anonymousCartDeleted whether the anonymous cart was deleted
  */
-public record RecoverCartOnLoginResult(
+public record RecoverCartResult(
     @Nullable String cartId,
     String customerId,
     List<CartItemSummary> items,
@@ -26,14 +26,14 @@ public record RecoverCartOnLoginResult(
     boolean anonymousCartDeleted) {
 
   /** Creates a response when no cart recovery was needed (no anonymous cart existed). */
-  public static RecoverCartOnLoginResult noRecoveryNeeded(final String customerId) {
-    return new RecoverCartOnLoginResult(
+  public static RecoverCartResult noRecoveryNeeded(final String customerId) {
+    return new RecoverCartResult(
         null, customerId, List.of(), Money.zero(Currency.getInstance("EUR")), 0, false);
   }
 
   /** Builds the result from the registered cart as it stands after the recovery. */
-  public static RecoverCartOnLoginResult recovered(final ShoppingCart cart, final int itemsMerged) {
-    return new RecoverCartOnLoginResult(
+  public static RecoverCartResult recovered(final ShoppingCart cart, final int itemsMerged) {
+    return new RecoverCartResult(
         cart.id().value(),
         cart.customerId().value(),
         cart.items().stream().map(CartItemSummary::from).toList(),

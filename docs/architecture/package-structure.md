@@ -162,7 +162,7 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── CompleteCartCommand, CompleteCartResult
 │   │   ├── recovercart/
 │   │   │   ├── RecoverCartInputPort, RecoverCartUseCase
-│   │   │   ├── RecoverCartCommand, RecoverCartOnLoginResult
+│   │   │   ├── RecoverCartCommand, RecoverCartResult
 │   │   └── shared/                 # Shared output ports
 │   │       ├── ShoppingCartRepository
 │   │       ├── ArticleDataPort

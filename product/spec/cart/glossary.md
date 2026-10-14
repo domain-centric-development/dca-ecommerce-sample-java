@@ -26,6 +26,9 @@ The Cart context groups its use cases into four features — domain-named naviga
 cart gets none (the cart page then shows an empty cart, the API answers `404`); `getorcreateactivecart` is the
 command that opens one when a change needs it, as adding a product does.
 
+`RecoverCart` (in `recovercart`) moves the guest cart's lines into the account's cart. It is named after its
+effect, not after the login that leads to it: when and by whom it runs is the adapter's business.
+
 `application/shared/` stays context-wide (`ShoppingCartRepository`, `ArticleDataPort`). The web
 adapters mirror `shopping` and `cartrecovery`; the REST resource serves every feature and stays under
 `adapter/incoming/api/`.

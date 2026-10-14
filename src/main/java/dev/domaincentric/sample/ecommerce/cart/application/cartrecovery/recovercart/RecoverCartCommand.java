@@ -1,7 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart;
 
 /**
- * Command to recover cart on login by merging anonymous cart into registered user's cart.
+ * Command to recover a guest cart by moving its items into registered user's cart.
  *
  * <p>When a registered user logs in from a new device/browser, this command facilitates merging any
  * items they added as an anonymous user into their existing registered cart.
@@ -9,9 +9,9 @@ package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recover
  * @param anonymousUserId the user ID of the anonymous session (before login)
  * @param registeredUserId the user ID of the registered user (after login)
  */
-public record RecoverCartOnLoginCommand(String anonymousUserId, String registeredUserId) {
+public record RecoverCartCommand(String anonymousUserId, String registeredUserId) {
 
-  public RecoverCartOnLoginCommand {
+  public RecoverCartCommand {
     if (anonymousUserId == null || anonymousUserId.isBlank()) {
       throw new IllegalArgumentException("Anonymous user ID cannot be null or blank");
     }

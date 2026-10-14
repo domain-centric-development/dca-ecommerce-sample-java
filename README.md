@@ -253,10 +253,10 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │       └── RemoveItemFromCartResult.java
 │   │   ├── cartrecovery/                 # Feature: recovering a guest cart on login (merge)
 │   │   │   ├── recovercart/              # Use case: Recover Cart on Login
-│   │   │   │   ├── RecoverCartOnLoginInputPort.java
-│   │   │   │   ├── RecoverCartOnLoginUseCase.java
-│   │   │   │   ├── RecoverCartOnLoginCommand.java
-│   │   │   │   └── RecoverCartOnLoginResult.java
+│   │   │   │   ├── RecoverCartInputPort.java
+│   │   │   │   ├── RecoverCartUseCase.java
+│   │   │   │   ├── RecoverCartCommand.java
+│   │   │   │   └── RecoverCartResult.java
 │   │   │   ├── getcartmergeoptions/      # Use case: Get Cart Merge Options
 │   │   │   │   ├── GetCartMergeOptionsInputPort.java
 │   │   │   │   ├── GetCartMergeOptionsUseCase.java

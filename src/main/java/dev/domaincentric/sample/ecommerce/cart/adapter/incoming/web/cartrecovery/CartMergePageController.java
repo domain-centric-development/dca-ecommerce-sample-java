@@ -7,8 +7,8 @@ import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecar
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts.MergeCartsCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts.MergeCartsInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts.MergeCartsResult;
-import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartOnLoginCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartOnLoginInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartCommand;
+import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartInputPort;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -36,17 +36,17 @@ public class CartMergePageController {
 
   private final GetCartMergeOptionsInputPort getCartMergeOptionsUseCase;
   private final MergeCartsInputPort mergeCartsUseCase;
-  private final RecoverCartOnLoginInputPort recoverCartOnLoginUseCase;
+  private final RecoverCartInputPort recoverCartUseCase;
   private final IdentityProvider identityProvider;
 
   public CartMergePageController(
       final GetCartMergeOptionsInputPort getCartMergeOptionsUseCase,
       final MergeCartsInputPort mergeCartsUseCase,
-      final RecoverCartOnLoginInputPort recoverCartOnLoginUseCase,
+      final RecoverCartInputPort recoverCartUseCase,
       final IdentityProvider identityProvider) {
     this.getCartMergeOptionsUseCase = getCartMergeOptionsUseCase;
     this.mergeCartsUseCase = mergeCartsUseCase;
-    this.recoverCartOnLoginUseCase = recoverCartOnLoginUseCase;
+    this.recoverCartUseCase = recoverCartUseCase;
     this.identityProvider = identityProvider;
   }
 
@@ -83,8 +83,7 @@ public class CartMergePageController {
       // have to follow the visitor into their account, or logging in would silently empty the cart.
       // The use
       // case is idempotent, so the other cases pass through it untouched.
-      recoverCartOnLoginUseCase.execute(
-          new RecoverCartOnLoginCommand(anonymousUserId, registeredUserId));
+      recoverCartUseCase.execute(new RecoverCartCommand(anonymousUserId, registeredUserId));
 
       redirectAttributes.addFlashAttribute("message", "Welcome back!");
 

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Use case for recovering cart on login.
+ * Use case for recovering a guest cart into the account's cart.
  *
  * <p>When a registered user logs in from a new device/browser:
  *
@@ -22,17 +22,17 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Delete the anonymous cart after merge
  * </ol>
  *
- * <p><b>Hexagonal Architecture:</b> This class implements the {@link RecoverCartOnLoginInputPort}
+ * <p><b>Hexagonal Architecture:</b> This class implements the {@link RecoverCartInputPort}
  * interface, which is a primary/driving port in the application layer.
  */
 @Service
 @Transactional
-public class RecoverCartOnLoginUseCase implements RecoverCartOnLoginInputPort {
+public class RecoverCartUseCase implements RecoverCartInputPort {
 
   private final ShoppingCartRepository shoppingCartRepository;
   private final DomainEventPublisher eventPublisher;
 
-  public RecoverCartOnLoginUseCase(
+  public RecoverCartUseCase(
       final ShoppingCartRepository shoppingCartRepository,
       final DomainEventPublisher eventPublisher) {
     this.shoppingCartRepository = shoppingCartRepository;
@@ -40,13 +40,13 @@ public class RecoverCartOnLoginUseCase implements RecoverCartOnLoginInputPort {
   }
 
   @Override
-  public RecoverCartOnLoginResult execute(final RecoverCartOnLoginCommand input) {
+  public RecoverCartResult execute(final RecoverCartCommand input) {
     final CustomerId anonymousCustomerId = CustomerId.of(input.anonymousUserId());
     final CustomerId registeredCustomerId = CustomerId.of(input.registeredUserId());
 
     // If same user ID, no merge needed
     if (anonymousCustomerId.equals(registeredCustomerId)) {
-      return RecoverCartOnLoginResult.noRecoveryNeeded(registeredCustomerId.value());
+      return RecoverCartResult.noRecoveryNeeded(registeredCustomerId.value());
     }
 
     // Find anonymous user's active cart
@@ -55,7 +55,7 @@ public class RecoverCartOnLoginUseCase implements RecoverCartOnLoginInputPort {
 
     // If no anonymous cart exists, no recovery needed
     if (anonymousCart.isEmpty() || anonymousCart.get().isEmpty()) {
-      return RecoverCartOnLoginResult.noRecoveryNeeded(registeredCustomerId.value());
+      return RecoverCartResult.noRecoveryNeeded(registeredCustomerId.value());
     }
 
     // Find or create registered user's active cart
@@ -87,6 +87,6 @@ public class RecoverCartOnLoginUseCase implements RecoverCartOnLoginInputPort {
     // Delete the anonymous cart
     shoppingCartRepository.deleteById(anonCart.id());
 
-    return RecoverCartOnLoginResult.recovered(registeredCart, itemsMerged);
+    return RecoverCartResult.recovered(registeredCart, itemsMerged);
   }
 }

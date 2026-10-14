@@ -29,8 +29,8 @@ import org.junit.jupiter.api.Test;
  * own, so the one they filled as a guest simply becomes theirs. Without it, logging in would
  * silently empty the cart — see ADR-029.
  */
-@DisplayName("RecoverCartOnLoginUseCase")
-class RecoverCartOnLoginUseCaseTest {
+@DisplayName("RecoverCartUseCase")
+class RecoverCartUseCaseTest {
 
   private static final Currency EUR = Currency.getInstance("EUR");
   private static final String ANONYMOUS_USER_ID = "anonymous-user-123";
@@ -38,13 +38,13 @@ class RecoverCartOnLoginUseCaseTest {
 
   private TestShoppingCartRepository repository;
   private TestDomainEventPublisher eventPublisher;
-  private RecoverCartOnLoginUseCase useCase;
+  private RecoverCartUseCase useCase;
 
   @BeforeEach
   void setUp() {
     repository = new TestShoppingCartRepository();
     eventPublisher = new TestDomainEventPublisher();
-    useCase = new RecoverCartOnLoginUseCase(repository, eventPublisher);
+    useCase = new RecoverCartUseCase(repository, eventPublisher);
   }
 
   @Test
@@ -53,7 +53,7 @@ class RecoverCartOnLoginUseCaseTest {
     final ProductId product = ProductId.generate();
     cartFor(ANONYMOUS_USER_ID, product, 2);
 
-    final RecoverCartOnLoginResult result = recover();
+    final RecoverCartResult result = recover();
 
     assertEquals(1, result.itemsMerged());
     assertTrue(result.anonymousCartDeleted());
@@ -80,8 +80,8 @@ class RecoverCartOnLoginUseCaseTest {
   void doesNothingWhenTheIdentityDidNotChange() {
     cartFor(REGISTERED_USER_ID, ProductId.generate(), 1);
 
-    final RecoverCartOnLoginResult result =
-        useCase.execute(new RecoverCartOnLoginCommand(REGISTERED_USER_ID, REGISTERED_USER_ID));
+    final RecoverCartResult result =
+        useCase.execute(new RecoverCartCommand(REGISTERED_USER_ID, REGISTERED_USER_ID));
 
     assertEquals(0, result.itemsMerged());
     assertFalse(result.anonymousCartDeleted());
@@ -91,7 +91,7 @@ class RecoverCartOnLoginUseCaseTest {
   @Test
   @DisplayName("does nothing when there is no anonymous cart")
   void doesNothingWhenThereIsNoAnonymousCart() {
-    final RecoverCartOnLoginResult result = recover();
+    final RecoverCartResult result = recover();
 
     assertEquals(0, result.itemsMerged());
     assertFalse(result.anonymousCartDeleted());
@@ -103,14 +103,14 @@ class RecoverCartOnLoginUseCaseTest {
   void doesNothingWhenTheAnonymousCartIsEmpty() {
     repository.save(ShoppingCart.create(CartId.generate(), CustomerId.of(ANONYMOUS_USER_ID)));
 
-    final RecoverCartOnLoginResult result = recover();
+    final RecoverCartResult result = recover();
 
     assertEquals(0, result.itemsMerged());
     assertTrue(activeCartOf(REGISTERED_USER_ID).isEmpty());
   }
 
-  private RecoverCartOnLoginResult recover() {
-    return useCase.execute(new RecoverCartOnLoginCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID));
+  private RecoverCartResult recover() {
+    return useCase.execute(new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID));
   }
 
   private void cartFor(final String userId, final ProductId productId, final int quantity) {
