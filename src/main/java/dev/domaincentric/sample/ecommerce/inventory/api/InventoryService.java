@@ -4,10 +4,10 @@ import dev.domaincentric.dca.buildingblocks.ddd.strategic.relationships.OpenHost
 import dev.domaincentric.sample.ecommerce.inventory.application.getstockforproducts.GetStockForProductsInputPort;
 import dev.domaincentric.sample.ecommerce.inventory.application.getstockforproducts.GetStockForProductsQuery;
 import dev.domaincentric.sample.ecommerce.inventory.application.getstockforproducts.GetStockForProductsResult;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockCommand;
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockInputPort;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelCommand;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelInputPort;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.Collection;
 import java.util.Collections;
@@ -35,15 +35,15 @@ import org.springframework.stereotype.Service;
 public class InventoryService {
 
   private final GetStockForProductsInputPort getStockForProductsInputPort;
-  private final SetStockLevelInputPort setStockLevelInputPort;
+  private final ProvisionInitialStockInputPort provisionInitialStockInputPort;
   private final ReduceStockInputPort reduceStockInputPort;
 
   public InventoryService(
       GetStockForProductsInputPort getStockForProductsInputPort,
-      SetStockLevelInputPort setStockLevelInputPort,
+      ProvisionInitialStockInputPort provisionInitialStockInputPort,
       ReduceStockInputPort reduceStockInputPort) {
     this.getStockForProductsInputPort = getStockForProductsInputPort;
-    this.setStockLevelInputPort = setStockLevelInputPort;
+    this.provisionInitialStockInputPort = provisionInitialStockInputPort;
     this.reduceStockInputPort = reduceStockInputPort;
   }
 
@@ -122,14 +122,16 @@ public class InventoryService {
   /**
    * Sets the initial stock level for a product.
    *
-   * <p>Delegates to the {@link SetStockLevelInputPort} use case. If no stock level exists for the
-   * product, a new stock level record is created. If a stock level already exists, it is updated.
+   * <p>Delegates to the {@link ProvisionInitialStockInputPort} use case. If no stock level exists
+   * for the product, a new stock level record is created. If a stock level already exists, it is
+   * updated.
    *
    * @param productId the product ID
    * @param quantity the stock quantity to set (must be non-negative)
    */
-  public void setInitialStock(ProductId productId, int quantity) {
-    setStockLevelInputPort.execute(new SetStockLevelCommand(productId.value(), quantity));
+  public void provisionInitialStock(ProductId productId, int quantity) {
+    provisionInitialStockInputPort.execute(
+        new ProvisionInitialStockCommand(productId.value(), quantity));
   }
 
   /**

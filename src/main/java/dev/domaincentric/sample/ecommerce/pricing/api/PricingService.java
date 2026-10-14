@@ -4,8 +4,8 @@ import dev.domaincentric.dca.buildingblocks.ddd.strategic.relationships.OpenHost
 import dev.domaincentric.sample.ecommerce.pricing.application.getpricesforproducts.GetPricesForProductsInputPort;
 import dev.domaincentric.sample.ecommerce.pricing.application.getpricesforproducts.GetPricesForProductsQuery;
 import dev.domaincentric.sample.ecommerce.pricing.application.getpricesforproducts.GetPricesForProductsResult;
-import dev.domaincentric.sample.ecommerce.pricing.application.setproductprice.SetProductPriceCommand;
-import dev.domaincentric.sample.ecommerce.pricing.application.setproductprice.SetProductPriceInputPort;
+import dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice.ProvisionInitialPriceCommand;
+import dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice.ProvisionInitialPriceInputPort;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.time.Instant;
@@ -35,13 +35,13 @@ import org.springframework.stereotype.Service;
 public class PricingService {
 
   private final GetPricesForProductsInputPort getPricesForProductsInputPort;
-  private final SetProductPriceInputPort setProductPriceInputPort;
+  private final ProvisionInitialPriceInputPort provisionInitialPriceInputPort;
 
   public PricingService(
       GetPricesForProductsInputPort getPricesForProductsInputPort,
-      SetProductPriceInputPort setProductPriceInputPort) {
+      ProvisionInitialPriceInputPort provisionInitialPriceInputPort) {
     this.getPricesForProductsInputPort = getPricesForProductsInputPort;
-    this.setProductPriceInputPort = setProductPriceInputPort;
+    this.provisionInitialPriceInputPort = provisionInitialPriceInputPort;
   }
 
   /**
@@ -92,15 +92,15 @@ public class PricingService {
   /**
    * Sets the initial price for a product.
    *
-   * <p>Delegates to the {@link SetProductPriceInputPort} use case. If no price exists for the
+   * <p>Delegates to the {@link ProvisionInitialPriceInputPort} use case. If no price exists for the
    * product, a new price record is created. If a price already exists, it is updated.
    *
    * @param productId the product ID
    * @param price the price to set (amount and currency)
    */
-  public void setInitialPrice(ProductId productId, Money price) {
-    setProductPriceInputPort.execute(
-        new SetProductPriceCommand(
+  public void provisionInitialPrice(ProductId productId, Money price) {
+    provisionInitialPriceInputPort.execute(
+        new ProvisionInitialPriceCommand(
             productId.value(), price.amount(), price.currency().getCurrencyCode()));
   }
 }

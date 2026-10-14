@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.pricing.application.setproductprice;
+package dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,12 +15,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** An event sets a price once: a redelivery does not undo a price set since. */
-class SetProductPriceUseCaseTest {
+class ProvisionInitialPriceUseCaseTest {
 
   private final InMemoryProductPriceRepository prices = new InMemoryProductPriceRepository();
   private final InMemoryProcessedEvents processedEvents = new InMemoryProcessedEvents();
-  private final SetProductPriceUseCase useCase =
-      new SetProductPriceUseCase(prices, new SilentEventPublisher(), processedEvents);
+  private final ProvisionInitialPriceUseCase useCase =
+      new ProvisionInitialPriceUseCase(prices, new SilentEventPublisher(), processedEvents);
 
   @Test
   @DisplayName("The same event delivered twice sets the price once")
@@ -29,11 +29,13 @@ class SetProductPriceUseCaseTest {
     final UUID eventId = UUID.randomUUID();
 
     useCase.execute(
-        new SetProductPriceCommand(product.value(), new BigDecimal("9.99"), "EUR", eventId));
-    useCase.execute(new SetProductPriceCommand(product.value(), new BigDecimal("12.00"), "EUR"));
-    final SetProductPriceResult redelivery =
+        new ProvisionInitialPriceCommand(product.value(), new BigDecimal("9.99"), "EUR", eventId));
+    useCase.execute(
+        new ProvisionInitialPriceCommand(product.value(), new BigDecimal("12.00"), "EUR"));
+    final ProvisionInitialPriceResult redelivery =
         useCase.execute(
-            new SetProductPriceCommand(product.value(), new BigDecimal("9.99"), "EUR", eventId));
+            new ProvisionInitialPriceCommand(
+                product.value(), new BigDecimal("9.99"), "EUR", eventId));
 
     assertTrue(redelivery.alreadyApplied());
     assertEquals(new BigDecimal("12.00"), redelivery.priceAmount());

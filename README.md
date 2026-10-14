@@ -590,11 +590,11 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── StockReserved.java
 │   │       └── StockReleased.java
 │   ├── application/                      # Application layer
-│   │   ├── setstocklevel/                # Use case: Set Stock Level
-│   │   │   ├── SetStockLevelInputPort.java
-│   │   │   ├── SetStockLevelUseCase.java
-│   │   │   ├── SetStockLevelCommand.java
-│   │   │   └── SetStockLevelResult.java
+│   │   ├── provisioninitialstock/        # Use case: Provision Initial Stock
+│   │   │   ├── ProvisionInitialStockInputPort.java
+│   │   │   ├── ProvisionInitialStockUseCase.java
+│   │   │   ├── ProvisionInitialStockCommand.java
+│   │   │   └── ProvisionInitialStockResult.java
 │   │   ├── reducestock/                  # Use case: Reduce Stock
 │   │   │   ├── ReduceStockInputPort.java
 │   │   │   ├── ReduceStockUseCase.java
@@ -629,11 +629,11 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── PriceCreated.java
 │   │       └── PriceChanged.java
 │   ├── application/                      # Application layer
-│   │   ├── setproductprice/              # Use case: Set Product Price
-│   │   │   ├── SetProductPriceInputPort.java
-│   │   │   ├── SetProductPriceUseCase.java
-│   │   │   ├── SetProductPriceCommand.java
-│   │   │   └── SetProductPriceResult.java
+│   │   ├── provisioninitialprice/        # Use case: Provision Initial Price
+│   │   │   ├── ProvisionInitialPriceInputPort.java
+│   │   │   ├── ProvisionInitialPriceUseCase.java
+│   │   │   ├── ProvisionInitialPriceCommand.java
+│   │   │   └── ProvisionInitialPriceResult.java
 │   │   ├── getpricesforproducts/         # Use case: Get Prices for Products
 │   │   │   ├── GetPricesForProductsInputPort.java
 │   │   │   ├── GetPricesForProductsUseCase.java

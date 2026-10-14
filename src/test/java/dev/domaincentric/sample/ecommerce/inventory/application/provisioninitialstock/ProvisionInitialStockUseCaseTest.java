@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel;
+package dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,11 +15,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** An event sets a stock level once: a redelivery does not undo what happened since. */
-class SetStockLevelUseCaseTest {
+class ProvisionInitialStockUseCaseTest {
 
   private final InMemoryStockLevelRepository stockLevels = new InMemoryStockLevelRepository();
-  private final SetStockLevelUseCase useCase =
-      new SetStockLevelUseCase(
+  private final ProvisionInitialStockUseCase useCase =
+      new ProvisionInitialStockUseCase(
           stockLevels, new SilentEventPublisher(), new InMemoryProcessedEvents());
 
   @Test
@@ -28,12 +28,12 @@ class SetStockLevelUseCaseTest {
     final ProductId product = ProductId.generate();
     final UUID eventId = UUID.randomUUID();
 
-    useCase.execute(new SetStockLevelCommand(product.value(), 10, eventId));
+    useCase.execute(new ProvisionInitialStockCommand(product.value(), 10, eventId));
     final StockLevel stockLevel = stockLevels.findByProductId(product).orElseThrow();
     stockLevel.adjustStockTo(7);
     stockLevels.save(stockLevel);
-    final SetStockLevelResult second =
-        useCase.execute(new SetStockLevelCommand(product.value(), 10, eventId));
+    final ProvisionInitialStockResult second =
+        useCase.execute(new ProvisionInitialStockCommand(product.value(), 10, eventId));
 
     assertTrue(second.alreadyApplied());
     assertEquals(7, stockLevels.findByProductId(product).orElseThrow().availableQuantity().value());

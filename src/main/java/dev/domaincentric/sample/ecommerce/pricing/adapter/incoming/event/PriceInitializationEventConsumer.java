@@ -1,7 +1,7 @@
 package dev.domaincentric.sample.ecommerce.pricing.adapter.incoming.event;
 
-import dev.domaincentric.sample.ecommerce.pricing.application.setproductprice.SetProductPriceCommand;
-import dev.domaincentric.sample.ecommerce.pricing.application.setproductprice.SetProductPriceInputPort;
+import dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice.ProvisionInitialPriceCommand;
+import dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice.ProvisionInitialPriceInputPort;
 import dev.domaincentric.sample.ecommerce.pricing.events.PriceInitializationTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,10 +24,11 @@ public class PriceInitializationEventConsumer {
 
   private static final Logger log = LoggerFactory.getLogger(PriceInitializationEventConsumer.class);
 
-  private final SetProductPriceInputPort setProductPriceInputPort;
+  private final ProvisionInitialPriceInputPort provisionInitialPriceInputPort;
 
-  public PriceInitializationEventConsumer(final SetProductPriceInputPort setProductPriceInputPort) {
-    this.setProductPriceInputPort = setProductPriceInputPort;
+  public PriceInitializationEventConsumer(
+      final ProvisionInitialPriceInputPort provisionInitialPriceInputPort) {
+    this.provisionInitialPriceInputPort = provisionInitialPriceInputPort;
   }
 
   /**
@@ -39,8 +40,8 @@ public class PriceInitializationEventConsumer {
   void on(final PriceInitializationTrigger event) {
     log.info("Initializing price for product {}", event.productId());
 
-    setProductPriceInputPort.execute(
-        new SetProductPriceCommand(
+    provisionInitialPriceInputPort.execute(
+        new ProvisionInitialPriceCommand(
             event.productId(),
             new java.math.BigDecimal(event.amount()),
             event.currency(),

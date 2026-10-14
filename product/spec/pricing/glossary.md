@@ -136,8 +136,8 @@ whoever creates products (Interface Inversion).
 **Related terms:** `ProductPrice`, **Initial Price Determination**
 
 **Notes:** Consumed by `pricing.adapter.incoming.event.PriceInitializationEventConsumer`, which calls
-the `SetProductPrice` use case with the event's `eventId()` (the contract extends `IntegrationEvent`). The use
-case skips an event `ProcessedEvents` has already recorded for its effect, `set-product-price`, and records it
+the `ProvisionInitialPrice` use case with the event's `eventId()` (the contract extends `IntegrationEvent`). The use
+case skips an event `ProcessedEvents` has already recorded for its effect, `set-product-price` (the stored key keeps its earlier name), and records it
 in the same transaction — a redelivery cannot reset a price that changed since.
 
 ---
@@ -173,8 +173,8 @@ transition from the "unpriced" to the "priced" state.
 
 **Type:** Concept
 
-**Related terms:** `ProductPrice.create`, _see Open Issues:
-`provisionInitialPrice`_
+**Related terms:** `ProductPrice.create`; the use case `ProvisionInitialPrice` and the Api operation
+`PricingService.provisionInitialPrice` record it.
 
 ---
 
@@ -193,18 +193,11 @@ business:
    - Extend the model into a **price history** in which each historical price
      entry has its own identity (then `PriceId` makes sense).
 
-2. **CRUD language `SetProductPrice`** in the use-case layer and
-   `PricingService.setInitialPrice` in the Api — should be
-   renamed to **`provisionInitialPrice`** (or similar business-meaningful name)
-   to linguistically express the transition character ("a product is being
-   priced for the first time"). In the aggregate this already corresponds to
-   `ProductPrice.create(...)`.
-
-3. **Missing price history** — the current modeling overwrites `currentPrice`
+2. **Missing price history** — the current modeling overwrites `currentPrice`
    and emits `PriceChanged`. A real price history (e.g. for retrospective
    analyses or future-dated prices) would be a separate modeling topic.
 
-4. **Future-dated prices** — `effectiveFrom` is currently fixed to
+3. **Future-dated prices** — `effectiveFrom` is currently fixed to
    `Instant.now()`. Scheduled price changes (e.g. "effective June 1st") are
    not modeled.
 

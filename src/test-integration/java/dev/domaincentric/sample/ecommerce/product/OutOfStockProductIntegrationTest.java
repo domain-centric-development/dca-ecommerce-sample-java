@@ -5,8 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelCommand;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,14 +58,14 @@ class OutOfStockProductIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @Autowired private SetStockLevelInputPort setStockLevel;
+  @Autowired private ProvisionInitialStockInputPort provisionInitialStock;
 
   private String productId;
 
   @BeforeEach
   void noUnitIsLeft() throws Exception {
     productId = text(VIEW_LINK, cardOf(SOLD_OUT));
-    setStockLevel.execute(new SetStockLevelCommand(productId, 0));
+    provisionInitialStock.execute(new ProvisionInitialStockCommand(productId, 0));
   }
 
   @Test

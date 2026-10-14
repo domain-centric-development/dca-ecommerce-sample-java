@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel;
+package dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock;
 
 /**
  * Output model for setting or updating stock levels.
@@ -10,7 +10,7 @@ package dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel;
  * @param created true if a new stock level was created, false if an existing one was updated
  * @param alreadyApplied whether the event had set this stock level before, so nothing changed
  */
-public record SetStockLevelResult(
+public record ProvisionInitialStockResult(
     String stockLevelId,
     String productId,
     int availableQuantity,

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.pricing.application.setproductprice;
+package dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -14,7 +14,7 @@ import java.time.Instant;
  * @param created true if a new price was created, false if an existing price was updated
  * @param alreadyApplied whether the event had set this price before, so nothing changed
  */
-public record SetProductPriceResult(
+public record ProvisionInitialPriceResult(
     String priceId,
     String productId,
     BigDecimal priceAmount,

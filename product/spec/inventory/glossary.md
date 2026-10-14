@@ -215,8 +215,8 @@ catalog.
 **Related terms:** `StockLevel`, `StockReductionTrigger`
 
 **Notes:** Consumed by `inventory.adapter.incoming.event.StockInitializationEventConsumer`, which calls
-the `SetStockLevel` use case with the event's `eventId()` (the contract extends `IntegrationEvent`). The use case
-skips an event `ProcessedEvents` has already recorded for its effect, `set-stock-level`, and records it in the
+the `ProvisionInitialStock` use case with the event's `eventId()` (the contract extends `IntegrationEvent`). The use case
+skips an event `ProcessedEvents` has already recorded for its effect, `set-stock-level` (the stored key keeps its earlier name), and records it in the
 same transaction — a redelivery cannot reset a stock level that changed since.
 
 ---

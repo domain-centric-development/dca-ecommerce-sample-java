@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelCommand;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import jakarta.servlet.http.Cookie;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -42,21 +42,21 @@ class CartStockWarningsIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @Autowired private SetStockLevelInputPort setStockLevel;
+  @Autowired private ProvisionInitialStockInputPort provisionInitialStock;
 
   private final Map<String, Cookie> cookies = new LinkedHashMap<>();
 
   @BeforeEach
   void forgetTheVisitorAndRestockTheSeededUnits() throws Exception {
     cookies.clear();
-    setStockLevel.execute(new SetStockLevelCommand(productIdOf(DESK_MODEL), 8));
+    provisionInitialStock.execute(new ProvisionInitialStockCommand(productIdOf(DESK_MODEL), 8));
   }
 
   @Test
   @DisplayName("Sold out line says unavailable")
   void aLineWhoseProductSoldOutSaysOnlyThatItIsNoLongerAvailable() throws Exception {
     addToCart(DESK_MODEL);
-    setStockLevel.execute(new SetStockLevelCommand(productIdOf(DESK_MODEL), 0));
+    provisionInitialStock.execute(new ProvisionInitialStockCommand(productIdOf(DESK_MODEL), 0));
 
     final Element line = lineOf(page("/cart"), DESK_MODEL);
 
@@ -71,7 +71,7 @@ class CartStockWarningsIntegrationTest {
     addToCart("Team Topologies");
     addToCart(DESK_MODEL);
     addToCart(DESK_MODEL);
-    setStockLevel.execute(new SetStockLevelCommand(productIdOf(DESK_MODEL), 1));
+    provisionInitialStock.execute(new ProvisionInitialStockCommand(productIdOf(DESK_MODEL), 1));
 
     final Document cart = page("/cart");
 

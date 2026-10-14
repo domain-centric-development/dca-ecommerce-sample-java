@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelCommand;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -53,7 +53,7 @@ class OrderCheckedAgainstStockIntegrationTest {
   private static final String CONFIRMATION = "/checkout/confirmation";
 
   @Autowired private MockMvc mockMvc;
-  @Autowired private SetStockLevelInputPort setStockLevel;
+  @Autowired private ProvisionInitialStockInputPort provisionInitialStock;
 
   private Visitor guest;
   private Visitor anotherVisitor;
@@ -62,7 +62,8 @@ class OrderCheckedAgainstStockIntegrationTest {
   void theDeskModelHasItsSeededStock() throws Exception {
     guest = new Visitor();
     anotherVisitor = new Visitor();
-    setStockLevel.execute(new SetStockLevelCommand(guest.productIdOf(DESK_MODEL), SEEDED_STOCK));
+    provisionInitialStock.execute(
+        new ProvisionInitialStockCommand(guest.productIdOf(DESK_MODEL), SEEDED_STOCK));
     guest.waitForAvailability(DESK_MODEL, SEEDED_STOCK + " units available");
   }
 

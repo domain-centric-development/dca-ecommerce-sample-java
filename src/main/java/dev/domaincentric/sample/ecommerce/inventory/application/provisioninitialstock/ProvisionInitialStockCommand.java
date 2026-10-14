@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel;
+package dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock;
 
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -14,15 +14,15 @@ import org.jspecify.annotations.Nullable;
  * @param quantity the stock quantity to set (must be non-negative)
  * @param eventId the id of the integration event that asked for it, if any
  */
-public record SetStockLevelCommand(String productId, int quantity, @Nullable UUID eventId) {
+public record ProvisionInitialStockCommand(String productId, int quantity, @Nullable UUID eventId) {
 
   /** A stock level no integration event asked for — not deduplicated. */
-  public SetStockLevelCommand(final String productId, final int quantity) {
+  public ProvisionInitialStockCommand(final String productId, final int quantity) {
     this(productId, quantity, null);
   }
 
   /** Compact constructor with validation. */
-  public SetStockLevelCommand {
+  public ProvisionInitialStockCommand {
     if (productId == null || productId.isBlank()) {
       throw new IllegalArgumentException("Product ID cannot be null or blank");
     }

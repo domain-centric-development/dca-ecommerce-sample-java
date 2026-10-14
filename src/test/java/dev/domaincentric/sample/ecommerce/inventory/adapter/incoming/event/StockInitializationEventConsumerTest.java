@@ -2,7 +2,7 @@ package dev.domaincentric.sample.ecommerce.inventory.adapter.incoming.event;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
 import dev.domaincentric.sample.ecommerce.inventory.events.StockInitializationTrigger;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ class StockInitializationEventConsumerTest {
   @Test
   @DisplayName("The trigger becomes a stock level command carrying the event id")
   void theCommandCarriesTheEventId() {
-    final List<SetStockLevelCommand> executed = new ArrayList<>();
+    final List<ProvisionInitialStockCommand> executed = new ArrayList<>();
     final StockInitializationEventConsumer consumer =
         new StockInitializationEventConsumer(
             command -> {
@@ -28,7 +28,7 @@ class StockInitializationEventConsumerTest {
 
     consumer.on(new Trigger(eventId, Instant.now(), "product-1", 10));
 
-    assertEquals(List.of(new SetStockLevelCommand("product-1", 10, eventId)), executed);
+    assertEquals(List.of(new ProvisionInitialStockCommand("product-1", 10, eventId)), executed);
   }
 
   private record Trigger(UUID eventId, Instant occurredOn, String productId, int initialStock)

@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel;
+package dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.inventory.application.shared.ProcessedEvents;
@@ -10,7 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Use case for setting or updating stock levels.
+ * Use case that provisions a product's initial stock — the stock level a product starts with when
+ * it enters the assortment. Provisioned again, it adjusts the level to the given quantity.
  *
  * <p>This use case orchestrates stock level management by:
  *
@@ -21,12 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Publishing domain events
  * </ol>
  *
- * <p><b>Hexagonal Architecture:</b> This class implements the {@link SetStockLevelInputPort}
- * interface, which is a primary/driving port in the application layer.
+ * <p><b>Hexagonal Architecture:</b> This class implements the {@link
+ * ProvisionInitialStockInputPort} interface, which is a primary/driving port in the application
+ * layer.
  */
 @Service
 @Transactional
-public class SetStockLevelUseCase implements SetStockLevelInputPort {
+public class ProvisionInitialStockUseCase implements ProvisionInitialStockInputPort {
 
   /** The effect's key in {@link ProcessedEvents} — stable: a rename would replay old events. */
   private static final String EFFECT = "set-stock-level";
@@ -35,7 +37,7 @@ public class SetStockLevelUseCase implements SetStockLevelInputPort {
   private final DomainEventPublisher eventPublisher;
   private final ProcessedEvents processedEvents;
 
-  public SetStockLevelUseCase(
+  public ProvisionInitialStockUseCase(
       final StockLevelRepository stockLevelRepository,
       final DomainEventPublisher eventPublisher,
       final ProcessedEvents processedEvents) {
@@ -45,7 +47,7 @@ public class SetStockLevelUseCase implements SetStockLevelInputPort {
   }
 
   @Override
-  public SetStockLevelResult execute(final SetStockLevelCommand command) {
+  public ProvisionInitialStockResult execute(final ProvisionInitialStockCommand command) {
     final ProductId productId = ProductId.of(command.productId());
 
     // Check if stock level exists for this product
@@ -84,9 +86,9 @@ public class SetStockLevelUseCase implements SetStockLevelInputPort {
     return toResult(stockLevel, created, false);
   }
 
-  private static SetStockLevelResult toResult(
+  private static ProvisionInitialStockResult toResult(
       final StockLevel stockLevel, final boolean created, final boolean alreadyApplied) {
-    return new SetStockLevelResult(
+    return new ProvisionInitialStockResult(
         stockLevel.id().value(),
         stockLevel.productId().value(),
         stockLevel.availableQuantity().value(),

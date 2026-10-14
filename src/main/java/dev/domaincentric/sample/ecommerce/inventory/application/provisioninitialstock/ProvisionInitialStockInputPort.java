@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel;
+package dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 
@@ -11,9 +11,10 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
  *
  * <p><b>Hexagonal Architecture:</b> This is a driving/primary port for write operations.
  *
- * @see SetStockLevelUseCase
+ * @see ProvisionInitialStockUseCase
  */
-public interface SetStockLevelInputPort extends UseCase<SetStockLevelCommand, SetStockLevelResult> {
+public interface ProvisionInitialStockInputPort
+    extends UseCase<ProvisionInitialStockCommand, ProvisionInitialStockResult> {
 
   /**
    * Sets or updates the stock level for a product.
@@ -26,5 +27,5 @@ public interface SetStockLevelInputPort extends UseCase<SetStockLevelCommand, Se
    * @throws IllegalArgumentException if quantity is negative
    */
   @Override
-  SetStockLevelResult execute(SetStockLevelCommand command);
+  ProvisionInitialStockResult execute(ProvisionInitialStockCommand command);
 }

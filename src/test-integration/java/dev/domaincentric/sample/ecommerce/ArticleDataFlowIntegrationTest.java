@@ -35,8 +35,8 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.LineItemSnap
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.inventory.api.InventoryService;
 import dev.domaincentric.sample.ecommerce.pricing.api.PricingService;
-import dev.domaincentric.sample.ecommerce.pricing.application.setproductprice.SetProductPriceCommand;
-import dev.domaincentric.sample.ecommerce.pricing.application.setproductprice.SetProductPriceInputPort;
+import dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice.ProvisionInitialPriceCommand;
+import dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice.ProvisionInitialPriceInputPort;
 import dev.domaincentric.sample.ecommerce.product.api.ProductCatalogService;
 import dev.domaincentric.sample.ecommerce.product.api.ProductCatalogService.ProductInfo;
 import dev.domaincentric.sample.ecommerce.product.application.shared.ProductRepository;
@@ -110,7 +110,7 @@ class ArticleDataFlowIntegrationTest {
 
   @Autowired private ConfirmCheckoutInputPort confirmCheckoutInputPort;
 
-  @Autowired private SetProductPriceInputPort setProductPriceInputPort;
+  @Autowired private ProvisionInitialPriceInputPort provisionInitialPriceInputPort;
 
   private ProductId testProductId;
   private String testProductIdString;
@@ -486,8 +486,8 @@ class ArticleDataFlowIntegrationTest {
 
       // When: Price changes (update to a different price)
       BigDecimal newPrice = originalPrice.add(BigDecimal.valueOf(10.00));
-      setProductPriceInputPort.execute(
-          new SetProductPriceCommand(testProductIdString, newPrice, "EUR"));
+      provisionInitialPriceInputPort.execute(
+          new ProvisionInitialPriceCommand(testProductIdString, newPrice, "EUR"));
 
       // Then: Getting cart should show price changed
       GetCartByIdResult updatedResult =
@@ -542,8 +542,8 @@ class ArticleDataFlowIntegrationTest {
 
       BigDecimal newPrice =
           item1Initial.priceAtAddition().value().amount().add(BigDecimal.valueOf(5.00));
-      setProductPriceInputPort.execute(
-          new SetProductPriceCommand(product1Id.value().toString(), newPrice, "EUR"));
+      provisionInitialPriceInputPort.execute(
+          new ProvisionInitialPriceCommand(product1Id.value().toString(), newPrice, "EUR"));
 
       // When: Getting cart
       GetCartByIdResult result =

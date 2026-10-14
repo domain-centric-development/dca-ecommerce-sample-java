@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.pricing.application.setproductprice;
+package dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -16,17 +16,17 @@ import org.jspecify.annotations.Nullable;
  * @param priceCurrency the price currency code (e.g., "EUR", "USD")
  * @param eventId the id of the integration event that asked for it, if any
  */
-public record SetProductPriceCommand(
+public record ProvisionInitialPriceCommand(
     String productId, BigDecimal priceAmount, String priceCurrency, @Nullable UUID eventId) {
 
   /** A price no integration event asked for — not deduplicated. */
-  public SetProductPriceCommand(
+  public ProvisionInitialPriceCommand(
       final String productId, final BigDecimal priceAmount, final String priceCurrency) {
     this(productId, priceAmount, priceCurrency, null);
   }
 
   /** Compact constructor with validation. */
-  public SetProductPriceCommand {
+  public ProvisionInitialPriceCommand {
     if (productId == null || productId.isBlank()) {
       throw new IllegalArgumentException("Product ID cannot be null or blank");
     }

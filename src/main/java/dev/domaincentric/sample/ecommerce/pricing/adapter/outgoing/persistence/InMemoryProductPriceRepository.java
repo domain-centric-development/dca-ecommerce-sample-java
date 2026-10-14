@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
  * ConcurrentHashMap. A secondary index on ProductId enables efficient lookups by product.
  *
  * <p><b>Initialization:</b> Pricing data is initialized by the SampleDataInitializer, which calls
- * the Pricing API ({@code PricingService.setInitialPrice}) after creating each product.
+ * the Pricing API ({@code PricingService.provisionInitialPrice}) after creating each product.
  *
  * <p>In a production system, this would be replaced with a database implementation.
  *
@@ -82,7 +82,7 @@ public class InMemoryProductPriceRepository implements ProductPriceRepository {
    * Asynchronous initialization method triggered by {@link AsyncInitialize}.
    *
    * <p>This method performs cache warmup and logs initialization status. Actual pricing data is
-   * populated via PricingService.setInitialPrice when products are created by
+   * populated via PricingService.provisionInitialPrice when products are created by
    * SampleDataInitializer.
    *
    * @see AsyncInitialize

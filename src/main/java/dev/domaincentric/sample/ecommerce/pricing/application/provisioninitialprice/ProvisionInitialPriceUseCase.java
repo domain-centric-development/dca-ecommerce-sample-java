@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.pricing.application.setproductprice;
+package dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.pricing.application.shared.ProcessedEvents;
@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Use case for setting or updating a product's price.
+ * Use case that provisions a product's initial price — the price a product starts with when it
+ * enters the assortment. Provisioned again, it replaces the current price.
  *
  * <p>This use case orchestrates price management by:
  *
@@ -23,12 +24,13 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Publishing domain events
  * </ol>
  *
- * <p><b>Hexagonal Architecture:</b> This class implements the {@link SetProductPriceInputPort}
- * interface, which is a primary/driving port in the application layer.
+ * <p><b>Hexagonal Architecture:</b> This class implements the {@link
+ * ProvisionInitialPriceInputPort} interface, which is a primary/driving port in the application
+ * layer.
  */
 @Service
 @Transactional
-public class SetProductPriceUseCase implements SetProductPriceInputPort {
+public class ProvisionInitialPriceUseCase implements ProvisionInitialPriceInputPort {
 
   /** The effect's key in {@link ProcessedEvents} — stable: a rename would replay old events. */
   private static final String EFFECT = "set-product-price";
@@ -37,7 +39,7 @@ public class SetProductPriceUseCase implements SetProductPriceInputPort {
   private final DomainEventPublisher eventPublisher;
   private final ProcessedEvents processedEvents;
 
-  public SetProductPriceUseCase(
+  public ProvisionInitialPriceUseCase(
       final ProductPriceRepository productPriceRepository,
       final DomainEventPublisher eventPublisher,
       final ProcessedEvents processedEvents) {
@@ -47,7 +49,7 @@ public class SetProductPriceUseCase implements SetProductPriceInputPort {
   }
 
   @Override
-  public SetProductPriceResult execute(final SetProductPriceCommand command) {
+  public ProvisionInitialPriceResult execute(final ProvisionInitialPriceCommand command) {
     final ProductId productId = ProductId.of(command.productId());
     final dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price newPrice =
         dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
@@ -88,9 +90,9 @@ public class SetProductPriceUseCase implements SetProductPriceInputPort {
     return toResult(productPrice, created, false);
   }
 
-  private static SetProductPriceResult toResult(
+  private static ProvisionInitialPriceResult toResult(
       final ProductPrice productPrice, final boolean created, final boolean alreadyApplied) {
-    return new SetProductPriceResult(
+    return new ProvisionInitialPriceResult(
         productPrice.id().value(),
         productPrice.productId().value(),
         productPrice.currentPrice().value().amount(),

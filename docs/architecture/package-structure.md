@@ -360,9 +360,9 @@ dev.domaincentric.sample.ecommerce
 │   │       ├── StockIncreased, StockDecreased
 │   │       └── StockReserved
 │   ├── application/
-│   │   ├── setstocklevel/
-│   │   │   ├── SetStockLevelInputPort, SetStockLevelUseCase
-│   │   │   ├── SetStockLevelCommand, SetStockLevelResult
+│   │   ├── provisioninitialstock/
+│   │   │   ├── ProvisionInitialStockInputPort, ProvisionInitialStockUseCase
+│   │   │   ├── ProvisionInitialStockCommand, ProvisionInitialStockResult
 │   │   ├── reducestock/
 │   │   │   ├── ReduceStockInputPort, ReduceStockUseCase
 │   │   │   ├── ReduceStockCommand, ReduceStockResult
@@ -398,9 +398,9 @@ dev.domaincentric.sample.ecommerce
 │   │       ├── PriceCreated
 │   │       └── PriceChanged
 │   ├── application/
-│   │   ├── setproductprice/
-│   │   │   ├── SetProductPriceInputPort, SetProductPriceUseCase
-│   │   │   ├── SetProductPriceCommand, SetProductPriceResult
+│   │   ├── provisioninitialprice/
+│   │   │   ├── ProvisionInitialPriceInputPort, ProvisionInitialPriceUseCase
+│   │   │   ├── ProvisionInitialPriceCommand, ProvisionInitialPriceResult
 │   │   ├── getpricesforproducts/
 │   │   │   ├── GetPricesForProductsInputPort, GetPricesForProductsUseCase
 │   │   │   ├── GetPricesForProductsQuery, GetPricesForProductsResult

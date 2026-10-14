@@ -9,9 +9,9 @@ import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.inventory.adapter.outgoing.persistence.InMemoryProcessedEvents;
 import dev.domaincentric.sample.ecommerce.inventory.adapter.outgoing.persistence.InMemoryStockLevelRepository;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockUseCase;
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockCommand.Line;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelCommand;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelUseCase;
 import dev.domaincentric.sample.ecommerce.inventory.domain.model.StockLevel;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
@@ -79,10 +79,10 @@ class ReduceStockUseCaseTest {
   void twoEffectsOfOneEventBothRun() {
     final ProductId product = ProductId.generate();
     final UUID eventId = UUID.randomUUID();
-    final SetStockLevelUseCase setStockLevel =
-        new SetStockLevelUseCase(stockLevels, publisher, processedEvents);
+    final ProvisionInitialStockUseCase provisionInitialStock =
+        new ProvisionInitialStockUseCase(stockLevels, publisher, processedEvents);
 
-    setStockLevel.execute(new SetStockLevelCommand(product.value(), 10, eventId));
+    provisionInitialStock.execute(new ProvisionInitialStockCommand(product.value(), 10, eventId));
     useCase.execute(new ReduceStockCommand(List.of(new Line(product.value(), 2)), eventId));
 
     assertEquals(8, available(product));

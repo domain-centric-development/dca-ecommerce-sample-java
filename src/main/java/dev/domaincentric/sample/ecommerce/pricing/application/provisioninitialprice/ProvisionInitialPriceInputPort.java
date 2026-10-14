@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.pricing.application.setproductprice;
+package dev.domaincentric.sample.ecommerce.pricing.application.provisioninitialprice;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 
@@ -10,10 +10,10 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
  *
  * <p><b>Hexagonal Architecture:</b> This is a driving/primary port for write operations.
  *
- * @see SetProductPriceUseCase
+ * @see ProvisionInitialPriceUseCase
  */
-public interface SetProductPriceInputPort
-    extends UseCase<SetProductPriceCommand, SetProductPriceResult> {
+public interface ProvisionInitialPriceInputPort
+    extends UseCase<ProvisionInitialPriceCommand, ProvisionInitialPriceResult> {
 
   /**
    * Sets or updates a product's price.
@@ -26,5 +26,5 @@ public interface SetProductPriceInputPort
    * @throws IllegalArgumentException if price amount is not greater than zero
    */
   @Override
-  SetProductPriceResult execute(SetProductPriceCommand command);
+  ProvisionInitialPriceResult execute(ProvisionInitialPriceCommand command);
 }

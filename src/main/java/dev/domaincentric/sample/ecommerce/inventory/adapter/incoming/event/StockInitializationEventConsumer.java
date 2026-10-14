@@ -1,7 +1,7 @@
 package dev.domaincentric.sample.ecommerce.inventory.adapter.incoming.event;
 
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelCommand;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import dev.domaincentric.sample.ecommerce.inventory.events.StockInitializationTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,10 +24,11 @@ public class StockInitializationEventConsumer {
 
   private static final Logger log = LoggerFactory.getLogger(StockInitializationEventConsumer.class);
 
-  private final SetStockLevelInputPort setStockLevelInputPort;
+  private final ProvisionInitialStockInputPort provisionInitialStockInputPort;
 
-  public StockInitializationEventConsumer(final SetStockLevelInputPort setStockLevelInputPort) {
-    this.setStockLevelInputPort = setStockLevelInputPort;
+  public StockInitializationEventConsumer(
+      final ProvisionInitialStockInputPort provisionInitialStockInputPort) {
+    this.provisionInitialStockInputPort = provisionInitialStockInputPort;
   }
 
   /**
@@ -39,7 +40,7 @@ public class StockInitializationEventConsumer {
   void on(final StockInitializationTrigger event) {
     log.info("Initializing stock for product {}", event.productId());
 
-    setStockLevelInputPort.execute(
-        new SetStockLevelCommand(event.productId(), event.initialStock(), event.eventId()));
+    provisionInitialStockInputPort.execute(
+        new ProvisionInitialStockCommand(event.productId(), event.initialStock(), event.eventId()));
   }
 }

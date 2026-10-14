@@ -9,8 +9,8 @@ import dev.domaincentric.sample.ecommerce.inventory.application.getlowstockprodu
 import dev.domaincentric.sample.ecommerce.inventory.application.getlowstockproducts.GetLowStockProductsQuery;
 import dev.domaincentric.sample.ecommerce.inventory.application.getlowstockproducts.GetLowStockProductsResult;
 import dev.domaincentric.sample.ecommerce.inventory.application.getlowstockproducts.GetLowStockProductsResult.LowStockProduct;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelCommand;
-import dev.domaincentric.sample.ecommerce.inventory.application.setstocklevel.SetStockLevelInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +32,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @DisplayName("Low stock overview")
 class LowStockOverviewIntegrationTest {
 
-  @Autowired private SetStockLevelInputPort setStockLevel;
+  @Autowired private ProvisionInitialStockInputPort provisionInitialStock;
 
   @Autowired private GetLowStockProductsInputPort getLowStockProducts;
 
@@ -92,7 +92,8 @@ class LowStockOverviewIntegrationTest {
 
   private ProductId stockedWith(final int availableQuantity) {
     final ProductId productId = ProductId.generate();
-    setStockLevel.execute(new SetStockLevelCommand(productId.value(), availableQuantity));
+    provisionInitialStock.execute(
+        new ProvisionInitialStockCommand(productId.value(), availableQuantity));
     return productId;
   }
 }
