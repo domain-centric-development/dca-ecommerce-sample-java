@@ -80,6 +80,7 @@ class GetProfileUseCaseTest {
     assertEquals(EMAIL, profile.email());
     assertEquals(FIRST_NAME, profile.firstName());
     assertEquals(LAST_NAME, profile.lastName());
+    assertEquals(FIRST_NAME + " " + LAST_NAME, profile.fullName());
     assertEquals(DATE_OF_BIRTH, profile.dateOfBirth());
   }
 

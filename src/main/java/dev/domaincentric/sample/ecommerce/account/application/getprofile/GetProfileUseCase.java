@@ -36,6 +36,7 @@ public class GetProfileUseCase implements GetProfileInputPort {
   }
 
   private static Profile profileOf(final String email, final Owner owner) {
-    return new Profile(email, owner.firstName(), owner.lastName(), owner.dateOfBirth());
+    return new Profile(
+        email, owner.firstName(), owner.lastName(), owner.fullName(), owner.dateOfBirth());
   }
 }

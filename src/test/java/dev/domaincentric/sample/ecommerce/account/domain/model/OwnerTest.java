@@ -35,6 +35,14 @@ class OwnerTest {
     assertEquals("Doe", owner.lastName());
   }
 
+  @Test
+  @DisplayName("the full name is the first and the last name joined by one space")
+  void fullNameJoinsFirstAndLastName() {
+    final Owner owner = Owner.of("  Anna ", " Schmidt  ", DATE_OF_BIRTH);
+
+    assertEquals("Anna Schmidt", owner.fullName());
+  }
+
   @ParameterizedTest
   @ValueSource(strings = {"", "   "})
   @DisplayName("refuses a blank first name")

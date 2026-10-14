@@ -33,7 +33,9 @@ public record GetProfileResult(Optional<Profile> profile) {
    * @param email the account's email address
    * @param firstName the owner's first name
    * @param lastName the owner's last name
+   * @param fullName the owner's full name, first and last name joined by one space
    * @param dateOfBirth the owner's date of birth
    */
-  public record Profile(String email, String firstName, String lastName, LocalDate dateOfBirth) {}
+  public record Profile(
+      String email, String firstName, String lastName, String fullName, LocalDate dateOfBirth) {}
 }

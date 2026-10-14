@@ -104,16 +104,12 @@ public class ProfilePageController {
     return render(
         model,
         flashMessage == null
-            ? ProfilePageViewModel.of(fullName(profile), profile.email(), profile.dateOfBirth())
+            ? ProfilePageViewModel.of(profile.fullName(), profile.email(), profile.dateOfBirth())
             : ProfilePageViewModel.withSuccess(
-                fullName(profile),
+                profile.fullName(),
                 profile.email(),
                 profile.dateOfBirth(),
                 String.valueOf(flashMessage)));
-  }
-
-  private static String fullName(final Profile profile) {
-    return profile.firstName() + " " + profile.lastName();
   }
 
   /**
@@ -180,7 +176,7 @@ public class ProfilePageController {
                 render(
                     model,
                     ProfilePageViewModel.withError(
-                        fullName(stored), submittedEmail, submittedDateOfBirth, message)))
+                        stored.fullName(), submittedEmail, submittedDateOfBirth, message)))
         .orElse(LOGIN_REDIRECT);
   }
 

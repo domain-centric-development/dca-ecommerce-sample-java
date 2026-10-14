@@ -65,7 +65,8 @@ Its **full name** is the first and the last name joined by one space, as the pro
 
 **Type:** Value Object
 
-**Operations:** `of`, `withDateOfBirth`.
+**Operations:** `of`, `withDateOfBirth`, `fullName` (first and last name joined by one space; the
+profile page shows it).
 
 **Notes:** Names are trimmed but never otherwise normalized — capitalization, particles and spelling
 of a person's own name are not the account's to correct — and are limited to 100 characters. A date

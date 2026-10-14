@@ -89,7 +89,8 @@ class ProfilePageControllerTest {
   private void givenRegisteredIdentityWithAccessibleAccount() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getProfile.setResult(
-        GetProfileResult.found(new Profile(EMAIL, FIRST_NAME, LAST_NAME, DATE_OF_BIRTH)));
+        GetProfileResult.found(
+            new Profile(EMAIL, FIRST_NAME, LAST_NAME, FULL_NAME, DATE_OF_BIRTH)));
   }
 
   // ---------------------------------------------------------------- GET

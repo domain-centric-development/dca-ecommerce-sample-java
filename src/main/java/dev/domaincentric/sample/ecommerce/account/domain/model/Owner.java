@@ -53,6 +53,15 @@ public record Owner(String firstName, String lastName, LocalDate dateOfBirth) im
     return new Owner(firstName, lastName, newDateOfBirth);
   }
 
+  /**
+   * The owner's full name: the first and the last name joined by one space.
+   *
+   * @return the full name
+   */
+  public String fullName() {
+    return firstName + " " + lastName;
+  }
+
   private static String requireName(final String value, final String label) {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException(label + " is required");
