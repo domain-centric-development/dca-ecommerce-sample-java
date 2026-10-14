@@ -556,6 +556,8 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │       ├── LoginPageController.java
 │       │       ├── LogoutPageController.java
 │       │       ├── RegisterPageController.java
+│       │       ├── RegistrationNotice.java              # the notice the page a registration leads to shows
+│       │       ├── RegistrationNoticeControllerAdvice.java  # words it on any page, as successMessage
 │       │       ├── MyAccountPageController.java
 │       │       ├── MyAccountPageViewModel.java
 │       │       ├── ChangePasswordPageController.java

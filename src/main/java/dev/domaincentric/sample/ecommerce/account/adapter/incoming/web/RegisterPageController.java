@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * MVC Controller for registration page.
@@ -76,6 +77,7 @@ public class RegisterPageController {
    * @param dateOfBirth the owner's date of birth, as the browser sent it
    * @param returnUrl optional URL to redirect to after registration
    * @param model Spring MVC model
+   * @param attributes the redirect's attributes, which take the notice that the account was created
    * @return redirect to home or returnUrl on success, register page on failure
    */
   @PostMapping
@@ -87,7 +89,8 @@ public class RegisterPageController {
       @RequestParam final String lastName,
       @RequestParam final String dateOfBirth,
       @RequestParam(required = false) final String returnUrl,
-      final Model model) {
+      final Model model,
+      final RedirectAttributes attributes) {
 
     final Submission submission =
         new Submission(email, firstName, lastName, dateOfBirth, returnUrl);
@@ -120,10 +123,8 @@ public class RegisterPageController {
 
       identitySession.setRegisteredIdentity(token);
 
-      if (returnUrl != null && !returnUrl.isBlank()) {
-        return "redirect:" + returnUrl;
-      }
-      return "redirect:/";
+      final String target = returnUrl != null && !returnUrl.isBlank() ? returnUrl : "/";
+      return RegistrationNotice.ACCOUNT_CREATED.redirectTo(target, attributes);
 
     } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
       // The context's own refusals, plus the argument exception a form field still reaches a value

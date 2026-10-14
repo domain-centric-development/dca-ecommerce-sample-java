@@ -18,6 +18,7 @@ public class HomePage extends BasePage {
 
   private static final String URL_PATTERN = "/";
   private static final String HERO = "hero";
+  private static final String SUCCESS_MESSAGE = "success-message";
   private static final String SLIDER = "product-slider";
   private static final String SLIDER_TITLE = "product-slider-title";
   private static final String CARD = "product-slider-card";
@@ -58,6 +59,17 @@ public class HomePage extends BasePage {
   }
 
   /**
+   * Creates the home page of a shop the test started itself, and waits for its hero section.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   */
+  public HomePage(Page page, String shopUrl) {
+    super(page, shopUrl, URL_PATTERN);
+    waitFor(HERO);
+  }
+
+  /**
    * Navigates to the home page and creates a page object.
    *
    * @param page the Playwright page instance
@@ -93,6 +105,15 @@ public class HomePage extends BasePage {
    */
   public String description() {
     return heroText(".hero__description");
+  }
+
+  /**
+   * The success messages the page shows above its content, in page order.
+   *
+   * @return one text per message, trimmed; empty when the page shows none
+   */
+  public List<String> successMessages() {
+    return byTest(SUCCESS_MESSAGE).allTextContents().stream().map(String::strip).toList();
   }
 
   /** Reloads the page and waits for its hero again. */

@@ -4,14 +4,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.domaincentric.sample.ecommerce.e2e.pages.HomePage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.RegisterPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.SiteHeader;
+import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /** A visitor creates an account on the registration page and is logged in right away. */
 @DisplayName("Registration E2E Tests")
 class RegistrationE2ETest extends BaseE2ETest {
+
+  private ConfigurableApplicationContext shop;
+
+  @AfterEach
+  void stopTheShop() {
+    if (shop != null) {
+      shop.close();
+    }
+  }
 
   @Test
   @DisplayName("Registration logs the visitor in")
@@ -29,6 +42,26 @@ class RegistrationE2ETest extends BaseE2ETest {
     SiteHeader header = new SiteHeader(page);
     assertEquals("Welcome, anna.schmidt@example.com", header.greeting());
     assertFalse(header.offersRegister(), "a logged-in visitor is not offered to register");
+  }
+
+  @Test
+  @DisplayName("Registration says the account was created")
+  void theHomePageARegistrationLeadsToSaysTheAccountWasCreated() {
+    // The shared shop may already hold the address from the test above, and a taken address is
+    // refused — so this test starts a shop of its own.
+    shop = ShopUnderTest.startedWith("registration_says_created_e2e");
+    final String shopUrl = ShopUnderTest.baseUrlOf(shop);
+
+    RegisterPage.navigateTo(page, shopUrl)
+        .fillOwner("Anna", "Schmidt", "1990-05-17")
+        .fillEmail("anna.schmidt@example.com")
+        .fillPassword("Secret123")
+        .fillConfirmPassword("Secret123")
+        .submit();
+
+    final HomePage home = new HomePage(page, shopUrl);
+    assertEquals(shopUrl + "/", page.url());
+    assertEquals(List.of("Account created successfully! Welcome!"), home.successMessages());
   }
 
   @Test
