@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.ReducedMotion;
@@ -136,8 +135,7 @@ class PageTransitionE2ETest extends BaseE2ETest {
   @DisplayName("Reduced motion means no animation")
   void theProductPageAppearsWithoutAnimationWhenTheVisitorPrefersReducedMotion() {
     context.close();
-    context =
-        browser.newContext(new Browser.NewContextOptions().setReducedMotion(ReducedMotion.REDUCE));
+    context = browser.newContext(contextOptions().setReducedMotion(ReducedMotion.REDUCE));
     context.addInitScript(RECORD_TRANSITION);
     page = context.newPage();
     ProductCatalogPage.navigateTo(page);
