@@ -94,6 +94,18 @@ class ShoppingCartApiE2ETest {
   }
 
   @Test
+  @DisplayName("No active cart is not found")
+  void theActiveCartOfACustomerWithoutOneIsNotFound() throws Exception {
+    final String token = registeredToken();
+    final String customerId = claimsOf(token).get("sub").asText();
+
+    final HttpResponse<String> response =
+        send(authorized(token, "/api/carts/customer/" + customerId + "/active").GET());
+
+    assertEquals(404, response.statusCode(), response.body());
+  }
+
+  @Test
   @DisplayName("Staff list every cart")
   void staffSeeEveryCartWithItsOwnerStatusAndTotal() throws Exception {
     final String ada = registeredToken();

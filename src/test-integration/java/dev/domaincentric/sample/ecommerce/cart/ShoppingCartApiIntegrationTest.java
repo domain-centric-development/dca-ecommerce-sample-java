@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import java.util.Base64;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -248,6 +249,24 @@ class ShoppingCartApiIntegrationTest {
   }
 
   @Test
+  @DisplayName("A read leaves no cart behind")
+  void readingAMissingActiveCartLeavesNothingInTheWayOfOpeningOne() throws Exception {
+    final String token = register("grace-reads-none@example.com");
+    mockMvc
+        .perform(
+            get("/api/carts/customer/" + customerIdOf(token) + "/active")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isNotFound());
+
+    mockMvc
+        .perform(post("/api/carts").header("Authorization", "Bearer " + token))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.items").isEmpty())
+        .andExpect(jsonPath("$.status").value("ACTIVE"))
+        .andExpect(jsonPath("$.itemCount").value(0));
+  }
+
+  @Test
   @DisplayName("Tokenless calls are strangers to each other")
   void eachCallWithoutATokenOpensACartForANewGuest() throws Exception {
     final JsonNode first = openWithoutToken();
@@ -319,6 +338,11 @@ class ShoppingCartApiIntegrationTest {
       }
     }
     throw new AssertionError("no product named " + name);
+  }
+
+  /** The customer id a token carries as its subject — the id the cart routes name. */
+  private static String customerIdOf(final String token) throws Exception {
+    return JSON.readTree(Base64.getUrlDecoder().decode(token.split("\\.")[1])).get("sub").asText();
   }
 
   /** Registers an account through the API and returns its token. */
