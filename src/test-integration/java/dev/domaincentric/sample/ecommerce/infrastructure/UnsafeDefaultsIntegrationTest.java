@@ -21,6 +21,12 @@ class UnsafeDefaultsIntegrationTest {
   private static final String OWN_SECRET =
       "--app.security.jwt.secret=a-secret-nobody-else-has-and-long-enough";
   private static final String SECURE_COOKIES = "--app.security.jwt.secure-cookies=true";
+  private static final String OPERATOR = "--app.security.backoffice.username=operator";
+  private static final String OPERATOR_PASSWORD =
+      "--app.security.backoffice.password=not-the-committed-one";
+  private static final String OPERATOR_SESSION = "--server.servlet.session.cookie.secure=true";
+  private static final String OWN_NOTICE_KEY =
+      "--app.web.notice-cookie.key=a2V5LW5vYm9keS1lbHNlLWhhcy0zMi1ieXRlcyEhISE=";
 
   @Test
   @DisplayName("the committed signing secret does not start a shop that is not in development")
@@ -51,6 +57,24 @@ class UnsafeDefaultsIntegrationTest {
   }
 
   @Test
+  @DisplayName("nor does the committed notice cookie key")
+  void refusesTheCommittedNoticeKey() {
+    final var failure =
+        assertThrows(
+            Exception.class,
+            () ->
+                start(
+                    HARDENED,
+                    OWN_SECRET,
+                    SECURE_COOKIES,
+                    OPERATOR,
+                    OPERATOR_PASSWORD,
+                    OPERATOR_SESSION));
+
+    assertTrue(message(failure).contains("NOTICE_COOKIE_KEY"), message(failure));
+  }
+
+  @Test
   @DisplayName("a configured shop starts")
   void startsWhenEverythingIsConfigured() {
     try (var context =
@@ -58,9 +82,10 @@ class UnsafeDefaultsIntegrationTest {
             HARDENED,
             OWN_SECRET,
             SECURE_COOKIES,
-            "--app.security.backoffice.username=operator",
-            "--app.security.backoffice.password=not-the-committed-one",
-            "--server.servlet.session.cookie.secure=true")) {
+            OPERATOR,
+            OPERATOR_PASSWORD,
+            OPERATOR_SESSION,
+            OWN_NOTICE_KEY)) {
       assertTrue(context.isRunning());
     }
   }

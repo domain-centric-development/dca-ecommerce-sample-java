@@ -6,6 +6,8 @@ import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.JwtP
 import dev.domaincentric.sample.ecommerce.account.infrastructure.JwtDevelopmentDefaultsValidator;
 import dev.domaincentric.sample.ecommerce.backoffice.infrastructure.BackofficeDevelopmentDefaultsValidator;
 import dev.domaincentric.sample.ecommerce.backoffice.infrastructure.BackofficeSecurityProperties;
+import dev.domaincentric.sample.ecommerce.infrastructure.config.NoticeCookieDevelopmentDefaultsValidator;
+import dev.domaincentric.sample.ecommerce.infrastructure.config.NoticeCookieProperties;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +31,10 @@ class DevelopmentDefaultsTest {
         BackofficeDevelopmentDefaultsValidator.DEVELOPMENT_PROFILES,
         "Two contexts deciding differently what a development run is would let one of them accept"
             + " a committed default where the other refuses it");
+    assertEquals(
+        JwtDevelopmentDefaultsValidator.DEVELOPMENT_PROFILES,
+        NoticeCookieDevelopmentDefaultsValidator.DEVELOPMENT_PROFILES,
+        "The notice cookie key must be refused where the other committed defaults are");
   }
 
   @Test
@@ -48,6 +54,10 @@ class DevelopmentDefaultsTest {
         yaml.contains(
             "${BACKOFFICE_PASSWORD:" + BackofficeSecurityProperties.DEVELOPMENT_PASSWORD + "}"),
         "The fallback operator password in application.yml must be the constant the guard compares"
+            + " to");
+    assertTrue(
+        yaml.contains("${NOTICE_COOKIE_KEY:" + NoticeCookieProperties.DEVELOPMENT_KEY + "}"),
+        "The fallback notice cookie key in application.yml must be the constant the guard compares"
             + " to");
   }
 
@@ -111,6 +121,20 @@ class DevelopmentDefaultsTest {
     }
 
     @Test
+    @DisplayName("the committed notice cookie key is refused")
+    void refusesTheCommittedNoticeKey() {
+      final var failure =
+          assertThrows(
+              IllegalStateException.class,
+              () ->
+                  new NoticeCookieDevelopmentDefaultsValidator(
+                          new NoticeCookieProperties(null, true, null), new MockEnvironment())
+                      .afterPropertiesSet());
+
+      assertTrue(failure.getMessage().contains("NOTICE_COOKIE_KEY"), failure.getMessage());
+    }
+
+    @Test
     @DisplayName("configured values start the shop")
     void acceptsConfiguredValues() {
       assertDoesNotThrow(() -> validator(OWN_SECRET, true).afterPropertiesSet());
@@ -144,6 +168,12 @@ class DevelopmentDefaultsTest {
             () ->
                 new BackofficeDevelopmentDefaultsValidator(
                         new BackofficeSecurityProperties(null, null), environment)
+                    .afterPropertiesSet(),
+            profile);
+        assertDoesNotThrow(
+            () ->
+                new NoticeCookieDevelopmentDefaultsValidator(
+                        new NoticeCookieProperties(null, false, null), environment)
                     .afterPropertiesSet(),
             profile);
       }

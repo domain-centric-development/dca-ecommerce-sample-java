@@ -73,6 +73,16 @@ logging:
 
 # JWT Security Configuration
 app:
+  web:
+    # The notice a redirect carries to the next page travels in a cookie sealed with AES-GCM
+    # (CookieFlashMapManager). Every instance must seal with the same key, so it comes from the
+    # environment: NOTICE_COOKIE_KEY, Base64 of 32 random bytes (`openssl rand -base64 32`). The
+    # fallback is committed, therefore public; NoticeCookieDevelopmentDefaultsValidator refuses it
+    # outside the dev and inmemory profiles. Secure and SameSite follow the identity cookie's.
+    notice-cookie:
+      key: ${NOTICE_COOKIE_KEY:hQ6wT6HZ3Kr+ilEKaTUAaF/3Be+MqOdGyTlUYcnPImQ=}
+      secure: ${JWT_SECURE_COOKIES:false}
+      same-site: ${JWT_SAME_SITE:Lax}
   security:
     jwt:
       # The fallback is committed, therefore public: anyone can mint a token this shop accepts.

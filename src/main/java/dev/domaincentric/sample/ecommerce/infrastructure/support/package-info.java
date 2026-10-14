@@ -10,6 +10,8 @@
  *   <li>{@link
  *       dev.domaincentric.sample.ecommerce.infrastructure.support.AsyncInitializationProcessor} -
  *       Spring BeanPostProcessor for async initialization
+ *   <li>{@link dev.domaincentric.sample.ecommerce.infrastructure.support.CookieFlashMapManager} -
+ *       Spring MVC flash maps in a sealed cookie instead of the server session
  * </ul>
  *
  * <p><b>Distinction from config package:</b>

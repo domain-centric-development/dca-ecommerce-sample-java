@@ -24,13 +24,16 @@ One Spring Boot process on port 8080, started with `./gradlew bootRun` or as a c
 (`docker compose up`).
 
 It is built to run as several instances behind a load balancer without sticky sessions: nothing a later request
-needs lives in one instance's memory. A message for the page a redirect leads to travels with the redirect as a
-fixed code in its URL (`?notice=<code>`), never as the sentence and never in a server session: the page turns the code
-into its own sentence and shows nothing for a code it does not know. The valid codes are one enum in the incoming
-web adapter, each value with its code and its sentence; reading the parameter is a lookup in that enum, never a
-switch over strings. The checkout steps' notices are `CheckoutStepNotice`, the cart pages' `CartPageNotice`, the
-account pages' `AccountPageNotice`; the checkout sends the customer back to the cart with the cart page's codes
-(`CartNotice`). A notice that names a number carries it beside the code (`&count=<n>`). What must outlast a request
+needs lives in one instance's memory. A message for the page a redirect leads to travels with the redirect in a
+sealed cookie — encrypted and signed with a key every instance shares, taken from configuration — never in the
+address and never in a server session. The cookie holds the notice's code, and a number where the sentence names
+one, never the sentence: the page turns the code into its own sentence and shows nothing for a code it does not
+know. A notice is addressed to the one page the redirect leads to, shown there once and then gone; a page never
+shows a notice meant for another. The valid codes are one enum in the incoming web adapter, each value with its
+code and its sentence; reading a code is a lookup in that enum, never a switch over strings. The checkout steps'
+notices are `CheckoutStepNotice`, the cart pages' `CartPageNotice`, the account pages' `AccountPageNotice`; the
+checkout sends the customer back to the cart with the cart page's codes (`CartNotice`). A checkout step that is
+denied and redirects passes no earlier notice on; only its own refusal applies. What must outlast a request
 lives in the database or in a cookie every instance can read.
 
 ## Two shops, one shop

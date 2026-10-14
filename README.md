@@ -747,6 +747,20 @@ docker compose run --rm gradle bootJar    # any other Gradle task
 
 `docker build -t dca-shop-java .` builds the image alone. Podman works the same way (`podman compose`).
 
+### Running several instances
+
+The shop keeps nothing a later request needs in one instance's memory, so it runs behind a load balancer without
+sticky sessions. The message a redirect carries to the next page ("Product added to cart!") travels in a cookie
+sealed with AES-GCM, and every instance must seal and open it with the same key. Give them one through the
+environment — Base64 of 32 random bytes:
+
+```bash
+NOTICE_COOKIE_KEY=$(openssl rand -base64 32)   # the same value on every instance
+```
+
+The key in `application.yml` is committed and therefore public; like the other development defaults (ADR-043) the
+shop refuses it outside the `dev` and `inmemory` profiles.
+
 ### Health Check
 
 ```bash

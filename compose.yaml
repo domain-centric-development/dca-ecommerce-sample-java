@@ -13,7 +13,7 @@ services:
       # A container is not a laptop, so the shop refuses the committed development secret and the
       # non-Secure cookies unless a development profile says this run is one. Compose says so; a
       # plain `docker run` of the image does not, and the shop refuses to start until JWT_SECRET,
-      # BACKOFFICE_USERNAME/PASSWORD and JWT_SECURE_COOKIES are supplied.
+      # BACKOFFICE_USERNAME/PASSWORD, JWT_SECURE_COOKIES and NOTICE_COOKIE_KEY are supplied.
       # A real database is added to a development run as SPRING_PROFILES_ACTIVE=dev,jdbc.
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
