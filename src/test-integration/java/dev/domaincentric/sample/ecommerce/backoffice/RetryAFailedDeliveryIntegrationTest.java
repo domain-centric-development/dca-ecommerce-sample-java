@@ -10,6 +10,8 @@ import dev.domaincentric.sample.ecommerce.backoffice.application.replayfailedpub
 import dev.domaincentric.sample.ecommerce.backoffice.application.replayfailedpublication.ReplayFailedPublicationInputPort;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -51,6 +53,7 @@ class RetryAFailedDeliveryIntegrationTest {
   @Autowired private ApplicationEventPublisher publisher;
   @Autowired private PlatformTransactionManager transactions;
   @Autowired private Fixes fixes;
+  @Autowired private HandlingListener handlingListener;
 
   @Test
   @DisplayName("Retry delivers the original event")
@@ -82,9 +85,7 @@ class RetryAFailedDeliveryIntegrationTest {
     final EventPublicationSummary handled =
         await(
             eventId,
-            entry ->
-                entry.listenerId().contains(HandlingListener.class.getSimpleName())
-                    && entry.isCompleted(),
+            entry -> entry.listenerId().contains(handlerName()) && entry.isCompleted(),
             DELIVERY_TIMEOUT_MILLIS);
     fixes.fix(eventId);
 
@@ -97,6 +98,12 @@ class RetryAFailedDeliveryIntegrationTest {
     final EventPublicationSummary handledAfter =
         entries(eventId, entry -> entry.id().equals(handled.id())).orElseThrow();
     assertThat(handledAfter.completionDate()).isEqualTo(handled.completionDate());
+    assertThat(allEntries(eventId, entry -> entry.listenerId().contains(handlerName())))
+        .as("the entries of the listener that handled the event")
+        .containsExactly(handledAfter);
+    assertThat(handlingListener.deliveriesOf(eventId))
+        .as("deliveries to the listener that handled the event")
+        .isEqualTo(1);
   }
 
   @Test
@@ -142,10 +149,19 @@ class RetryAFailedDeliveryIntegrationTest {
 
   private Optional<EventPublicationSummary> entries(
       final UUID eventId, final Predicate<EventPublicationSummary> state) {
+    return allEntries(eventId, state).stream().findFirst();
+  }
+
+  private List<EventPublicationSummary> allEntries(
+      final UUID eventId, final Predicate<EventPublicationSummary> state) {
     return getEventPublications.execute(new GetEventPublicationsQuery()).entries().stream()
         .filter(entry -> entry.serializedEvent().contains(eventId.toString()))
         .filter(state)
-        .findFirst();
+        .toList();
+  }
+
+  private static String handlerName() {
+    return HandlingListener.class.getSimpleName();
   }
 
   private static String firstLine(final EventPublicationSummary entry) {
@@ -200,9 +216,15 @@ class RetryAFailedDeliveryIntegrationTest {
 
   static class HandlingListener {
 
+    private final Map<UUID, Integer> deliveries = new ConcurrentHashMap<>();
+
     @ApplicationModuleListener
     public void deliver(final SharedFailure event) {
-      // handles every delivery
+      deliveries.merge(event.eventId(), 1, Integer::sum);
+    }
+
+    int deliveriesOf(final UUID eventId) {
+      return deliveries.getOrDefault(eventId, 0);
     }
   }
 
