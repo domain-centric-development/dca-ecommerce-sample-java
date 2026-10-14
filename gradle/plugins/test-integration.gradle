@@ -42,6 +42,10 @@ configureTestTask(tasks.getByName('test-integration'), "test-integration")
 // Extra logging parity with unit tests when -Plog-debug is set
 tasks.named('test-integration').configure {
   jvmArgs "-Xshare:off"
+  // Spring keeps every distinct test context alive for reuse (about 80 here: test classes with a
+  // database of their own each get one). Gradle's default worker heap of 512 MB runs out partway
+  // through the suite with an OutOfMemoryError in whichever class comes next.
+  maxHeapSize = '2g'
   if (project.hasProperty('log-debug')) {
     beforeTest { descriptor ->
       logger.lifecycle("# ${descriptor.className}: ${descriptor.name}")
