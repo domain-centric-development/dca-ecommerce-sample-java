@@ -122,6 +122,12 @@ Test: dev.domaincentric.sample.ecommerce.product.ProductValueRefusalIntegrationT
 - And the catalogue card "Rounding Mug" shows "15.00 EUR"
 Test: dev.domaincentric.sample.ecommerce.e2e.PriceRoundingApiE2ETest#aPriceWithAFractionOfACentIsRoundedHalfUpInTheAnswerAndOnTheCard
 
+#### the-answer-carries-the-rounded-price
+- Given a client holding a staff token
+- When it creates "Rounding Mug" with SKU "ROUND-001", price 14.995, category "Desk & Office" and stock 5
+- Then the shop answers 201 with `price` 15.00
+Test: dev.domaincentric.sample.ecommerce.e2e.ProductCreationApiE2ETest#theAnswerCarriesThePriceRoundedHalfUpToCents
+
 ### Rule: A price is greater than zero
 
 #### a-price-of-zero-is-refused
