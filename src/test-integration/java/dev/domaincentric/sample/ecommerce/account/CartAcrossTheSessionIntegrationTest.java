@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
 import java.net.URI;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +113,7 @@ class CartAcrossTheSessionIntegrationTest {
     // The session cookie lives 7 days, the visitor identity 30: the browser drops the session
     // first.
     assertThat(browser.cookie(SESSION_COOKIE).getMaxAge())
+        .isEqualTo((int) Duration.ofDays(7).toSeconds())
         .isLessThan(browser.cookie(IDENTITY_COOKIE).getMaxAge());
     browser.forget(SESSION_COOKIE);
 
