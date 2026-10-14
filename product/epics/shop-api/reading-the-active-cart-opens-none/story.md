@@ -1,7 +1,9 @@
 ---
 id: reading-the-active-cart-opens-none
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-14T18:41:09Z
+delivered_by: gate
 context: cart
 feature: shopping
 title: Reading a customer's active cart opens none
@@ -35,3 +37,7 @@ so that a read never leaves a cart behind and opening a cart stays the one way t
 - Decided by the user 2026-10-14 (WP-108 part A): a read never creates a cart. A cart comes into being when it is
   opened (`POST /api/carts`) or when an item is put in it. One of the two shops already behaves so and adopts this
   story; the other builds it.
+
+## Assumptions
+
+- answered: SharedScenariosTest also knows the titles of the stories not yet delivered (their `####` criteria, title = Title line else the key in words); the spec stays the only source for the Test-line and duplicate checks. Fixed on main in d5ce1e9; nothing changes in this story — run the stage again as it is. (reading-the-active-cart-opens-none-01)

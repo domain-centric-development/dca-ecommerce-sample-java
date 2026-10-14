@@ -51,3 +51,7 @@ moves my cart.
 - Decided by the user 2026-10-14 (WP-108 part A, DCA-HEX-014): no state changes on a page that is only opened. The
   visible flow stays as close to today's as it can: with scripts the customer sees the cart page as now, without them
   one more page with one button.
+
+## Assumptions
+
+- answered: SharedScenariosTest also knows the titles of the stories not yet delivered (their `####` criteria, title = Title line else the key in words); the spec stays the only source for the Test-line and duplicate checks. Fixed on main in d5ce1e9; nothing changes in this story — run the stage again as it is. (taking-over-the-guest-cart-is-a-step-of-its-own-01)

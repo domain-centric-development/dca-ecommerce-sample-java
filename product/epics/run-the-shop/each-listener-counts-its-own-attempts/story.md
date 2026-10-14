@@ -1,7 +1,9 @@
 ---
 id: each-listener-counts-its-own-attempts
 epic: run-the-shop
-status: adopted
+status: delivered
+delivered: 2026-10-14T17:39:35Z
+delivered_by: gate
 context: backoffice
 feature: eventlog
 title: Each listener's entry counts its own delivery attempts
@@ -38,3 +40,7 @@ alone, so that the number tells me how often that one listener failed and not ho
 - Decided by the user 2026-10-14 (triage Gruppe 5): `attempts` counts per listener; the glossary's *Attempt* says
   so. Both shops already count so: this story is adopted, not built — the scenarios come into the spec with the
   tests that prove them.
+
+## Assumptions
+
+- answered: SharedScenariosTest also knows the titles of the stories not yet delivered (their `####` criteria, title = Title line else the key in words); the spec stays the only source for the Test-line and duplicate checks. Fixed on main in d5ce1e9; nothing changes in this story — run the stage again as it is. (each-listener-counts-its-own-attempts-01)

@@ -321,3 +321,63 @@ Test: dev.domaincentric.sample.ecommerce.cart.ShoppingCartApiIntegrationTest#add
 - Then the shop answers 404 with an `application/problem+json` body
 - And its title is "Position not in cart" and its detail "The cart holds no position for <id of Team Topologies>."
 Test: dev.domaincentric.sample.ecommerce.cart.ShoppingCartApiIntegrationTest#removingAProductTheCartDoesNotHoldIsNotFoundStatedAsAProblem
+
+### Rule: "Remove" takes one line out of the cart, whatever its quantity; the other lines keep their order
+
+#### remove-takes-the-line-out
+- Given a guest who added "Domain-Driven Design", "Clean Architecture" and "Team Topologies" once each, in that order
+- When they press "Remove" on the line "Clean Architecture" on the cart page
+- Then the cart page shows two lines, "Domain-Driven Design" first and "Team Topologies" second
+- And the header's cart entry shows the badge "2"
+Test: dev.domaincentric.sample.ecommerce.e2e.RemoveCartLineE2ETest#removingALineLeavesTheOtherLinesInTheirOrder
+
+#### remove-takes-the-whole-quantity
+- Given a guest whose cart holds "Domain-Driven Design" with quantity 3 and "Clean Architecture" with quantity 1
+- When they press "Remove" on the line "Domain-Driven Design"
+- Then the cart page shows one line, "Clean Architecture" with quantity 1
+- And it shows "Total Items: 1" and "Total Quantity: 1"
+Test: dev.domaincentric.sample.ecommerce.cart.RemoveCartItemIntegrationTest#removingALineTakesItsWholeQuantityOut
+
+#### removing-the-last-line-empties-the-cart
+- Given a guest whose cart holds only "Domain-Driven Design" with quantity 1
+- When they press "Remove" on that line
+- Then the cart page shows "Your cart is empty"
+Test: dev.domaincentric.sample.ecommerce.cart.RemoveCartItemIntegrationTest#removingTheLastLineLeavesAnEmptyCart
+
+### Rule: A "Remove" for a line the visitor's cart does not hold changes nothing
+
+#### removing-a-line-already-gone-changes-nothing
+- Given a guest who opened the cart page with "Domain-Driven Design" and "Clean Architecture" in two tabs and
+  pressed "Remove" on "Clean Architecture" in the first tab
+- When they press "Remove" on "Clean Architecture" in the second tab
+- Then the cart page opens and shows the one line "Domain-Driven Design"
+Test: dev.domaincentric.sample.ecommerce.cart.RemoveCartItemIntegrationTest#removingALineAnotherTabRemovedAlreadyChangesNothing
+
+#### a-remove-with-a-malformed-line-id-changes-nothing
+- Given a guest whose cart holds "Domain-Driven Design" with quantity 1
+- When a "Remove" naming the line "no-such-line" is sent to the shop
+- Then the cart page opens and still shows "Domain-Driven Design" with quantity 1
+Test: dev.domaincentric.sample.ecommerce.cart.RemoveCartItemIntegrationTest#aRemoveNamingNoLineOfTheCartChangesNothing
+
+#### a-remove-for-another-visitors-line-changes-nothing
+- Given a guest whose cart holds `"Ubiquitous Language" Mug` and a second guest in another browser whose cart holds
+  "Team Topologies"
+- When the second guest sends a "Remove" naming the first guest's `"Ubiquitous Language" Mug` line
+- Then the first guest's cart still shows `"Ubiquitous Language" Mug` with quantity 1
+- And the second guest's cart page still shows "Team Topologies"
+Test: dev.domaincentric.sample.ecommerce.cart.RemoveCartItemIntegrationTest#aRemoveForAnotherVisitorsLineChangesNothing
+
+### Rule: Reading the active cart opens none; a customer without one is answered 404
+
+#### no-active-cart-is-not-found
+- Given a client holding the token of the customer "grace@example.com", who has no cart yet, and her `customerId`
+- When it sends `GET /api/carts/customer/<her customerId>/active` with her token
+- Then the shop answers 404
+Test: dev.domaincentric.sample.ecommerce.e2e.ShoppingCartApiE2ETest#theActiveCartOfACustomerWithoutOneIsNotFound
+
+#### a-read-leaves-no-cart-behind
+- Given the client of "grace@example.com" has just been answered 404 for her active cart
+- When it sends `POST /api/carts` with her token
+- Then the shop answers 201
+- And the body has `items` [], `status` "ACTIVE" and `itemCount` 0
+Test: dev.domaincentric.sample.ecommerce.cart.ShoppingCartApiIntegrationTest#readingAMissingActiveCartLeavesNothingInTheWayOfOpeningOne

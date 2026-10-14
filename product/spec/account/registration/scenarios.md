@@ -179,3 +179,18 @@ Test: dev.domaincentric.sample.ecommerce.account.RegistrationApiIntegrationTest#
 - Then the shop answers 409 with an `application/problem+json` body
 - And its title is "Account already exists" and its detail "The signed-in user already has an account."
 Test: dev.domaincentric.sample.ecommerce.account.RegistrationApiIntegrationTest#aCallerHoldingTheTokenOfAnAccountCannotRegisterASecondOne
+
+### Rule: The page a successful registration leads to says once "Account created successfully! Welcome!"
+
+#### registration-says-the-account-was-created
+- Given a visitor with no cookies on `/register`
+- When they submit First Name "Anna", Last Name "Schmidt", Date of Birth 1990-05-17, Email "anna.schmidt@example.com",
+  Password "Secret123" and Confirm Password "Secret123"
+- Then the home page `/` opens and shows "Account created successfully! Welcome!"
+Test: dev.domaincentric.sample.ecommerce.e2e.RegistrationE2ETest#theHomePageARegistrationLeadsToSaysTheAccountWasCreated
+
+#### the-page-returned-to-says-the-account-was-created
+- Given a visitor with no cookies who opened `/register?returnUrl=/products`
+- When they submit a valid registration for "anna.schmidt@example.com"
+- Then the catalogue page `/products` opens and shows "Account created successfully! Welcome!"
+Test: dev.domaincentric.sample.ecommerce.account.RegistrationNoticeIntegrationTest#thePageTheVisitorCameFromSaysTheAccountWasCreated

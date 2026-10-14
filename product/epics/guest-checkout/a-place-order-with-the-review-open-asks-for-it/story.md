@@ -37,6 +37,7 @@ review and say so, so that I place an order only after I have seen it.
   other step page, with the review open, it leads to the review with "Please review your order before placing it."
   Opening the review page changes no state: the review's own form carries what tells the shop it was sent from there.
   (user, 2026-10-14)
+- answered: SharedScenariosTest also knows the titles of the stories not yet delivered (their `####` criteria, title = Title line else the key in words); the spec stays the only source for the Test-line and duplicate checks. Fixed on main in d5ce1e9; nothing changes in this story — run the stage again as it is. (a-place-order-with-the-review-open-asks-for-it-01)
 
 ## Notes
 

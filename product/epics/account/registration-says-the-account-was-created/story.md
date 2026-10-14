@@ -1,7 +1,9 @@
 ---
 id: registration-says-the-account-was-created
 epic: account
-status: approved
+status: delivered
+delivered: 2026-10-14T17:54:31Z
+delivered_by: gate
 context: account
 feature: registration
 title: The page a registration leads to says the account was created
@@ -45,3 +47,7 @@ created, so that I know it worked.
   travels with the redirect as a notice addressed to the page the registration leads to (`product/tech.md`,
   Runtime), so it is shown there once and on no later page — that already holds today, where the sentence is shown
   nowhere, and stays a guarantee rather than a criterion.
+
+## Assumptions
+
+- answered: SharedScenariosTest also knows the titles of the stories not yet delivered (their `####` criteria, title = Title line else the key in words); the spec stays the only source for the Test-line and duplicate checks. Fixed on main in d5ce1e9; nothing changes in this story — run the stage again as it is. (registration-says-the-account-was-created-01)

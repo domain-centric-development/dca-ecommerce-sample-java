@@ -69,3 +69,21 @@ Test: dev.domaincentric.sample.ecommerce.e2e.EventPayloadE2ETest#theFirstEntrysP
 - Then its first line reads "Status: COMPLETED, attempts: 1"
 - And the lines after it hold the event's content: eventId, occurredOn, productId, amount, currency and initialStock
 Test: dev.domaincentric.sample.ecommerce.backoffice.EventPayloadIntegrationTest#aDeliveredProductCreationShowsItsStatusAttemptsAndContent
+
+### Rule: An entry's attempts are the tries of its own listener, the successful one included
+
+#### each-listener-counts-its-own-attempts
+- Given the operator is logged in and an event with two listeners, the first of which failed twice and the second
+  once before each handled it
+- When they expand the "Event Payload" of the event's two entries
+- Then the first listener's entry reads "Status: COMPLETED, attempts: 3" on its first line
+- And the second listener's entry reads "Status: COMPLETED, attempts: 2"
+Test: dev.domaincentric.sample.ecommerce.e2e.AttemptsPerListenerE2ETest#theEntriesOfOneEventCountTheTriesOfTheirOwnListener
+
+#### a-failing-listener-leaves-the-others-count-alone
+- Given the operator is logged in and an event with two listeners, the first of which fails on every delivery and
+  the second handled it at the first try
+- When they expand the "Event Payload" of the event's two entries after the automatic retries have stopped
+- Then the first listener's entry reads "Status: FAILED, attempts: 5" on its first line
+- And the second listener's entry reads "Status: COMPLETED, attempts: 1"
+Test: dev.domaincentric.sample.ecommerce.backoffice.AttemptsPerListenerIntegrationTest#aListenerFailingEveryTimeLeavesTheCountOfTheOneThatHandledTheEventAtOne
