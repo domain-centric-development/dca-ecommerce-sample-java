@@ -21,8 +21,9 @@ The Checkout context groups its use cases into three features — domain-named n
 | `cartsync` | Following changes of the underlying cart while the session is active | `synccheckoutwithcart` |
 
 `application/shared/` stays context-wide. The web adapters mirror `session` and `checkoutcompletion`
-(`adapter/incoming/web/{feature}`); `CheckoutRoutes`, `CheckoutStepNotice` and `CartNotice` (the codes the cart page
-knows) stay beside them, shared. The event consumer sits in `adapter/incoming/event/cartsync/`.
+(`adapter/incoming/web/{feature}`); `CheckoutRoutes`, `CheckoutStepNotice`, `CartNotice` (the codes the cart page
+knows) and `CheckoutStepPage` (the one place a step page is opened or a refused submission translated) stay beside
+them, shared. The event consumer sits in `adapter/incoming/event/cartsync/`.
 
 ---
 

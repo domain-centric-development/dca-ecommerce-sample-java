@@ -1,10 +1,9 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
-import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepPage;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
@@ -13,11 +12,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getactive
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -101,13 +96,11 @@ public class BuyerInfoPageController {
     if (!result.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
     }
-    final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
-    if (!result.stepAccess().granted()) {
-      return notice
-          .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
-          .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
+    final Optional<String> denied =
+        CheckoutStepPage.redirectIfDenied(result.stepAccess(), noticeCode, null, model);
+    if (denied.isPresent()) {
+      return denied.get();
     }
-    notice.flatMap(n -> n.sentence(null)).ifPresent(text -> model.addAttribute("error", text));
 
     // Convert to page-specific ViewModel
     final BuyerInfoPageViewModel viewModel = BuyerInfoPageViewModel.fromSnapshot(result.session());
@@ -150,33 +143,14 @@ public class BuyerInfoPageController {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
-    try {
-      submitBuyerInfoInputPort.execute(
-          new SubmitBuyerInfoCommand(
-              activeSession.sessionId(), customerId, email, firstName, lastName, phone));
+    return CheckoutStepPage.submitting(
+        CheckoutStep.BUYER_INFO,
+        () -> {
+          submitBuyerInfoInputPort.execute(
+              new SubmitBuyerInfoCommand(
+                  activeSession.sessionId(), customerId, email, firstName, lastName, phone));
 
-      return "redirect:/checkout/delivery";
-
-    } catch (UseCaseException | DomainException | IllegalArgumentException e) {
-      // The two base types are the checkout's own refusals. IllegalArgumentException is still
-      // here because a form field the customer typed reaches a value object unvalidated; each
-      // field moved into request validation is one reason less to catch it.
-      return CheckoutRoutes.redirectTo(CheckoutStep.BUYER_INFO, noticeFor(e));
-    }
-  }
-
-  /**
-   * The notice for a refusal: chosen by the failure's type. The failure's message is for the log,
-   * never for the customer.
-   */
-  private static CheckoutStepNotice noticeFor(final RuntimeException failure) {
-    return switch (failure) {
-      case CheckoutSessionNotFoundException e -> CheckoutStepNotice.SESSION_NOT_FOUND;
-      case CheckoutNotModifiableException e -> CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE;
-      case CheckoutStepNotCompletedException e -> CheckoutStepNotice.EARLIER_STEPS_FIRST;
-      case CheckoutStepOutOfOrderException e -> CheckoutStepNotice.EARLIER_STEPS_FIRST;
-      case IllegalArgumentException e -> CheckoutStepNotice.INVALID_BUYER_DETAILS;
-      default -> CheckoutStepNotice.BUYER_DETAILS_NOT_SAVED;
-    };
+          return "redirect:/checkout/delivery";
+        });
   }
 }

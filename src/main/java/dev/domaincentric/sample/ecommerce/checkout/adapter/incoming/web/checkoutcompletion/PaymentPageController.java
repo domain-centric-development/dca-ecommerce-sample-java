@@ -1,10 +1,9 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
-import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepPage;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersResult;
@@ -16,15 +15,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getactive
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.NothingToPayException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -111,13 +102,11 @@ public class PaymentPageController {
     if (!result.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
     }
-    final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
-    if (!result.stepAccess().granted()) {
-      return notice
-          .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
-          .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
+    final Optional<String> denied =
+        CheckoutStepPage.redirectIfDenied(result.stepAccess(), noticeCode, null, model);
+    if (denied.isPresent()) {
+      return denied.get();
     }
-    notice.flatMap(n -> n.sentence(null)).ifPresent(text -> model.addAttribute("error", text));
 
     // Convert to page-specific ViewModel
     final PaymentPageViewModel viewModel = PaymentPageViewModel.fromSnapshot(result.session());
@@ -156,38 +145,13 @@ public class PaymentPageController {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
-    try {
-      submitPaymentInputPort.execute(
-          new SubmitPaymentCommand(activeSession.sessionId(), customerId, providerId));
+    return CheckoutStepPage.submitting(
+        CheckoutStep.PAYMENT,
+        () -> {
+          submitPaymentInputPort.execute(
+              new SubmitPaymentCommand(activeSession.sessionId(), customerId, providerId));
 
-      return "redirect:/checkout/review";
-
-    } catch (CheckoutStepNotCompletedException | CheckoutStepOutOfOrderException e) {
-      // The step shown instead says it; the redirect carries it to whichever instance answers
-      return CheckoutRoutes.redirectTo(
-          CheckoutStep.PAYMENT, CheckoutStepNotice.EARLIER_STEPS_FIRST);
-    } catch (UseCaseException | DomainException | IllegalArgumentException e) {
-      // The two base types are the checkout's own refusals. IllegalArgumentException is still
-      // here because a form field the customer typed reaches a value object unvalidated; each
-      // field moved into request validation is one reason less to catch it.
-      return CheckoutRoutes.redirectTo(CheckoutStep.PAYMENT, noticeFor(e));
-    }
-  }
-
-  /**
-   * The notice for a refusal: chosen by the failure's type. The failure's message is for the log,
-   * never for the customer.
-   */
-  private static CheckoutStepNotice noticeFor(final RuntimeException failure) {
-    return switch (failure) {
-      case PaymentInitiationFailedException e -> CheckoutStepNotice.PAYMENT_REFUSED;
-      case PaymentProviderUnavailableException e -> CheckoutStepNotice.PAYMENT_PROVIDER_UNAVAILABLE;
-      case PaymentProviderNotFoundException e -> CheckoutStepNotice.PAYMENT_METHOD_NOT_OFFERED;
-      case NothingToPayException e -> CheckoutStepNotice.NOTHING_TO_PAY;
-      case CheckoutSessionNotFoundException e -> CheckoutStepNotice.SESSION_NOT_FOUND;
-      case CheckoutNotModifiableException e -> CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE;
-      case IllegalArgumentException e -> CheckoutStepNotice.PAYMENT_METHOD_MISSING;
-      default -> CheckoutStepNotice.PAYMENT_NOT_SAVED;
-    };
+          return "redirect:/checkout/review";
+        });
   }
 }

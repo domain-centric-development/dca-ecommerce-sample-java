@@ -1,10 +1,9 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
-import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepPage;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
@@ -16,12 +15,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfirmedcheckoutsession.GetConfirmedCheckoutSessionResult;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -90,21 +84,14 @@ public class ConfirmationPageController {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT);
     }
 
-    try {
-      confirmCheckoutInputPort.execute(
-          new ConfirmCheckoutCommand(activeSession.sessionId(), customerId));
+    return CheckoutStepPage.submitting(
+        CheckoutStep.REVIEW,
+        () -> {
+          confirmCheckoutInputPort.execute(
+              new ConfirmCheckoutCommand(activeSession.sessionId(), customerId));
 
-      return "redirect:/checkout/confirmation";
-
-    } catch (CheckoutStepNotCompletedException e) {
-      // The step shown instead says it; the redirect carries it to whichever instance answers
-      return CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, CheckoutStepNotice.EARLIER_STEPS_FIRST);
-    } catch (UseCaseException | DomainException | IllegalArgumentException e) {
-      // The two base types are the checkout's own refusals. IllegalArgumentException is still
-      // here because a form field the customer typed reaches a value object unvalidated; each
-      // field moved into request validation is one reason less to catch it.
-      return redirectToReviewFor(e);
-    }
+          return "redirect:/checkout/confirmation";
+        });
   }
 
   /**
@@ -155,28 +142,5 @@ public class ConfirmationPageController {
     model.addAttribute("title", "Order Confirmed - Thank You!");
 
     return "checkout/confirmation";
-  }
-
-  /**
-   * The review page with the notice for a refusal: chosen by the failure's type, the number it
-   * names taken from its values. The failure's message is for the log, never for the customer.
-   */
-  private static String redirectToReviewFor(final RuntimeException failure) {
-    return switch (failure) {
-      case CheckoutValidationException e ->
-          CheckoutRoutes.redirectTo(
-              CheckoutStep.REVIEW,
-              CheckoutStepNotice.ITEMS_UNAVAILABLE,
-              e.validation().errors().size());
-      case CheckoutSessionNotFoundException e ->
-          CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, CheckoutStepNotice.SESSION_NOT_FOUND);
-      case CheckoutNotModifiableException e ->
-          CheckoutRoutes.redirectTo(
-              CheckoutStep.REVIEW, CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE);
-      case CheckoutStepOutOfOrderException e ->
-          CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, CheckoutStepNotice.REVIEW_FIRST);
-      default ->
-          CheckoutRoutes.redirectTo(CheckoutStep.REVIEW, CheckoutStepNotice.ORDER_NOT_PLACED);
-    };
   }
 }

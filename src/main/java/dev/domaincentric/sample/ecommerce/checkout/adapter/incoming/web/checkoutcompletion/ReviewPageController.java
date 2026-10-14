@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepPage;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -92,13 +93,11 @@ public class ReviewPageController {
     if (!result.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND);
     }
-    final Optional<CheckoutStepNotice> notice = CheckoutStepNotice.fromCode(noticeCode);
-    if (!result.stepAccess().granted()) {
-      return notice
-          .map(n -> CheckoutRoutes.redirectFor(result.stepAccess(), n))
-          .orElseGet(() -> CheckoutRoutes.redirectFor(result.stepAccess()));
+    final Optional<String> denied =
+        CheckoutStepPage.redirectIfDenied(result.stepAccess(), noticeCode, count, model);
+    if (denied.isPresent()) {
+      return denied.get();
     }
-    notice.flatMap(n -> n.sentence(count)).ifPresent(text -> model.addAttribute("error", text));
 
     // Convert to page-specific ViewModel
     final ReviewPageViewModel viewModel = ReviewPageViewModel.fromSnapshot(result.session());
