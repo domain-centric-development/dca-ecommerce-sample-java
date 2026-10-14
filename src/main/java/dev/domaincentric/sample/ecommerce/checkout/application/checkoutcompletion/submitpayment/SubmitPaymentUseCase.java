@@ -67,9 +67,9 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
     final PaymentProvider provider =
         paymentProviderRegistry
             .findById(providerId)
-            .orElseThrow(() -> new PaymentProviderNotFoundException(command.providerId()));
+            .orElseThrow(() -> new PaymentProviderNotFoundException(providerId));
     if (!provider.isAvailable()) {
-      throw new PaymentProviderUnavailableException(command.providerId());
+      throw new PaymentProviderUnavailableException(providerId);
     }
 
     // Everything the session itself can refuse is refused here, before the provider is reached: a
@@ -84,10 +84,10 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
 
     final PaymentProvider.PaymentResult initiation = provider.initiatePayment(sessionId, amount);
     if (initiation.outcome() == PaymentProvider.PaymentResult.Outcome.UNAVAILABLE) {
-      throw new PaymentProviderUnavailableException(command.providerId());
+      throw new PaymentProviderUnavailableException(providerId);
     }
     if (!initiation.success()) {
-      throw new PaymentInitiationFailedException(command.providerId(), initiation.errorMessage());
+      throw new PaymentInitiationFailedException(providerId, initiation.errorMessage());
     }
 
     final PaymentSelection paymentSelection =

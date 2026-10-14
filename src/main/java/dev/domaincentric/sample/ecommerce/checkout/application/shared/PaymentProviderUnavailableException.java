@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.shared;
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import java.io.Serial;
 
 /**
@@ -13,14 +14,14 @@ public final class PaymentProviderUnavailableException extends UseCaseException 
 
   @Serial private static final long serialVersionUID = 1L;
 
-  private final String providerId;
+  private final PaymentProviderId providerId;
 
-  public PaymentProviderUnavailableException(final String providerId) {
-    super("Payment provider is currently unavailable: " + providerId);
+  public PaymentProviderUnavailableException(final PaymentProviderId providerId) {
+    super("Payment provider is currently unavailable: " + providerId.value());
     this.providerId = providerId;
   }
 
-  public String providerId() {
+  public PaymentProviderId providerId() {
     return providerId;
   }
 }

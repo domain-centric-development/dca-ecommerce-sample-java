@@ -3,6 +3,8 @@ package dev.domaincentric.sample.ecommerce.cart.domain.model;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.io.Serial;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Raised when a position the caller names is not in the cart.
@@ -15,26 +17,39 @@ public final class CartItemNotFoundException extends DomainException {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  private final String reference;
+  private final @Nullable CartItemId itemId;
+  private final @Nullable ProductId productId;
 
-  private CartItemNotFoundException(final String message, final String reference) {
+  private CartItemNotFoundException(
+      final String message,
+      final @Nullable CartItemId itemId,
+      final @Nullable ProductId productId) {
     super(message);
-    this.reference = reference;
+    this.itemId = itemId;
+    this.productId = productId;
   }
 
-  /** The position was named by its own identity. */
   public static CartItemNotFoundException forItem(final CartItemId itemId) {
-    return new CartItemNotFoundException("Cart item not found: " + itemId.value(), itemId.value());
+    return new CartItemNotFoundException("Cart item not found: " + itemId.value(), itemId, null);
   }
 
-  /** The position was named by the product it holds. */
   public static CartItemNotFoundException forProduct(final ProductId productId) {
     return new CartItemNotFoundException(
-        "Product not found in cart: " + productId.value(), productId.value());
+        "Product not found in cart: " + productId.value(), null, productId);
   }
 
-  /** The identity the caller used — a position identity or a product identity. */
+  /** The cart item that was named, when the caller named an item. */
+  public Optional<CartItemId> itemId() {
+    return Optional.ofNullable(itemId);
+  }
+
+  /** The product that was named, when the caller named a product. */
+  public Optional<ProductId> productId() {
+    return Optional.ofNullable(productId);
+  }
+
+  /** The id the caller named, item or product, as its value. */
   public String reference() {
-    return reference;
+    return itemId().map(CartItemId::value).orElseGet(() -> productId().orElseThrow().value());
   }
 }

@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.shared;
 
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import java.io.Serial;
 
 /**
@@ -13,14 +14,14 @@ public final class PaymentInitiationFailedException extends UseCaseException {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  private final String providerId;
+  private final PaymentProviderId providerId;
 
-  public PaymentInitiationFailedException(final String providerId, final String reason) {
+  public PaymentInitiationFailedException(final PaymentProviderId providerId, final String reason) {
     super(reason);
     this.providerId = providerId;
   }
 
-  public String providerId() {
+  public PaymentProviderId providerId() {
     return providerId;
   }
 }

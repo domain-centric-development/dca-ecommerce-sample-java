@@ -515,7 +515,8 @@ carries their product ids, in cart order.
 
 **Definition:** The selected provider is unknown to the shop; it is unavailable (it says it is not taking payments,
 cannot be reached, does not answer in time or answers outside its contract); or it refused to open a payment. The
-provider's reason travels on the failure and into the log. The customer sees the shop's own text: "The payment was
+provider's reason travels on the failure and into the log; each carries the `PaymentProviderId` it met, not the raw
+input. The customer sees the shop's own text: "The payment was
 refused. Please choose another way to pay." for a refusal, "The payment provider is not available right now. Please
 try again later." when the provider is unavailable.
 

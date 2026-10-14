@@ -348,6 +348,8 @@ the use case or by the store that sees every cart of a customer.
 
 **Type:** Domain failure (`DomainException`) · **Related terms:** `CartItem`, `ShoppingCart.removeItem`
 
+**Notes:** Carries the id the caller named — the `CartItemId` or the `ProductId` — never its text.
+
 ---
 
 ### CartNotFound
