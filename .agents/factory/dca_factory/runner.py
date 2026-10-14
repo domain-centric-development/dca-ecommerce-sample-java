@@ -25,7 +25,7 @@ from .contract import (
     delivered_by, delivered_on, GateError, git, is_delivered, legacy_story_digest, MAPPING_ROW, NOTHING, place, PROFILE_FILE, read_front_matter, read_profile, read_text,
     record_path, resolve_profile, SELECTOR, set_places, SHARED_WINDOWS, shown, STAGE, STAGE_FILES, STAGE_ORDER, STAGES,
     STORY_BRANCH, story_digest, STORY_FILE, story_files, story_folder, story_id_of, story_kind, worktree_places, decisions_store,
-    needs_human_ids)
+    needs_human_ids, OWNED_DIGEST, WINDOW_DIGEST)
 from .reports import (
     tokens_of, usage_lines)
 from .state import (
@@ -36,7 +36,7 @@ from .state import (
 from .spec import (
     context_folder, derived, merge, place_name, read_delta, read_spec, render_spec, story_entries)
 from .gate import (
-    merge_target,
+    merge_target, run as run_command,
     read_mapping, spec_target, story_spec,
     BUILT_IN_PERSPECTIVES, CLAUSES_MARKER, CONFLICT_MARKER, contract_of, criteria_of, HANDOVER_BUDGET,
     integration_target, INVARIANTS_MARKER, perspectives_of, plan_invariants, plan_proposals, read_clause_rows,
@@ -236,17 +236,38 @@ def worktree_prepare(cwd, runs, story_id):
             handle.write((on or git(path, "rev-parse", "HEAD")[1].strip()) + "\n")
     target = integration_target(runs, story_id)
     restore_places(path)
-    # Resumed after waiting: a branch with no commit of its own moves onto the main line as it is now — what the
-    # other stories delivered is there for its next stage. Git refuses where the story's changes are in the way;
-    # then it keeps its base, and the integrate step merges.
-    own = git(path, "rev-list", "--count", f"{target}..HEAD")[1].strip()
-    if own == "0" and git(path, "rev-parse", "HEAD")[1].strip() != git(path, "rev-parse", target)[1].strip():
-        if git(path, "merge", "--ff-only", "--quiet", target)[0] == 0:
+    # Resumed — after an answer, a restart: the story moves onto the main line as it is now, so what the other
+    # stories delivered (a dependency added while it waited among them) is there for its next stage. A branch with no
+    # commit of its own fast-forwards; where the story's own change is in the way, or it has a commit, it is merged
+    # the way the integrate step merges — one commit on top of the main line. A conflict is named (`conflict:` lines,
+    # the list in the evidence folder) and left to the integrate stage, which the runner starts before the stage.
+    if git(path, "merge-base", "--is-ancestor", target, "HEAD")[0] != 0:
+        own = git(path, "rev-list", "--count", f"{target}..HEAD")[1].strip()
+        if own == "0" and git(path, "merge", "--ff-only", "--quiet", target)[0] == 0:
             write_base(runs, story_id, git(path, "rev-parse", "HEAD^{tree}")[1].strip())
             print(f"worktree: {story_id} moved onto {target} as it is now", file=sys.stderr)
         else:
-            print(f"worktree: {story_id} keeps its base — {target} changed what the story changes; the integrate "
-                  f"step merges", file=sys.stderr)
+            stage_story(path, runs, story_id)
+            if git(path, "diff", "--cached", "--quiet")[0] != 0:
+                git(path, *git_identity(path), "commit", "--no-verify", "--quiet", "-m", f"wip({story_id}): before resuming")
+            done = git(path, *git_identity(path), "merge", "--no-ff", "--no-edit", "--no-verify", "--quiet", target)
+            conflicted = [p for p in git(path, "diff", "--name-only", "--diff-filter=U")[1].split("\n") if p.strip()]
+            if done[0] == 0:
+                front, body = read_front_matter(find_story(place("epics"), story_id))
+                if squash_story(path, runs, story_id, target, front, body) != 0:
+                    return 1
+                print(f"worktree: {story_id} merged with {target} as it is now", file=sys.stderr)
+            elif conflicted:
+                with open(os.path.join(evidence_dir(runs, story_id), CONFLICTS_FILE), "w", encoding="utf-8") as handle:
+                    handle.write("\n".join(conflicted) + "\n")
+                for conflict in conflicted:
+                    print(f"conflict: {conflict}")
+                print(f"worktree: {story_id} meets {target} in {', '.join(conflicted)} — the integrate stage resolves "
+                      f"it before the next stage", file=sys.stderr)
+            else:
+                git(path, "merge", "--abort")
+                print(f"worktree: {story_id} keeps its base — merging {target} failed ({done[1].strip()[:200]}); the "
+                      f"integrate step merges", file=sys.stderr)
     link_places(path, cwd, runs)
     print(os.path.abspath(path).replace("\\", "/"))
     return 0
@@ -1337,6 +1358,8 @@ class Run:
         self.shared_builder = options.builder == "shared"
         self.shared_verifier = options.verifier == "shared"
         self.parallel = options.parallel
+        self.keep_going = getattr(options, "keep_going", False)
+        self.skipped = {}                     # --keep-going: story → the exit it stopped with
         self.options = options
         self.add_dirs, self.read_dirs = [], []
         self.tool_in_flight = ""
@@ -1954,6 +1977,31 @@ class Run:
         return self.run([sys.executable, self.gate_path, "--owned", edge, window,
                          *([str(code)] if code is not None else []), "--story", story])[0]
 
+    def owned_invoke(self, story, window, call):
+        """The tool of an owned window. Stopped inside it — an interrupt, a signal that ends the tool — the window is
+        closed before the run ends: its end journaled, the person's parts compared and the digest gone, so a person
+        may change the story before the next run."""
+        try:
+            return call()
+        except (Stopped, KeyboardInterrupt):
+            self.journal_line(story, f"{utc()}\tstage-end\t{window}\texit=stopped")
+            self.owned("end", window, story, 1)
+            raise
+
+    def fresh_window(self, story):
+        """`--from <stage>`: a person names where the story starts, so a window a killed run left open is closed —
+        its digest of the story is gone, and a story the person changed since reads as changed after its plan,
+        never as changed under a stage."""
+        self.profile()
+        folder = evidence_dir(place("runs"), story)
+        left = [name for name in (OWNED_DIGEST, WINDOW_DIGEST) if os.path.isfile(os.path.join(folder, name))]
+        for name in left:
+            with contextlib.suppress(OSError):
+                os.remove(os.path.join(folder, name))
+        if OWNED_DIGEST in left:
+            self.journal_line(story, f"{utc()}\twindow-closed\t-\tby=--from")
+            print(f"factory: --from closes the stage window an earlier run of {story} left open.")
+
     def record(self, flag, story, *more):
         """`--record-base` / `--record-changes <stage>`: what the story's diff is taken against, and what it changed."""
         if self.gate_installed():
@@ -2078,12 +2126,13 @@ class Run:
         self.journal_line(story, f"{utc()}\tstage-start\t{window}\ttool={tool}{self.effort_field(tool, window)}"
                                  f"\tstages={','.join(stages)}")
         began = time.time()
-        invoked = self.invoke(tool, prompt, raw, window, story)
+        invoked = self.owned_invoke(story, window, lambda: self.invoke(tool, prompt, raw, window, story))
         self.record_usage(story, window, tool, raw, int(time.time() - began))
         self.journal_line(story, f"{utc()}\tstage-end\t{window}\texit={self.exit_field(invoked)}")
-        self.checkpoint()
+        # The window closes before a signal that arrived ends the run: the person may change the story before the next.
         if self.owned("end", window, story, invoked) != 0:
             return 7
+        self.checkpoint()
         if invoked != 0:
             err("factory: the tool exited non-zero during the shared stages.")
             return 1
@@ -2516,7 +2565,7 @@ class Run:
                                  f"{self.effort_field(tool, stage)}")
         raw = f"{evidence}/{stage}.{utc('%H%M%S')}.out"
         began = time.time()
-        invoked = self.invoke(tool, self.prompt_for(stage, story), raw, stage, story)
+        invoked = self.owned_invoke(story, stage, lambda: self.invoke(tool, self.prompt_for(stage, story), raw, stage, story))
         self.record_usage(story, stage, tool, raw, int(time.time() - began))
         if self.owned("end", stage, story, invoked) != 0:
             self.journal_line(story, f"{utc()}\tstage-end\t{stage}\texit=owned")
@@ -2564,6 +2613,46 @@ class Run:
         self.run([sys.executable, self.cli_path, "--worktree-link", story], cwd=os.environ.get("FACTORY_HOME") or self.home,
                  env=self.home_env())
 
+    def resolve_merge(self, story, tool, out):
+        """A merge of the main line into the story that stopped on conflicts (`conflict: <path>` lines in <out>): the
+        stage-integrate agent resolves them in the worktree, then the merge is committed and squashed. None when it
+        is, else the run's exit code."""
+        conflicts = "".join(line[len("conflict: "):] + " " for line in out.split("\n") if line.startswith("conflict: "))
+        print(f"── stage integrate  (tool: {tool}, fresh context — the merge stopped on: {conflicts})")
+        self.link_worktree(story)
+        self.tool_in_flight = tool
+        raw = f"{self.evidence(story)}/integrate.{utc('%H%M%S')}.out"
+        began = time.time()
+        self.owned("start", "integrate", story)
+        tool = self.tool_for("integrate", tool)
+        self.journal_line(story, f"{utc()}\tstage-start\tintegrate\ttool={tool}")
+        code = self.owned_invoke(story, "integrate", lambda: self.invoke(
+            tool, self.integrate_prompt(story, conflicts), raw, "integrate", story))
+        self.record_usage(story, "integrate", tool, raw, int(time.time() - began))
+        self.journal_line(story, f"{utc()}\tstage-end\tintegrate\texit={self.exit_field(code)}")
+        if self.owned("end", "integrate", story, code) != 0:
+            return 7
+        self.checkpoint()
+        record = f"{self.runs}/{story}/integrate.md"
+        if os.path.isfile(record) and self.asks_human(record):
+            self.drop_lock()
+            return self.stopped_for_human(record, "integrate", story)
+        # The formatter is mechanical: what the resolution left for it is corrected here, not spent as a round.
+        fix = self.profile().get("formatFix", "").strip()
+        if fix:
+            print(f"── formatFix  (the profile's, over what the integrate stage resolved: {fix})")
+            fixed, said = run_command(fix, self.pwd)
+            if fixed != 0:
+                err(f"factory: the profile's formatFix exited {fixed} — the gate's format check decides: "
+                    f"{said.strip()[-300:]}")
+        code, out = self.in_home("--integrate-finish", story)
+        print(out)
+        if code != 0:
+            err(f"factory: the conflicts of {story} are not resolved — needs-human: the worktree {self.pwd} holds the "
+                "merge.")
+            return 1
+        return None
+
     def integrate_story(self, story, tool, dry):
         """Delivered is the integration: the main line merged into the story (a stage-integrate agent where git stops
         on a conflict), squashed, the gate once more on that tree, the main checkout fast-forwarded — under the lock."""
@@ -2578,32 +2667,9 @@ class Run:
                 code, out = self.in_home("--integrate-prepare", story)
                 print(out)
                 if code == 3:
-                    conflicts = "".join(line[len("conflict: "):] + " " for line in out.split("\n")
-                                        if line.startswith("conflict: "))
-                    print(f"── stage integrate  (tool: {tool}, fresh context — the merge stopped on: {conflicts})")
-                    self.link_worktree(story)
-                    self.tool_in_flight = tool
-                    raw = f"{self.evidence(story)}/integrate.{utc('%H%M%S')}.out"
-                    began = time.time()
-                    self.owned("start", "integrate", story)
-                    tool = self.tool_for("integrate", tool)
-                    self.journal_line(story, f"{utc()}\tstage-start\tintegrate\ttool={tool}")
-                    code = self.invoke(tool, self.integrate_prompt(story, conflicts), raw, "integrate", story)
-                    self.record_usage(story, "integrate", tool, raw, int(time.time() - began))
-                    self.journal_line(story, f"{utc()}\tstage-end\tintegrate\texit={self.exit_field(code)}")
-                    self.checkpoint()
-                    if self.owned("end", "integrate", story, code) != 0:
-                        return 7
-                    record = f"{self.runs}/{story}/integrate.md"
-                    if os.path.isfile(record) and self.asks_human(record):
-                        self.drop_lock()
-                        return self.stopped_for_human(record, "integrate", story)
-                    code, out = self.in_home("--integrate-finish", story)
-                    print(out)
-                    if code != 0:
-                        err(f"factory: the conflicts of {story} are not resolved — needs-human: the worktree {self.pwd} "
-                            "holds the merge.")
-                        return 1
+                    stopped = self.resolve_merge(story, tool, out)
+                    if stopped is not None:
+                        return stopped
                 elif code != 0:
                     err(f"factory: {story} could not be merged with the main line — the worktree {self.pwd} keeps it as it was.")
                     return 1
@@ -2687,7 +2753,13 @@ class Run:
         os.environ["FACTORY_HOME"] = self.home
         self.runs = f"{self.home}/{self.runs_rel}"
         try:
-            code = self.run_stages(story, tool, start, dry)
+            # Resumed onto a main line that changed what the story changes: the conflicts are resolved first, so the
+            # next stage works on the main line as it is.
+            code = self.resolve_merge(story, tool, out) if "\nconflict: " in "\n" + out else None
+            if code is None:
+                if "\nconflict: " in "\n" + out:
+                    self.link_worktree(story)
+                code = self.run_stages(story, tool, start, dry)
         finally:
             os.chdir(self.home)
             self.pwd = self.home
@@ -2711,6 +2783,29 @@ class Run:
             err(f"factory: parallel takes a whole number of stories, 1 or more — not '{given}'")
             return None
         return int(given)
+
+    def skip(self, story, code):
+        """--keep-going: a story that stopped is set aside for the rest of this run — the schedule skips it and what
+        depends on it — unless the stop concerns the whole run: the checkout taken over (5), the run's --max-stages
+        (4 with the cap reached), a configuration nothing could run with (2). True when the run goes on."""
+        if not self.keep_going or code in (2, 5) or (code == 4 and self.max_stages and self.invocations >= self.max_stages):
+            return False
+        self.skipped[story] = code
+        err(f"factory: story {story} stopped (exit {code}) — --keep-going skips it and what depends on it; the "
+            f"backlog run goes on.")
+        return True
+
+    def skip_args(self):
+        return ("--skip", ",".join(self.skipped)) if self.skipped else ()
+
+    def skipped_summary(self):
+        """The run's exit once nothing more can start: 0, or the first stop's code where --keep-going skipped one."""
+        if not self.skipped:
+            return 0
+        err("factory: stopped in this run and skipped: "
+            + ", ".join(f"{story} (exit {code})" for story, code in self.skipped.items())
+            + " — `factory.sh status` says why.")
+        return next(iter(self.skipped.values()))
 
     def nothing_more(self, out, watch):
         print(out)
@@ -2756,7 +2851,7 @@ class Run:
                 if claimed and claimed != getattr(self, "last_claims", ""):
                     print(claimed)
                 self.last_claims = claimed
-            code, out = self.cli("--schedule", "--slots", "1", merge=True)
+            code, out = self.cli("--schedule", "--slots", "1", *self.skip_args(), merge=True)
             if code != 0:
                 err(out)
                 err("factory: the schedule could not be read.")
@@ -2767,6 +2862,9 @@ class Run:
                 if following == last:
                     print(out)
                     err(f"factory: {story} ran from {start} and the schedule names it there again — no progress, stopping.")
+                    if self.skip(story, 1):
+                        last = ""
+                        continue
                     return 1
                 print(f"══ story {story} from {start}")
                 if dry:
@@ -2780,11 +2878,14 @@ class Run:
                 if code == 3:                       # waits for a decision; the schedule skips it now
                     last = ""
                     continue
+                if self.skip(story, code):
+                    last = ""
+                    continue
                 err(f"factory: story {story} stopped (exit {code}) — the backlog run ends here.")
                 return code
             if not watch or not any(line == "wait: yes" or line.startswith("wait: yes") for line in out.split("\n")):
                 self.nothing_more(out, watch)
-                return 0
+                return self.skipped_summary()
             previous = self.waiting_note(out, previous, interval)
             last = ""
             self.sleep(interval)
@@ -2812,13 +2913,16 @@ class Run:
                 code = process.returncode
                 if code == 0:
                     seen.add(f"{story}@{start}")
+                elif code != 3 and self.skip(story, code):
+                    pass
                 elif code != 3:
                     err(f"factory: story {story} stopped (exit {code}) — no further story starts; the running ones finish.")
                     stopping = stopping if stopping is not None else code
                     failed = failed or code
             launched = False
             if stopping is None:
-                code, out = self.cli("--schedule", "--slots", str(slots), "--busy", ",".join(children), merge=True)
+                code, out = self.cli("--schedule", "--slots", str(slots), "--busy", ",".join(children),
+                                     *self.skip_args(), merge=True)
                 if code != 0:
                     err(out)
                     err("factory: the schedule could not be read.")
@@ -2831,6 +2935,8 @@ class Run:
                         if f"{story}@{start}" in seen:
                             err(f"factory: {story} ran from {start} and the schedule names it there again — no "
                                 "progress, not started again.")
+                            if self.skip(story, 1):
+                                continue
                             failed = failed or 1
                             stopping = stopping if stopping is not None else 1
                             continue
@@ -2843,7 +2949,7 @@ class Run:
                     return failed if isinstance(stopping, int) or failed else 0
                 if not watch or not any(line.startswith("wait: yes") for line in out.split("\n")):
                     self.nothing_more(out, watch)
-                    return failed
+                    return failed or self.skipped_summary()
                 previous = self.waiting_note(out, previous, interval)
                 time.sleep(interval)
                 continue
@@ -3018,6 +3124,8 @@ def run_options(argv):
     parser.add_argument("--verifier", choices=("shared", "separate"), default="shared")
     parser.add_argument("--parallel", default="")
     parser.add_argument("--child", action="store_true", help="one story of a parallel run, under its parent's claim")
+    parser.add_argument("--keep-going", action="store_true",
+                        help="a stopped story is skipped with what depends on it; the backlog run ends when nothing can start")
     return parser.parse_args(argv)
 
 
@@ -3122,6 +3230,8 @@ def run_start(run, options):
             code = run.take_checkout() or run.guard_pipeline_start()
             if code:
                 return code
+            if options.start:
+                run.fresh_window(story)
         return run.run_story(story, tool or "stand-in", start, options.dry_run)
     if not options.dry_run:
         code = run.take_checkout() or run.guard_pipeline_start()
