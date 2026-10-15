@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 /**
@@ -52,6 +53,21 @@ public class PaymentPage extends BasePage {
   public PaymentPage chooseTheOfferedProvider() {
     page.locator("[data-test='" + PROVIDER_RADIO + "']").check();
     return this;
+  }
+
+  /**
+   * The amount the order summary shows beside a label.
+   *
+   * @param label the summary line's label, e.g. "Subtotal", "Shipping" or "Total"
+   * @return the amount with its currency, e.g. "54.99 EUR"
+   */
+  public Locator summaryAmount(String label) {
+    return page.locator(".order-summary__line, .order-summary__total")
+        .filter(
+            new Locator.FilterOptions()
+                .setHas(page.getByText(label, new Page.GetByTextOptions().setExact(true))))
+        .locator("span")
+        .nth(1);
   }
 
   /** Presses "Continue to Review" without assuming where the shop sends the guest. */

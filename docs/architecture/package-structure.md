@@ -265,6 +265,7 @@ dev.domaincentric.sample.ecommerce
 │   │       ├── CheckoutArticleDataPort
 │   │       ├── ProductInfoPort
 │   │       ├── PaymentProvider, PaymentProviderRegistry
+│   │       ├── ShippingOptionRegistry
 │   └── adapter/
 │       ├── incoming/
 │       │   ├── web/
@@ -284,10 +285,12 @@ dev.domaincentric.sample.ecommerce
 │           ├── product/
 │           │   ├── CompositeCheckoutArticleDataAdapter
 │           │   └── ProductInfoAdapter
-│           └── payment/
-│               ├── RestPaymentProvider, PaymentProviderProperties
-│               ├── MockPaymentProvider
-│               └── InMemoryPaymentProviderRegistry
+│           ├── payment/
+│           │   ├── RestPaymentProvider, PaymentProviderProperties
+│           │   ├── MockPaymentProvider
+│           │   └── InMemoryPaymentProviderRegistry
+│           └── shipping/
+│               └── InMemoryShippingOptionRegistry
 │
 ├── account/                         # Account Bounded Context
 │   ├── domain/

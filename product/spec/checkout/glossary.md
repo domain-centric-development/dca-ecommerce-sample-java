@@ -90,10 +90,10 @@ postal code, country, and optional state. Captured in the delivery step.
 
 **Operations:** `formattedAddress`.
 
-### ShippingOption
+### Shipping method (ShippingOption)
 
-**Definition:** Selectable shipping method with identifier, display name, estimated delivery time,
-and shipping cost.
+**Definition:** Selectable shipping method with identifier, display name, estimated delivery time
+and shipping cost — the cost the shop sets for the method, never one the buyer sends.
 
 **Type:** Value Object
 

@@ -29,7 +29,6 @@ import dev.domaincentric.sample.ecommerce.checkout.application.shared.EmptyCartE
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.shared.ProductRepository;
 import dev.domaincentric.sample.ecommerce.product.domain.model.Product;
-import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -145,11 +144,7 @@ class CheckoutFlowIntegrationTest {
             "12345",
             "United States",
             "IL", // state
-            "STANDARD", // shippingOptionId
-            "Standard Shipping",
-            "5-7 business days",
-            new BigDecimal("5.99"),
-            "EUR"));
+            "standard")); // shippingOptionId
 
     GetCheckoutSessionResult afterDelivery =
         getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));

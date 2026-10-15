@@ -655,11 +655,7 @@ class ArticleDataFlowIntegrationTest {
             "12345",
             "United States",
             "IL",
-            "STANDARD",
-            "Standard Shipping",
-            "5-7 business days",
-            new BigDecimal("5.99"),
-            "EUR"));
+            "standard"));
 
     // Submit payment
     submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, customerId, "mock"));

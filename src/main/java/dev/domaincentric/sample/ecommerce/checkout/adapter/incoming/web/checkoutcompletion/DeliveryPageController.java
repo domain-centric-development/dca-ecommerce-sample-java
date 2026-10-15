@@ -16,7 +16,6 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
-import java.math.BigDecimal;
 import java.util.Optional;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -129,11 +128,8 @@ public class DeliveryPageController {
    * @param postalCode the postal code
    * @param country the country
    * @param state optional state/province
-   * @param shippingOptionId the selected shipping option ID
-   * @param shippingOptionName the shipping option display name
-   * @param estimatedDelivery the estimated delivery time
-   * @param shippingCost the shipping cost
-   * @param currencyCode the currency code for shipping cost
+   * @param shippingOptionId the selected shipping option ID; its name, estimate and price are the
+   *     shop's, whatever else the form carries
    * @return redirect to payment step or back to delivery on error
    */
   @PostMapping("/delivery")
@@ -145,10 +141,6 @@ public class DeliveryPageController {
       @RequestParam final String country,
       @RequestParam(required = false) final String state,
       @RequestParam final String shippingOptionId,
-      @RequestParam final String shippingOptionName,
-      @RequestParam final String estimatedDelivery,
-      @RequestParam final BigDecimal shippingCost,
-      @RequestParam final String currencyCode,
       final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
@@ -178,11 +170,7 @@ public class DeliveryPageController {
                   postalCode,
                   country,
                   state,
-                  shippingOptionId,
-                  shippingOptionName,
-                  estimatedDelivery,
-                  shippingCost,
-                  currencyCode));
+                  shippingOptionId));
 
           return "redirect:/checkout/payment";
         });

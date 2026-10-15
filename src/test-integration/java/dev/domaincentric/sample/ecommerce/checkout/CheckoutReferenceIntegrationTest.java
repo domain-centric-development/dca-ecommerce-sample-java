@@ -32,7 +32,6 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsQuery;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -184,11 +183,7 @@ class CheckoutReferenceIntegrationTest {
             "12345",
             "United States",
             "IL",
-            "STANDARD",
-            "Standard Shipping",
-            "5-7 business days",
-            new BigDecimal("5.99"),
-            "EUR"));
+            "standard"));
 
     return new CustomersCheckout(sessionId, customerId);
   }

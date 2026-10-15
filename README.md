@@ -434,7 +434,8 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── CheckoutArticleDataPort.java  # Port for article data (prices + stock)
 │   │       ├── ProductInfoPort.java
 │   │       ├── PaymentProvider.java
-│   │       └── PaymentProviderRegistry.java
+│   │       ├── PaymentProviderRegistry.java
+│   │       └── ShippingOptionRegistry.java
 │   ├── infrastructure/                   # Per-context infrastructure
 │   │   ├── CheckoutDomainConfiguration.java
 │   │   └── CheckoutPaymentConfiguration.java  # Binds the payment provider's address
@@ -467,11 +468,13 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           ├── product/
 │           │   ├── CompositeCheckoutArticleDataAdapter.java  # Composite adapter
 │           │   └── ProductInfoAdapter.java
-│           └── payment/
-│               ├── RestPaymentProvider.java      # ACL to the provider's REST contract, where its address is set
-│               ├── PaymentProviderProperties.java  # checkout.payment-provider.base-url
-│               ├── MockPaymentProvider.java      # The stand-in, where no address is set
-│               └── InMemoryPaymentProviderRegistry.java
+│           ├── payment/
+│           │   ├── RestPaymentProvider.java      # ACL to the provider's REST contract, where its address is set
+│           │   ├── PaymentProviderProperties.java  # checkout.payment-provider.base-url
+│           │   ├── MockPaymentProvider.java      # The stand-in, where no address is set
+│           │   └── InMemoryPaymentProviderRegistry.java
+│           └── shipping/
+│               └── InMemoryShippingOptionRegistry.java
 │
 ├── account/                              # Account bounded context
 │   ├── domain/

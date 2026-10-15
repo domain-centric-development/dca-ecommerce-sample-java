@@ -1,6 +1,5 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery;
 
-import java.math.BigDecimal;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,11 +13,7 @@ import org.jspecify.annotations.Nullable;
  * @param postalCode the postal code
  * @param country the country
  * @param state optional state/province
- * @param shippingOptionId the selected shipping option ID
- * @param shippingOptionName the shipping option display name
- * @param estimatedDelivery the estimated delivery time
- * @param shippingCost the shipping cost
- * @param currencyCode the currency code for shipping cost
+ * @param shippingOptionId the selected shipping option ID; name, estimate and price are the shop's
  */
 public record SubmitDeliveryCommand(
     String sessionId,
@@ -29,11 +24,7 @@ public record SubmitDeliveryCommand(
     String postalCode,
     String country,
     @Nullable String state,
-    String shippingOptionId,
-    String shippingOptionName,
-    String estimatedDelivery,
-    BigDecimal shippingCost,
-    String currencyCode) {
+    String shippingOptionId) {
 
   /** Compact constructor with validation. */
   public SubmitDeliveryCommand {
@@ -57,18 +48,6 @@ public record SubmitDeliveryCommand(
     }
     if (shippingOptionId == null || shippingOptionId.isBlank()) {
       throw new IllegalArgumentException("Shipping option ID cannot be null or blank");
-    }
-    if (shippingOptionName == null || shippingOptionName.isBlank()) {
-      throw new IllegalArgumentException("Shipping option name cannot be null or blank");
-    }
-    if (estimatedDelivery == null || estimatedDelivery.isBlank()) {
-      throw new IllegalArgumentException("Estimated delivery cannot be null or blank");
-    }
-    if (shippingCost == null) {
-      throw new IllegalArgumentException("Shipping cost cannot be null");
-    }
-    if (currencyCode == null || currencyCode.isBlank()) {
-      throw new IllegalArgumentException("Currency code cannot be null or blank");
     }
   }
 }
