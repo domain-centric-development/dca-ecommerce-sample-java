@@ -1,7 +1,7 @@
 ---
 id: the-confirmation-says-only-what-happened
 epic: guest-checkout
-status: draft
+status: approved
 context: checkout
 feature: ordering
 title: The confirmation says only what the shop has done
@@ -27,10 +27,10 @@ do not wait for an email that never comes or believe I have paid when the paymen
 
 ### Rule: The confirmation calls the amount the order's total, not an amount paid
 
-#### the-confirmation-shows-the-total
+#### the-confirmation-shows-the-order-total
 - Given the guest is on the review step with "Domain-Driven Design" once and "Standard Shipping"
 - When the guest presses "Place Order"
-- Then the confirmation page shows "Total" "59.98 EUR"
+- Then the confirmation page shows "Order Total" "59.98 EUR"
 - And it does not say "Total Paid"
 
 ## Changed expectations
@@ -38,17 +38,16 @@ do not wait for an email that never comes or believe I have paid when the paymen
 - The confirmation says "We've sent a confirmation email to jane@example.com." and "You can track your order status
   using your order reference." now; the shop sends no email and tracks no order. After, neither sentence is there.
 - The confirmation labels the amount "Total Paid" now, while the payment is only authorized at the provider; after,
-  it reads "Total".
+  it reads "Order Total".
 
 ## Assumptions
 
-- open: the label of the amount — "Total" (as written), "Order Total", or "Total (authorized)"?
-- open: the two sentences go without replacement (as written), or a sentence that is true takes their place — and
-  which?
+- answered: the email and the tracking sentences go without replacement, and the amount reads "Order Total"
+  (planning/questions-2026-10-15.md Q4.5)
 
 ## Notes
 
 - From TODO #94 (a) and (b), checked 2026-10-15: still true in both shops — no mail is sent anywhere, and the
   payment is initiated at the payment step and never captured.
-- Spec (`checkout/ordering`): adds `the-confirmation-promises-no-email` and `the-confirmation-shows-the-total`; holds
-  `guest-places-the-order` and `confirmation-shows-what-was-ordered`.
+- Spec (`checkout/ordering`): adds `the-confirmation-promises-no-email` and `the-confirmation-shows-the-order-total`;
+  holds `guest-places-the-order` and `confirmation-shows-what-was-ordered`.

@@ -1,7 +1,7 @@
 ---
 id: an-unknown-product-page-answers-not-found
 epic: browse-catalogue
-status: draft
+status: approved
 context: product
 feature: productdetails
 title: The page of an unknown product answers "not found"
@@ -39,12 +39,12 @@ As a visitor, a search engine or a link checker I want the address of a product 
 
 ## Assumptions
 
-- open: the scenarios already hold in one of the two shops (it answers 404 there) — adopt them there, and build them
-  only where they do not hold?
+- answered: adopted in the shop where both scenarios already hold, built in the other (planning/questions-2026-10-15.md
+  Q4.1)
 
 ## Notes
 
 - From TODO #94 (d), checked 2026-10-15: still true in the Java shop (status 200 for an unknown and for a malformed
-  id); fixed in the .NET shop (404 for both).
+  id); fixed in the .NET shop (404 for both). Hence `approved` in the Java shop and `adopted` in the .NET shop.
 - Spec (`product/productdetails`): adds `an-unknown-product-answers-404` and `a-malformed-product-address-answers-404`;
   holds `unknown-product-shows-the-not-found-page` and `not-found-page-has-the-shop-title`.

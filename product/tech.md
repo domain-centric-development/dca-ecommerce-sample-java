@@ -51,8 +51,9 @@ string with two places, never a JSON number, which would pass through binary flo
 ISO 4217 code; the merchant reference the checkout reference: the checkout session's id as text, the same in
 every payment request of that checkout;
 `201` with a payment reference authorizes it, `402` refuses it, and no answer within 2 seconds counts
-as unavailable. Where the provider's address is not configured, a stand-in inside the sample takes
-payments. MCP clients reach the catalogue over streamable HTTP. Nothing else.
+as unavailable. An authorized payment is cancelled with `POST /payments/{payment reference}/cancel`, without a
+body: `204` cancels it, and no answer within 2 seconds counts as unavailable. Where the provider's address is not
+configured, a stand-in inside the sample takes payments and their cancellations. MCP clients reach the catalogue over streamable HTTP. Nothing else.
 
 ## Version policy
 

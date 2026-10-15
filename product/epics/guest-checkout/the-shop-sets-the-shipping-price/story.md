@@ -1,7 +1,7 @@
 ---
 id: the-shop-sets-the-shipping-price
 epic: guest-checkout
-status: draft
+status: approved
 context: checkout
 feature: delivery
 title: The shipping price is the price the shop offers
@@ -25,35 +25,28 @@ buyer sets their own shipping price by changing what their browser sends.
   "Germany" and "Overnight Shipping", carrying the shipping price "0.00 EUR"
 - Then the payment step opens and shows Subtotal "54.99 EUR", Shipping "19.99 EUR" and Total "74.98 EUR"
 
-### Rule: A shipping method the delivery step does not offer is refused
+## Out of scope
 
-#### an-unknown-shipping-method-is-refused
-- Given a guest on the delivery step
-- When the delivery form is sent with Street Address "Hauptstrasse 1", City "Berlin", Postal Code "10115", Country
-  "Germany" and the shipping method "teleport"
-- Then the delivery step opens again with the error "This shipping method is not offered. Please choose another one."
+- A shipping method the delivery step does not offer: story `only-an-offered-shipping-method-is-taken`.
 
 ## Changed expectations
 
-- A delivery form that carries a shipping price of its own can set the order's shipping price now; after, the order
-  always carries the price the delivery step shows for the chosen method.
-- A shipping method the delivery step does not offer is accepted now, or refused with "Please check the delivery
-  address you entered.", which names the address; after, it is refused with "This shipping method is not offered.
-  Please choose another one."
+- A delivery form that carries a shipping price of its own can set the order's shipping price now, where the shop
+  takes the price from the form; after, the order always carries the price the delivery step shows for the chosen
+  method.
 
 ## Assumptions
 
-- open: the wording of the refusal — "This shipping method is not offered. Please choose another one." (as written,
-  after the payment step's "This way to pay is not offered. Please choose another one.")?
-- open: the happy path already holds in one of the two shops (it reads the price from the shipping method there and
-  ignores the form's price) — adopt it there, and build it only where it does not hold?
+- answered: adopted in the shop where the scenario already holds, built in the other (planning/questions-2026-10-15.md
+  Q4.1)
 
 ## Notes
 
 - From TODO #91 (shipping cost from the client), checked 2026-10-15: still true in the Java shop (the delivery step
   takes name, estimate and price from the form); fixed in the .NET shop (only the method's id is read, the price comes
-  from the shop's list; the form still carries the old fields, which nothing reads). The unknown-method refusal is
-  red in both: the .NET shop answers it with the address message.
-- Spec (`checkout/delivery`): adds `a-shipping-price-sent-with-the-form-is-not-taken` and
-  `an-unknown-shipping-method-is-refused`; holds `four-shipping-methods-are-offered` and
-  `address-and-shipping-open-the-payment-step`.
+  from the shop's list; the form still carries the old fields, which nothing reads). Hence `approved` in the Java shop
+  and `adopted` in the .NET shop.
+- The refusal of a method the step does not offer is red in both shops, so it is a story of its own, built in both:
+  `only-an-offered-shipping-method-is-taken`.
+- Spec (`checkout/delivery`): adds `a-shipping-price-sent-with-the-form-is-not-taken`; holds
+  `four-shipping-methods-are-offered` and `address-and-shipping-open-the-payment-step`.

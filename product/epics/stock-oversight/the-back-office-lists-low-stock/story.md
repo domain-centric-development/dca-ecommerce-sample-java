@@ -1,13 +1,19 @@
 ---
 id: the-back-office-lists-low-stock
 epic: stock-oversight
-status: draft
+status: superseded
 context: inventory
 title: The back office lists the products that run low
 depends_on: []
 ---
 
 # The back office lists the products that run low
+
+## Superseded
+
+- Not built: the low-stock page is not part of the shop, and the unused low-stock capability leaves the code; the
+  user's decision of 2026-10-15 (planning/questions-2026-10-15.md Q4.7) — no further pages for now, first the current
+  state stable and correct.
 
 ## Story
 
@@ -42,17 +48,7 @@ can reorder them before a customer finds them sold out.
 
 ## Assumptions
 
-- open: does the shop want this page at all — or is the overview recorded as not part of today's shop (then this
-  draft is withdrawn, and the overview's use case with it)?
-- open: the page's address, heading and place in the back office's navigation, and the sentence for "nothing runs
-  low"?
-- open: the threshold — one the operator types on the page (as written), with which default, or a reorder level per
-  product?
-- open: should reserved quantity count towards the available quantity, or is available quantity alone the measure
-  (STORY-P1's open question)?
-- open: the back office reads only the application's own infrastructure today; a page that lists stock reads the
-  inventory — is that a new relationship on the designed context map, or a page of the inventory under the back
-  office's address?
+- answered: the low-stock page is not wanted; the draft is superseded (planning/questions-2026-10-15.md Q4.7)
 
 ## Notes
 

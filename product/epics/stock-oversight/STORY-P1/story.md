@@ -1,7 +1,7 @@
 ---
 id: STORY-P1
 epic: stock-oversight
-status: delivered
+status: superseded
 delivered: 2026-09-10T20:14:35Z
 delivered_by: hand:unknown
 context: Inventory
@@ -10,6 +10,12 @@ depends_on: []
 ---
 
 # Low stock overview
+
+## Superseded
+
+- Withdrawn: the low-stock overview, delivered without a surface, is not part of the shop, and its unused capability
+  leaves the code; the user's decision of 2026-10-15 (planning/questions-2026-10-15.md Q4.7) — no further pages for now, first the current
+  state stable and correct.
 
 ## Story
 
@@ -29,7 +35,5 @@ give, so that I can reorder them before they run out.
 
 ## Assumptions
 
-- open: Should reserved quantity count towards the available quantity for this overview, or is
-  available quantity alone the right measure?
-- open: Is one threshold for all products the right shape, or does a product carry its own reorder
-  level?
+- answered: no longer asked — the overview is withdrawn, so neither the measure nor the threshold is decided
+  (planning/questions-2026-10-15.md Q4.7)

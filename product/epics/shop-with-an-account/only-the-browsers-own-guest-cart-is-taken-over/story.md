@@ -1,11 +1,11 @@
 ---
 id: only-the-browsers-own-guest-cart-is-taken-over
 epic: shop-with-an-account
-status: draft
+status: approved
 context: cart
 feature: cartrecovery
 title: Logging in takes over only the guest cart of this browser
-depends_on: [taking-over-the-guest-cart-is-a-step-of-its-own]
+depends_on: [logging-in-from-the-checkout-returns-to-it]
 ---
 
 # Logging in takes over only the guest cart of this browser
@@ -50,23 +50,26 @@ until I log in myself; and as a customer who logs in I want the shop to lead me 
 ## Changed expectations
 
 - A logged-in customer's browser can name any guest's cart in the take-over or the merge now, and that cart's lines
-  move into the account while the other guest's cart is gone; after, only the guest cart this browser had before the
-  login is taken over, and a request for another one changes no cart.
+  move into the account while the other guest's cart is gone; after, the guest cart to take over is only the one the
+  browser's own cookie names, and a request that names another changes no cart and shows the customer's own cart as
+  it is, without a message.
 - The merge page sends the customer on to a return page of another site now; after, it opens the cart page.
 
 ## Assumptions
 
-- open: what the customer sees when their browser asks for another guest's cart — the cart page as it is, without a
-  message (as written), or the cart page with a message, and which?
-- open: the page an outside return page is replaced with after the merge — the cart page (as written)?
+- answered: a browser asking for another guest's cart sees its own cart as it is, without a message; the guest cart
+  comes only from the browser's own cookie, never from an id the form sends (planning/questions-2026-10-15.md Q4.2)
+- answered: after the merge, a return page outside the shop is replaced with the cart page
+  (planning/questions-2026-10-15.md Q4.2)
 
 ## Notes
 
 - From TODO #90 (unchecked guest identity, open redirect), checked against both shops 2026-10-15: still true in both
   — the guest cart to take over travels with the browser's request and is not compared with the guest the shop knew
   before the login; the merge and the take-over follow any return page that is not blank.
-- Depends on `taking-over-the-guest-cart-is-a-step-of-its-own` (approved in the Java shop, delivered in the .NET
-  shop): it brings the take-over step these scenarios send.
+- Depends on `logging-in-from-the-checkout-returns-to-it`: both change the take-over, one after the other;
+  `taking-over-the-guest-cart-is-a-step-of-its-own` (delivered in both shops) brought the take-over step these
+  scenarios send.
 - Spec (`cart/cartrecovery`): adds `another-guests-cart-is-not-taken-over`, `another-guests-cart-is-not-merged` and
   `an-outside-return-page-after-the-merge-opens-the-cart`; holds `merge-both-adds-up-the-carts` and
   `continue-takes-the-guest-cart-over`.
