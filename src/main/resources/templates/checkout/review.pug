@@ -106,4 +106,5 @@ block content
       form(method="post" action="/checkout/confirm" data-test="review-confirm-form")
         if _csrf
           input(type="hidden" name=_csrf.parameterName value=_csrf.token)
+        input(type="hidden" name="sentFrom" value="review")
         button.btn.btn--primary.btn--lg(type="submit" data-test="review-place-order-button") Place Order

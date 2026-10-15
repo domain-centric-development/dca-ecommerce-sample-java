@@ -163,6 +163,7 @@ Placing the order (`/checkout/confirm`):
 | `CheckoutValidationException` | Cannot place the order, {count} item(s) unavailable or out of stock. |
 | `CheckoutStepNotCompletedException` | Please complete the previous checkout steps first. |
 | `CheckoutStepOutOfOrderException` | Please review your order before placing it. |
+| not sent from the review's own form (checked by the page, Java shop) | Please review your order before placing it. — or, while an earlier step is still missing, Please complete the previous checkout steps first. on that step |
 | any other refusal | Your order could not be placed. Please try again. |
 
 Confirmation (`/checkout/confirmation`):

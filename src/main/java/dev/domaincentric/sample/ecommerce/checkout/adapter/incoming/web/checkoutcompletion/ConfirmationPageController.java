@@ -17,11 +17,13 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfir
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -42,6 +44,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/checkout")
 public class ConfirmationPageController {
+
+  /** The value of {@code sentFrom} the review's own form carries. */
+  private static final String REVIEW_PAGE = "review";
 
   private final ConfirmCheckoutInputPort confirmCheckoutInputPort;
   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
@@ -66,12 +71,19 @@ public class ConfirmationPageController {
    * Confirms the checkout and places the order.
    *
    * <p>This endpoint finds the active checkout session for the current user (via JWT identity),
-   * processes the order confirmation, and redirects to the confirmation page on success.
+   * processes the order confirmation, and redirects to the confirmation page on success. An order
+   * is placed only from the review page, the last check before it: a "Place Order" sent from
+   * anywhere else leads to the review, asking for it — or, while an earlier step is still missing,
+   * to that step.
    *
-   * @return redirect to confirmation page or back to review on error
+   * @param sentFrom the page the form was sent from, {@code review} from the review's own form
+   * @param attributes the attributes of the redirect
+   * @return redirect to confirmation page, or to the review or the step still open on refusal
    */
   @PostMapping("/confirm")
-  public String confirmOrder(final RedirectAttributes attributes) {
+  public String confirmOrder(
+      @RequestParam(name = "sentFrom", required = false) final @Nullable String sentFrom,
+      final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
@@ -85,6 +97,10 @@ public class ConfirmationPageController {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
+    if (!REVIEW_PAGE.equals(sentFrom)) {
+      return redirectToTheReview(activeSession.sessionId(), customerId, attributes);
+    }
+
     return CheckoutStepPage.submitting(
         CheckoutStep.REVIEW,
         () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.REVIEW),
@@ -95,6 +111,19 @@ public class ConfirmationPageController {
 
           return "redirect:/checkout/confirmation";
         });
+  }
+
+  /**
+   * A "Place Order" not sent from the review: the review, asking for it — or, while an earlier step
+   * is still missing, that step.
+   */
+  private String redirectToTheReview(
+      final String sessionId, final String customerId, final RedirectAttributes attributes) {
+    final StepAccess review = stepAccess(sessionId, customerId, CheckoutStep.REVIEW);
+    return review.granted()
+        ? CheckoutRoutes.redirectTo(
+            CheckoutStep.REVIEW, CheckoutStepNotice.REVIEW_FIRST, attributes)
+        : CheckoutRoutes.redirectFor(review, CheckoutStepNotice.EARLIER_STEPS_FIRST, attributes);
   }
 
   /**
@@ -150,7 +179,10 @@ public class ConfirmationPageController {
     return "checkout/confirmation";
   }
 
-  /** The domain's decision whether the step may be opened, for a submission sent too early. */
+  /**
+   * The domain's decision whether the step may be opened, for a submission sent too early or not
+   * from the review.
+   */
   private StepAccess stepAccess(
       final String sessionId, final String customerId, final CheckoutStep step) {
     return getCheckoutSessionInputPort

@@ -5,8 +5,10 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 import com.microsoft.playwright.Locator;
 import dev.domaincentric.sample.ecommerce.e2e.pages.CartPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.ProductCatalogPage;
+import dev.domaincentric.sample.ecommerce.e2e.pages.ReviewPage;
 import java.net.URI;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,6 +63,22 @@ class StepsShowTheProgressE2ETest extends BaseE2ETest {
     assertThat(page.locator("[data-test='buyer-form']")).isVisible();
   }
 
+  @Test
+  @DisplayName("Place order with the review open asks for the review")
+  void aPlaceOrderSentFromThePaymentStepWithTheReviewOpenLeadsToTheReview() {
+    aGuestWhoSubmittedBuyerDeliveryAndPayment();
+    page.navigate(BASE_URL + "/checkout/payment");
+    assertThat(page.locator("[data-test='payment-form']")).isVisible();
+
+    sendAPlaceOrderFromThePaymentStep();
+
+    assertThat(page).hasURL(BASE_URL + "/checkout/review");
+    assertThat(new ReviewPage(page).errorMessage())
+        .hasText("Please review your order before placing it.");
+    page.navigate(BASE_URL + "/checkout/confirmation");
+    assertThat(page).not().hasURL(BASE_URL + "/checkout/confirmation");
+  }
+
   private void aGuestWhoHasJustStartedTheCheckout() {
     ProductCatalogPage.navigateTo(page).viewProductNamed("Domain-Driven Design").addToCart();
     CartPage.navigateTo(page).proceedToCheckout();
@@ -89,6 +107,26 @@ class StepsShowTheProgressE2ETest extends BaseE2ETest {
                     + " form.submit();"
                     + "}",
                 fields));
+  }
+
+  /**
+   * Sends a "Place Order" to the shop from the payment page, its form token along — a request the
+   * page does not offer, as a second tab or a replayed form would send it — and waits for the
+   * review or the confirmation it is led to.
+   */
+  private void sendAPlaceOrderFromThePaymentStep() {
+    page.waitForResponse(
+        response ->
+            "GET".equals(response.request().method())
+                && Set.of("/checkout/review", "/checkout/confirmation")
+                    .contains(URI.create(response.url()).getPath()),
+        () ->
+            page.evaluate(
+                "() => {"
+                    + " const form = document.querySelector(\"[data-test='payment-form']\");"
+                    + " form.action = '/checkout/confirm';"
+                    + " form.submit();"
+                    + "}"));
   }
 
   private void aGuestWhoSubmittedBuyerDeliveryAndPayment() {

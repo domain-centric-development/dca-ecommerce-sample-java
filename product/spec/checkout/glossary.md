@@ -391,7 +391,10 @@ It decides on the snapshot alone, so a read does not load the session aggregate.
 
 **Notes:** Decides on the `CheckoutCartSnapshot` read model and knows no routes. The `GetCheckoutSession` query
 use case invokes it when a step is requested and delivers the `StepAccess` in its result; the web
-adapter (`CheckoutRoutes`) maps the decision to a redirect path.
+adapter (`CheckoutRoutes`) maps the decision to a redirect path. A "Place Order" is accepted only from the
+review's own form (`sentFrom=review`); sent from anywhere else it is not placed and leads to the review, or,
+when Step access denies the review, to the step still open. Opening the review changes no state, so the web
+adapter (`ConfirmationPageController`) holds this rule, not the snapshot.
 
 ### CheckoutArticlePriceResolver
 
