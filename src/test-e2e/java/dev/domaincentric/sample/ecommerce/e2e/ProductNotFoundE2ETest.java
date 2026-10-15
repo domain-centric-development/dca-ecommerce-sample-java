@@ -25,6 +25,20 @@ class ProductNotFoundE2ETest extends BaseE2ETest {
   }
 
   @Test
+  @DisplayName("An unknown product answers 404")
+  void unknownProductAddressAnswersNotFound() {
+    NotFoundPage notFound = NotFoundPage.openProduct(page, "00000000-0000-4000-8000-000000000001");
+
+    assertEquals(404, notFound.status());
+    assertEquals("404", notFound.code());
+    assertEquals("Page Not Found", notFound.heading());
+    assertEquals(
+        "The page you're looking for doesn't exist or has been removed. Perhaps you were looking"
+            + " for one of our products?",
+        notFound.message());
+  }
+
+  @Test
   @DisplayName("The not-found page is titled with the shop's name")
   void notFoundPageIsTitledWithTheShopsName() {
     NotFoundPage.openProduct(page, "no-such-product");

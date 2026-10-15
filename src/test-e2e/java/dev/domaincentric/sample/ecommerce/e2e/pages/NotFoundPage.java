@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Response;
 
 /**
  * Page object for the not-found page the shop shows for an address it has no page for.
@@ -12,13 +13,17 @@ public class NotFoundPage extends BasePage {
 
   private static final String BROWSE_LINK = "error-browse-link";
 
+  private final Response response;
+
   /**
    * Creates a new NotFoundPage and waits for its way on to the catalogue.
    *
    * @param page the Playwright page instance
+   * @param response the response the shop answered the address with
    */
-  public NotFoundPage(Page page) {
+  private NotFoundPage(Page page, Response response) {
     super(page);
+    this.response = response;
     waitFor(BROWSE_LINK);
   }
 
@@ -30,8 +35,16 @@ public class NotFoundPage extends BasePage {
    * @return the NotFoundPage shown for it
    */
   public static NotFoundPage openProduct(Page page, String productId) {
-    page.navigate(BASE_URL + "/products/" + productId);
-    return new NotFoundPage(page);
+    return new NotFoundPage(page, page.navigate(BASE_URL + "/products/" + productId));
+  }
+
+  /**
+   * The HTTP status the shop answered the address with.
+   *
+   * @return the status code
+   */
+  public int status() {
+    return response.status();
   }
 
   /**

@@ -6,6 +6,7 @@ import dev.domaincentric.sample.ecommerce.product.application.getallproducts.Get
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdQuery;
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdResult;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -81,13 +82,16 @@ public class ProductPageController {
    *
    * @param id the product ID
    * @param model Spring MVC model to pass data to the view
-   * @return view name "product/detail" or "error/404" if product not found
+   * @param response the response, answered with status 404 when no product has the ID
+   * @return view name "product/detail", or "error/404" with status 404 if product not found
    */
   @GetMapping("/{id}")
-  public String showProductDetail(@PathVariable final String id, final Model model) {
+  public String showProductDetail(
+      @PathVariable final String id, final Model model, final HttpServletResponse response) {
     final GetProductByIdResult result = getProductByIdUseCase.execute(new GetProductByIdQuery(id));
 
     if (!result.found()) {
+      response.setStatus(HttpServletResponse.SC_NOT_FOUND);
       return "error/404";
     }
 
