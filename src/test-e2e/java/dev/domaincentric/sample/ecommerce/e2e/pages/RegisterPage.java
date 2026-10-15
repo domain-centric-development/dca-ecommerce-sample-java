@@ -18,7 +18,6 @@ public class RegisterPage extends BasePage {
 
   private static final String DEFAULT_DATE_OF_BIRTH = "1990-05-17";
   private static final String SUBMIT_BUTTON = "register-submit-button";
-  private static final String CONFIRM_PASSWORD_INPUT = "register-confirm-password-input";
   private static final String ERROR_MESSAGE = "register-error-message";
 
   /**
@@ -185,14 +184,5 @@ public class RegisterPage extends BasePage {
   public void register(String email, String password) {
     fillRegistrationForm(email, password);
     submit();
-  }
-
-  /**
-   * Checks if confirm password field exists.
-   *
-   * @return true if confirm password is required
-   */
-  public boolean requiresConfirmPassword() {
-    return exists(CONFIRM_PASSWORD_INPUT);
   }
 }

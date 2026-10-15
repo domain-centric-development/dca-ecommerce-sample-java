@@ -138,13 +138,4 @@ public class LoginPage extends BasePage {
     click(REGISTER_LINK);
     return new RegisterPage(page);
   }
-
-  /**
-   * Checks if the register link exists.
-   *
-   * @return true if register link is available
-   */
-  public boolean hasRegisterLink() {
-    return exists(REGISTER_LINK);
-  }
 }

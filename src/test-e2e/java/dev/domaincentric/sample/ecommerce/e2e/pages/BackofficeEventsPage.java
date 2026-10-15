@@ -22,16 +22,12 @@ public class BackofficeEventsPage extends BasePage {
   private static final String EVENT_LOG_TOTAL = "event-log-total";
   private static final String EVENT_LOG_COMPLETED = "event-log-completed";
   private static final String EVENT_LOG_INCOMPLETE = "event-log-incomplete";
-  private static final String EVENT_LOG_LIST = "event-log-list";
   private static final String EVENT_LOG_ITEM = "event-log-item";
   private static final String EVENT_TYPE = "event-type";
   private static final String EVENT_STATUS = "event-status";
   private static final String EVENT_LISTENER = "event-listener";
-  private static final String EVENT_PUBLICATION_DATE = "event-publication-date";
   private static final String EVENT_COMPLETION_DATE = "event-completion-date";
   private static final String EVENT_PAYLOAD = "event-payload";
-  private static final String EVENT_LOG_REFRESH = "event-log-refresh";
-  private static final String EVENT_LOG_LOGOUT = "event-log-logout";
 
   /**
    * Creates a new BackofficeEventsPage and waits for it to load.
@@ -105,15 +101,6 @@ public class BackofficeEventsPage extends BasePage {
   }
 
   /**
-   * Checks if the event list container is present.
-   *
-   * @return true if the event list is displayed
-   */
-  public boolean hasEvents() {
-    return exists(EVENT_LOG_LIST);
-  }
-
-  /**
    * Gets the total number of events as shown in the summary.
    *
    * @return the total event count
@@ -172,36 +159,6 @@ public class BackofficeEventsPage extends BasePage {
   public String getFirstEventType() {
     waitFor(EVENT_TYPE);
     return page.locator("[data-test='" + EVENT_TYPE + "']").first().textContent().trim();
-  }
-
-  /**
-   * Gets the status badge text of the first event in the list.
-   *
-   * @return the first event status string
-   */
-  public String getFirstEventStatus() {
-    waitFor(EVENT_STATUS);
-    return page.locator("[data-test='" + EVENT_STATUS + "']").first().textContent().trim();
-  }
-
-  /**
-   * Clicks the refresh button and returns a fresh page object.
-   *
-   * @return a new BackofficeEventsPage after the refresh
-   */
-  public BackofficeEventsPage clickRefresh() {
-    click(EVENT_LOG_REFRESH);
-    return new BackofficeEventsPage(page);
-  }
-
-  /**
-   * Clicks the logout button and returns the backoffice login page.
-   *
-   * @return the BackofficeLoginPage after logout
-   */
-  public BackofficeLoginPage clickLogout() {
-    click(EVENT_LOG_LOGOUT);
-    return new BackofficeLoginPage(page);
   }
 
   /** Clicks the payload details element for the first event to expand its content. */

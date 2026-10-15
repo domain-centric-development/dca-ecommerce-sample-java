@@ -158,13 +158,4 @@ public class DeliveryPage extends BasePage {
     click(BACK_LINK);
     return new BuyerInfoPage(page, shopUrl);
   }
-
-  /**
-   * Checks if the back link exists.
-   *
-   * @return true if back navigation is available
-   */
-  public boolean hasBackLink() {
-    return exists(BACK_LINK);
-  }
 }

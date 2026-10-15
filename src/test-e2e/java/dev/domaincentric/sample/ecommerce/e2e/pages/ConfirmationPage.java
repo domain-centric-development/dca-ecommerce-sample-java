@@ -10,7 +10,6 @@ import com.microsoft.playwright.Page;
 public class ConfirmationPage extends BasePage {
 
   private static final String URL_PATTERN = "/checkout/confirmation";
-  private static final String CONFIRMATION_MESSAGE = "confirmation-message";
   private static final String ORDER_REFERENCE = ".confirmation__reference";
   private static final String ORDER_REFERENCE_LABEL = "Order Reference:";
 
@@ -31,15 +30,6 @@ public class ConfirmationPage extends BasePage {
    */
   public ConfirmationPage(Page page, String shopUrl) {
     super(page, shopUrl, URL_PATTERN);
-  }
-
-  /**
-   * Checks if the order confirmation message is displayed.
-   *
-   * @return true if the confirmation message is visible
-   */
-  public boolean isOrderConfirmed() {
-    return exists(CONFIRMATION_MESSAGE);
   }
 
   /**

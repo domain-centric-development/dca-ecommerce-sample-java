@@ -10,12 +10,8 @@ import com.microsoft.playwright.Page;
 public class BackofficeLoginPage extends BasePage {
 
   private static final String URL_PATTERN = "/backoffice/login**";
-  private static final String LOGIN_FORM = "backoffice-login-form";
-  private static final String USERNAME_INPUT = "backoffice-username-input";
-  private static final String PASSWORD_INPUT = "backoffice-password-input";
   private static final String SUBMIT_BUTTON = "backoffice-login-submit";
   private static final String LOGIN_ERROR_MESSAGE = "login-error-message";
-  private static final String LOGOUT_MESSAGE = "logout-message";
 
   /**
    * Creates a new BackofficeLoginPage and waits for it to load.
@@ -69,23 +65,5 @@ public class BackofficeLoginPage extends BasePage {
   public void submitExpectingError() {
     click(SUBMIT_BUTTON);
     waitFor(LOGIN_ERROR_MESSAGE);
-  }
-
-  /**
-   * Checks if the login error message is displayed.
-   *
-   * @return true if an error message is visible
-   */
-  public boolean hasLoginError() {
-    return exists(LOGIN_ERROR_MESSAGE);
-  }
-
-  /**
-   * Checks if the logout success message is displayed.
-   *
-   * @return true if the logout message is visible
-   */
-  public boolean hasLogoutMessage() {
-    return exists(LOGOUT_MESSAGE);
   }
 }

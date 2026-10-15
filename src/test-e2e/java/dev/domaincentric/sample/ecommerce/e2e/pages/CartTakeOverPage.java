@@ -32,15 +32,6 @@ public class CartTakeOverPage extends BasePage {
   }
 
   /**
-   * The button that sends the take-over.
-   *
-   * @return the button's locator
-   */
-  public Locator continueButton() {
-    return page.locator("[data-test='" + CONTINUE_BUTTON + "']");
-  }
-
-  /**
    * Presses "Continue" and waits for the cart page.
    *
    * @return the cart page the take-over leads to

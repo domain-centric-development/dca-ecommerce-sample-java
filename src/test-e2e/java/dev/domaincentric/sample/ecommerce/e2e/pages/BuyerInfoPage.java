@@ -13,9 +13,7 @@ public class BuyerInfoPage extends BasePage {
 
   private static final String URL_PATTERN = "/checkout/buyer";
   private static final String CONTINUE_BUTTON = "buyer-continue-button";
-  private static final String LOGIN_LINK = "buyer-login-link";
   private static final String REGISTER_LINK = "buyer-register-link";
-  private static final String ERROR_MESSAGE = "buyer-error-message";
   private static final String AUTH_OPTIONS = "buyer-auth-options";
   private static final String LOGGED_IN_BANNER = "buyer-logged-in";
   private static final String EMAIL_INPUT = "buyer-email-input";
@@ -108,22 +106,6 @@ public class BuyerInfoPage extends BasePage {
   }
 
   /**
-   * Clicks the continue button, expecting to stay on the same page due to validation errors.
-   *
-   * <p>Handles both HTML5 client-side validation (which prevents form submission) and server-side
-   * validation (which redirects back with error flash attributes).
-   *
-   * @return this page for method chaining
-   */
-  public BuyerInfoPage submitWithErrors() {
-    click(CONTINUE_BUTTON);
-    // Brief wait: HTML5 validation prevents submission (no navigation),
-    // server-side validation triggers a redirect back to this page.
-    page.waitForTimeout(500);
-    return this;
-  }
-
-  /**
    * Presses "Continue to Delivery" and waits for whatever the press started to settle — a page load
    * when the form was sent, nothing when the browser's own checks held it back.
    *
@@ -172,16 +154,6 @@ public class BuyerInfoPage extends BasePage {
   }
 
   /**
-   * Navigates to the login page from checkout.
-   *
-   * @return the LoginPage
-   */
-  public LoginPage goToLogin() {
-    click(LOGIN_LINK);
-    return new LoginPage(page);
-  }
-
-  /**
    * Navigates to the register page from checkout.
    *
    * @return the RegisterPage
@@ -189,42 +161,6 @@ public class BuyerInfoPage extends BasePage {
   public RegisterPage goToRegister() {
     click(REGISTER_LINK);
     return new RegisterPage(page);
-  }
-
-  /**
-   * Checks if an error message is displayed.
-   *
-   * @return true if error message exists
-   */
-  public boolean hasErrorMessage() {
-    return exists(ERROR_MESSAGE);
-  }
-
-  /**
-   * Checks if the page contains validation error text or HTML5 validation failures.
-   *
-   * <p>Detects three types of validation:
-   *
-   * <ul>
-   *   <li>Server-side errors rendered via data-test="buyer-error-message"
-   *   <li>Server-side error text in the page body
-   *   <li>HTML5 constraint validation on the buyer form inputs
-   * </ul>
-   *
-   * @return true if validation errors are shown
-   */
-  public boolean hasValidationErrors() {
-    return hasErrorMessage()
-        || pageContains("valid email")
-        || pageContains("error")
-        || hasHtml5ValidationErrors();
-  }
-
-  private boolean hasHtml5ValidationErrors() {
-    return (boolean)
-        page.evaluate(
-            "() => { const form = document.querySelector('[data-test=\"buyer-form\"]'); "
-                + "return form != null && !form.checkValidity(); }");
   }
 
   /**

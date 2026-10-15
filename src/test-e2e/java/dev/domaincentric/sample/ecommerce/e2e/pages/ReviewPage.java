@@ -45,16 +45,6 @@ public class ReviewPage extends BasePage {
   }
 
   /**
-   * Checks if the page displays the expected address.
-   *
-   * @param address the expected address text
-   * @return true if the address is displayed
-   */
-  public boolean showsAddress(String address) {
-    return pageContains(address);
-  }
-
-  /**
    * Reads the checkout session's total as the page shows it.
    *
    * @return the amount and the currency code, e.g. {@code "45.98 EUR"}
