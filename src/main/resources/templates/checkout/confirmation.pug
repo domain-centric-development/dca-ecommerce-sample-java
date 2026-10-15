@@ -79,12 +79,8 @@ block content
               span Tax
               span #{orderConfirmation.totals().tax()} #{orderConfirmation.totals().currencyCode()}
           .order-summary__total
-            span Total Paid
+            span Order Total
             span #{orderConfirmation.totals().total()} #{orderConfirmation.totals().currencyCode()}
-
-    .confirmation__next-steps
-      p We've sent a confirmation email to #{orderConfirmation.buyerInfo() ? orderConfirmation.buyerInfo().email() : 'your email address'}.
-      p You can track your order status using your order reference.
 
     .confirmation__footer
       a.btn.btn--primary.btn--lg(href="/" data-test="confirmation-continue-link") Continue Shopping

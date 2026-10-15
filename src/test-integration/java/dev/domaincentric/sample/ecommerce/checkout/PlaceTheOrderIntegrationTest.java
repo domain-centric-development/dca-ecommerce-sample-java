@@ -114,6 +114,17 @@ class PlaceTheOrderIntegrationTest {
   }
 
   @Test
+  @DisplayName("The confirmation shows the order total")
+  void theConfirmationCallsTheAmountTheOrderTotal() throws Exception {
+    final Document confirmation = placeTheOrder();
+
+    final Element details = confirmation.selectFirst(".confirmation__details");
+    assertThat(String.join(" ", details.select(".order-summary__total > span").eachText()))
+        .isEqualTo("Order Total 59.98 EUR");
+    assertThat(confirmation.selectFirst(".confirmation").text()).doesNotContain("Total Paid");
+  }
+
+  @Test
   @DisplayName("Continue shopping leads home")
   void continueShoppingOnTheConfirmationOpensTheHomePage() throws Exception {
     final Element link = placeTheOrder().selectFirst("[data-test=confirmation-continue-link]");
