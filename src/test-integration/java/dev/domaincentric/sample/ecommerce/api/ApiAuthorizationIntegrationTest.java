@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.api;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -125,14 +126,23 @@ class ApiAuthorizationIntegrationTest {
         .andExpect(jsonPath("$.items[0].productId").value(ddd))
         .andExpect(jsonPath("$.items[0].quantity").value(2));
 
-    // Not 403: telling a stranger they are forbidden confirms the id exists.
+    // Not 403: telling a stranger they are forbidden confirms the id exists. The stranger names a
+    // cart and a line that both exist, so the 404 can only come from whose cart it is.
     mockMvc
         .perform(get("/api/carts/" + cartId).header("Authorization", "Bearer " + theirs))
         .andExpect(status().isNotFound());
     mockMvc
         .perform(
-            post("/api/carts/" + cartId + "/checkout").header("Authorization", "Bearer " + theirs))
+            delete("/api/carts/" + cartId + "/items/" + ddd)
+                .header("Authorization", "Bearer " + theirs))
         .andExpect(status().isNotFound());
+
+    mockMvc
+        .perform(get("/api/carts/" + cartId).header("Authorization", "Bearer " + mine))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].productId").value(ddd))
+        .andExpect(jsonPath("$.items[0].quantity").value(2));
   }
 
   @Test
