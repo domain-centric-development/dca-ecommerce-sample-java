@@ -40,6 +40,7 @@ __pycache__/
 .opencode/skills/dca-review
 Thumbs.db
 .claude/skills/dca-audit
+/.dca-factory
 .claude/skills/factory-backlog
 .claude/skills/factory-decisions
 .claude/skills/factory-discover
@@ -65,7 +66,6 @@ Thumbs.db
 .claude/skills/review-ddd
 .claude/skills/review-hexagonal
 .claude/skills/ubiquitous-language
-/.dca-factory
 .codex/skills/factory-backlog
 .codex/skills/factory-decisions
 .codex/skills/factory-discover
