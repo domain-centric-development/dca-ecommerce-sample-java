@@ -98,3 +98,21 @@ Test: dev.domaincentric.sample.ecommerce.cart.CartMergeChoiceIntegrationTest#usi
 - When the merge form is sent with an option other than the three offered
 - Then the merge page opens again and shows "Invalid merge option selected"
 Test: dev.domaincentric.sample.ecommerce.cart.CartMergeChoiceIntegrationTest#anOptionThePageDoesNotOfferIsRefused
+
+### Rule: Opening the page that follows the login moves no cart; the take-over is a form the browser sends
+
+#### the-page-after-the-login-moves-no-cart
+- Given the account "anna.schmidt@example.com" with password "Secret123", registered earlier, whose cart holds nothing
+- And a browser with no cookies that runs no script, in which a guest added `"Ubiquitous Language" Mug` to the cart
+- When the guest logs in on `/login` with "anna.schmidt@example.com" and "Secret123"
+- Then a page opens that says "Bringing your cart along." and offers a "Continue" button
+- And the account's cart still holds nothing
+Test: dev.domaincentric.sample.ecommerce.cart.CartAtLoginIntegrationTest#openingThePageAfterTheLoginLeavesTheAccountsCartAsItWas
+
+#### continue-takes-the-guest-cart-over
+- Given the account "anna.schmidt@example.com", whose cart holds nothing, and a guest in a browser that runs no script
+  who added `"Ubiquitous Language" Mug`, logged in and sees "Bringing your cart along."
+- When they press "Continue"
+- Then the cart page `/cart` opens and shows "Welcome back!"
+- And the cart shows one line `"Ubiquitous Language" Mug` with quantity 1
+Test: dev.domaincentric.sample.ecommerce.e2e.CartTakeOverWithoutScriptE2ETest#continueTakesTheGuestCartIntoTheAccount

@@ -1,7 +1,9 @@
 ---
 id: taking-over-the-guest-cart-is-a-step-of-its-own
 epic: shop-with-an-account
-status: approved
+status: delivered
+delivered: 2026-10-15T00:18:57Z
+delivered_by: gate
 context: cart
 feature: cartrecovery
 title: Logging in takes the guest cart over in a step the browser sends
@@ -55,3 +57,4 @@ moves my cart.
 ## Assumptions
 
 - answered: SharedScenariosTest also knows the titles of the stories not yet delivered (their `####` criteria, title = Title line else the key in words); the spec stays the only source for the Test-line and duplicate checks. Fixed on main in d5ce1e9; nothing changes in this story — run the stage again as it is. (taking-over-the-guest-cart-is-a-step-of-its-own-01)
+- answered: The pipeline records the tests baseline again after it brings main into a story's branch, and works out (taking-over-the-guest-cart-is-a-step-of-its-own-02)
