@@ -1172,6 +1172,7 @@ point the build at a local checkout; the vectors are copied into the gitignored 
 the adapters in `SharedSpecificationTest`, `CheckoutSpecificationTest` and `RetainedDeliveryIntegrationTest` drive the production code with them.
 The end-user scenarios the browser suite implements are this shop's `product/spec/**/scenarios.md`, test for test under
 the scenario title; `SharedScenariosTest` checks that binding against the sources of `src/test-e2e` on every build.
+The specification's own `scenarios.md` is the history of the behaviour both shops share and binds no suite.
 
 ```bash
 ./gradlew test test-integration -Pspecification.path=../dca-sample-specification
