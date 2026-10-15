@@ -52,9 +52,10 @@ a business identifier)
 **Operations:**
 - `isCompleted()` — has the delivery to this listener been made?
 - `shortEventType()` — type name of the event without its package
+- `failed()` — has the delivery used up its attempts (see `Failed`)?
 - Retry failed listener (`replayFailed`) — delivers a failed entry's event once more
   to that entry's listener alone; the other listeners' entries stay as they were
-  (use case `ReplayFailedPublication`)
+  (use case `ReplayFailedPublication`); the event log offers it only on a `Failed` entry
 
 **Notes:** Belongs to the Store as its **read schema** and is deliberately
 decoupled from the use-case API (see `EventPublicationSummary`).
@@ -79,7 +80,7 @@ distinguish `EventPublicationSummary` (application layer) from
 
 **Operations:**
 - `from(EventPublicationEntry)` — mapping from the Store entry
-- `isCompleted()`, `shortEventType()`
+- `isCompleted()`, `shortEventType()`, `failed()`
 
 **Notes:** **Clarification Entry vs. Summary:**
 - `EventPublicationEntry` = persistence-near representation returned by the
@@ -95,7 +96,7 @@ distinguish `EventPublicationSummary` (application layer) from
 **Definition:** Status of an event publication: **completed** when it has been
 delivered (`completionDate != null`), otherwise **incomplete** — which covers
 both what is still queued and what failed and is being retried. The event log's
-badge shows exactly these two words; a **failed** publication is incomplete and is
+badge shows exactly these two words; a **Failed** publication is incomplete and is
 the one an operator can retry from the log.
 
 **Type:** Concept (derived attribute)
@@ -131,6 +132,25 @@ its attempts reads `Status: FAILED, attempts: 5`.
 
 **Notes:** Spring Modulith counts every try as it starts (`COMPLETION_ATTEMPTS`);
 the store shows that number as it is (`JdbcEventPublicationLogStore`).
+
+---
+
+### Failed (`failed()`)
+
+**Definition:** A delivery whose attempts are used up: Publication Status `FAILED` with no
+automatic retry left (`COMPLETION_ATTEMPTS` at or above `dca.events.retry.max-attempts`,
+default 5). Only a failed entry offers "Retry failed listener" in the event log; an entry
+whose delivery is still under way, or that waits for its automatic retry, has not failed
+and offers none.
+
+**Type:** Concept (derived attribute)
+
+**Related terms:** `Publication Status`, `Attempt`, `Completion Status`,
+`EventPublicationEntry.failed()`, `EventPublicationSummary.failed()`
+
+**Notes:** Not the same as the Publication Status `FAILED`, which an entry also carries
+while attempts are left. The store derives it (`JdbcEventPublicationLogStore`) from the same
+setting the automatic retry reads (`IntegrationEventRecovery`).
 
 ---
 

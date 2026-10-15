@@ -133,6 +133,18 @@ public final class ShopUnderTest {
   }
 
   /**
+   * The delivery held until released, for a test to publish an event whose delivery is still under
+   * way while it looks at the log — a component of the suite's own shop, which scans this package.
+   * Empty when the suite drives a shop started elsewhere: that shop carries no such listener.
+   *
+   * @return the held delivery, or empty
+   */
+  public static synchronized Optional<HeldDelivery> heldDelivery() {
+    baseUrl();
+    return Optional.ofNullable(shop).map(started -> started.getBean(HeldDelivery.class));
+  }
+
+  /**
    * A staff token for a registered account, minted by the suite's own shop the way an operator
    * provisioning tool would — no registration or login hands the role out. Empty when the suite
    * drives a shop started elsewhere: that shop's signing key is not the suite's.

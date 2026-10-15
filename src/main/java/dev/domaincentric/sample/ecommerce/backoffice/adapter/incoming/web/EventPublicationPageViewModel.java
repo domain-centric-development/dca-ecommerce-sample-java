@@ -60,7 +60,8 @@ public record EventPublicationPageViewModel(
         DATE_FORMATTER.format(summary.publicationDate()),
         summary.completionDate() != null ? DATE_FORMATTER.format(summary.completionDate()) : null,
         summary.isCompleted(),
-        summary.isCompleted() ? "Completed" : "Incomplete");
+        summary.isCompleted() ? "Completed" : "Incomplete",
+        summary.failed());
   }
 
   /**
@@ -75,6 +76,7 @@ public record EventPublicationPageViewModel(
    * @param completionDate formatted completion timestamp (null if incomplete)
    * @param completed whether the event has been processed
    * @param statusLabel display label for the status
+   * @param failed whether the delivery has used up its attempts and offers a retry
    */
   public record EventPublicationItemViewModel(
       String id,
@@ -85,7 +87,8 @@ public record EventPublicationPageViewModel(
       String publicationDate,
       String completionDate,
       boolean completed,
-      String statusLabel) {}
+      String statusLabel,
+      boolean failed) {}
 
   private static String prettyPrintJson(final String json) {
     if (json == null || json.isBlank()) {

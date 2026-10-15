@@ -50,7 +50,7 @@ block content
                   span.event-log__detail-label Completed
                   span.event-log__detail-value(data-test="event-completion-date")= event.completionDate()
 
-            if !event.completed()
+            if event.failed()
               form(method="post" action="/backoffice/events/" + event.id() + "/replay")
                 input(type="hidden" name=_csrf.parameterName value=_csrf.token)
                 button(type="submit") Retry failed listener

@@ -174,7 +174,8 @@ class RetryButtonPageIntegrationTest {
               "Status: FAILED, attempts: 5\n{\"eventId\":\"" + UUID.randomUUID() + "\"}",
               "dev.domaincentric.sample.ecommerce.inventory.Listener.on(ProductCreatedEvent)",
               Instant.now(),
-              null);
+              null,
+              true);
       return new GetEventPublicationsResult(List.of(exhausted), 1, 0, 1);
     }
   }

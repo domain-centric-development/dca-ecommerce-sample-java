@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
  * @param listenerId fully qualified listener method that handles this event
  * @param publicationDate when the event was published
  * @param completionDate when the event was completed (null if still incomplete)
+ * @param failed whether the delivery has used up its attempts — the one an operator can retry
  */
 public record EventPublicationSummary(
     UUID id,
@@ -25,7 +26,8 @@ public record EventPublicationSummary(
     String serializedEvent,
     String listenerId,
     Instant publicationDate,
-    @Nullable Instant completionDate) {
+    @Nullable Instant completionDate,
+    boolean failed) {
 
   /**
    * Maps a store entry to its application-layer summary.
@@ -40,7 +42,8 @@ public record EventPublicationSummary(
         entry.serializedEvent(),
         entry.listenerId(),
         entry.publicationDate(),
-        entry.completionDate());
+        entry.completionDate(),
+        entry.failed());
   }
 
   /**

@@ -31,6 +31,7 @@ public interface EventPublicationLogStore extends Store {
    * @param listenerId fully qualified listener method that handles this event
    * @param publicationDate when the event was published
    * @param completionDate when the event was completed (null if still incomplete)
+   * @param failed whether the delivery has used up its attempts and no automatic retry is left
    */
   record EventPublicationEntry(
       UUID id,
@@ -38,7 +39,8 @@ public interface EventPublicationLogStore extends Store {
       String serializedEvent,
       String listenerId,
       Instant publicationDate,
-      @Nullable Instant completionDate) {
+      @Nullable Instant completionDate,
+      boolean failed) {
 
     /**
      * Whether this event publication has been completed.

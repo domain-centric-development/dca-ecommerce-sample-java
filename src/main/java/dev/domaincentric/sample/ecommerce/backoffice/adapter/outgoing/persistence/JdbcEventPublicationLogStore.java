@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -23,10 +24,16 @@ public class JdbcEventPublicationLogStore implements EventPublicationLogStore {
       "SELECT ID, EVENT_TYPE, SERIALIZED_EVENT, LISTENER_ID, PUBLICATION_DATE, COMPLETION_DATE, STATUS, COMPLETION_ATTEMPTS "
           + "FROM EVENT_PUBLICATION ORDER BY PUBLICATION_DATE DESC";
 
-  private final JdbcTemplate jdbcTemplate;
+  private static final String FAILED = "FAILED";
 
-  public JdbcEventPublicationLogStore(final JdbcTemplate jdbcTemplate) {
+  private final JdbcTemplate jdbcTemplate;
+  private final int maxAttempts;
+
+  public JdbcEventPublicationLogStore(
+      final JdbcTemplate jdbcTemplate,
+      @Value("${dca.events.retry.max-attempts:5}") final int maxAttempts) {
     this.jdbcTemplate = jdbcTemplate;
+    this.maxAttempts = maxAttempts;
   }
 
   @Override
@@ -36,18 +43,16 @@ public class JdbcEventPublicationLogStore implements EventPublicationLogStore {
 
   private EventPublicationEntry mapRow(final ResultSet rs, final int rowNum) throws SQLException {
     final Timestamp completionTimestamp = rs.getTimestamp("COMPLETION_DATE");
+    final String status = rs.getString("STATUS");
+    final int attempts = rs.getInt("COMPLETION_ATTEMPTS");
 
     return new EventPublicationEntry(
         UUID.fromString(rs.getString("ID")),
         rs.getString("EVENT_TYPE"),
-        "Status: "
-            + rs.getString("STATUS")
-            + ", attempts: "
-            + rs.getInt("COMPLETION_ATTEMPTS")
-            + "\n"
-            + rs.getString("SERIALIZED_EVENT"),
+        "Status: " + status + ", attempts: " + attempts + "\n" + rs.getString("SERIALIZED_EVENT"),
         rs.getString("LISTENER_ID"),
         rs.getTimestamp("PUBLICATION_DATE").toInstant(),
-        completionTimestamp != null ? completionTimestamp.toInstant() : null);
+        completionTimestamp != null ? completionTimestamp.toInstant() : null,
+        FAILED.equals(status) && attempts >= maxAttempts);
   }
 }

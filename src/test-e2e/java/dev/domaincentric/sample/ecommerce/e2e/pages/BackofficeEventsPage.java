@@ -251,6 +251,22 @@ public class BackofficeEventsPage extends BasePage {
   }
 
   /**
+   * Checks if the entry carrying the given text offers "Retry failed listener".
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @return true if the entry shows the retry button
+   */
+  public boolean entryCarryingOffersRetry(String text) {
+    Locator entry = entryCarrying(text);
+    assertThat(entry).hasCount(1);
+    return entry
+            .getByRole(
+                AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Retry failed listener"))
+            .count()
+        > 0;
+  }
+
+  /**
    * Gets the status badge of the entry carrying the given text.
    *
    * @param text a text the entry's payload carries, such as the event's id
