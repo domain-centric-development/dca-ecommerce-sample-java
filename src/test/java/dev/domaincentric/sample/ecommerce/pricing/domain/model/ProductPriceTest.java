@@ -158,6 +158,18 @@ class ProductPriceTest {
     }
 
     @Test
+    @DisplayName("refuses a missing new price")
+    void refusesAMissingNewPrice() {
+      ProductPrice productPrice =
+          ProductPrice.create(
+              ProductId.generate(),
+              dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
+                  Money.of(BigDecimal.valueOf(10.00), EUR)));
+
+      assertThrows(IllegalArgumentException.class, () -> productPrice.updatePrice(null));
+    }
+
+    @Test
     @DisplayName("raises PriceChanged event on update")
     void raisesPriceChangedEventOnUpdate() {
       ProductId productId = ProductId.generate();

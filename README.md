@@ -644,6 +644,12 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── ProvisionInitialPriceUseCase.java
 │   │   │   ├── ProvisionInitialPriceCommand.java
 │   │   │   └── ProvisionInitialPriceResult.java
+│   │   ├── changeprice/                  # Use case: Change Price
+│   │   │   ├── ChangePriceInputPort.java
+│   │   │   ├── ChangePriceUseCase.java
+│   │   │   ├── ChangePriceCommand.java
+│   │   │   ├── ChangePriceResult.java
+│   │   │   └── ProductPriceNotFoundException.java
 │   │   ├── getpricesforproducts/         # Use case: Get Prices for Products
 │   │   │   ├── GetPricesForProductsInputPort.java
 │   │   │   ├── GetPricesForProductsUseCase.java
@@ -653,6 +659,10 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       └── ProductPriceRepository.java
 │   └── adapter/                          # Adapters
 │       ├── incoming/                     # Incoming adapters
+│       │   ├── api/
+│       │   │   ├── PriceResource.java
+│       │   │   ├── ChangePriceRequest.java
+│       │   │   └── PricingApiExceptionHandler.java
 │       │   └── event/
 │       │       └── PriceInitializationEventConsumer.java
 │       └── outgoing/                     # Outgoing adapters
@@ -787,7 +797,7 @@ stated by each resource, not by the filter chain: the JWT filter gives every req
 | Route | Who |
 |---|---|
 | `GET /api/products`, `GET /api/products/{id}` | anyone — the same assortment the shop pages show |
-| `POST /api/products` | staff role |
+| `POST /api/products`, `PUT /api/products/{id}/price` | staff role |
 | `GET /api/carts` (every cart in the shop) | staff role |
 | `POST /api/carts`, `GET /api/carts/{id}`, `POST /{id}/items`, `DELETE /{id}/items/{productId}`, `POST /{id}/checkout`, `GET /api/carts/customer/{id}/active` | the caller, on their own cart — a stranger's cart answers `404`, never `403` |
 | `POST /api/auth/{login,register,logout}` | anyone; the token comes back in the body, no cookie is set |
@@ -799,10 +809,10 @@ context's own `*ApiExceptionHandler`. The status follows what went wrong, not wh
 
 | Status | When |
 |---|---|
-| `404` | the addressed thing is not there, or not the caller's — a cart, a session, an article, a position in a cart |
+| `404` | the addressed thing is not there, or not the caller's — a cart, a session, an article, a position in a cart, a product in the price address |
 | `409` | a conflict with existing state — a stock keeping unit already in use, a second active cart, a cart that no longer takes changes |
 | `422` | the request was understood and a rule refused it — a password below the strength rules, a checkout step that has no data yet |
-| `400` | a value that is malformed — a stock keeping unit or a blank name the model does not accept, a product id in a cart route that is no UUID |
+| `400` | a value that is malformed — a stock keeping unit or a blank name the model does not accept, a product id in a cart route or the price address that is no UUID, a new price of zero |
 
 ```json
 { "type": "about:blank", "title": "Stock keeping unit already in use", "status": 409,

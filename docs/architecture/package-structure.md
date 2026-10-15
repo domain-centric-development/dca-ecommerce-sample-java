@@ -407,6 +407,10 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── provisioninitialprice/
 │   │   │   ├── ProvisionInitialPriceInputPort, ProvisionInitialPriceUseCase
 │   │   │   ├── ProvisionInitialPriceCommand, ProvisionInitialPriceResult
+│   │   ├── changeprice/
+│   │   │   ├── ChangePriceInputPort, ChangePriceUseCase
+│   │   │   ├── ChangePriceCommand, ChangePriceResult
+│   │   │   ├── ProductPriceNotFoundException
 │   │   ├── getpricesforproducts/
 │   │   │   ├── GetPricesForProductsInputPort, GetPricesForProductsUseCase
 │   │   │   ├── GetPricesForProductsQuery, GetPricesForProductsResult
@@ -415,6 +419,10 @@ dev.domaincentric.sample.ecommerce
 │   │       └── ProcessedEvents          # Store: effects already produced, by effect and event id
 │   └── adapter/
 │       ├── incoming/
+│       │   ├── api/
+│       │   │   ├── PriceResource
+│       │   │   ├── ChangePriceRequest
+│       │   │   └── PricingApiExceptionHandler
 │       │   └── event/
 │       │       └── PriceInitializationEventConsumer
 │       └── outgoing/
