@@ -78,7 +78,7 @@ This is a **sample e-commerce application** demonstrating best practices for:
 - Spring AI 2.0.0-M2 (milestone)
 - `dev.domaincentric:dca-building-blocks` — architectural markers (DDD tactical/strategic, hexagonal ports)
 - `dev.domaincentric:dca-archunit` — the DCA governance rules (ArchUnit), run via JUnit 5
-- Both come from Maven Central (`dca-building-blocks` 0.3.1, `dca-archunit` 0.8.0). Working on unreleased rules or markers: `./gradlew -PwithDcaJava <task>` makes `settings.gradle` include the sibling build `../dca-java` and substitute the coordinates — **run the build once without the switch before calling anything done**: it hides what a stranger sees, and CI (`.github/workflows/ci.yml`) exists because the sample once matched no published rule version for a day. The composite build also compiles `dca-java`, whose toolchain is Java 21: install a JDK 21 beside JDK 25, or pass `-PjavaToolchain=25`
+- Both come from Maven Central (`dca-building-blocks` 0.3.1, `dca-archunit` 0.9.0). Working on unreleased rules or markers: `./gradlew -PwithDcaJava <task>` makes `settings.gradle` include the sibling build `../dca-java` and substitute the coordinates — **run the build once without the switch before calling anything done**: it hides what a stranger sees, and CI (`.github/workflows/ci.yml`) exists because the sample once matched no published rule version for a day. The composite build also compiles `dca-java`, whose toolchain is Java 21: install a JDK 21 beside JDK 25, or pass `-PjavaToolchain=25`
 - JSpecify for nullability annotations
 
 **Purpose:**
@@ -162,8 +162,7 @@ replace that file instead of adding to it.
 Rule changes belong in `dca-java`, not here.
 
 The architecture suite runs the experimental rules too: `src/test-architecture/resources/dca-archunit.properties`
-sets `dca.rules.experimental = true` and turns off the rule on state kept in one instance, which the libraries
-retire (the file names its id). An enforced experimental rule fails the build like any other; an informational one
+sets `dca.rules.experimental = true`. An enforced experimental rule fails the build like any other; an informational one
 only lists.
 
 **Run architecture tests:**
