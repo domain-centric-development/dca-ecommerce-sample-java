@@ -99,3 +99,25 @@ Test: dev.domaincentric.sample.ecommerce.checkout.CheckoutReferenceIntegrationTe
 - Then the payment provider received two payment requests for that checkout session
 - And both carry the same `merchantReference`
 Test: dev.domaincentric.sample.ecommerce.checkout.CheckoutReferenceIntegrationTest#aSecondAttemptCarriesTheSameReference
+
+### Rule: A checkout whose authorized payment covers its total keeps that payment
+
+#### paying-again-for-the-same-amount-keeps-the-payment
+- Given a checkout session whose payment of its total the payment provider authorized
+- And the customer went back from the review to the payment step
+- When the customer pays through the payment provider again
+- Then the checkout shows the review step and the message "Your payment is already authorized."
+- And the payment provider received one payment request for that checkout session
+Test: dev.domaincentric.sample.ecommerce.e2e.ProviderPaymentE2ETest#payingAgainForTheSameAmountKeepsThePayment
+
+### Rule: A checkout whose total changed after its payment was authorized cancels that payment and requests a new one
+
+#### paying-again-for-a-changed-amount-replaces-the-payment
+- Given a checkout session with "Domain-Driven Design" once and "Standard Shipping", whose payment of "59.98" the
+  payment provider authorized
+- And the customer went back from the review to the delivery step and chose "Express Shipping"
+- When the customer pays through the payment provider again
+- Then the payment provider received the cancellation of the first payment
+- And a second payment request of "64.98" with the same `merchantReference` as the first
+- And the checkout shows the review step
+Test: dev.domaincentric.sample.ecommerce.checkout.PayingAgainIntegrationTest#payingAgainForAChangedAmountCancelsTheFirstPaymentAndRequestsTheNewTotal

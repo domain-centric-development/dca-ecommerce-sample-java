@@ -1,7 +1,9 @@
 ---
 id: paying-again-requests-no-second-payment
 epic: provider-payment
-status: approved
+status: delivered
+delivered: 2026-10-15T17:02:20Z
+delivered_by: gate
 context: checkout
 feature: payment
 title: Paying again for a checkout leaves no second payment open
