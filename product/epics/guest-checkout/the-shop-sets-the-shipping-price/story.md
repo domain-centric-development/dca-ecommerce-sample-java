@@ -1,7 +1,9 @@
 ---
 id: the-shop-sets-the-shipping-price
 epic: guest-checkout
-status: approved
+status: delivered
+delivered: 2026-10-15T15:50:24Z
+delivered_by: gate
 context: checkout
 feature: delivery
 title: The shipping price is the price the shop offers
