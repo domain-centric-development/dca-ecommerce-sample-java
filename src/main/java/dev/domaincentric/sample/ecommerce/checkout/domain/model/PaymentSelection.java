@@ -1,15 +1,19 @@
 package dev.domaincentric.sample.ecommerce.checkout.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.Value;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Value Object representing the selected payment method for checkout.
  *
- * <p>Contains the payment provider identifier and optional provider-specific reference data (e.g.,
- * payment intent ID, saved card token).
+ * <p>Contains the payment provider identifier, optional provider-specific reference data (e.g.,
+ * payment intent ID, saved card token) and the amount the provider authorized the payment for.
  */
-public record PaymentSelection(PaymentProviderId providerId, @Nullable String providerReference)
+public record PaymentSelection(
+    PaymentProviderId providerId,
+    @Nullable String providerReference,
+    @Nullable Money authorizedAmount)
     implements Value {
 
   public PaymentSelection {
@@ -19,16 +23,38 @@ public record PaymentSelection(PaymentProviderId providerId, @Nullable String pr
   }
 
   public static PaymentSelection of(final PaymentProviderId providerId) {
-    return new PaymentSelection(providerId, null);
+    return new PaymentSelection(providerId, null, null);
   }
 
   public static PaymentSelection of(
       final PaymentProviderId providerId, final String providerReference) {
-    return new PaymentSelection(providerId, providerReference);
+    return new PaymentSelection(providerId, providerReference, null);
   }
 
-  public PaymentSelection withReference(final String reference) {
-    return new PaymentSelection(this.providerId, reference);
+  /**
+   * A payment the provider authorized for an amount.
+   *
+   * @param providerId the provider that authorized it
+   * @param providerReference the payment reference the provider answered with
+   * @param authorizedAmount the amount it authorized
+   * @return the selection
+   */
+  public static PaymentSelection authorized(
+      final PaymentProviderId providerId,
+      final String providerReference,
+      final Money authorizedAmount) {
+    return new PaymentSelection(providerId, providerReference, authorizedAmount);
+  }
+
+  /**
+   * Whether this payment stands for the given total with the given provider.
+   *
+   * @param provider the provider the customer pays through now
+   * @param total the total to pay
+   * @return true when the provider authorized exactly that total
+   */
+  public boolean covers(final PaymentProviderId provider, final Money total) {
+    return hasReference() && this.providerId.equals(provider) && total.equals(authorizedAmount);
   }
 
   public boolean hasReference() {

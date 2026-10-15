@@ -15,6 +15,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentSelection;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,10 @@ import org.springframework.stereotype.Service;
  *
  * <ul>
  *   <li>Loading and validating the checkout session
- *   <li>Validating the payment provider exists and is available
+ *   <li>Validating the payment provider exists
+ *   <li>Keeping a payment the provider already authorized for the same total
+ *   <li>Otherwise validating the provider is available and cancelling a payment it authorized for
+ *       another total
  *   <li>Initiating the payment with the provider and taking its reference
  *   <li>Calling the domain method to submit payment info
  *   <li>Persisting the updated session
@@ -68,9 +72,6 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
         paymentProviderRegistry
             .findById(providerId)
             .orElseThrow(() -> new PaymentProviderNotFoundException(providerId));
-    if (!provider.isAvailable()) {
-      throw new PaymentProviderUnavailableException(providerId);
-    }
 
     // Everything the session itself can refuse is refused here, before the provider is reached: a
     // payment intent must not exist for a checkout that cannot accept it. The amount to charge is
@@ -80,8 +81,22 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
             .findByIdForCustomer(sessionId, customerId)
             .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
     snapshot.assertReadyForPayment();
-    final Money amount = snapshot.totals().total();
 
+    // A payment the provider already authorized for exactly this total stands: no second request,
+    // so nothing is asked of the provider and its availability does not matter
+    if (snapshot.authorizedPaymentCovers(providerId)) {
+      return SubmitPaymentResult.kept(
+          changeSession(
+              sessionId, customerId, session -> session.keepAuthorizedPayment(providerId)));
+    }
+
+    if (!provider.isAvailable()) {
+      throw new PaymentProviderUnavailableException(providerId);
+    }
+
+    cancelEarlierPayment(sessionId, customerId, snapshot);
+
+    final Money amount = snapshot.totals().total();
     final PaymentProvider.PaymentResult initiation = provider.initiatePayment(sessionId, amount);
     if (initiation.outcome() == PaymentProvider.PaymentResult.Outcome.UNAVAILABLE) {
       throw new PaymentProviderUnavailableException(providerId);
@@ -91,23 +106,14 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
     }
 
     final PaymentSelection paymentSelection =
-        PaymentSelection.of(providerId, initiation.providerReference());
+        PaymentSelection.authorized(providerId, initiation.providerReference(), amount);
 
     // Short transaction: load, submit, save, publish. The session can still have moved on between
     // the check above and this load — a concurrent confirmation, an expiry — so the intent that is
     // already at the provider is released rather than left dangling.
     try {
-      return transactionBoundary.inTransaction(
-          () -> {
-            final CheckoutSession session =
-                checkoutSessionRepository
-                    .findByIdForCustomer(sessionId, customerId)
-                    .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
-            session.submitPayment(paymentSelection);
-            checkoutSessionRepository.save(session);
-            eventPublisher.publishAndClearEvents(session);
-            return SubmitPaymentResult.from(session);
-          });
+      return SubmitPaymentResult.from(
+          changeSession(sessionId, customerId, session -> session.submitPayment(paymentSelection)));
     } catch (final Throwable t) {
       // Every way out of the transaction releases the intent, an Error included: the clean-up is
       // one call that swallows its own failures, and leaving a payment behind is worse than
@@ -118,11 +124,60 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
   }
 
   /**
-   * Releases a payment intent the session could not accept. A provider that refuses the
-   * cancellation leaves the original failure standing: the caller is told why their payment was
-   * rejected, not that the clean-up of it failed as well.
+   * Short transaction: load the session, change it, save it, publish its events.
+   *
+   * @return the changed session
    */
-  private void cancelQuietly(final PaymentProvider provider, final String providerReference) {
+  private CheckoutSession changeSession(
+      final CheckoutSessionId sessionId,
+      final CustomerId customerId,
+      final Consumer<CheckoutSession> change) {
+    return transactionBoundary.inTransaction(
+        () -> {
+          final CheckoutSession session =
+              checkoutSessionRepository
+                  .findByIdForCustomer(sessionId, customerId)
+                  .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
+          change.accept(session);
+          checkoutSessionRepository.save(session);
+          eventPublisher.publishAndClearEvents(session);
+          return session;
+        });
+  }
+
+  /**
+   * Cancels a payment the provider authorized for another total before the new one is requested, so
+   * the provider never holds two payments for one checkout. A payment the provider released is
+   * released in the session too, so it covers nothing should the new request fail.
+   */
+  private void cancelEarlierPayment(
+      final CheckoutSessionId sessionId,
+      final CustomerId customerId,
+      final CheckoutSession snapshot) {
+    final PaymentSelection earlier = snapshot.paymentSelection();
+    if (earlier == null || !earlier.hasReference()) {
+      return;
+    }
+    final String reference = earlier.providerReference();
+    final boolean released =
+        paymentProviderRegistry
+            .findById(earlier.providerId())
+            .map(earlierProvider -> cancelQuietly(earlierProvider, reference))
+            .orElse(false);
+    if (released) {
+      changeSession(sessionId, customerId, session -> session.releasePayment(reference));
+    }
+  }
+
+  /**
+   * Releases a payment intent the session could not accept, or one the session no longer needs. A
+   * provider that refuses the cancellation is logged and changes nothing else: the caller is told
+   * why their payment was rejected, not that the clean-up of it failed as well, and a payment for a
+   * changed total is still requested.
+   *
+   * @return whether the provider released the payment
+   */
+  private boolean cancelQuietly(final PaymentProvider provider, final String providerReference) {
     try {
       final PaymentProvider.PaymentResult cancellation = provider.cancelPayment(providerReference);
       if (!cancellation.success()) {
@@ -131,8 +186,10 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
             providerReference,
             cancellation.errorMessage());
       }
+      return cancellation.success();
     } catch (final RuntimeException e) {
       LOG.warn("Payment intent {} could not be released", providerReference, e);
+      return false;
     }
   }
 }

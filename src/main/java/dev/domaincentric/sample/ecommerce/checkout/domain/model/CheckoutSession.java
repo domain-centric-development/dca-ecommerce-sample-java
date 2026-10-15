@@ -287,6 +287,48 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
+   * Whether the payment the provider already authorized for this session stands for its total.
+   *
+   * @param provider the provider the customer pays through now
+   * @return true when the session holds an authorized payment of exactly its total by that provider
+   */
+  public boolean authorizedPaymentCovers(final PaymentProviderId provider) {
+    return paymentSelection != null && paymentSelection.covers(provider, totals.total());
+  }
+
+  /**
+   * Keeps the payment the provider already authorized and moves on to the review, without a new
+   * payment request.
+   *
+   * @param provider the provider the customer pays through now
+   * @throws CheckoutStepNotCompletedException if the authorized payment does not cover the total
+   */
+  public void keepAuthorizedPayment(final PaymentProviderId provider) {
+    assertReadyForPayment();
+    if (!authorizedPaymentCovers(provider)) {
+      throw new CheckoutStepNotCompletedException(this.id, CheckoutStep.PAYMENT);
+    }
+
+    // The payment was announced when the provider authorized it; keeping it announces nothing new
+    if (currentStep == CheckoutStep.PAYMENT) {
+      this.currentStep = CheckoutStep.REVIEW;
+    }
+  }
+
+  /**
+   * Forgets the payment the provider released, so it covers nothing any more and the payment step
+   * waits for a new one. A session that holds another payment by now keeps that one.
+   *
+   * @param providerReference the reference of the payment the provider released
+   */
+  public void releasePayment(final String providerReference) {
+    if (paymentSelection != null
+        && providerReference.equals(paymentSelection.providerReference())) {
+      this.paymentSelection = null;
+    }
+  }
+
+  /**
    * Confirms the checkout order once the checkout pricing has judged the current line items.
    *
    * <p>The verdict and the recomputed subtotal are handed in by the use case: deciding them needs

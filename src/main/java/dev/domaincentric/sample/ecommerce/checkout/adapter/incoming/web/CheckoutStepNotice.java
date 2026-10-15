@@ -15,31 +15,65 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * sentence. A code the page does not know, or a number it needs and does not get, shows nothing.
  */
 public enum CheckoutStepNotice {
-  EARLIER_STEPS_FIRST("earlier-steps-first", "Please complete the previous checkout steps first."),
-  SESSION_NOT_FOUND("session-not-found", "Checkout session not found"),
-  CHECKOUT_NOT_MODIFIABLE("checkout-not-modifiable", "This checkout can no longer be changed."),
-  INVALID_BUYER_DETAILS("invalid-buyer-details", "Please check the details you entered."),
+  EARLIER_STEPS_FIRST(
+      Kind.REFUSAL, "earlier-steps-first", "Please complete the previous checkout steps first."),
+  SESSION_NOT_FOUND(Kind.REFUSAL, "session-not-found", "Checkout session not found"),
+  CHECKOUT_NOT_MODIFIABLE(
+      Kind.REFUSAL, "checkout-not-modifiable", "This checkout can no longer be changed."),
+  INVALID_BUYER_DETAILS(
+      Kind.REFUSAL, "invalid-buyer-details", "Please check the details you entered."),
   BUYER_DETAILS_NOT_SAVED(
-      "buyer-details-not-saved", "Your details could not be saved. Please try again."),
+      Kind.REFUSAL,
+      "buyer-details-not-saved",
+      "Your details could not be saved. Please try again."),
   INVALID_DELIVERY_ADDRESS(
-      "invalid-delivery-address", "Please check the delivery address you entered."),
+      Kind.REFUSAL, "invalid-delivery-address", "Please check the delivery address you entered."),
   DELIVERY_NOT_SAVED(
-      "delivery-not-saved", "Your delivery details could not be saved. Please try again."),
-  PAYMENT_REFUSED("payment-refused", "The payment was refused. Please choose another way to pay."),
+      Kind.REFUSAL,
+      "delivery-not-saved",
+      "Your delivery details could not be saved. Please try again."),
+  PAYMENT_REFUSED(
+      Kind.REFUSAL,
+      "payment-refused",
+      "The payment was refused. Please choose another way to pay."),
   PAYMENT_PROVIDER_UNAVAILABLE(
+      Kind.REFUSAL,
       "payment-provider-unavailable",
       "The payment provider is not available right now. Please try again later."),
   PAYMENT_METHOD_NOT_OFFERED(
-      "payment-method-not-offered", "This way to pay is not offered. Please choose another one."),
-  NOTHING_TO_PAY("nothing-to-pay", "There is nothing to pay for this order."),
-  PAYMENT_METHOD_MISSING("payment-method-missing", "Please choose a way to pay."),
+      Kind.REFUSAL,
+      "payment-method-not-offered",
+      "This way to pay is not offered. Please choose another one."),
+  NOTHING_TO_PAY(Kind.REFUSAL, "nothing-to-pay", "There is nothing to pay for this order."),
+  PAYMENT_METHOD_MISSING(Kind.REFUSAL, "payment-method-missing", "Please choose a way to pay."),
   PAYMENT_NOT_SAVED(
-      "payment-not-saved", "Your payment selection could not be saved. Please try again."),
+      Kind.REFUSAL,
+      "payment-not-saved",
+      "Your payment selection could not be saved. Please try again."),
   ITEMS_UNAVAILABLE(
-      "items-unavailable", "Cannot place the order, %d item(s) unavailable or out of stock."),
-  REVIEW_FIRST("review-first", "Please review your order before placing it."),
-  ORDER_NOT_PLACED("order-not-placed", "Your order could not be placed. Please try again."),
-  ORDER_NOT_CONFIRMED("order-not-confirmed", "Order has not been confirmed yet");
+      Kind.REFUSAL,
+      "items-unavailable",
+      "Cannot place the order, %d item(s) unavailable or out of stock."),
+  REVIEW_FIRST(Kind.REFUSAL, "review-first", "Please review your order before placing it."),
+  ORDER_NOT_PLACED(
+      Kind.REFUSAL, "order-not-placed", "Your order could not be placed. Please try again."),
+  ORDER_NOT_CONFIRMED(Kind.REFUSAL, "order-not-confirmed", "Order has not been confirmed yet"),
+  PAYMENT_ALREADY_AUTHORIZED(
+      Kind.INFORMATION, "payment-already-authorized", "Your payment is already authorized.");
+
+  /** What a notice tells the customer, and so the page attribute it is shown under. */
+  public enum Kind {
+    /** Why something was refused, shown as the page's error. */
+    REFUSAL("error"),
+    /** What happened, shown as the page's notice. */
+    INFORMATION("notice");
+
+    private final String pageAttribute;
+
+    Kind(final String pageAttribute) {
+      this.pageAttribute = pageAttribute;
+    }
+  }
 
   /** The flash attribute that carries a checkout step notice's code. */
   public static final String KEY = "notice.checkout-step";
@@ -47,10 +81,12 @@ public enum CheckoutStepNotice {
   /** The flash attribute that carries the number a notice names. */
   public static final String COUNT_KEY = "notice.count";
 
+  private final Kind kind;
   private final String code;
   private final String sentence;
 
-  CheckoutStepNotice(final String code, final String sentence) {
+  CheckoutStepNotice(final Kind kind, final String code, final String sentence) {
+    this.kind = kind;
     this.code = code;
     this.sentence = sentence;
   }
@@ -66,18 +102,20 @@ public enum CheckoutStepNotice {
   }
 
   /**
-   * The sentence of the notice a redirect brought to this page, read from the page's model, where
-   * Spring puts the flash attributes addressed to the page.
+   * Shows the notice a redirect brought to this page: reads it from the page's model, where Spring
+   * puts the flash attributes addressed to the page, and puts its sentence there under the
+   * attribute its kind names — a refusal as the page's error, any other as its notice. Nothing is
+   * shown when no notice came, its code is unknown or its number missing.
    *
    * @param model the page's model
-   * @return the sentence, or empty when no notice came, its code is unknown or its number missing
    */
-  public static Optional<String> sentenceIn(final Model model) {
-    return fromCode(model.getAttribute(KEY) instanceof String code ? code : null)
-        .flatMap(
+  public static void showIn(final Model model) {
+    fromCode(model.getAttribute(KEY) instanceof String code ? code : null)
+        .ifPresent(
             notice ->
-                notice.sentence(
-                    model.getAttribute(COUNT_KEY) instanceof Integer count ? count : null));
+                notice
+                    .sentence(model.getAttribute(COUNT_KEY) instanceof Integer count ? count : null)
+                    .ifPresent(text -> model.addAttribute(notice.kind.pageAttribute, text)));
   }
 
   /**

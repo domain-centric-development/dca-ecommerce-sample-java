@@ -31,8 +31,10 @@ import org.springframework.web.client.RestClientException;
  * refused. No answer within two seconds, no connection, or any other answer counts as unavailable.
  * The provider's wire types stay in this class; the port sees only {@link PaymentResult}.
  *
- * <p>The contract knows no confirmation and no cancellation, so both answer with a refusal and call
- * nothing.
+ * <p>An authorized payment is cancelled with {@code POST /payments/{payment reference}/cancel},
+ * without a body: {@code 204} cancels it, any other answer refuses it, and no answer within two
+ * seconds or no connection counts as unavailable. The contract knows no confirmation, so that
+ * answers with a refusal and calls nothing.
  *
  * <p>Active only where a provider address is configured; otherwise {@link MockPaymentProvider}
  * stands in.
@@ -124,7 +126,26 @@ public class RestPaymentProvider implements PaymentProvider {
 
   @Override
   public PaymentResult cancelPayment(final String providerReference) {
-    return PaymentResult.failure(NOT_IN_CONTRACT.formatted("cancellation"));
+    try {
+      return restClient
+          .post()
+          .uri("/payments/{reference}/cancel", providerReference)
+          .exchange((httpRequest, response) -> translateCancellation(response, providerReference));
+    } catch (final RestClientException e) {
+      LOG.warn("Cancelling payment {} failed", providerReference, e);
+      return PaymentResult.unavailable("The payment provider could not be reached");
+    }
+  }
+
+  private static PaymentResult translateCancellation(
+      final ConvertibleClientHttpResponse response, final String providerReference)
+      throws IOException {
+    final HttpStatusCode status = response.getStatusCode();
+    if (status.isSameCodeAs(HttpStatus.NO_CONTENT)) {
+      return PaymentResult.success(providerReference);
+    }
+    LOG.warn("Payment provider answered {} to cancelling {}", status, providerReference);
+    return PaymentResult.failure("The payment provider answered " + status);
   }
 
   /**

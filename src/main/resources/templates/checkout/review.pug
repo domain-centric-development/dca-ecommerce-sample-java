@@ -18,6 +18,8 @@ block content
 
     if error
       .alert.alert--error(data-test="review-error-message")= error
+    if notice
+      .alert.alert--info(data-test="review-notice-message")= notice
 
     .review-sections(data-test="review-sections")
       .review-section(data-test="review-buyer-section")

@@ -14,6 +14,8 @@ public class ReviewPage extends BasePage {
   private static final String PLACE_ORDER_BUTTON = "review-place-order-button";
   private static final String TOTAL = "review-total";
   private static final String ERROR_MESSAGE = "review-error-message";
+  private static final String NOTICE_MESSAGE = "review-notice-message";
+  private static final String BACK_LINK = "review-back-link";
 
   /**
    * Creates a new ReviewPage and waits for it to load.
@@ -60,6 +62,25 @@ public class ReviewPage extends BasePage {
    */
   public Locator errorMessage() {
     return page.locator("[data-test='" + ERROR_MESSAGE + "']");
+  }
+
+  /**
+   * The notice the review step shows, for assertions on it.
+   *
+   * @return the notice's locator
+   */
+  public Locator notice() {
+    return page.locator("[data-test='" + NOTICE_MESSAGE + "']");
+  }
+
+  /**
+   * Follows the "Back" link to the payment step.
+   *
+   * @return the PaymentPage
+   */
+  public PaymentPage backToPayment() {
+    click(BACK_LINK);
+    return new PaymentPage(page, shopUrl);
   }
 
   /** Presses "Place Order" without assuming where the shop sends the guest. */

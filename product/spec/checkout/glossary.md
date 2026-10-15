@@ -55,6 +55,13 @@ claim of durable distributed transactions or universal rollback of unenlisted re
 - `supersede` — kept with status superseded when a new checkout action replaces it; no event; only an active session can be superseded
 - `submitBuyerInfo`, `submitDelivery`, `submitPayment` — record the step's data and move on to the next step when standing on it
 - `assertReadyForPayment` — a question: the preconditions of `submitPayment`, checked without changing anything
+- `authorizedPaymentCovers` — a question: whether the payment the provider authorized stands for the session's total
+  with the provider the customer pays through now
+- keep the authorized payment (`keepAuthorizedPayment`) — moves a session whose authorized payment covers its total
+  from payment to review without a new payment request; no event, `PaymentSubmitted` was published when the provider
+  authorized it; refused when the payment does not cover the total
+- `releasePayment` — forgets a payment the provider cancelled, so it covers nothing any more; a session that holds
+  another payment by then keeps that one
 - `goBackTo` — moves the current step back; data already submitted stays
 - `confirm` — status confirmed, totals recomputed at current prices; refused while the pricing verdict reports a changed price or a shortage
 - `complete` — after payment: status completed, with the order reference
@@ -104,13 +111,16 @@ and shipping cost — the cost the shop sets for the method, never one the buyer
 ### PaymentSelection
 
 **Definition:** Selected payment method consisting of `PaymentProviderId` and the provider
-reference (e.g. payment intent ID) the provider returned when the payment was initiated.
+reference (e.g. payment intent ID) the provider returned when the payment was initiated, together with its
+**authorized amount** (`authorizedAmount`): the total the provider authorized the payment for.
 
 **Type:** Value Object
 
-**Related terms:** `PaymentProviderId`, `PaymentSubmitted`.
+**Related terms:** `PaymentProviderId`, `PaymentSubmitted`, `PaymentResult`.
 
-**Operations:** `withReference`, `hasReference`.
+**Operations:** `authorized`, `hasReference`, `covers` — whether the payment stands for a total with a provider: only
+with a payment reference, only for the provider that authorized it, and only when its authorized amount equals the
+total; a selection without an authorized amount covers nothing.
 
 ### CheckoutLineItem
 
@@ -546,8 +556,13 @@ outcome is one of:
 **Related terms:** `PaymentProviderId`, `PaymentSelection`, `PaymentSubmitted`.
 
 **Notes:** The **payment stand-in** (`MockPaymentProvider`, id `mock`) authorizes every payment and takes
-payments where no provider address is configured. The provider's contract has no confirmation or cancellation;
-the REST adapter answers both with `REFUSED` without asking the provider.
+payments where no provider address is configured. The provider's contract has no confirmation; the REST adapter
+answers it with `REFUSED` without asking the provider.
+
+**Cancel a payment** (`cancelPayment`): releases an authorized payment at the provider by its payment reference
+(`POST /payments/{payment reference}/cancel`, no body). `204` is `SUCCEEDED`, any other answer `REFUSED`, no answer
+within 2 seconds `UNAVAILABLE`. Paying again for a changed total cancels the earlier payment before the new request;
+a refused or unanswered cancellation is logged and the new request still goes out.
 
 ---
 

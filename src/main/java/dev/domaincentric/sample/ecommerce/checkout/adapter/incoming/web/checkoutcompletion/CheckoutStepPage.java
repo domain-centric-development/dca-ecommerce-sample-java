@@ -45,7 +45,7 @@ final class CheckoutStepPage {
 
   /**
    * The redirect for a step the domain did not grant, or nothing for a granted one — which then
-   * shows the notice a redirect handed it as its error.
+   * shows the notice a redirect handed it: a refusal as its error, any other as its notice.
    *
    * <p>A denied step passes no notice on: a notice belongs to the page it was addressed to, and the
    * step shown instead says nothing it was not sent.
@@ -58,7 +58,7 @@ final class CheckoutStepPage {
     if (!access.granted()) {
       return Optional.of(CheckoutRoutes.redirectFor(access));
     }
-    CheckoutStepNotice.sentenceIn(model).ifPresent(text -> model.addAttribute("error", text));
+    CheckoutStepNotice.showIn(model);
     return Optional.empty();
   }
 

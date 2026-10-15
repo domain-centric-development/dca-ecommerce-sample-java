@@ -2,11 +2,13 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
+import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -146,8 +148,12 @@ public class PaymentPageController {
         () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.PAYMENT),
         attributes,
         () -> {
-          submitPaymentInputPort.execute(
-              new SubmitPaymentCommand(activeSession.sessionId(), customerId, providerId));
+          final SubmitPaymentResult result =
+              submitPaymentInputPort.execute(
+                  new SubmitPaymentCommand(activeSession.sessionId(), customerId, providerId));
+          if (result.paymentKept()) {
+            CheckoutStepNotice.PAYMENT_ALREADY_AUTHORIZED.addTo(attributes);
+          }
 
           return "redirect:/checkout/review";
         });

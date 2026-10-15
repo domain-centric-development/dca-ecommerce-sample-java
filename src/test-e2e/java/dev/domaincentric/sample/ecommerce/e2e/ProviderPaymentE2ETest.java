@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -90,6 +91,29 @@ class ProviderPaymentE2ETest extends BaseE2ETest {
         new BigDecimal(total[0]).compareTo(new BigDecimal(request.get("amount").asText())),
         "the payment request is for the checkout session's total " + shownTotal);
     assertEquals(total[1], request.get("currency").asText(), "the payment request's currency");
+  }
+
+  @Test
+  @DisplayName("Paying again for the same amount keeps the payment")
+  void payingAgainForTheSameAmountKeepsThePayment() {
+    paymentProvider.stubFor(post("/payments").willReturn(ShopUnderTest.authorized()));
+    PaymentPage paymentAgain =
+        checkoutAtThePaymentStep().selectFirstPaymentProvider().continueToReview().backToPayment();
+
+    ReviewPage review = paymentAgain.selectFirstPaymentProvider().continueToReview();
+
+    assertThat(review.notice()).hasText("Your payment is already authorized.");
+    String checkoutReference = review.placeOrder().orderReference();
+    List<LoggedRequest> requests =
+        paymentProvider.findAll(
+            postRequestedFor(urlEqualTo("/payments"))
+                .withRequestBody(
+                    matchingJsonPath("$.merchantReference", equalTo(checkoutReference))));
+    assertEquals(
+        1,
+        requests.size(),
+        "the payment provider received one payment request for the checkout session "
+            + checkoutReference);
   }
 
   private PaymentPage checkoutAtThePaymentStep() {
