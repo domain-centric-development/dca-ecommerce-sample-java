@@ -64,7 +64,9 @@ A command the profile does not declare is skipped and named, never failed.
 
 import argparse
 import calendar
+import collections
 import contextlib
+import difflib
 import glob
 import hashlib
 import hmac
@@ -79,13 +81,13 @@ import time
 import typing
 from datetime import datetime, timezone
 from .contract import (
-    DEFAULTS, METHOD_PROFILE, PLACES, read_flat,
+    DEFAULTS, evidence_rel, METHOD_PROFILE, PLACES, PLACES_REL, read_flat,
     runs_top,
-    ALL_KINDS, ANSWER_FIELDS, answered_decisions, CONTEXT_MAP_CANDIDATES, CONTRACT, CRITERION, decisions_store, delivered_on,
+    ALL_KINDS, ANSWER_FIELDS, answered_decisions, confirmed_defects, CONTEXT_MAP_CANDIDATES, CONTRACT, CRITERION, decisions_store, delivered_on,
     DOC_BUDGET_BYTES, duplicate_ids, epic_dependency_problem, EPIC_FIELDS, EPIC_FILE, epic_folder, evidence_dir,
-    factory_home, file_digest, find_story, findings_path, findings_rows, GateError, git, git_identity, HAPPY_MARK, HOME_VARIABLE, in_worktree,
+    factory_home, file_digest, find_story, findings_cells, findings_path, findings_rows, GateError, git, git_blob, git_identity, HAPPY_MARK, HOME_VARIABLE, in_worktree,
     INSTRUCTION_FILES, is_delivered, JOURNEY_ORDER, order_for, layout_hint, location, MAPPING_ROW, MAX_ROUNDS, needs_human_ids,
-    NOTHING, place, PROFILE_FILE, read_decisions, read_front_matter, read_profile, read_text, record_findings,
+    NOTHING, place, PLAIN_COLUMN, PROFILE_FILE, read_decisions, read_front_matter, read_profile, read_text, record_findings,
     record_path, records_of, resolve_profile, resume_stage, section_of, SELECTOR, set_places, SHARED_WINDOWS, shown,
     STAGE, STAGE_CHECKS, STAGE_FILES, STAGE_ORDER, STAGES, stamp_applied, story_digest, story_files, story_folder,
     story_id_of, story_kind, TECH_HEADINGS, TESTED_KINDS, unknown_profile_keys, VERSION)
@@ -326,9 +328,9 @@ def close_findings(result, front):
             continue
         lines = read_text(path).splitlines()
         for index, line in enumerate(lines):
-            cells = [c.strip() for c in line.strip().strip("|").split("|")] if line.startswith("|") else []
-            if len(cells) == 7 and cells[0] == row[0]:
-                cells[6] = "done"
+            cells = findings_cells(line)
+            if cells and cells[0] == row[0]:
+                cells[-1] = "done"
                 lines[index] = "| " + " | ".join(cells) + " |"
         with open(path, "w", encoding="utf-8") as handle:
             handle.write("\n".join(lines) + "\n")
@@ -562,15 +564,32 @@ def check_invariants(result, profile, cwd, runs, story_id, front, mapping):
     """Contract 13: every domain type the plan changes names its invariants — its rules, the guards included, one
     per `;` — and every rule has its own unit test in tests.md's `gate:invariants` table: a selector that exists as
     class and method, and that is no criterion's test. A guard nobody named is code no test asked for; a rule whose
-    only test is a criterion's is a rule nobody tested on its own."""
-    if story_kind(front) != "story" or contract_of(profile) < 13:
+    only test is a criterion's is a rule nobody tested on its own.
+
+    Contract 24 (#134): an adoption changes no domain type, so its plan names the ones its scenarios exercise — each
+    with its rules, or `- none — <why>` where they exercise none — and every rule is held the same way: an existing
+    unit test mapped, or a characterization test the adoption wrote, with its break."""
+    kind = story_kind(front)
+    if kind not in ("story", "adopt") or contract_of(profile) < (13 if kind == "story" else 24):
         return
     plan_path, tests_path = os.path.join(runs, story_id, "plan.md"), os.path.join(runs, story_id, "tests.md")
     if not os.path.isfile(plan_path):
         return
     plan = read_text(plan_path)
-    elements, named = plan_domain_elements(plan), plan_invariants(plan) or {}
+    if kind == "adopt":
+        if not any(line.strip().startswith("-") for line in section_of(plan, "invariants") or []):
+            result.fail("invariants", "plan.md: an adoption names the invariants of the domain types its scenarios "
+                                      "exercise under `## Invariants` — `- <Element>: <rule>; <rule>` per type, its "
+                                      "guards included, or `- none — <why>` where the scenarios exercise none")
+            return
+        elements = list(plan_invariants(plan) or {})
+    else:
+        elements = plan_domain_elements(plan)
+    named = plan_invariants(plan) or {}
     if not elements and not any(named.values()):
+        if kind == "adopt":
+            result.ok("invariants", "the adoption's scenarios exercise no domain type with a rule of its own — "
+                                    "the plan says why")
         return
     missing = [e for e in elements if e not in named]
     if missing:
@@ -911,6 +930,15 @@ def check_adopt(result, profile, cwd, runs, story_id, front, criteria):
     mapping = check_mapping(result, runs, story_id, criteria)
     located = check_exists(result, cwd, mapping)
     check_compiles(result, profile, cwd)
+    check_invariants(result, profile, cwd, runs, story_id, front, mapping)
+    # every rule's unit test is green beside the scenarios' tests: an adoption proves what holds, the rules included
+    tests_path = os.path.join(runs, story_id, "tests.md")
+    rows = read_invariant_rows(read_text(tests_path)) if os.path.isfile(tests_path) else None
+    rules = {f"{element} rule {', '.join(map(str, numbers))}": [selector] for element, numbers, selector in rows or []
+             if selector and SELECTOR.match(selector) and selector not in {s for sels in mapping.values() for s in sels}}
+    if rules and contract_of(profile) >= 24:
+        located = dict(located or {}, **(check_exists(Result(), cwd, rules) or {}))
+        mapping = dict(mapping, **rules)
     check_test_state(result, profile, cwd, mapping, "green", located, runs, story_id, guard=True)
     judge = read_text(os.path.join(runs, story_id, "judge.md")) if os.path.isfile(os.path.join(runs, story_id, "judge.md")) else ""
     if verdict_in(judge) != "pass":
@@ -2613,13 +2641,7 @@ def check_red_proof(result, cwd, located, digests, story):
         result.skip("red-proof", "the red record names no test-file digests (written by an older gate) — "
                                  "whether a test changed since it was seen failing is not checked")
         return
-    moved = []
-    for selector, digest in sorted(digests.items()):
-        test_file = located.get(selector)
-        if not digest or not test_file or not os.path.isfile(os.path.join(cwd, test_file)):
-            continue
-        if file_digest(os.path.join(cwd, test_file)) != digest:
-            moved.append(f"{selector} ({test_file})")
+    moved = unproven_tests(cwd, located, digests)
     if not moved:
         result.ok("red-proof", f"{len(digests) - len(unbound)} test(s) are the version that was seen failing")
     elif answered_decisions(cwd, story, "test"):
@@ -2632,6 +2654,33 @@ def check_red_proof(result, cwd, located, digests, story):
             f"earlier version, so its green now proves nothing. The test stage runs again and records "
             f"it red as it is; a change of what it expects is a human's decision.",
         )
+
+
+def unproven_tests(cwd, located, digests):
+    """`<selector> (<file>)` for each test whose file is no longer the version its red proof was taken against."""
+    moved = []
+    for selector, digest in sorted(digests.items()):
+        test_file = located.get(selector)
+        if not digest or not test_file or not os.path.isfile(os.path.join(cwd, test_file)):
+            continue
+        if file_digest(os.path.join(cwd, test_file)) != digest:
+            moved.append(f"{selector} ({test_file})")
+    return moved
+
+
+def stale_red_proof(cwd, runs, story):
+    """The tests whose red proof the build and tidy gates would refuse (`red-proof`), read without running anything:
+    each mapped test whose file changed after the test stage saw it fail — by a merge of the main line into the story,
+    most often — and no answered decision of stage `test` changed what it expects. Empty without a red record."""
+    digests = read_red_digests(runs, story)
+    if not digests or all(d is None for d in digests.values()):
+        return []
+    try:
+        _path, mapping = read_mapping(runs, story)
+    except GateError:
+        return []
+    moved = unproven_tests(cwd, check_exists(Result(), cwd, mapping) or {}, digests)
+    return [] if not moved or answered_decisions(cwd, story, "test") else moved
 
 
 #: Which selectors the test stage saw fail. Kept as a file next to the round counter for the same
@@ -2763,6 +2812,16 @@ def check_decisions(result, runs, story_id, cwd, gating=None, story_path=None):
                     f"{rid} is answered ({answer.get('answer')!r} by {answer.get('by')}) — the plan "
                     f"stage runs next and applies it; the gate after it checks that it did.",
                 )
+            # A stage before the one that applies the answer ran first — the test stage recording a red proof a
+            # merge left stale: the answer waits for its own stage, whose gate checks that it was applied.
+            elif gating in STAGE_ORDER and stage in STAGE_ORDER \
+                    and STAGE_ORDER.index(gating) < STAGE_ORDER.index(stage) and (text is None or still_asking
+                                                                                   or rid not in text):
+                result.note(
+                    "decisions",
+                    f"{rid} is answered ({answer.get('answer')!r} by {answer.get('by')}) — stage {stage} comes "
+                    f"after {gating} and applies it; its gate checks that it did.",
+                )
             elif text is None or still_asking:
                 result.fail(
                     "decisions",
@@ -2821,9 +2880,13 @@ def staged_snapshot(result, cwd, env):
     _, untracked = git(cwd, "ls-files", "--others", "--exclude-standard", env=env)
     # The agent tools' own folders — skill links, a settings file the install wrote — are no input to
     # any check here, and refusing every commit over them would stop the first commit after an install.
+    # Nor is what the pipeline writes itself while a runner works — `.dca-factory/`, the run folder and
+    # the evidence beside it: a person's commit is not refused by a running factory's protocol.
     tooling = lambda p: any(folder in "/" + p for folder in TOOL_FOLDERS)
-    drift = [f"modified, not staged: {p}" for p in unstaged.splitlines() if p and not tooling(p)] \
-        + [f"untracked: {p}" for p in untracked.splitlines() if p and not tooling(p)]
+    owned = pipeline_owned()
+    left = [p for p in unstaged.splitlines() + untracked.splitlines() if p and owned(p)]
+    drift = [f"modified, not staged: {p}" for p in unstaged.splitlines() if p and not tooling(p) and not owned(p)] \
+        + [f"untracked: {p}" for p in untracked.splitlines() if p and not tooling(p) and not owned(p)]
     if drift:
         shown = "\n".join("  " + line for line in drift[:10])
         more = f"\n  … and {len(drift) - 10} more" if len(drift) > 10 else ""
@@ -2834,8 +2897,17 @@ def staged_snapshot(result, cwd, env):
             f"(`git stash push --keep-index --include-untracked`), then commit again.",
         )
         return None
-    result.ok("snapshot", f"index tree {tree[:12]} — the working tree matches it")
+    result.ok("snapshot", f"index tree {tree[:12]} — the working tree matches it"
+                          + (f" ({len(left)} file(s) the pipeline writes itself left out)" if left else ""))
     return tree
+
+
+def pipeline_owned():
+    """Whether a path is one the pipeline writes itself, outside any story's commit: under `.dca-factory/`, the
+    run folder or the evidence beside it, as the profile places them."""
+    runs = (PLACES_REL.get("runs") or DEFAULTS["runs"]).strip("/")
+    prefixes = tuple(dict.fromkeys(folder + "/" for folder in (".dca-factory", runs, evidence_rel()) if folder))
+    return lambda path: path.replace("\\", "/").startswith(prefixes)
 
 
 def red(result, check, message, must, strict):
@@ -2952,6 +3024,88 @@ def rebase_tests_baseline(cwd, runs, story_id, new, old=None):
     rebased.update(main)
     if rebased != entries:
         write_mark(runs, story_id, TESTS_BASELINE, "\n".join(f"{blob}  {rel}" for rel, blob in sorted(rebased.items())))
+
+
+#: The main line's side of the tests a merge met (#151): written when merging the main line into a story stops on a
+#: conflict — every test file the main line changed since the story's base, as `<base blob | ->\t<main blob>\t<file>`
+#: — so the integrate gate tells a resolution that dropped what the main line added to a test from the story's own
+#: change, and the runner sends it back to the integrate stage.
+MAIN_TESTS = "main-tests"
+
+
+def record_main_tests(cwd, runs, story_id, target):
+    """During a merge that stopped on conflicts in the story's worktree (`HEAD` the story, `target` the main line):
+    the test files the main line changed since the two parted, with both versions. Nothing to hold, no record."""
+    base = git(cwd, "merge-base", "HEAD", target)[1].strip()
+    before, main = tree_tests(cwd, base) or {}, tree_tests(cwd, target) or {}
+    rows = [f"{before.get(rel, '-')}\t{blob}\t{rel}" for rel, blob in sorted(main.items()) if before.get(rel) != blob]
+    path = os.path.join(evidence_dir(runs, story_id), MAIN_TESTS)
+    if rows:
+        write_mark(runs, story_id, MAIN_TESTS, "\n".join(rows))
+    elif os.path.isfile(path):
+        os.remove(path)
+
+
+def main_tests_lost(cwd, runs, story_id):
+    """[(test file, [line, …])]: what the main line added to a test while the story ran that the story's tree no
+    longer holds — a case another story added, an assertion it changed. Lines the main line kept from the base are
+    the story's to change (and `tests-kept` holds the story to them); the main line's own lines are not."""
+    path = os.path.join(evidence_dir(runs, story_id), MAIN_TESTS)
+    if not os.path.isfile(path):
+        return []
+    lost = []
+    for line in read_text(path).splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        before_blob, main_blob, rel = parts
+        code, main_text = git_blob(cwd, main_blob)
+        if code:
+            continue
+        base_text = "" if before_blob == "-" else git_blob(cwd, before_blob)[1]
+        # compared without their indentation: a resolution may indent a case anew
+        was = [l.strip() for l in meaningful_lines(base_text, rel)]
+        main = [l.strip() for l in meaningful_lines(main_text, rel)]
+        added = [main[j] for tag, _i1, _i2, j1, j2 in
+                 difflib.SequenceMatcher(None, was, main, autojunk=False).get_opcodes()
+                 if tag in ("insert", "replace") for j in range(j1, j2)]
+        full = os.path.join(cwd, rel)
+        if not os.path.isfile(full):
+            lost.append((rel, ["(the file is gone)"]))
+            continue
+        with open(full, encoding="utf-8", errors="replace") as handle:
+            left = collections.Counter(l.strip() for l in meaningful_lines(handle.read(), rel))
+        missing = []
+        for wanted in added:
+            if left[wanted] > 0:
+                left[wanted] -= 1
+            else:
+                missing.append(wanted)
+        if missing:
+            lost.append((rel, missing))
+    return lost
+
+
+def lost_text(lost):
+    """The lost lines as a reader takes them in: each file with its first lines."""
+    return "; ".join(f"{rel} lost {', '.join(repr(l) for l in lines[:2])}"
+                     + (f" and {len(lines) - 2} more line(s)" if len(lines) > 2 else "") for rel, lines in lost)
+
+
+def check_main_tests(result, cwd, runs, story_id):
+    """#151: the merge's resolution keeps the main line's side of every test it met. A line the main line added to a
+    test while the story ran — another story's case — that the story's tree lacks is the resolution's change, never
+    the story's: refused here by name, and the runner sends it back to the integrate stage."""
+    if not os.path.isfile(os.path.join(evidence_dir(runs, story_id), MAIN_TESTS)):
+        return
+    lost = main_tests_lost(cwd, runs, story_id)
+    target = integration_target(runs, story_id) or "the main line"
+    if lost:
+        result.fail("main-tests", f"the merge's resolution changed a test the main line holds: {lost_text(lost)} — the "
+                                  f"integrate stage puts the main line's side back (`git show {target}:<file>`) beside "
+                                  f"the story's")
+    else:
+        result.ok("main-tests", "every test the main line changed while the story ran keeps the main line's side")
 
 
 def human_line(text):
@@ -3153,7 +3307,7 @@ def check_existing_tests(result, cwd, runs, story_id, story_body=""):
         if not head_code and not in_worktree(cwd) and head_blob.strip() and head_blob.strip() != blob \
                 and not git(cwd, "cat-file", "-e", blob)[0] and not committed_by_a_stage(cwd, runs, story_id, rel):
             blob = head_blob.strip()
-        code, before = git(cwd, "cat-file", "blob", blob)
+        code, before = git_blob(cwd, blob)
         if code:
             lost.append(rel)
             continue
@@ -3797,6 +3951,7 @@ def _adopt(run):
 @check("integrate", stages=("integrate",))
 def _integrated(run):
     check_integrated(run.result, run.cwd, run.runs, run.story_id)
+    check_main_tests(run.result, run.cwd, run.runs, run.story_id)
     # The spec as the main line holds it now: a key another story added meanwhile, or a criterion it changed, is a
     # question to a person — never a silent last-writer-wins (WP-98 R3). With claims on a remote the main line is the
     # remote's, merged into this worktree (WP-93 D).
@@ -4487,6 +4642,12 @@ def deliver(result, story_path, story_id, front, runs):
     if added or open_now:
         result.ok("findings", f"{added} confirmed finding(s) kept in {shown(findings_path(story_path))} — "
                               f"{open_now} open there")
+    judge = os.path.join(runs, story_id, "judge.md")
+    unworded = [r[1] for r in confirmed_defects(read_text(judge)) if not r[5]] if os.path.isfile(judge) else []
+    if unworded:
+        result.note("findings", f"{len(unworded)} confirmed defect(s) in judge.md without `{PLAIN_COLUMN}` "
+                                f"({', '.join(unworded[:3])}{' …' if len(unworded) > 3 else ''}) — the one sentence a "
+                                f"person reads first; Decide shows the reviewer's `Defect` in its place")
 
 
 def journal_gate(result, args, story_id, story_path, code):

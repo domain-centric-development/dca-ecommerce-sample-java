@@ -37,10 +37,10 @@ from .spec import (
     context_folder, derived, merge, place_name, read_delta, read_spec, render_spec, story_entries)
 from .gate import (
     merge_target, run as run_command,
-    read_mapping, spec_target, story_spec,
+    read_mapping, spec_target, stale_red_proof, story_spec,
     BUILT_IN_PERSPECTIVES, CLAUSES_MARKER, CONFLICT_MARKER, contract_of, criteria_of, HANDOVER_BUDGET,
-    integration_target, INVARIANTS_MARKER, perspectives_of, plan_invariants, plan_proposals, read_clause_rows,
-    read_invariant_rows, rebase_tests_baseline, scenario_clauses, TESTS_BASELINE)
+    integration_target, INVARIANTS_MARKER, lost_text, main_tests_lost, perspectives_of, plan_invariants, plan_proposals, read_clause_rows,
+    MAIN_TESTS, read_invariant_rows, rebase_tests_baseline, record_main_tests, scenario_clauses, TESTS_BASELINE)
 from .tools import (
     isolation_args, TOOL, tool_command, TOOLS, tools_shell)
 
@@ -257,6 +257,7 @@ def worktree_prepare(cwd, runs, story_id):
             elif conflicted:
                 with open(os.path.join(evidence_dir(runs, story_id), CONFLICTS_FILE), "w", encoding="utf-8") as handle:
                     handle.write("\n".join(conflicted) + "\n")
+                record_main_tests(path, runs, story_id, target)
                 for conflict in conflicted:
                     print(f"conflict: {conflict}")
                 print(f"worktree: {story_id} meets {target} in {', '.join(conflicted)} — the integrate stage resolves "
@@ -382,6 +383,7 @@ def integrate_prepare(cwd, runs, epics, story_id):
                 return 1
             with open(os.path.join(evidence_dir(runs, story_id), CONFLICTS_FILE), "w", encoding="utf-8") as handle:
                 handle.write("\n".join(conflicted) + "\n")
+            record_main_tests(path, runs, story_id, target)
             for conflict in conflicted:
                 print(f"conflict: {conflict}")
             return 3
@@ -431,7 +433,7 @@ def move_path(cwd, src, dst):
 
 #: What the gate and the runner keep in a story's evidence folder that a new pass starts without: the red ledger, the
 #: story's digest, the tests baseline, the round count and the base tree. The journal and the snapshots carry on.
-PASS_MARKS = (".tests-red", STORY_DIGEST, TESTS_BASELINE, ".rounds", "base-tree", STAGES_MADE)
+PASS_MARKS = (".tests-red", STORY_DIGEST, TESTS_BASELINE, ".rounds", "base-tree", STAGES_MADE, MAIN_TESTS)
 
 
 def migrate_evidence(cwd, runs, say):
@@ -870,7 +872,8 @@ plan — {folder}/plan.md (gate before the stage: story, epic, context map, deci
   The test gate reads `level: browser-only` here (`levels`); a key is `[a-z0-9][a-z0-9-]*`
 - `## Invariants`: one line per aggregate, entity, value object or domain service `## Changes` names —
   `- <Element>: <rule>; <rule>` with its guards (required, trimmed, in range), or `- <Element>: none — <why>`.
-  The test gate reads it (`invariants`): each named rule needs a unit test in tests.md's `## Notes`
+  The test gate reads it (`invariants`): each named rule needs a unit test in tests.md's `## Notes`.
+  An adopted story names the domain types its scenarios exercise instead, or `- none — <why>`: the line is required
 - `## Spec delta`: the story against its context's spec (`product/spec/<context>/scenarios.md`) — the skeleton writes
   `- adds <key>` / `- holds <key>` / `- changes <key>` as the comparison says; add `- removes <key>: <why>` for a
   criterion the story takes away and `- rule "<old>" → "<new>"` for a renamed rule (every criterion under it named or
@@ -939,8 +942,10 @@ judge — {folder}/judge.md (the runner reads the verdict; the document gate rea
 - `back: test` under the verdict when a confirmed defect is in a test (it asserts less than its criterion): the round
   goes to the test stage, then build; without it the round goes to build, which may not change a test
 - `## Perspectives covered`: `- <perspective>: reviews/<perspective>.md (<carrier>) | in-session — <why no file> | not covered — <why>`
-- `## Confirmed defects`: `| Perspective | File:line | Severity | Defect | Fix |` — file as a path from the project root
-  with its line; severity blocker | major | minor; only blocker and major prevent `pass`
+- `## Confirmed defects`: `| Perspective | File:line | Severity | In plain words | Defect | Fix |` — file as a path from
+  the project root with its line; severity blocker | major | minor; only blocker and major prevent `pass`; `In plain
+  words` is one short sentence a person understands at once, no code name or line ("the checkout controller checks
+  the step twice"), `Defect` the reviewer's precise account
 - `## Considered and dropped`, `## Criteria re-checked`: `- <key>: met | met only nominally — <what the test does not assert>`
 - `## Previous round` in a repeat round: every defect the previous verdict confirmed — fixed (file:line) | withdrawn (why) | still open
 - a `story-conflict` names a decision record: `## needs-human` with `decision: <story>-<nn>`, the record's `stage:` is the one
@@ -1364,6 +1369,7 @@ class Run:
         self.parallel = options.parallel
         self.keep_going = getattr(options, "keep_going", False)
         self.skipped = {}                     # --keep-going: story → the exit it stopped with
+        self.red_stale = {}                   # story → its tests whose red proof a merge left stale
         self.options = options
         self.add_dirs, self.read_dirs = [], []
         self.tool_in_flight = ""
@@ -1974,13 +1980,22 @@ class Run:
             repeat += later
         if stage == "test" and self.back_to(story, "build") == "test":
             repeat += f" The build stage sent the story back: {self.runs}/{story}/build.md."
+        if stage == "test":
+            repeat += self.red_stale_sentence(story)
         if stage == "judge" and os.path.isfile(f"{self.runs}/{story}/.judge-previous.md"):
             repeat = f" This is a repeat round; the previous verdict: {self.runs}/{story}/.judge-previous.md."
         guard = self.guard_sentence() if stage in STAGE and STAGE[stage].guarded else ""
         return (f"Apply the stage-{stage} skill for backlog story {story}.{self.worktree_sentence()} "
                 f"{self.where_things_are(self.tool_in_flight, story)}{guard}{repeat}")
 
-    def integrate_prompt(self, story, conflicts):
+    def integrate_prompt(self, story, conflicts, lost=None):
+        if lost:
+            target = integration_target(self.runs, story) or "the main line"
+            return (f"Apply the stage-integrate skill for backlog story {story}. The resolution of the merge changed a "
+                    f"test the main line holds — {lost_text(lost)}. Put the main line's side back beside the story's "
+                    f"(`git show {target}:<file>` shows it) and edit nothing else; the merge is committed, add a row "
+                    f"for each file to integrate.md.{self.worktree_sentence()} "
+                    f"{self.where_things_are(self.tool_in_flight, story)}")
         return (f"Apply the stage-integrate skill for backlog story {story}. Merging the main line into this story's "
                 f"branch stopped on conflicts in: {conflicts}. Their list: {self.evidence(story)}/conflicts."
                 f"{self.worktree_sentence()} {self.where_things_are(self.tool_in_flight, story)}")
@@ -2181,6 +2196,8 @@ class Run:
         prompt += self.guard_sentence()
         if self.back_to(story, "build") == "test":
             prompt += f" The build stage sent the story back: {self.runs}/{story}/build.md."
+        if "test" in stages:
+            prompt += self.red_stale_sentence(story)
         for refused in stages:
             if os.path.isfile(f"{self.runs}/{story}/.gate-{refused}.txt"):
                 prompt += f" The gate refused stage {refused} before: {self.runs}/{story}/.gate-{refused}.txt."
@@ -2429,6 +2446,7 @@ class Run:
             return self.integrate_story(story, tool, dry)
         if start == "adopt":
             return self.adopt_gate(story, tool, dry)
+        start = self.red_proof_start(story, kind, start, dry)
         started, ran, built = False, [], False
         for stage in STAGE_ORDER:
             started = started or stage == start
@@ -2525,6 +2543,36 @@ class Run:
         if os.environ.get("FACTORY_HOME") and not dry and self.start_stage(story) == "integrate":
             return self.integrate_story(story, tool, dry)
         return 0
+
+    def red_proof_start(self, story, kind, start, dry):
+        """Where a story whose red proof went stale starts: a gate that holds the red proof (build, tidy) refuses a
+        test changed after it was seen failing, and only the test stage can record it again — so the story goes to
+        its test stage, as a step of the runner, never as a stage's question and never as a round. A merge of the
+        main line into the story's branch is what changes a test that way (the resumed story's merge, the integrate
+        stage's resolution, the integration a gate refused afterwards); the test stage records the tests as they now
+        are, a break where the code already meets them."""
+        if dry or start not in STAGE or not STAGE[start].lists or STAGE[start].red or not self.kind_runs(kind, "test"):
+            return start
+        self.profile()
+        moved = stale_red_proof(os.getcwd(), place("runs"), story)
+        if not moved:
+            self.red_stale.pop(story, None)
+            return start
+        self.red_stale[story] = moved
+        self.journal_line(story, f"{utc()}\tred-stale\ttest\tfrom={start}\ttests={len(moved)}")
+        print(f"factory: {', '.join(moved)} changed after the test stage saw it fail — the red proof is about the "
+              f"earlier version, so the story goes to its test stage to record it on the files as they are, then "
+              f"'{start}' runs again.")
+        return "test"
+
+    def red_stale_sentence(self, story):
+        moved = self.red_stale.get(story)
+        if not moved:
+            return ""
+        return (f" The story's tests changed after the test stage saw them fail — the main line was merged into the "
+                f"story's branch: {', '.join(moved)}. Record each as it now is and change nothing it asserts: red "
+                f"where the code before this story fails it, else its break under {self.runs}/{story}/breaks/ "
+                f"(`<Class>--<method>.patch`, the smallest change to the production code that turns it red).")
 
     def quiet_gate(self, stage, story):
         """A gate whose lines nobody reads — the runner asks it only whether a file already holds."""
@@ -2629,12 +2677,34 @@ class Run:
         self.run([sys.executable, self.cli_path, "--worktree-link", story], cwd=os.environ.get("FACTORY_HOME") or self.home,
                  env=self.home_env())
 
-    def resolve_merge(self, story, tool, out):
+    def resolve_merge(self, story, tool, out, lost=None):
         """A merge of the main line into the story that stopped on conflicts (`conflict: <path>` lines in <out>): the
-        stage-integrate agent resolves them in the worktree, then the merge is committed and squashed. None when it
-        is, else the run's exit code."""
+        stage-integrate agent resolves them in the worktree, then the merge is committed and squashed. A resolution
+        that dropped what the main line added to a test (#151) goes back to the same stage, naming the lines, at most
+        twice — never to a person, and never to the story's own stages, whose gates would call it the story's change.
+        `lost` starts with such a repair (the integrate gate refused `main-tests`). None when it holds, else the run's
+        exit code."""
         conflicts = "".join(line[len("conflict: "):] + " " for line in out.split("\n") if line.startswith("conflict: "))
-        print(f"── stage integrate  (tool: {tool}, fresh context — the merge stopped on: {conflicts})")
+        for attempt in (1, 2, 3):
+            stopped = self.integrate_stage(story, tool, conflicts, lost)
+            if stopped is not None:
+                return stopped
+            lost = main_tests_lost(self.pwd, self.runs, story)
+            if not lost:
+                return None
+            if attempt < 3:
+                print(f"factory: the resolution of {story} changed a test the main line holds — {lost_text(lost)}; "
+                      f"back to the integrate stage (attempt {attempt + 1}).")
+        err(f"factory: three resolutions of {story} kept dropping the main line's side of a test — {lost_text(lost)}. "
+            f"needs-human: the worktree {self.pwd} holds the merge.")
+        return 1
+
+    def integrate_stage(self, story, tool, conflicts, lost=None):
+        """One stage-integrate session — the conflicts, or a repair of a resolution that lost the main line's side of a
+        test — then the profile's formatter and the merge committed and squashed. None when it is, else an exit code."""
+        what = f"the resolution lost the main line's side of {', '.join(rel for rel, _ in lost)}" if lost \
+            else f"the merge stopped on: {conflicts}"
+        print(f"── stage integrate  (tool: {tool}, fresh context — {what})")
         self.link_worktree(story)
         self.tool_in_flight = tool
         raw = f"{self.evidence(story)}/integrate.{utc('%H%M%S')}.out"
@@ -2643,7 +2713,7 @@ class Run:
         tool = self.tool_for("integrate", tool)
         self.journal_line(story, f"{utc()}\tstage-start\tintegrate\ttool={tool}")
         code = self.owned_invoke(story, "integrate", lambda: self.invoke(
-            tool, self.integrate_prompt(story, conflicts), raw, "integrate", story))
+            tool, self.integrate_prompt(story, conflicts, lost), raw, "integrate", story))
         self.record_usage(story, "integrate", tool, raw, int(time.time() - began))
         self.journal_line(story, f"{utc()}\tstage-end\tintegrate\texit={self.exit_field(code)}")
         if self.owned("end", "integrate", story, code) != 0:
@@ -2696,7 +2766,9 @@ class Run:
         """The integration, again where the main line moved meanwhile: an exit code, or "round" where the gate
         refused the story on the main line and the build stage runs again."""
         home = os.environ.get("FACTORY_HOME") or self.home
-        for attempt in (1, 2, 3):
+        attempt, repairs = 0, 0
+        while attempt < 3:
+            attempt += 1
             self.take_lock()
             try:
                 code, out = self.in_home("--integrate-prepare", story)
@@ -2725,6 +2797,22 @@ class Run:
             if fails and all(line.startswith("gate:fail moved") for line in fails):
                 print(f"factory: the main line moved on while {story} was merged — merged again (attempt {attempt + 1}).")
                 continue
+            # #151: the resolution dropped what the main line added to a test — the integrate stage's to put back
+            if any(line.startswith("gate:fail main-tests") for line in fails) and repairs < 2:
+                lost = main_tests_lost(self.pwd, self.runs, story)
+                if lost:
+                    repairs += 1
+                    attempt -= 1
+                    print(f"factory: the integrate gate named a test of the main line the resolution changed — "
+                          f"back to the integrate stage, not a round ({lost_text(lost)}).")
+                    self.take_lock()
+                    try:
+                        stopped = self.resolve_merge(story, tool, "", lost)
+                    finally:
+                        self.drop_lock()
+                    if stopped is not None:
+                        return stopped
+                    continue
             if any(line.startswith("gate:fail checkout") for line in fails):
                 err(f"factory: the main checkout could not take {story} — see {report}; then: factory.sh run --story "
                     f"{story} --from integrate")
