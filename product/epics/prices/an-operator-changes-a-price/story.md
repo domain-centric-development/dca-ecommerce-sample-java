@@ -1,7 +1,9 @@
 ---
 id: an-operator-changes-a-price
 epic: prices
-status: approved
+status: delivered
+delivered: 2026-10-15T16:01:35Z
+delivered_by: gate
 context: pricing
 title: An operator changes a product's price
 depends_on: []
