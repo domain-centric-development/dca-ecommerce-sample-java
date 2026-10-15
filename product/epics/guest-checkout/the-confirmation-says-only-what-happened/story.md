@@ -1,7 +1,9 @@
 ---
 id: the-confirmation-says-only-what-happened
 epic: guest-checkout
-status: approved
+status: delivered
+delivered: 2026-10-15T15:39:39Z
+delivered_by: gate
 context: checkout
 feature: ordering
 title: The confirmation says only what the shop has done

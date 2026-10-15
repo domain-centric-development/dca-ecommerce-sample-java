@@ -94,3 +94,21 @@ Test: dev.domaincentric.sample.ecommerce.e2e.OrderCheckedAgainstStockE2ETest#pla
 - Then the review step stays open at `/checkout/review` and shows an error
 - And no confirmation is shown
 Test: dev.domaincentric.sample.ecommerce.checkout.OrderCheckedAgainstStockIntegrationTest#placingTheOrderAfterAnotherVisitorBoughtEverythingIsRefused
+
+### Rule: The confirmation promises no email and no order tracking
+
+#### the-confirmation-promises-no-email
+- Given the guest "jane@example.com" is on the review step
+- When the guest presses "Place Order"
+- Then the confirmation page does not say "We've sent a confirmation email"
+- And it does not say "You can track your order status using your order reference."
+Test: dev.domaincentric.sample.ecommerce.e2e.PlaceTheOrderE2ETest#theConfirmationPromisesNeitherAnEmailNorOrderTracking
+
+### Rule: The confirmation calls the amount the order's total, not an amount paid
+
+#### the-confirmation-shows-the-order-total
+- Given the guest is on the review step with "Domain-Driven Design" once and "Standard Shipping"
+- When the guest presses "Place Order"
+- Then the confirmation page shows "Order Total" "59.98 EUR"
+- And it does not say "Total Paid"
+Test: dev.domaincentric.sample.ecommerce.checkout.PlaceTheOrderIntegrationTest#theConfirmationCallsTheAmountTheOrderTotal
