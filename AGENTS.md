@@ -161,6 +161,11 @@ that reason — and record the decision in an ADR. The same is configurable with
 replace that file instead of adding to it.
 Rule changes belong in `dca-java`, not here.
 
+The architecture suite runs the experimental rules too: `src/test-architecture/resources/dca-archunit.properties`
+sets `dca.rules.experimental = true` and turns off the rule on state kept in one instance, which the libraries
+retire (the file names its id). An enforced experimental rule fails the build like any other; an informational one
+only lists.
+
 **Run architecture tests:**
 ```bash
 ./gradlew test-architecture
