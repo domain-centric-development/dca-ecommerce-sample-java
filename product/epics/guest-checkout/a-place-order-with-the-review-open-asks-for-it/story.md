@@ -1,7 +1,9 @@
 ---
 id: a-place-order-with-the-review-open-asks-for-it
 epic: guest-checkout
-status: approved
+status: delivered
+delivered: 2026-10-15T01:44:59Z
+delivered_by: gate
 context: checkout
 feature: steps
 title: A Place Order sent while the review is open asks for the review
@@ -38,6 +40,7 @@ review and say so, so that I place an order only after I have seen it.
   Opening the review page changes no state: the review's own form carries what tells the shop it was sent from there.
   (user, 2026-10-14)
 - answered: SharedScenariosTest also knows the titles of the stories not yet delivered (their `####` criteria, title = Title line else the key in words); the spec stays the only source for the Test-line and duplicate checks. Fixed on main in d5ce1e9; nothing changes in this story — run the stage again as it is. (a-place-order-with-the-review-open-asks-for-it-01)
+- answered: a — the missing CheckoutReferenceIntegrationTest is written again and committed on main (274b646), with its three methods; run the document stage again as it is. (a-place-order-with-the-review-open-asks-for-it-02)
 
 ## Notes
 
