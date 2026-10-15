@@ -8,7 +8,8 @@ import org.jspecify.annotations.Nullable;
  * Response containing cart merge options information.
  *
  * <p>When both anonymous and account carts have items, this response provides details about each
- * cart so the user can make an informed decision about how to handle the merge.
+ * cart so the user can make an informed decision about how to handle the merge. When only the
+ * anonymous cart has items, it carries that cart alone: it is taken over without a choice.
  *
  * @param mergeRequired true if user must choose between merge options
  * @param anonymousCart summary of the anonymous cart (null if empty/not exists)
@@ -20,6 +21,14 @@ public record GetCartMergeOptionsResult(
   /** Creates a response indicating no merge is required. */
   public static GetCartMergeOptionsResult noMergeRequired() {
     return new GetCartMergeOptionsResult(false, null, null);
+  }
+
+  /**
+   * Creates a response for a guest cart that holds items beside an account cart that holds none:
+   * nothing to choose, but a cart to take over.
+   */
+  public static GetCartMergeOptionsResult onlyGuestCartHoldsItems(CartSummary anonymousCart) {
+    return new GetCartMergeOptionsResult(false, anonymousCart, null);
   }
 
   /** Creates a response indicating merge options should be presented. */

@@ -64,6 +64,22 @@ class CartAtLoginIntegrationTest {
   }
 
   @Test
+  @DisplayName("The page after the login moves no cart")
+  void openingThePageAfterTheLoginLeavesTheAccountsCartAsItWas() throws Exception {
+    final String email = anAccount();
+    final Browser guest = new Browser();
+    guest.addToCart("\"Ubiquitous Language\" Mug");
+
+    final Landing landed = guest.logInWithoutScript("/login", email);
+
+    assertThat(textOf(landed.page(), "take-over-message")).isEqualTo("Bringing your cart along.");
+    assertThat(textOf(landed.page(), "take-over-continue-button")).isEqualTo("Continue");
+    final Browser account = new Browser();
+    account.logIn("/login", email);
+    assertThat(linesOf(account.page(CART))).isEmpty();
+  }
+
+  @Test
   @DisplayName("Login from the checkout keeps the cart, not the checkout")
   void loggingInFromTheBuyerStepKeepsTheGuestsCartButNotTheirCheckout() throws Exception {
     final String email = anAccount();
@@ -126,8 +142,13 @@ class CartAtLoginIntegrationTest {
 
   /** The cart page's error message, or null when it shows none. */
   private static String errorOn(final Document page) {
-    final Element error = page.selectFirst("[data-test=cart-error-message]");
-    return error == null ? null : error.text();
+    return textOf(page, "cart-error-message");
+  }
+
+  /** The text of the element with that {@code data-test} name, or null when the page has none. */
+  private static String textOf(final Document page, final String dataTest) {
+    final Element element = page.selectFirst("[data-test=" + dataTest + "]");
+    return element == null ? null : element.text();
   }
 
   /** Where a redirect chain ended, and the page shown there. */
@@ -138,8 +159,22 @@ class CartAtLoginIntegrationTest {
 
     private final Map<String, Cookie> cookies = new LinkedHashMap<>();
 
-    /** Logs in on the login page at {@code loginPage}; follows the shop's redirects to the end. */
+    /**
+     * Logs in on the login page at {@code loginPage} as a browser that runs scripts: follows the
+     * shop's redirects to the end and sends the form of the page after the login, as its script
+     * does.
+     */
     Landing logIn(final String loginPage, final String email) throws Exception {
+      final Landing landed = logInWithoutScript(loginPage, email);
+      final Element takeOver = landed.page().selectFirst("[data-test=take-over-form]");
+      return takeOver == null ? landed : followed(submit(takeOver));
+    }
+
+    /**
+     * Logs in on the login page at {@code loginPage} as a browser that runs no script; follows the
+     * shop's redirects to the page that is shown.
+     */
+    Landing logInWithoutScript(final String loginPage, final String email) throws Exception {
       final Element form = page(loginPage).selectFirst("[data-test=login-form]");
       form.selectFirst("input[name=email]").val(email);
       form.selectFirst("input[name=password]").val(PASSWORD);

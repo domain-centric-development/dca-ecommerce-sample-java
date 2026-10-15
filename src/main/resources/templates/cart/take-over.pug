@@ -1,0 +1,18 @@
+extends ../layout
+
+block content
+  .merge-options
+    form#take-over-form(method="POST" action="/cart/merge/take-over" data-test="take-over-form")
+      if _csrf
+        input(type="hidden" name=_csrf.parameterName value=_csrf.token)
+      input(type="hidden" name="anonymousUserId" value=anonymousUserId)
+      if returnUrl
+        input(type="hidden" name="returnUrl" value=returnUrl)
+
+      p.merge-options__intro(data-test="take-over-message") Bringing your cart along.
+
+      .form__actions
+        button.btn.btn--primary.btn--lg(type="submit" data-test="take-over-continue-button") Continue
+
+    script.
+      document.getElementById('take-over-form').submit();

@@ -170,12 +170,17 @@ class CartAcrossTheSessionIntegrationTest {
       return followed(submit(form));
     }
 
-    /** Logs in on the login page; follows the shop's redirects to the end. */
+    /**
+     * Logs in on the login page; follows the shop's redirects to the end and sends the form of the
+     * page after the login, as the script of a browser does.
+     */
     Landing logIn(final String email) throws Exception {
       final Element form = page("/login").selectFirst("[data-test=login-form]");
       form.selectFirst("input[name=email]").val(email);
       form.selectFirst("input[name=password]").val(PASSWORD);
-      return followed(submit(form));
+      final Landing landed = followed(submit(form));
+      final Element takeOver = landed.page().selectFirst("[data-test=take-over-form]");
+      return takeOver == null ? landed : followed(submit(takeOver));
     }
 
     /** Presses "Logout" in the header of the product list. */

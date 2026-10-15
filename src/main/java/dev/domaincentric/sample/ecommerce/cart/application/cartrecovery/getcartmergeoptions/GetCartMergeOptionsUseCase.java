@@ -18,7 +18,8 @@ import org.springframework.stereotype.Service;
  *
  * <p>When a user logs in, this use case determines if both the anonymous session and the registered
  * account have active carts with items. If so, the user should be presented with options to choose
- * how to handle the cart conflict.
+ * how to handle the cart conflict. If only the anonymous cart holds items, the result carries its
+ * summary alone: there is a cart to take over, but nothing to choose.
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link GetCartMergeOptionsInputPort}
  * interface, which is a primary/driving port in the application layer.
@@ -57,23 +58,28 @@ public class GetCartMergeOptionsUseCase implements GetCartMergeOptionsInputPort 
     final boolean anonymousHasItems = anonymousCart.isPresent() && !anonymousCart.get().isEmpty();
     final boolean accountHasItems = accountCart.isPresent() && !accountCart.get().isEmpty();
 
-    if (anonymousHasItems && accountHasItems) {
-      // Fetch article data for all products in both carts
-      final var allProductIds =
-          Stream.concat(
-                  anonymousCart.get().items().stream().map(CartItem::productId),
-                  accountCart.get().items().stream().map(CartItem::productId))
-              .collect(Collectors.toSet());
-      final Map<ProductId, CartArticle> articleData = articleDataPort.getArticleData(allProductIds);
-
-      // Both carts have items - user must choose
-      return GetCartMergeOptionsResult.mergeRequired(
-          toCartSummary(anonymousCart.get(), articleData),
-          toCartSummary(accountCart.get(), articleData));
+    if (!anonymousHasItems) {
+      // Nothing to choose and nothing to take over
+      return GetCartMergeOptionsResult.noMergeRequired();
     }
 
-    // No merge required - either one or both carts are empty
-    return GetCartMergeOptionsResult.noMergeRequired();
+    // Fetch article data for all products in the carts that hold items
+    final var allProductIds =
+        Stream.concat(anonymousCart.stream(), accountCart.filter(cart -> accountHasItems).stream())
+            .flatMap(cart -> cart.items().stream().map(CartItem::productId))
+            .collect(Collectors.toSet());
+    final Map<ProductId, CartArticle> articleData = articleDataPort.getArticleData(allProductIds);
+
+    if (!accountHasItems) {
+      // Only the guest cart has items - it is taken over, no choice to make
+      return GetCartMergeOptionsResult.onlyGuestCartHoldsItems(
+          toCartSummary(anonymousCart.get(), articleData));
+    }
+
+    // Both carts have items - user must choose
+    return GetCartMergeOptionsResult.mergeRequired(
+        toCartSummary(anonymousCart.get(), articleData),
+        toCartSummary(accountCart.get(), articleData));
   }
 
   private GetCartMergeOptionsResult.CartSummary toCartSummary(

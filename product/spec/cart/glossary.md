@@ -50,6 +50,7 @@ An editable collection of stable positions. Checkout copies a snapshot through t
 - `removeItemByProductId` — the position holding a product is gone from the cart; the API reaches it through `RemoveItemFromCart`
 - `updateItemQuantity` — sets a position's quantity; `increaseItemQuantity` / `decreaseItemQuantity` change it by one
 - `merge` — the positions of another cart are added to this one; the source cart is left untouched
+- taking over the guest cart (`RecoverCart`) — the guest cart's lines move into the account's cart; it runs when the form of the page after the login is sent (by the browser's script, or with "Continue"), never when a page is only opened
 - `clear` — every position is gone; the cart itself stays, active
 - `reconcileCheckout` — the units a checkout bought are taken out of their positions, positions left without units are gone; the cart stays active and editable
 - `abandon` — the cart is kept with status abandoned and rejects edits; it is not deleted

@@ -21,16 +21,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * MVC Controller for cart merge options page.
+ * MVC Controller for the page after the login: the cart merge options and the take-over.
  *
- * <p>This controller handles the cart merge decision flow when a user logs in and both their
- * anonymous cart and account cart have items.
+ * <p>This controller handles the page after the login: the cart merge decision when both the
+ * anonymous cart and the account cart have items, and the take-over when only the anonymous one
+ * has. Either moves a cart only on a form the browser sends.
  *
  * <p><b>Stateless Design:</b> This controller uses URL parameters instead of HTTP sessions to pass
  * state between requests. The anonymous user ID and return URL are passed via URL, making it
  * compatible with session-disabled configurations.
  *
- * <p><b>Template Location:</b> {@code src/main/resources/templates/cart/merge-options.pug}
+ * <p><b>Template Location:</b> {@code src/main/resources/templates/cart/merge-options.pug} and
+ * {@code src/main/resources/templates/cart/take-over.pug}
  */
 @Controller
 @RequestMapping("/cart/merge")
@@ -55,16 +57,18 @@ public class CartMergePageController {
   }
 
   /**
-   * Displays the cart merge options page.
+   * Displays the page after the login.
    *
-   * <p>Shows the user both carts and lets them choose how to handle the conflict. If no merge is
-   * required, redirects to the return URL or cart page.
+   * <p>When both carts hold items, shows the user both and lets them choose how to handle the
+   * conflict. When only the anonymous cart holds items, shows the take-over page, whose form moves
+   * them into the account — opening a page moves no cart. With nothing to take over, redirects to
+   * the return URL or cart page.
    *
    * @param model Spring MVC model, holding the notice a redirect handed the page, if any
    * @param anonymousUserId the anonymous user ID (passed via URL from login)
    * @param returnUrl optional URL to redirect to after merge
    * @param attributes the redirect's attributes, which take the cart page's notice
-   * @return view name "cart/merge-options" or redirect if no merge needed
+   * @return view name "cart/merge-options" or "cart/take-over", or a redirect if neither is needed
    */
   @GetMapping
   public String showMergeOptions(
@@ -82,14 +86,13 @@ public class CartMergePageController {
     final GetCartMergeOptionsResult options = getCartMergeOptionsUseCase.execute(query);
 
     if (!options.mergeRequired()) {
-      // Nothing to decide does not mean nothing to do: when only the anonymous cart holds items,
-      // they still
-      // have to follow the visitor into their account, or logging in would silently empty the cart.
-      // The use
-      // case is idempotent, so the other cases pass through it untouched.
-      recoverCartUseCase.execute(new RecoverCartCommand(anonymousUserId, registeredUserId));
-
-      return redirectAfterLogin(returnUrl, CartPageNotice.WELCOME_BACK, attributes);
+      if (options.anonymousCart() == null) {
+        return redirectAfterLogin(returnUrl, CartPageNotice.WELCOME_BACK, attributes);
+      }
+      model.addAttribute("anonymousUserId", anonymousUserId);
+      model.addAttribute("returnUrl", returnUrl);
+      model.addAttribute("title", "Bringing your cart along");
+      return "cart/take-over";
     }
 
     // Convert to page-specific ViewModel
@@ -101,6 +104,27 @@ public class CartMergePageController {
     model.addAttribute("title", "Cart Merge Options");
 
     return "cart/merge-options";
+  }
+
+  /**
+   * Takes the anonymous cart into the account's cart: the form of the take-over page, sent by the
+   * browser's script or with "Continue".
+   *
+   * @param anonymousUserId the anonymous user ID (from hidden form field)
+   * @param returnUrl optional URL to redirect to after the take-over
+   * @param attributes the redirect's attributes, which take the cart page's notice
+   * @return redirect to return URL or cart
+   */
+  @PostMapping("/take-over")
+  public String takeOverGuestCart(
+      @RequestParam final String anonymousUserId,
+      @RequestParam(required = false) final String returnUrl,
+      final RedirectAttributes attributes) {
+
+    final String registeredUserId = identityProvider.getCurrentIdentity().userId().value();
+    recoverCartUseCase.execute(new RecoverCartCommand(anonymousUserId, registeredUserId));
+
+    return redirectAfterLogin(returnUrl, CartPageNotice.WELCOME_BACK, attributes);
   }
 
   /**

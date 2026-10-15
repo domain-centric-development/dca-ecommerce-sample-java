@@ -11,7 +11,9 @@ import com.microsoft.playwright.options.WaitForSelectorState;
  */
 public class CartPage extends BasePage {
 
-  private static final String URL_PATTERN = "/cart**";
+  // The cart page itself, not a page below it: the page after the login (/cart/merge) is passed
+  // on the way.
+  private static final String URL_PATTERN = "/cart";
   private static final String CART_ITEM = "cart-item";
   private static final String CHECKOUT_BUTTON = "cart-checkout-button";
   private static final String SUCCESS_MESSAGE = "cart-success-message";
