@@ -1,7 +1,9 @@
 ---
 id: each-payment-names-its-checkout
 epic: provider-payment
-status: approved
+status: delivered
+delivered: 2026-10-15T00:08:10Z
+delivered_by: gate
 context: checkout
 feature: payment
 title: Each payment request names the checkout it pays for
@@ -54,6 +56,7 @@ payment, and a provider's answer for one checkout never touches another.
 - answered: the reference the shop sends is the *checkout reference* (field `merchantReference`), kept apart from the
   *payment reference* the provider answers with and the *order reference* (user, 2026-10-14)
 - answered: a second attempt of the same checkout carries the same reference — its own scenario (user, 2026-10-14)
+- answered: a — back to the test stage: the assertion message uses the total the test read before placeOrder(); what the test asserts stays the same. (each-payment-names-its-checkout-01)
 
 ## Changed expectations
 

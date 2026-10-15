@@ -67,3 +67,35 @@ Test: dev.domaincentric.sample.ecommerce.e2e.ChooseHowToPayE2ETest#choosingTheOf
 - When the payment form is sent with the provider "paypal"
 - Then the payment step opens again with the error "This way to pay is not offered. Please choose another one."
 Test: dev.domaincentric.sample.ecommerce.checkout.ChooseHowToPayIntegrationTest#aProviderTheShopDoesNotOfferOpensThePaymentStepAgainWithTheRefusal
+
+### Rule: A payment request carries the reference of its checkout
+
+#### the-payment-request-names-its-checkout
+- Given a checkout session at the payment step
+- And the payment provider authorizes payments
+- When the customer pays through the payment provider
+- Then the payment provider received one payment request for the checkout session's total
+- And that request carries the checkout reference, the checkout session's id as text, as `merchantReference`
+Test: dev.domaincentric.sample.ecommerce.e2e.ProviderPaymentE2ETest#thePaymentRequestCarriesTheCheckoutReference
+
+#### two-checkouts-send-two-references
+- Given two customers, each with a checkout session at the payment step
+- When both pay through the payment provider
+- Then the payment provider received two payment requests with two different `merchantReference` values
+Test: dev.domaincentric.sample.ecommerce.checkout.CheckoutReferenceIntegrationTest#twoCheckoutsSendTwoDifferentReferences
+
+#### the-provider-answers-per-checkout
+- Given two customers, each with a checkout session at the payment step
+- And the payment provider refuses the payment for the first customer's checkout reference only
+- When both pay through the payment provider
+- Then the first customer stays at the payment step with "The payment was refused. Please choose another way to pay."
+- And the second customer's checkout shows the review step
+Test: dev.domaincentric.sample.ecommerce.checkout.CheckoutReferenceIntegrationTest#theProvidersAnswerForOneCheckoutTouchesNoOther
+
+#### a-second-attempt-names-the-same-checkout
+- Given a checkout session at the payment step
+- And the customer's first payment for it was refused by the payment provider
+- When the customer pays through the payment provider again
+- Then the payment provider received two payment requests for that checkout session
+- And both carry the same `merchantReference`
+Test: dev.domaincentric.sample.ecommerce.checkout.CheckoutReferenceIntegrationTest#aSecondAttemptCarriesTheSameReference
