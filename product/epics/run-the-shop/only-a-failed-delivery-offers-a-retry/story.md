@@ -1,7 +1,9 @@
 ---
 id: only-a-failed-delivery-offers-a-retry
 epic: run-the-shop
-status: approved
+status: delivered
+delivered: 2026-10-15T17:13:34Z
+delivered_by: gate
 context: backoffice
 feature: redelivery
 title: Only a failed delivery offers a retry
