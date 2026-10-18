@@ -2,6 +2,7 @@
 id: a-refused-api-login-is-a-problem-document
 epic: shop-api
 status: approved
+created: 2026-10-14T23:44:13Z
 context: account
 feature: signin
 title: A refused login through the API is a problem document

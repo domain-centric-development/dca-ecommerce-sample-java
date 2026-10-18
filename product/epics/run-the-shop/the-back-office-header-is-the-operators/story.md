@@ -2,6 +2,7 @@
 id: the-back-office-header-is-the-operators
 epic: run-the-shop
 status: approved
+created: 2026-10-14T23:44:13Z
 context: backoffice
 feature: access
 title: The back office's header is the operator's

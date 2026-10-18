@@ -4,6 +4,7 @@ epic: prices
 status: delivered
 delivered: 2026-10-12T21:16:50Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: pricing
 title: Prices shown from the price owner
 depends_on: [CAT-01, CAT-02]

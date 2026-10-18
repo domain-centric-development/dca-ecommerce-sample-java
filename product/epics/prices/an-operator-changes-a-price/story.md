@@ -4,6 +4,7 @@ epic: prices
 status: delivered
 delivered: 2026-10-15T16:01:35Z
 delivered_by: gate
+created: 2026-10-14T23:44:13Z
 context: pricing
 title: An operator changes a product's price
 depends_on: []

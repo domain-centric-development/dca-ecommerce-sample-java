@@ -2,6 +2,7 @@
 id: a-date-of-birth-lies-in-the-past
 epic: shop-api
 status: approved
+created: 2026-10-15T07:50:52Z
 context: account
 feature: registration
 title: A date of birth lies in the past, on the page and through the API

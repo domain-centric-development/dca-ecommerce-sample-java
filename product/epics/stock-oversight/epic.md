@@ -5,6 +5,7 @@ intent: Operators notice that a product ran out only when a customer complains a
 goal: An operator sees which products are running low before they run out
 metric: StockChanged
 domain_contact: warehouse-lead
+created: 2026-10-11T11:59:24Z
 ---
 
 # Stock oversight for operators

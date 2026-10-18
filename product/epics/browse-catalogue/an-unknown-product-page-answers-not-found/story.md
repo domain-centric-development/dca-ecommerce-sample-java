@@ -4,6 +4,7 @@ epic: browse-catalogue
 status: delivered
 delivered: 2026-10-15T15:28:14Z
 delivered_by: gate
+created: 2026-10-14T23:44:13Z
 context: product
 feature: productdetails
 title: The page of an unknown product answers "not found"

@@ -4,6 +4,7 @@ epic: guest-checkout
 status: delivered
 delivered: 2026-10-13T07:33:50Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: checkout
 feature: cartsync
 title: The open checkout keeps its order while the cart changes

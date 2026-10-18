@@ -4,6 +4,7 @@ epic: shop-api
 status: delivered
 delivered: 2026-10-13T16:36:31Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: cart
 feature: shopping
 title: Only your own cart through the API

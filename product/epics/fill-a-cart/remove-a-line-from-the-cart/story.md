@@ -4,6 +4,7 @@ epic: fill-a-cart
 status: delivered
 delivered: 2026-10-14T18:08:57Z
 delivered_by: gate
+created: 2026-10-14T15:12:58Z
 context: cart
 feature: shopping
 title: A line is removed from the cart page

@@ -2,6 +2,7 @@
 id: the-back-office-lists-low-stock
 epic: stock-oversight
 status: superseded
+created: 2026-10-14T23:44:13Z
 context: inventory
 title: The back office lists the products that run low
 depends_on: []

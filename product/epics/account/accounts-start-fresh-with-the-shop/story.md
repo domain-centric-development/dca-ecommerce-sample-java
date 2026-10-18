@@ -4,6 +4,7 @@ epic: account
 status: delivered
 delivered: 2026-10-13T01:34:06Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: account
 feature: registration
 title: Accounts start fresh with the shop

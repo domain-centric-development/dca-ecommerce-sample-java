@@ -4,6 +4,7 @@ epic: homepage-discovery
 status: delivered
 delivered: 2026-09-27T11:06:53Z
 delivered_by: gate
+created: 2026-10-11T11:59:24Z
 context: product
 title: Product slider on the homepage
 depends_on: [CAT-02, CAT-04]

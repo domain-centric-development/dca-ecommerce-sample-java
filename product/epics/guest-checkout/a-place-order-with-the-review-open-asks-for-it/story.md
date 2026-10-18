@@ -4,6 +4,7 @@ epic: guest-checkout
 status: delivered
 delivered: 2026-10-15T01:44:59Z
 delivered_by: gate
+created: 2026-10-14T15:12:58Z
 context: checkout
 feature: steps
 title: A Place Order sent while the review is open asks for the review

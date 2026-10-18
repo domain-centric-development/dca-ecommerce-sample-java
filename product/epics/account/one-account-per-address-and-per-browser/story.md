@@ -4,6 +4,7 @@ epic: account
 status: delivered
 delivered: 2026-10-12T21:45:20Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: account
 feature: registration
 title: One account per address and per browser

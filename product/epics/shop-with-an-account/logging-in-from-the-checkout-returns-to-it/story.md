@@ -2,6 +2,7 @@
 id: logging-in-from-the-checkout-returns-to-it
 epic: shop-with-an-account
 status: approved
+created: 2026-10-15T07:50:52Z
 context: cart
 feature: cartrecovery
 title: Logging in from the checkout returns to the checkout

@@ -4,6 +4,7 @@ epic: account
 status: delivered
 delivered: 2026-10-13T01:12:18Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: account
 feature: profile
 title: My account overview

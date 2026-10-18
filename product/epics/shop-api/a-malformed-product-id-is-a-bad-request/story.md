@@ -4,6 +4,7 @@ epic: shop-api
 status: delivered
 delivered: 2026-10-14T23:02:46Z
 delivered_by: gate
+created: 2026-10-14T15:12:58Z
 context: cart
 feature: shopping
 title: The cart API answers a malformed product id as a malformed call

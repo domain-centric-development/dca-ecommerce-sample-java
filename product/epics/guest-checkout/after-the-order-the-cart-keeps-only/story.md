@@ -4,6 +4,7 @@ epic: guest-checkout
 status: delivered
 delivered: 2026-10-13T08:22:41Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: cart
 feature: cartcheckout
 title: After the order the cart keeps only what was not bought

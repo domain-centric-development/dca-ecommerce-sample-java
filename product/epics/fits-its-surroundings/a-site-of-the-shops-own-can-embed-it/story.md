@@ -4,6 +4,7 @@ epic: fits-its-surroundings
 status: delivered
 delivered: 2026-10-12T22:18:29Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: account
 title: A site of the shop's own can embed it, a foreign site cannot
 depends_on: [add-a-product-to-the-cart]

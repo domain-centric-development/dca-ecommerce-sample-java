@@ -5,6 +5,7 @@ intent: The same product is quoted at different prices depending on where a cust
 goal: A customer sees the same price for a product on every page and in every answer
 metric: PriceCreated
 domain_contact: shop-owner
+created: 2026-10-12T20:16:16Z
 ---
 
 # Prices from their owner

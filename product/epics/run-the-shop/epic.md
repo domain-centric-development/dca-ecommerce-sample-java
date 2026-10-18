@@ -5,6 +5,7 @@ intent: When something goes wrong behind the scenes, operators learn about it fr
 goal: An operator sees what the shop did and when, and gets a failed delivery through by retrying it
 metric: a failed delivery succeeds on retry
 domain_contact: operator
+created: 2026-10-12T20:16:16Z
 ---
 
 # Run the shop

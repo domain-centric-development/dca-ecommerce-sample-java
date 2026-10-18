@@ -2,6 +2,7 @@
 id: an-unusable-cart-request-is-a-problem-document
 epic: shop-api
 status: approved
+created: 2026-10-14T23:44:13Z
 context: cart
 feature: shopping
 title: A refused quantity is a problem document

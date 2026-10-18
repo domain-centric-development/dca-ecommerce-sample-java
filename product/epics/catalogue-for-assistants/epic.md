@@ -5,6 +5,7 @@ intent: Customers ask an AI assistant what to buy, and the assistant knows nothi
 goal: An assistant answers what the shop sells, with price and availability, from the shop's own data
 metric: an assistant's answer names a product with its price and stock
 domain_contact: shop-owner
+created: 2026-10-12T20:16:16Z
 ---
 
 # The catalogue for AI assistants

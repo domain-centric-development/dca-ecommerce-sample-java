@@ -5,6 +5,7 @@ intent: Customers who have made up their mind still cannot place an order, and f
 goal: A customer places an order in one sitting, without an account, and knows it went through; what they did not buy stays in the cart
 metric: CheckoutConfirmed
 domain_contact: shop-owner
+created: 2026-10-12T20:16:16Z
 ---
 
 # Check out as a guest

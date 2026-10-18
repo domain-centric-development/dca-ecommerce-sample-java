@@ -5,6 +5,7 @@ intent: Customers shop on their phones and from partner sites, and a shop that o
 goal: A customer uses the shop on a phone and in the look they choose; a site of the shop's own can embed it, a foreign site cannot
 metric: an order placed from a phone
 domain_contact: shop-owner
+created: 2026-10-12T20:16:16Z
 ---
 
 # A shop that fits its surroundings

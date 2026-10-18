@@ -5,6 +5,7 @@ intent: Customers who log in halfway through lose the cart they already filled, 
 goal: A customer logs in or registers at any point without losing the cart they filled, keeps an open checkout when registering, and decides how two carts come together
 metric: CartCompleted
 domain_contact: shop-owner
+created: 2026-10-12T20:16:16Z
 ---
 
 # Shop with an account

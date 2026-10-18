@@ -4,6 +4,7 @@ epic: shop-api
 status: delivered
 delivered: 2026-10-13T16:57:02Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: product
 feature: assortment
 title: Staff create a product through the API

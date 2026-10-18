@@ -2,6 +2,7 @@
 id: the-cart-oversight-is-a-feature-of-its-own
 epic: shop-api
 status: adopted
+created: 2026-10-15T07:50:52Z
 context: cart
 feature: cartoversight
 title: The staff list of every cart is the feature Cart oversight

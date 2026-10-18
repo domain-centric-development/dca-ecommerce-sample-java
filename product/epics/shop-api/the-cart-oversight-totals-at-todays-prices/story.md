@@ -2,6 +2,7 @@
 id: the-cart-oversight-totals-at-todays-prices
 epic: shop-api
 status: approved
+created: 2026-10-15T07:50:52Z
 context: cart
 feature: cartoversight
 title: The cart oversight totals every cart at today's prices

@@ -3,6 +3,7 @@ id: the-cart-oversight-has-its-own-place-in-the-code
 epic: shop-api
 kind: task
 status: approved
+created: 2026-10-15T07:50:52Z
 context: cart
 title: The cart oversight has its own place in the code
 closes: []

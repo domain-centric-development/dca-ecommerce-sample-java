@@ -5,6 +5,7 @@ intent: Partners who want to offer the range in their own applications have to c
 goal: A partner application signs in, reads and creates products and runs its own carts, without the shop's pages
 metric: CartItemAddedToCart
 domain_contact: integration-partner
+created: 2026-10-12T20:16:16Z
 ---
 
 # Shop through the API

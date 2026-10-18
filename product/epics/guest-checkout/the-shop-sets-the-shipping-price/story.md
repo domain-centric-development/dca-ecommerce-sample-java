@@ -4,6 +4,7 @@ epic: guest-checkout
 status: delivered
 delivered: 2026-10-15T15:50:24Z
 delivered_by: gate
+created: 2026-10-14T23:44:13Z
 context: checkout
 feature: delivery
 title: The shipping price is the price the shop offers

@@ -4,6 +4,7 @@ epic: fits-its-surroundings
 status: delivered
 delivered: 2026-10-13T07:55:22Z
 delivered_by: gate
+created: 2026-10-13T19:17:38Z
 context: portal
 feature: appearance
 title: Reduced motion stills the page transitions

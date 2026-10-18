@@ -2,6 +2,7 @@
 id: an-open-checkout-keeps-its-price
 epic: prices
 status: approved
+created: 2026-10-15T07:50:52Z
 context: checkout
 feature: ordering
 title: An open checkout keeps the price it started with

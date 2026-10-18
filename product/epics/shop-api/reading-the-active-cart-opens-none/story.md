@@ -4,6 +4,7 @@ epic: shop-api
 status: delivered
 delivered: 2026-10-14T18:41:09Z
 delivered_by: gate
+created: 2026-10-14T15:12:58Z
 context: cart
 feature: shopping
 title: Reading a customer's active cart opens none

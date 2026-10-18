@@ -2,6 +2,7 @@
 id: the-cart-shows-a-changed-price
 epic: prices
 status: approved
+created: 2026-10-15T07:50:52Z
 context: cart
 feature: shopping
 title: A cart shows today's price after a price change

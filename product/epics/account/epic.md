@@ -5,6 +5,7 @@ intent: Returning customers type their details again for every order and cannot 
 goal: A returning customer logs in, finds their details already filled in, and keeps profile and password up to date
 metric: AccountRegistered
 domain_contact: shop-owner
+created: 2026-10-12T20:16:16Z
 ---
 
 # Have an account

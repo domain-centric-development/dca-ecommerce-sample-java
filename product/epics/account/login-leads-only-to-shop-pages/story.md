@@ -2,6 +2,7 @@
 id: login-leads-only-to-shop-pages
 epic: account
 status: approved
+created: 2026-10-14T23:44:13Z
 context: account
 feature: signin
 title: A login leads only to pages of the shop

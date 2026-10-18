@@ -4,6 +4,7 @@ epic: shop-api
 status: delivered
 delivered: 2026-10-13T12:47:51Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: account
 feature: registration
 title: Register through the API

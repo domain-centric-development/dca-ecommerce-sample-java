@@ -4,6 +4,7 @@ epic: provider-payment
 status: delivered
 delivered: 2026-09-26T07:39:59Z
 delivered_by: gate
+created: 2026-10-11T11:59:24Z
 context: checkout
 title: Pay through the payment provider
 depends_on: []

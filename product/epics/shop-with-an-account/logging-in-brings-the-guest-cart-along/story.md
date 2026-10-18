@@ -4,6 +4,7 @@ epic: shop-with-an-account
 status: delivered
 delivered: 2026-10-13T12:58:40Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: cart
 feature: cartrecovery
 title: Logging in brings the guest cart along

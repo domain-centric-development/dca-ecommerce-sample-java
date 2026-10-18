@@ -5,6 +5,7 @@ intent: Customers who want several products have to keep them in mind until they
 goal: A customer collects products in a cart that stays with them across pages and visits, and sees what it will cost
 metric: CartItemAddedToCart
 domain_contact: shop-owner
+created: 2026-10-12T20:16:16Z
 ---
 
 # Fill a cart

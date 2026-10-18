@@ -2,6 +2,7 @@
 id: only-the-browsers-own-guest-cart-is-taken-over
 epic: shop-with-an-account
 status: approved
+created: 2026-10-14T23:44:13Z
 context: cart
 feature: cartrecovery
 title: Logging in takes over only the guest cart of this browser

@@ -4,6 +4,7 @@ epic: account
 status: delivered
 delivered: 2026-10-13T02:08:12Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: account
 feature: password
 title: The password policy

@@ -2,6 +2,7 @@
 id: every-cart-answer-shows-todays-price
 epic: shop-api
 status: approved
+created: 2026-10-14T23:44:13Z
 context: cart
 feature: shopping
 title: Every cart answer of the API shows today's prices

@@ -2,6 +2,7 @@
 id: two-orders-never-sell-more-than-the-stock
 epic: guest-checkout
 status: approved
+created: 2026-10-14T23:44:13Z
 context: checkout
 feature: ordering
 title: Two orders placed at once never sell more than the stock

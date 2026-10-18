@@ -4,6 +4,7 @@ epic: fill-a-cart
 status: delivered
 delivered: 2026-10-13T12:14:55Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: cart
 feature: shopping
 title: Stock warnings in the cart

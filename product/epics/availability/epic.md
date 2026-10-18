@@ -5,6 +5,7 @@ intent: Customers order products that are no longer in stock and have to be told
 goal: A customer sees whether a product is available before adding it, and cannot put an unavailable one in the cart
 metric: StockChanged
 domain_contact: warehouse-lead
+created: 2026-10-12T20:16:16Z
 ---
 
 # Availability before adding

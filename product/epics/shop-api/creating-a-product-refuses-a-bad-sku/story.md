@@ -4,6 +4,7 @@ epic: shop-api
 status: delivered
 delivered: 2026-10-13T18:02:48Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: product
 feature: assortment
 title: Creating a product refuses a bad SKU, name or text

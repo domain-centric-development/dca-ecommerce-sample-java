@@ -4,6 +4,7 @@ epic: guest-checkout
 status: delivered
 delivered: 2026-10-13T11:30:59Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: inventory
 feature: stock
 title: Stock goes down by what was bought

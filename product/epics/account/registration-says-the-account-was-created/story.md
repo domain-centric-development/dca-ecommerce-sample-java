@@ -4,6 +4,7 @@ epic: account
 status: delivered
 delivered: 2026-10-14T17:54:31Z
 delivered_by: gate
+created: 2026-10-14T15:12:58Z
 context: account
 feature: registration
 title: The page a registration leads to says the account was created

@@ -2,6 +2,7 @@
 id: the-cart-holds-no-more-than-is-in-stock
 epic: fill-a-cart
 status: approved
+created: 2026-10-14T23:44:13Z
 context: cart
 feature: shopping
 title: A cart line holds no more than the product's stock

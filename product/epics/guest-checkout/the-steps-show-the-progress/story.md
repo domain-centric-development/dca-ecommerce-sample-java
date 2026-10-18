@@ -4,6 +4,7 @@ epic: guest-checkout
 status: delivered
 delivered: 2026-10-13T11:38:21Z
 delivered_by: gate
+created: 2026-10-12T20:16:16Z
 context: checkout
 feature: steps
 title: The steps show the progress and are taken in order
