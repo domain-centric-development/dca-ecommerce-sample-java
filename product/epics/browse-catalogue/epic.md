@@ -5,7 +5,7 @@ intent: People who want to buy from the shop have no way to see what it offers w
 goal: A visitor browses the whole range in a stable order and opens any product to see what it is
 metric: CartItemAddedToCart
 domain_contact: shop-owner
-created: 2026-10-11T11:59:24Z
+created: 2026-09-26T08:35:55Z
 ---
 
 # Browse the catalogue

@@ -4,7 +4,7 @@ epic: stock-oversight
 status: superseded
 delivered: 2026-09-10T20:14:35Z
 delivered_by: hand:unknown
-created: 2026-10-11T11:59:24Z
+created: 2026-09-10T20:14:35Z
 context: Inventory
 title: Low stock overview
 depends_on: []

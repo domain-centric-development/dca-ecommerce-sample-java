@@ -5,7 +5,7 @@ intent: Visitors to the homepage see products right away, not only categories
 goal: More visitors get from the homepage to a product
 metric: CartContentsChangedEvent
 domain_contact: shop-owner
-created: 2026-10-11T11:59:24Z
+created: 2026-09-26T12:15:58Z
 ---
 
 # Discovering products from the homepage

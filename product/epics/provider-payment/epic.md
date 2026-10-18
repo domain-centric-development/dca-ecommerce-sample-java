@@ -5,7 +5,7 @@ intent: The shop takes every payment through a stand-in inside the application, 
 goal: A customer pays through the payment provider, and learns at once when the provider refuses the payment or cannot be reached
 metric: PaymentSubmitted
 domain_contact: checkout-lead
-created: 2026-10-11T11:59:24Z
+created: 2026-09-25T21:54:20Z
 ---
 
 # Payment through the payment provider

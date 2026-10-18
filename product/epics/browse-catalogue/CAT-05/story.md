@@ -4,7 +4,7 @@ epic: browse-catalogue
 status: delivered
 delivered: 2026-09-26T10:52:56Z
 delivered_by: gate
-created: 2026-10-11T11:59:24Z
+created: 2026-09-26T11:31:18Z
 context: portal
 title: Every page shares the shop's header and footer
 depends_on: [CAT-04]
