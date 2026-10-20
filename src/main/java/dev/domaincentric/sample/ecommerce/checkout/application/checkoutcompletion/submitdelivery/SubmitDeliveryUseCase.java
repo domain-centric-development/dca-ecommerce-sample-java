@@ -4,6 +4,7 @@ import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.ShippingOptionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.ShippingOptionRegistry;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
@@ -18,7 +19,8 @@ import org.springframework.stereotype.Service;
  * <p>This use case handles the delivery step by:
  *
  * <ul>
- *   <li>Taking the chosen ShippingOption, its price included, from the shop's offered options
+ *   <li>Taking the chosen ShippingOption, its price included, from the shop's offered options — an
+ *       option the shop does not offer is refused with {@link ShippingOptionNotFoundException}
  *   <li>Loading and validating the checkout session
  *   <li>Creating the DeliveryAddress value object from command data
  *   <li>Calling the domain method to submit delivery info
@@ -54,10 +56,7 @@ public class SubmitDeliveryUseCase implements SubmitDeliveryInputPort {
     final ShippingOption shippingOption =
         shippingOptionRegistry
             .findById(command.shippingOptionId())
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "Shipping option not offered: " + command.shippingOptionId()));
+            .orElseThrow(() -> new ShippingOptionNotFoundException(command.shippingOptionId()));
 
     return transactionBoundary.inTransaction(
         () -> {

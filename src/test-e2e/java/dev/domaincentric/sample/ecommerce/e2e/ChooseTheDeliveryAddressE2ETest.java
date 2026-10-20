@@ -50,6 +50,34 @@ class ChooseTheDeliveryAddressE2ETest extends BaseE2ETest {
     assertThat(payment.summaryAmount("Total")).hasText("74.98 EUR");
   }
 
+  @Test
+  @DisplayName("An unknown shipping method is refused")
+  void aShippingMethodTheDeliveryStepDoesNotOfferOpensItAgainWithTheRefusal() {
+    final DeliveryPage delivery = aGuestOnTheDeliveryStep();
+    delivery
+        .fillStreet("Hauptstrasse 1")
+        .fillCity("Berlin")
+        .fillPostalCode("10115")
+        .fillCountry("Germany")
+        .chooseShippingMethod("Standard Shipping");
+    sendTheShippingMethodAs("teleport");
+
+    delivery.pressContinue();
+
+    assertThat(page).hasURL(BASE_URL + "/checkout/delivery");
+    assertThat(page.locator("[data-test='delivery-error-message']"))
+        .hasText("This shipping method is not offered. Please choose another one.");
+  }
+
+  /**
+   * Makes the chosen shipping method's radio send an identifier the delivery step does not offer —
+   * as a changed request would carry it.
+   */
+  private void sendTheShippingMethodAs(final String shippingOptionId) {
+    page.locator("[data-test='delivery-shipping-radio']:checked")
+        .evaluate("(radio, id) => radio.value = id", shippingOptionId);
+  }
+
   /**
    * Puts a shipping price of the browser's own into the form, where the chosen method's price is
    * sent along — as a changed request would carry it.

@@ -28,6 +28,10 @@ public enum CheckoutStepNotice {
       "Your details could not be saved. Please try again."),
   INVALID_DELIVERY_ADDRESS(
       Kind.REFUSAL, "invalid-delivery-address", "Please check the delivery address you entered."),
+  SHIPPING_METHOD_NOT_OFFERED(
+      Kind.REFUSAL,
+      "shipping-method-not-offered",
+      "This shipping method is not offered. Please choose another one."),
   DELIVERY_NOT_SAVED(
       Kind.REFUSAL,
       "delivery-not-saved",

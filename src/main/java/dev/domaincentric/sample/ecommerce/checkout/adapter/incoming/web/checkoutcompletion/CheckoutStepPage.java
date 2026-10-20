@@ -8,6 +8,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSe
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.ShippingOptionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
@@ -130,6 +131,7 @@ final class CheckoutStepPage {
       case PaymentInitiationFailedException e -> CheckoutStepNotice.PAYMENT_REFUSED;
       case PaymentProviderUnavailableException e -> CheckoutStepNotice.PAYMENT_PROVIDER_UNAVAILABLE;
       case PaymentProviderNotFoundException e -> CheckoutStepNotice.PAYMENT_METHOD_NOT_OFFERED;
+      case ShippingOptionNotFoundException e -> CheckoutStepNotice.SHIPPING_METHOD_NOT_OFFERED;
       case NothingToPayException e -> CheckoutStepNotice.NOTHING_TO_PAY;
       case IllegalArgumentException e -> invalidInputOn(step);
       default -> notSavedOn(step);

@@ -538,6 +538,15 @@ try again later." when the provider is unavailable.
 
 ---
 
+### ShippingOptionNotFound (ShippingOptionNotFoundException)
+
+**Definition:** The shipping method the delivery form names is not one the shop offers. Carries the shipping option
+id it met. The delivery step opens again with "This shipping method is not offered. Please choose another one."
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ShippingOptionRegistry`, `ShippingOption`
+
+---
+
 ### PaymentResult
 
 **Definition:** What the payment provider made of a payment operation, as checkout understands it. A payment
