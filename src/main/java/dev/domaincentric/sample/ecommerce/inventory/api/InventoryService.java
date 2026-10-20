@@ -8,9 +8,14 @@ import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitial
 import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockCommand;
 import dev.domaincentric.sample.ecommerce.inventory.application.reducestock.ReduceStockInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.releasestock.ReleaseStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.releasestock.ReleaseStockInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.reservestock.ReserveStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.reservestock.ReserveStockInputPort;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -37,14 +42,20 @@ public class InventoryService {
   private final GetStockForProductsInputPort getStockForProductsInputPort;
   private final ProvisionInitialStockInputPort provisionInitialStockInputPort;
   private final ReduceStockInputPort reduceStockInputPort;
+  private final ReserveStockInputPort reserveStockInputPort;
+  private final ReleaseStockInputPort releaseStockInputPort;
 
   public InventoryService(
       GetStockForProductsInputPort getStockForProductsInputPort,
       ProvisionInitialStockInputPort provisionInitialStockInputPort,
-      ReduceStockInputPort reduceStockInputPort) {
+      ReduceStockInputPort reduceStockInputPort,
+      ReserveStockInputPort reserveStockInputPort,
+      ReleaseStockInputPort releaseStockInputPort) {
     this.getStockForProductsInputPort = getStockForProductsInputPort;
     this.provisionInitialStockInputPort = provisionInitialStockInputPort;
     this.reduceStockInputPort = reduceStockInputPort;
+    this.reserveStockInputPort = reserveStockInputPort;
+    this.releaseStockInputPort = releaseStockInputPort;
   }
 
   /**
@@ -145,5 +156,51 @@ public class InventoryService {
    */
   public void reduceStock(ProductId productId, int quantity) {
     reduceStockInputPort.execute(new ReduceStockCommand(productId.value(), quantity));
+  }
+
+  /**
+   * One line of an order: a product and how many of it.
+   *
+   * @param productId the product ID
+   * @param quantity how many of it, positive
+   */
+  public record StockLine(ProductId productId, int quantity) {}
+
+  /**
+   * Reserves the stock of every line of an order that is being placed — all lines or none.
+   *
+   * <p>Delegates to the {@link ReserveStockInputPort} use case.
+   *
+   * @param lines the order's lines
+   * @return empty when every line was reserved; otherwise the first product, in line order, whose
+   *     unreserved stock does not cover its line, and nothing was reserved
+   */
+  public Optional<ProductId> reserveStock(List<StockLine> lines) {
+    return reserveStockInputPort
+        .execute(
+            new ReserveStockCommand(
+                lines.stream()
+                    .map(
+                        line ->
+                            new ReserveStockCommand.Line(line.productId().value(), line.quantity()))
+                    .toList()))
+        .refusedProductId()
+        .map(ProductId::of);
+  }
+
+  /**
+   * Gives back the stock an order reserved and was then not placed with.
+   *
+   * <p>Delegates to the {@link ReleaseStockInputPort} use case.
+   *
+   * @param lines the lines that were reserved
+   */
+  public void releaseStock(List<StockLine> lines) {
+    releaseStockInputPort.execute(
+        new ReleaseStockCommand(
+            lines.stream()
+                .map(
+                    line -> new ReleaseStockCommand.Line(line.productId().value(), line.quantity()))
+                .toList()));
   }
 }

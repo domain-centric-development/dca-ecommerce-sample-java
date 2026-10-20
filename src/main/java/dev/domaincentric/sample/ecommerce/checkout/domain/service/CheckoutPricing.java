@@ -29,17 +29,21 @@ public final class CheckoutPricing implements DomainService {
     for (final CheckoutLineItem item : lines) {
       final CheckoutArticlePriceResolver.ArticlePrice articlePrice = facts.get(item.productId());
       if (articlePrice == null || !articlePrice.isAvailable()) {
-        errors.add(ValidationError.productUnavailable(item.productId()));
+        errors.add(ValidationError.productUnavailable(item.productId(), item.productName()));
       } else if (!articlePrice.price().equals(item.unitPrice())) {
         errors.add(
             new ValidationError(
                 item.productId(),
+                item.productName(),
                 "Price changed; start a fresh checkout to accept it",
                 CheckoutValidationResult.ErrorType.PRICE_CHANGED));
       } else if (articlePrice.availableStock() < item.quantity()) {
         errors.add(
             ValidationError.insufficientStock(
-                item.productId(), item.quantity(), articlePrice.availableStock()));
+                item.productId(),
+                item.productName(),
+                item.quantity(),
+                articlePrice.availableStock()));
       }
     }
     return errors.isEmpty()

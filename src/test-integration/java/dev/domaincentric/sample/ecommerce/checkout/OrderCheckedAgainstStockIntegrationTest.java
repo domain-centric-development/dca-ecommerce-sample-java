@@ -10,6 +10,7 @@ import jakarta.servlet.http.Cookie;
 import java.net.URI;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.awaitility.Awaitility;
 import org.jsoup.Jsoup;
@@ -45,6 +46,8 @@ class OrderCheckedAgainstStockIntegrationTest {
   private static final String DESK_MODEL = "Wooden Hexagon Desk Model";
   private static final String DDD_BOOK = "Domain-Driven Design";
   private static final int SEEDED_STOCK = 8;
+  private static final String NOT_ENOUGH_DESK_MODELS =
+      "Not enough stock left for '" + DESK_MODEL + "'. Please adjust your order.";
 
   private static final String CART = "/cart";
   private static final String BUYER_STEP = "/checkout/buyer";
@@ -135,11 +138,36 @@ class OrderCheckedAgainstStockIntegrationTest {
     assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
     final Document review = guest.followed(placed);
     assertThat(review.selectFirst("[data-test=review-error-message]")).isNotNull();
-    assertThat(review.selectFirst("[data-test=review-error-message]").text()).isNotBlank();
+    assertThat(review.selectFirst("[data-test=review-error-message]").text())
+        .isEqualTo(NOT_ENOUGH_DESK_MODELS);
     assertThat(review.selectFirst("[data-test=confirmation-title]")).isNull();
     assertThat(guest.perform(get(CONFIRMATION)).getResponse().getRedirectedUrl())
         .as("no confirmed order to show")
         .isEqualTo(CART);
+  }
+
+  @Test
+  @DisplayName("Place order is refused when stock ran short")
+  void placingTheOrderAfterAnotherVisitorBoughtTheStockAwayIsRefused() throws Exception {
+    guest.addToCart(DESK_MODEL, 5);
+    final Element confirmForm =
+        guest.walkToTheReview().selectFirst("[data-test=review-confirm-form]");
+    anotherVisitor.buys(DESK_MODEL, 5);
+    guest.waitForAvailability(DESK_MODEL, "3 units available");
+
+    final MvcResult placed = guest.submit(confirmForm);
+
+    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
+    final Document review = guest.followed(placed);
+    final Element error = review.selectFirst("[data-test=review-error-message]");
+    assertThat(error).isNotNull();
+    assertThat(error.text()).isEqualTo(NOT_ENOUGH_DESK_MODELS);
+    assertThat(review.selectFirst("[data-test=confirmation-title]")).isNull();
+    assertThat(guest.perform(get(CONFIRMATION)).getResponse().getRedirectedUrl())
+        .as("no confirmed order to show")
+        .isEqualTo(CART);
+    assertThat(guest.availabilityOf(DESK_MODEL)).isEqualTo("3 units available");
+    assertThat(guest.cartLines()).containsExactly(DESK_MODEL + " x5");
   }
 
   /** The cart page's error message, or null when it shows none. */
@@ -238,6 +266,22 @@ class OrderCheckedAgainstStockIntegrationTest {
       Awaitility.await()
           .atMost(Duration.ofSeconds(15))
           .until(() -> availability.equals(availabilityOn(page(productPage))));
+    }
+
+    /** What the product page of the product with that name reads under "Availability". */
+    String availabilityOf(final String productName) throws Exception {
+      return availabilityOn(page(productPageOf(productName)));
+    }
+
+    /** The cart page's lines, each as its product's name and its quantity: {@code "Name x5"}. */
+    List<String> cartLines() throws Exception {
+      return page(CART).select("[data-test=cart-item]").stream()
+          .map(
+              item ->
+                  item.selectFirst("[data-test=cart-item-name]").text()
+                      + " x"
+                      + item.selectFirst("[data-test=cart-item-quantity]").text())
+          .toList();
     }
 
     /** The product's id, as its product page address carries it. */

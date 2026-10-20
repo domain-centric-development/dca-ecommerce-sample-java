@@ -31,6 +31,14 @@ instead of creating a second. It needs a parameter on the port, and the redirect
 (WP-16) is where that contract is decided. Compensation uses the port as it stands and makes `cancelPayment`
 load-bearing, which it was not: two of the port's three operations had no caller.
 
+**The same holds for the order's stock.** Placing the order reserves the stock of every line in Inventory, through
+its Open Host Service, before the confirmation's own transaction — so that two orders placed at once never both
+count on the same units. `ConfirmCheckout` asks `assertReadyForConfirmation(...)` first (the preconditions
+`confirm` enforces, the checkout pricing's verdict included), reserves all lines or none, and releases the
+reservation on every way out of the transaction that follows. The asynchronous stock reduction after the
+confirmation consumes the reservation. The release is a quantity per product, not a key per order: what a
+process that died in between leaves reserved is found only by reconciliation.
+
 ## Consequences
 
 - Positive: no payment intent exists for a checkout that cannot accept it, in either sample.

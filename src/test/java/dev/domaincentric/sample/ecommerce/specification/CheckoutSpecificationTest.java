@@ -214,7 +214,12 @@ class CheckoutSpecificationTest {
 
     void confirm(CheckoutSession session) {
       new ConfirmCheckoutUseCase(
-              repository, this, new CheckoutPricing(), events, new InMemoryTransactionBoundary())
+              repository,
+              this,
+              new CheckoutPricing(),
+              events,
+              new InMemoryTransactionBoundary(),
+              new StockAlwaysReserved())
           .execute(new ConfirmCheckoutCommand(session.id().value(), session.customerId().value()));
     }
 
@@ -241,6 +246,15 @@ class CheckoutSpecificationTest {
               Collectors.toMap(
                   i -> i, i -> new CheckoutArticle(i, "Thing", price, stock, true, null)));
     }
+  }
+
+  /** Stock the vectors do not race for: every reservation is granted, every release accepted. */
+  static class StockAlwaysReserved implements StockReservationPort {
+    public Optional<ProductId> reserve(List<Line> lines) {
+      return Optional.empty();
+    }
+
+    public void release(List<Line> lines) {}
   }
 
   static class Publisher implements DomainEventPublisher {

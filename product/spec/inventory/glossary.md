@@ -33,6 +33,8 @@ open orders, and ensures that reservations never exceed the available quantity.
 - `decreaseStock(amount)` — Record outgoing goods (e.g. shipment): the available quantity shrinks by the amount. It does not consume a reservation — a reservation above the new figure is only capped to it; there is no separate operation that turns reserved stock into shipped stock
 - `reserve(amount)` — Reserve stock for an order: the amount is earmarked out of the unreserved stock and stays in the available quantity
 - `release(amount)` — Release previously reserved stock: the reservation shrinks, the available quantity is unchanged
+- Reserve stock (`reserveStock`) — Inventory earmarks every line of an order being placed out of the unreserved stock — all lines or none; a line the unreserved stock does not cover refuses the whole order and reserves nothing (the `ReserveStock` use case, offered through `InventoryService.reserveStock`)
+- Release stock (`releaseStock`) — Inventory gives back what an order that was then not placed had reserved, up to what is still reserved for each product (the `ReleaseStock` use case, offered through `InventoryService.releaseStock`)
 - `adjustStockTo(quantity)` — Manual correction / stocktake (see Open Issues): the available quantity is set to the counted figure, a reservation above it is capped
 - `isAvailable()` — Checks whether unreserved stock is available (a question; changes nothing)
 
@@ -136,7 +138,8 @@ order and is no longer available for further reservations.
 ### StockReleased
 
 **Definition:** A previously made reservation has been cancelled; the quantity
-is reservable again.
+is reservable again. Raised as well when a sale consumes the reservation its
+order made, just before the stock goes down.
 
 **Type:** Domain Event
 
@@ -234,7 +237,10 @@ whose stock must go down. Owned here and implemented by Checkout's `CheckoutConf
 lines and the event's `eventId()` to the `ReduceStock` use case in one command (the contract extends
 `IntegrationEvent`). The use case reduces the lines in one transaction, skips an event `ProcessedEvents` has
 already recorded for its effect, `reduce-stock`, and records it there — a redelivered order never reduces stock
-twice, while `set-stock-level` for the same event id is a different effect and still happens. The trigger
+twice, while `set-stock-level` for the same event id is a different effect and still happens. Each line first
+releases what it reserved when its order was placed (up to its quantity, and only when the stock covers the line),
+then the stock goes down. Reserving, releasing and reducing run one at a time (`StockLevelRepository.inStockLevels`),
+so no two of them count on the same units. The trigger
 names its lines in Inventory's words — `lineItems()`, each a `StockReductionLineItem` (product and quantity
 whose stock goes down) — not in Checkout's: the data comes from the order, the names do not.
 

@@ -5,15 +5,23 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublis
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutArticleDataPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.StockReservationPort;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticle;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticlePriceResolver;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ErrorType;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -24,38 +32,49 @@ import org.springframework.stereotype.Service;
  * <ul>
  *   <li>Loading and validating the checkout session
  *   <li>Fetching fresh article data (pricing, availability) via CheckoutArticleDataPort
- *   <li>Building a resolver for current pricing validation
+ *   <li>Asking the session whether it may be confirmed with the checkout pricing's verdict
+ *   <li>Reserving the stock of every line in Inventory via StockReservationPort — refused when the
+ *       stock no longer covers a line, so two orders placed at once never count on the same units
  *   <li>Calling the domain method to confirm with validation
  *   <li>Persisting the updated session
  *   <li>Publishing domain events — triggers cart completion and stock reduction in separate
- *       transactions via Interface Inversion pattern
+ *       transactions via Interface Inversion pattern; the reduction consumes the reservation
  * </ul>
  *
+ * <p>A confirmation that fails after the reservation gives the reservation back (ADR-041). A
+ * process that dies between the two leaves the reservation behind; only a reconciliation would find
+ * it.
+ *
  * <p><b>One Aggregate Per Transaction:</b> This use case only modifies the {@code CheckoutSession}
- * aggregate. Cart completion and stock reduction happen in separate transactions via event
- * listeners (Interface Inversion pattern), respecting the DDD rule of one aggregate per
- * transaction.
+ * aggregate. The reservation happens before, in Inventory's own transaction; cart completion and
+ * stock reduction happen after, in separate transactions via event listeners (Interface Inversion
+ * pattern), respecting the DDD rule of one aggregate per transaction.
  */
 @Service
 public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ConfirmCheckoutUseCase.class);
 
   private final CheckoutSessionRepository checkoutSessionRepository;
   private final CheckoutArticleDataPort checkoutArticleDataPort;
   private final CheckoutPricing checkoutPricing;
   private final DomainEventPublisher domainEventPublisher;
   private final TransactionBoundary transactionBoundary;
+  private final StockReservationPort stockReservationPort;
 
   public ConfirmCheckoutUseCase(
       final CheckoutSessionRepository checkoutSessionRepository,
       final CheckoutArticleDataPort checkoutArticleDataPort,
       final CheckoutPricing checkoutPricing,
       final DomainEventPublisher domainEventPublisher,
-      final TransactionBoundary transactionBoundary) {
+      final TransactionBoundary transactionBoundary,
+      final StockReservationPort stockReservationPort) {
     this.checkoutSessionRepository = checkoutSessionRepository;
     this.checkoutArticleDataPort = checkoutArticleDataPort;
     this.checkoutPricing = checkoutPricing;
     this.domainEventPublisher = domainEventPublisher;
     this.transactionBoundary = transactionBoundary;
+    this.stockReservationPort = stockReservationPort;
   }
 
   @Override
@@ -80,11 +99,19 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
                             e.getValue().isAvailable(),
                             e.getValue().availableStock())));
 
-    // Short transaction: reload, confirm, save, publish
+    // Serialized against a replacement of the cart's checkout, as the confirmation itself is
     return checkoutSessionRepository.inCartSession(
         current.cartId(),
-        () ->
-            transactionBoundary.inTransaction(
+        () -> {
+          // Everything the session itself can refuse is refused here, before Inventory is asked to
+          // hold stock: a reservation must not exist for a checkout that cannot be confirmed
+          final CheckoutSession ready = loadSession(sessionId, command);
+          ready.assertReadyForConfirmation(checkoutPricing.validateItems(ready, facts));
+          final List<StockReservationPort.Line> lines = reserveStockOf(ready);
+
+          // Short transaction: reload, confirm, save, publish
+          try {
+            return transactionBoundary.inTransaction(
                 () -> {
                   final CheckoutSession session = loadSession(sessionId, command);
                   session.confirm(
@@ -93,7 +120,65 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
                   checkoutSessionRepository.save(session);
                   domainEventPublisher.publishAndClearEvents(session);
                   return ConfirmCheckoutResult.from(session);
-                }));
+                });
+          } catch (final Throwable t) {
+            // Every way out releases the reservation, an Error included: the release swallows its
+            // own failures, and stock held for an order never placed is worse than the attempt
+            releaseQuietly(lines);
+            throw t;
+          }
+        });
+  }
+
+  /**
+   * Reserves the stock of every line of the session, or refuses the order with the line whose stock
+   * another order took since the check — nothing is reserved then.
+   *
+   * @return the reserved lines
+   */
+  private List<StockReservationPort.Line> reserveStockOf(final CheckoutSession session) {
+    final List<StockReservationPort.Line> lines =
+        session.lineItems().stream()
+            .map(item -> new StockReservationPort.Line(item.productId(), item.quantity()))
+            .toList();
+    stockReservationPort
+        .reserve(lines)
+        .ifPresent(
+            refused -> {
+              throw new CheckoutValidationException(
+                  CheckoutValidationResult.withError(stockNotReserved(session, refused)));
+            });
+    return lines;
+  }
+
+  /**
+   * The refusal for a line whose stock another order took between the check and the reservation.
+   */
+  private static ValidationError stockNotReserved(
+      final CheckoutSession session, final ProductId refused) {
+    final CheckoutLineItem line =
+        session.lineItems().stream()
+            .filter(item -> item.productId().equals(refused))
+            .findFirst()
+            .orElseThrow();
+    return new ValidationError(
+        refused,
+        line.productName(),
+        "Stock could not be reserved for " + line.quantity() + " unit(s)",
+        ErrorType.INSUFFICIENT_STOCK);
+  }
+
+  /**
+   * Gives back a reservation the confirmation could not use. A refused release is logged and
+   * changes nothing else: the caller is told why their order was not placed, not that the clean-up
+   * failed as well.
+   */
+  private void releaseQuietly(final List<StockReservationPort.Line> lines) {
+    try {
+      stockReservationPort.release(lines);
+    } catch (final RuntimeException e) {
+      LOG.warn("Stock reserved for {} line(s) could not be released", lines.size(), e);
+    }
   }
 
   /** Loads the session as the caller's own: a session that is not theirs is not found. */

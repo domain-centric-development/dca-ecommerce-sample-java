@@ -85,6 +85,24 @@ public final class CheckoutRoutes {
   }
 
   /**
+   * The Spring MVC redirect to a step's page, handing it a notice and the product name it names.
+   *
+   * @param step the step
+   * @param notice the notice the page says
+   * @param name the product name the notice names
+   * @param attributes the redirect's attributes, which take the notice
+   * @return {@code redirect:} followed by the step's page
+   */
+  public static String redirectTo(
+      final CheckoutStep step,
+      final CheckoutStepNotice notice,
+      final String name,
+      final RedirectAttributes attributes) {
+    notice.addTo(attributes, name);
+    return "redirect:" + pathOf(step);
+  }
+
+  /**
    * The Spring MVC redirect to the cart page, handing it a notice the cart page knows.
    *
    * @param notice the notice the cart page says

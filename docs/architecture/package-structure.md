@@ -266,6 +266,7 @@ dev.domaincentric.sample.ecommerce
 │   │       ├── ProductInfoPort
 │   │       ├── PaymentProvider, PaymentProviderRegistry
 │   │       ├── ShippingOptionRegistry
+│   │       ├── StockReservationPort    # Holds an order's stock while it is placed
 │   └── adapter/
 │       ├── incoming/
 │       │   ├── web/
@@ -289,6 +290,8 @@ dev.domaincentric.sample.ecommerce
 │           │   ├── RestPaymentProvider, PaymentProviderProperties
 │           │   ├── MockPaymentProvider
 │           │   └── InMemoryPaymentProviderRegistry
+│           ├── inventory/
+│           │   └── InventoryStockReservationAdapter   # ACL to Inventory's OHS: reserve and release stock
 │           └── shipping/
 │               └── InMemoryShippingOptionRegistry
 │
@@ -364,7 +367,7 @@ dev.domaincentric.sample.ecommerce
 │   │   └── event/
 │   │       ├── StockLevelCreated, StockChanged
 │   │       ├── StockIncreased, StockDecreased
-│   │       └── StockReserved
+│   │       └── StockReserved, StockReleased
 │   ├── application/
 │   │   ├── provisioninitialstock/
 │   │   │   ├── ProvisionInitialStockInputPort, ProvisionInitialStockUseCase
@@ -372,6 +375,12 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── reducestock/
 │   │   │   ├── ReduceStockInputPort, ReduceStockUseCase
 │   │   │   ├── ReduceStockCommand, ReduceStockResult
+│   │   ├── reservestock/
+│   │   │   ├── ReserveStockInputPort, ReserveStockUseCase
+│   │   │   ├── ReserveStockCommand, ReserveStockResult
+│   │   ├── releasestock/
+│   │   │   ├── ReleaseStockInputPort, ReleaseStockUseCase
+│   │   │   ├── ReleaseStockCommand, ReleaseStockResult
 │   │   ├── getstockforproducts/
 │   │   │   ├── GetStockForProductsInputPort, GetStockForProductsUseCase
 │   │   │   ├── GetStockForProductsQuery, GetStockForProductsResult

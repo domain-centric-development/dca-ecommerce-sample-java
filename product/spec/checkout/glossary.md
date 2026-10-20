@@ -45,7 +45,10 @@ an active cart editable and never completes the whole cart.
 Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume
 immutable line/fact snapshots. Any changed price or shortage reports affected lines and leaves state, totals and events
 unchanged. The buyer explicitly starts a fresh checkout against the new prices. Success stores the recomputed total and
-publishes the same total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
+publishes the same total; there is no no-argument confirmation path. Before its transaction, confirmation reserves the
+stock of every line in Inventory (reserve stock, through `StockReservationPort`), all lines or none; a refused
+reservation is a shortage of that line, and a confirmation that then fails gives the reservation back (release stock).
+Local in-memory repository serialization is not a
 claim of durable distributed transactions or universal rollback of unenlisted resources.
 
 **Type:** Aggregate Root
@@ -63,6 +66,7 @@ claim of durable distributed transactions or universal rollback of unenlisted re
 - `releasePayment` — forgets a payment the provider cancelled, so it covers nothing any more; a session that holds
   another payment by then keeps that one
 - `goBackTo` — moves the current step back; data already submitted stays
+- `assertReadyForConfirmation` — a question: the preconditions of `confirm`, the pricing verdict included, checked without changing anything — asked before the order's stock is reserved
 - `confirm` — status confirmed, totals recomputed at current prices; refused while the pricing verdict reports a changed price or a shortage
 - `complete` — after payment: status completed, with the order reference
 - `abandon` — kept with status abandoned; the cart's contents stay
@@ -206,12 +210,13 @@ contains a list of `ValidationError` entries.
 
 **Related terms:** `ValidationError`, `CheckoutArticlePriceResolver`, `CheckoutSession`.
 
-**Operations:** `isValid`, `valid`, `withErrors`, `withError`.
+**Operations:** `isValid`, `valid`, `withErrors`, `withError`; `shortOfStock` — the line a refusal for stock
+names: the first, in line order, that is unavailable or short of stock.
 
 ### ValidationError
 
 **Definition:** A specific violation of checkout preconditions for a line item (e.g. product
-unavailable, insufficient stock).
+unavailable, insufficient stock), carrying the line's product name as the line shows it.
 
 **Type:** Value Object
 

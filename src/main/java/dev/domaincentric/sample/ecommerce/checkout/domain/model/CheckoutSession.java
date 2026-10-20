@@ -329,6 +329,32 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
+   * Asserts that this session may be confirmed with that verdict right now.
+   *
+   * <p>The same preconditions {@link #confirm(CheckoutValidationResult, Money)} enforces, without
+   * changing anything: a caller that is about to reserve the order's stock asks this first, so a
+   * session that would be refused afterwards never holds stock.
+   *
+   * @param validationResult the checkout pricing's verdict on the current line items
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   * @throws CheckoutStepNotCompletedException if a step is still missing its data
+   * @throws CheckoutStepOutOfOrderException if the session does not stand at the review step
+   * @throws CheckoutValidationException if a line item no longer passes validation
+   */
+  public void assertReadyForConfirmation(final CheckoutValidationResult validationResult) {
+    ensureModifiable();
+    ensureAllStepsCompleted();
+
+    if (currentStep != CheckoutStep.REVIEW) {
+      throw new CheckoutStepOutOfOrderException(this.id, CheckoutStep.REVIEW, currentStep);
+    }
+
+    if (!validationResult.isValid()) {
+      throw new CheckoutValidationException(validationResult);
+    }
+  }
+
+  /**
    * Confirms the checkout order once the checkout pricing has judged the current line items.
    *
    * <p>The verdict and the recomputed subtotal are handed in by the use case: deciding them needs
@@ -346,16 +372,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    */
   public void confirm(
       final CheckoutValidationResult validationResult, final Money recomputedSubtotal) {
-    ensureModifiable();
-    ensureAllStepsCompleted();
-
-    if (currentStep != CheckoutStep.REVIEW) {
-      throw new CheckoutStepOutOfOrderException(this.id, CheckoutStep.REVIEW, currentStep);
-    }
-
-    if (!validationResult.isValid()) {
-      throw new CheckoutValidationException(validationResult);
-    }
+    assertReadyForConfirmation(validationResult);
 
     this.totals = CheckoutTotals.calculate(recomputedSubtotal, totals.shipping());
     this.status = CheckoutSessionStatus.CONFIRMED;

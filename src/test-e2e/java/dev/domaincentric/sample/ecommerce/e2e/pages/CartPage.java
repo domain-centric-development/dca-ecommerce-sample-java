@@ -74,6 +74,26 @@ public class CartPage extends BasePage {
   }
 
   /**
+   * Proceeds to checkout and walks every step to the review as Jane Doe: her buyer details, her
+   * address in Berlin, "Standard Shipping" and the offered payment provider.
+   *
+   * @return the ReviewPage
+   */
+  public ReviewPage proceedToTheReviewAsJaneDoe() {
+    return proceedToCheckout()
+        .fillBuyerInfo("jane@example.com", "Jane", "Doe", "+49 30 1234567")
+        .continueToDelivery()
+        .fillStreet("Hauptstrasse 1")
+        .fillCity("Berlin")
+        .fillPostalCode("10115")
+        .fillCountry("Germany")
+        .chooseShippingMethod("Standard Shipping")
+        .continueToPayment()
+        .chooseTheOfferedProvider()
+        .continueToReview();
+  }
+
+  /**
    * Presses "Proceed to Checkout" without expecting where the shop leads — the caller asserts the
    * page it lands on.
    */

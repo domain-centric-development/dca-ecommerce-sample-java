@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.dca.spring.InMemoryTransactionBoundary;
 import dev.domaincentric.sample.ecommerce.inventory.adapter.outgoing.persistence.InMemoryProcessedEvents;
 import dev.domaincentric.sample.ecommerce.inventory.adapter.outgoing.persistence.InMemoryStockLevelRepository;
 import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
@@ -26,7 +27,8 @@ class ReduceStockUseCaseTest {
   private final InMemoryProcessedEvents processedEvents = new InMemoryProcessedEvents();
   private final DomainEventPublisher publisher = new SilentEventPublisher();
   private final ReduceStockUseCase useCase =
-      new ReduceStockUseCase(stockLevels, publisher, processedEvents);
+      new ReduceStockUseCase(
+          stockLevels, publisher, processedEvents, new InMemoryTransactionBoundary());
 
   @Test
   @DisplayName("The same event delivered twice reduces every line once")

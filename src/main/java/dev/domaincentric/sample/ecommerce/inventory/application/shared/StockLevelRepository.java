@@ -42,6 +42,20 @@ public interface StockLevelRepository extends Repository<StockLevel, StockLevelI
   List<StockLevel> findByProductIds(Collection<ProductId> productIds);
 
   /**
+   * Runs an operation that checks and changes stock levels, including the caller's transaction
+   * completion, one at a time: a reservation, a release and a reduction never interleave, so no two
+   * of them count on the same units.
+   *
+   * @param operation the check-and-change to run
+   * @return what the operation returns
+   */
+  default <T> T inStockLevels(java.util.function.Supplier<T> operation) {
+    synchronized (this) {
+      return operation.get();
+    }
+  }
+
+  /**
    * Finds every stock level. Only an overview across the assortment has a reason to ask for this.
    *
    * @return all stock levels

@@ -436,7 +436,8 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── ProductInfoPort.java
 │   │       ├── PaymentProvider.java
 │   │       ├── PaymentProviderRegistry.java
-│   │       └── ShippingOptionRegistry.java
+│   │       ├── ShippingOptionRegistry.java
+│   │       └── StockReservationPort.java  # Holds an order's stock while it is placed
 │   ├── infrastructure/                   # Per-context infrastructure
 │   │   ├── CheckoutDomainConfiguration.java
 │   │   └── CheckoutPaymentConfiguration.java  # Binds the payment provider's address
@@ -474,6 +475,8 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           │   ├── PaymentProviderProperties.java  # checkout.payment-provider.base-url
 │           │   ├── MockPaymentProvider.java      # The stand-in, where no address is set
 │           │   └── InMemoryPaymentProviderRegistry.java
+│           ├── inventory/
+│           │   └── InventoryStockReservationAdapter.java  # ACL to Inventory's OHS: reserve and release stock
 │           └── shipping/
 │               └── InMemoryShippingOptionRegistry.java
 │
@@ -611,6 +614,16 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── ReduceStockUseCase.java
 │   │   │   ├── ReduceStockCommand.java
 │   │   │   └── ReduceStockResult.java
+│   │   ├── reservestock/                 # Use case: Reserve Stock (all lines or none)
+│   │   │   ├── ReserveStockInputPort.java
+│   │   │   ├── ReserveStockUseCase.java
+│   │   │   ├── ReserveStockCommand.java
+│   │   │   └── ReserveStockResult.java
+│   │   ├── releasestock/                 # Use case: Release Stock
+│   │   │   ├── ReleaseStockInputPort.java
+│   │   │   ├── ReleaseStockUseCase.java
+│   │   │   ├── ReleaseStockCommand.java
+│   │   │   └── ReleaseStockResult.java
 │   │   ├── getstockforproducts/          # Use case: Get Stock for Products
 │   │   │   ├── GetStockForProductsInputPort.java
 │   │   │   ├── GetStockForProductsUseCase.java

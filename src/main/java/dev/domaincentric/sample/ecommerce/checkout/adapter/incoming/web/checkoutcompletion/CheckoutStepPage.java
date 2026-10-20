@@ -14,6 +14,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.NothingToPayException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import java.util.Optional;
@@ -106,6 +107,12 @@ final class CheckoutStepPage {
       }
     }
     if (step == CheckoutStep.REVIEW && refusal instanceof CheckoutValidationException invalid) {
+      // A line short of stock is named, whichever check found it; changed prices only are counted
+      final Optional<ValidationError> shortOfStock = invalid.validation().shortOfStock();
+      if (shortOfStock.isPresent()) {
+        return CheckoutRoutes.redirectTo(
+            step, CheckoutStepNotice.STOCK_RAN_SHORT, shortOfStock.get().productName(), attributes);
+      }
       return CheckoutRoutes.redirectTo(
           step,
           CheckoutStepNotice.ITEMS_UNAVAILABLE,

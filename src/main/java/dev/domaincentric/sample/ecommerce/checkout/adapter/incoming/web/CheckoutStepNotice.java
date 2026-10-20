@@ -11,8 +11,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  *
  * <p>The notice travels with the redirect as a flash attribute, which the shop keeps in a sealed
  * cookie addressed to the page the redirect leads to: only its code ({@value #KEY}), never the
- * text, and the number a sentence names beside it ({@value #COUNT_KEY}); the page words the
- * sentence. A code the page does not know, or a number it needs and does not get, shows nothing.
+ * text, and the number or the product name a sentence names beside it ({@value #COUNT_KEY}, {@value
+ * #NAME_KEY}); the page words the sentence. A code the page does not know, or a number or a name it
+ * needs and does not get, shows nothing.
  */
 public enum CheckoutStepNotice {
   EARLIER_STEPS_FIRST(
@@ -58,6 +59,8 @@ public enum CheckoutStepNotice {
       Kind.REFUSAL,
       "items-unavailable",
       "Cannot place the order, %d item(s) unavailable or out of stock."),
+  STOCK_RAN_SHORT(
+      Kind.REFUSAL, "stock-ran-short", "Not enough stock left for '%s'. Please adjust your order."),
   REVIEW_FIRST(Kind.REFUSAL, "review-first", "Please review your order before placing it."),
   ORDER_NOT_PLACED(
       Kind.REFUSAL, "order-not-placed", "Your order could not be placed. Please try again."),
@@ -85,6 +88,9 @@ public enum CheckoutStepNotice {
   /** The flash attribute that carries the number a notice names. */
   public static final String COUNT_KEY = "notice.count";
 
+  /** The flash attribute that carries the product name a notice names. */
+  public static final String NAME_KEY = "notice.name";
+
   private final Kind kind;
   private final String code;
   private final String sentence;
@@ -109,7 +115,7 @@ public enum CheckoutStepNotice {
    * Shows the notice a redirect brought to this page: reads it from the page's model, where Spring
    * puts the flash attributes addressed to the page, and puts its sentence there under the
    * attribute its kind names — a refusal as the page's error, any other as its notice. Nothing is
-   * shown when no notice came, its code is unknown or its number missing.
+   * shown when no notice came, its code is unknown or its number or name missing.
    *
    * @param model the page's model
    */
@@ -118,7 +124,9 @@ public enum CheckoutStepNotice {
         .ifPresent(
             notice ->
                 notice
-                    .sentence(model.getAttribute(COUNT_KEY) instanceof Integer count ? count : null)
+                    .sentence(
+                        model.getAttribute(COUNT_KEY) instanceof Integer count ? count : null,
+                        model.getAttribute(NAME_KEY) instanceof String name ? name : null)
                     .ifPresent(text -> model.addAttribute(notice.kind.pageAttribute, text)));
   }
 
@@ -142,6 +150,17 @@ public enum CheckoutStepNotice {
     attributes.addFlashAttribute(COUNT_KEY, count);
   }
 
+  /**
+   * Hands this notice and the product name it names to the page the redirect leads to.
+   *
+   * @param attributes the redirect's attributes
+   * @param name the product name the sentence names
+   */
+  public void addTo(final RedirectAttributes attributes, final String name) {
+    addTo(attributes);
+    attributes.addFlashAttribute(NAME_KEY, name);
+  }
+
   public String code() {
     return code;
   }
@@ -153,9 +172,24 @@ public enum CheckoutStepNotice {
    * @return the sentence, or empty for a notice that names a number the redirect did not carry
    */
   public Optional<String> sentence(final @Nullable Integer count) {
-    if (!sentence.contains("%d")) {
-      return Optional.of(sentence);
+    return sentence(count, null);
+  }
+
+  /**
+   * The sentence the page shows.
+   *
+   * @param count the number the redirect carried, if any
+   * @param name the product name the redirect carried, if any
+   * @return the sentence, or empty for a notice that names a number or a name the redirect did not
+   *     carry
+   */
+  public Optional<String> sentence(final @Nullable Integer count, final @Nullable String name) {
+    if (sentence.contains("%s")) {
+      return Optional.ofNullable(name).map(product -> sentence.formatted(product));
     }
-    return Optional.ofNullable(count).map(number -> sentence.formatted(number));
+    if (sentence.contains("%d")) {
+      return Optional.ofNullable(count).map(number -> sentence.formatted(number));
+    }
+    return Optional.of(sentence);
   }
 }
