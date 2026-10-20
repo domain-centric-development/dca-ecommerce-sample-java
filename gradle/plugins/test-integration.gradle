@@ -46,6 +46,10 @@ tasks.named('test-integration').configure {
   // database of their own each get one). Gradle's default worker heap of 512 MB runs out partway
   // through the suite with an OutOfMemoryError in whichever class comes next.
   maxHeapSize = '2g'
+  // Those contexts start one after another in a single JVM, so the classes run in several JVMs side by
+  // side; -PintegrationForks=1 runs them in one again
+  maxParallelForks = (project.findProperty('integrationForks')
+      ?: Math.min(4, Math.max(1, Runtime.runtime.availableProcessors().intdiv(2)))) as int
   if (project.hasProperty('log-debug')) {
     beforeTest { descriptor ->
       logger.lifecycle("# ${descriptor.className}: ${descriptor.name}")
