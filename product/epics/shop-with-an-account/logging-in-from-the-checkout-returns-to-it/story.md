@@ -59,6 +59,11 @@ Title: A guest who logs in from the buyer step returns to the checkout after the
   so buyer-step-without-a-checkout-leads-to-the-cart and its three neighbours hold. An ADR names this exception. Cart
   never calls Checkout. Built the same in both shops — answered by Christoph Bloemer on 2026-10-15 in the .NET shop's
   decision logging-in-from-the-checkout-returns-to-it-01
+- answered: the use case that resumes the open checkout of the customer's cart is `ResumeCheckout`, in the feature
+  `checkoutcompletion` (`checkout/application/checkoutcompletion/resumecheckout`), not in `session`: the step pages
+  are CheckoutCompletion's adapters, and an adapter drives one feature's commands (DCA-USE-018) — answered by
+  Christoph Bloemer on 2026-10-20 in the .NET shop's decision logging-in-from-the-checkout-returns-to-it-02 (option a),
+  for both shops
 
 ## Notes
 
