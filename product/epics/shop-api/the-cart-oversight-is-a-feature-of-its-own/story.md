@@ -1,7 +1,9 @@
 ---
 id: the-cart-oversight-is-a-feature-of-its-own
 epic: shop-api
-status: adopted
+status: delivered
+delivered: 2026-10-20T15:13:35Z
+delivered_by: gate
 created: 2026-10-15T07:50:52Z
 context: cart
 feature: cartoversight
