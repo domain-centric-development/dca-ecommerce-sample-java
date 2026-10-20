@@ -1,7 +1,9 @@
 ---
 id: only-an-offered-shipping-method-is-taken
 epic: guest-checkout
-status: approved
+status: delivered
+delivered: 2026-10-20T18:45:37Z
+delivered_by: gate
 created: 2026-10-15T07:50:52Z
 context: checkout
 feature: delivery
