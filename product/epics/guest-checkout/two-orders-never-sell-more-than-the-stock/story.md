@@ -1,7 +1,9 @@
 ---
 id: two-orders-never-sell-more-than-the-stock
 epic: guest-checkout
-status: approved
+status: delivered
+delivered: 2026-10-20T18:58:17Z
+delivered_by: gate
 created: 2026-10-14T23:44:13Z
 context: checkout
 feature: ordering

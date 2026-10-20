@@ -81,17 +81,19 @@ Test: dev.domaincentric.sample.ecommerce.checkout.OrderCheckedAgainstStockIntegr
 - Given a guest at the review with "Wooden Hexagon Desk Model" five times
 - And another visitor has since bought it five times, leaving 3
 - When the guest presses "Place Order"
-- Then the review step stays open at `/checkout/review` and shows an error
+- Then the review step stays open at `/checkout/review` and shows
+  "Not enough stock left for 'Wooden Hexagon Desk Model'. Please adjust your order."
 - And no confirmation is shown
 - And the product page still reads "3 units available" and the guest's cart still holds the product five
   times
-Test: dev.domaincentric.sample.ecommerce.e2e.OrderCheckedAgainstStockE2ETest#placingTheOrderAfterAnotherVisitorBoughtTheStockAwayIsRefused
+Test: dev.domaincentric.sample.ecommerce.checkout.OrderCheckedAgainstStockIntegrationTest#placingTheOrderAfterAnotherVisitorBoughtTheStockAwayIsRefused
 
 #### place-order-is-refused-when-sold-out
 - Given a guest at the review with "Wooden Hexagon Desk Model" twice
 - And another visitor has since bought all 8
 - When the guest presses "Place Order"
-- Then the review step stays open at `/checkout/review` and shows an error
+- Then the review step stays open at `/checkout/review` and shows
+  "Not enough stock left for 'Wooden Hexagon Desk Model'. Please adjust your order."
 - And no confirmation is shown
 Test: dev.domaincentric.sample.ecommerce.checkout.OrderCheckedAgainstStockIntegrationTest#placingTheOrderAfterAnotherVisitorBoughtEverythingIsRefused
 
@@ -112,3 +114,15 @@ Test: dev.domaincentric.sample.ecommerce.e2e.PlaceTheOrderE2ETest#theConfirmatio
 - Then the confirmation page shows "Order Total" "59.98 EUR"
 - And it does not say "Total Paid"
 Test: dev.domaincentric.sample.ecommerce.checkout.PlaceTheOrderIntegrationTest#theConfirmationCallsTheAmountTheOrderTotal
+
+### Rule: Of orders placed at the same time, only those the stock still covers are placed
+
+#### the-order-the-stock-no-longer-covers-is-refused
+- Given the seeded "Wooden Hexagon Desk Model" with a stock of 8
+- And two guests, each at the review with "Wooden Hexagon Desk Model" five times
+- When both press "Place Order" at the same moment
+- Then exactly one of them sees the confirmation
+- And the other is back at the review `/checkout/review` with
+  "Not enough stock left for 'Wooden Hexagon Desk Model'. Please adjust your order."
+- And shortly afterwards the product page of "Wooden Hexagon Desk Model" reads "3 units available"
+Test: dev.domaincentric.sample.ecommerce.e2e.TwoOrdersAtOnceE2ETest#ofTwoOrdersPlacedAtOnceOnlyTheOneTheStockCoversIsPlaced
