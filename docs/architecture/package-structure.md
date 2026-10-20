@@ -175,7 +175,7 @@ dev.domaincentric.sample.ecommerce
 │   └── adapter/
 │       ├── incoming/
 │       │   ├── api/
-│       │   │   ├── ShoppingCartResource
+│       │   │   ├── ShoppingCartResource, CartOversightResource
 │       │   │   ├── AddToCartRequest
 │       │   │   ├── ShoppingCartDto, ShoppingCartListDto
 │       │   │   ├── CartItemDto, ShoppingCartDtoConverter

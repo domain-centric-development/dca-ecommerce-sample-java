@@ -279,7 +279,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │       ├── CompleteCartUseCase.java
 │   │   │       ├── CompleteCartCommand.java
 │   │   │       └── CompleteCartResult.java
-│   │   ├── operations/                   # Feature: operating the shop (staff-only queries)
+│   │   ├── cartoversight/                # Feature: the staff's view of every cart
 │   │   │   └── getallcarts/              # Use case: Get All Carts
 │   │   │       ├── GetAllCartsInputPort.java
 │   │   │       ├── GetAllCartsUseCase.java
@@ -294,6 +294,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       ├── incoming/                     # Incoming adapters
 │       │   ├── api/
 │       │   │   ├── ShoppingCartResource.java
+│       │   │   ├── CartOversightResource.java
 │       │   │   ├── AddToCartRequest.java
 │       │   │   ├── ShoppingCartDto.java
 │       │   │   ├── ShoppingCartListDto.java

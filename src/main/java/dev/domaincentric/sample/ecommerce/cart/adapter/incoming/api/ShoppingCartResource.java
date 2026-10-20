@@ -1,8 +1,5 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.api;
 
-import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsQuery;
-import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
@@ -23,7 +20,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -37,7 +33,8 @@ import org.springframework.web.bind.annotation.*;
  * in the path selects <i>which</i> of the caller's carts is meant, never <i>whose</i> cart is
  * meant. A cart belonging to somebody else answers {@code 404}, not {@code 403}: a {@code 403}
  * would confirm that the id exists, which is exactly the fact a stranger must not learn. Listing
- * every cart in the shop crosses that boundary by design and therefore requires the staff role.
+ * every cart in the shop crosses that boundary by design; it is the cart oversight's, {@link
+ * CartOversightResource}.
  *
  * <p><b>Bearer only:</b> {@code /api/**} is authenticated by an {@code Authorization: Bearer}
  * header and never by a browser cookie, which is what makes its CSRF exemption sound (ADR-035).
@@ -47,7 +44,6 @@ import org.springframework.web.bind.annotation.*;
 public class ShoppingCartResource {
 
   private final CreateCartInputPort createCart;
-  private final GetAllCartsInputPort getAllCarts;
   private final GetCartByIdInputPort getCartById;
   private final GetActiveCartInputPort getActiveCart;
   private final AddItemToCartInputPort addItemToCart;
@@ -57,7 +53,6 @@ public class ShoppingCartResource {
 
   public ShoppingCartResource(
       final CreateCartInputPort createCart,
-      final GetAllCartsInputPort getAllCarts,
       final GetCartByIdInputPort getCartById,
       final GetActiveCartInputPort getActiveCart,
       final AddItemToCartInputPort addItemToCart,
@@ -65,7 +60,6 @@ public class ShoppingCartResource {
       final ShoppingCartDtoConverter converter,
       final IdentityProvider identityProvider) {
     this.createCart = createCart;
-    this.getAllCarts = getAllCarts;
     this.getCartById = getCartById;
     this.getActiveCart = getActiveCart;
     this.addItemToCart = addItemToCart;
@@ -80,19 +74,6 @@ public class ShoppingCartResource {
     final CreateCartResult output = createCart.execute(new CreateCartCommand(currentCustomerId()));
 
     return ResponseEntity.status(HttpStatus.CREATED).body(converter.toDto(output));
-  }
-
-  /**
-   * Every cart in the shop — the operator view, and the only route that leaves the caller's data.
-   * Crossing that boundary demands the staff role; a stranger is challenged with {@code 401}, a
-   * customer without the role forbidden with {@code 403} (ADR-036).
-   */
-  @GetMapping
-  @PreAuthorize("hasRole('STAFF')")
-  public ResponseEntity<ShoppingCartListDto> getAllCarts() {
-    final GetAllCartsResult output = getAllCarts.execute(new GetAllCartsQuery());
-
-    return ResponseEntity.ok(converter.toListDto(output));
   }
 
   @GetMapping("/{cartId}")

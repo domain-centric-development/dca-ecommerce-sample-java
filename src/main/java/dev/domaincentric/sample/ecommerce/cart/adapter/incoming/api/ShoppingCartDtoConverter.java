@@ -1,6 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.api;
 
-import dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts.GetAllCartsResult;
+import dev.domaincentric.sample.ecommerce.cart.application.cartoversight.getallcarts.GetAllCartsResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.CartItemSummary;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.createcart.CreateCartResult;

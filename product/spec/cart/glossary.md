@@ -20,7 +20,7 @@ The Cart context groups its use cases into four features — domain-named naviga
 | `shopping` | Filling and reading the shopping cart while the customer shops | `createcart`, `getactivecart`, `getorcreateactivecart`, `getcartbyid`, `additemtocart`, `removecartitem`, `removeitemfromcart` |
 | `cartrecovery` | Recovering a guest cart on login — offering and applying a merge | `recovercart`, `getcartmergeoptions`, `mergecarts` |
 | `cartcheckout` | Reconciling the cart once Checkout confirms an order — the purchased units leave the cart (`completecart`) | `completecart` |
-| `operations` | Operating the shop — staff-only views across all carts | `getallcarts` |
+| `cartoversight` | The staff's view of every cart in the shop, across all customers | `getallcarts` |
 
 `getactivecart` is the query a page or a `GET` asks — it never opens a cart, and a customer without an active
 cart gets none (the cart page then shows an empty cart, the API answers `404`); `getorcreateactivecart` is the
@@ -31,8 +31,9 @@ effect, not after the login that leads to it: when and by whom it runs is the ad
 
 `application/shared/` stays context-wide (`ShoppingCartRepository`, `ArticleDataPort`). The web
 adapters mirror `shopping` and `cartrecovery`, with `CartPageNotice` beside them — the notices the cart and the
-merge page show after a redirect, the checkout's included; the REST resource serves every feature and stays under
-`adapter/incoming/api/`.
+merge page show after a redirect, the checkout's included; the REST resources stay flat under
+`adapter/incoming/api/` — `ShoppingCartResource` for the caller's own carts, `CartOversightResource` for the
+staff's list of every cart.
 
 ## Aggregates
 
@@ -398,5 +399,12 @@ The parts of the context's behaviour its people name; each groups what holds in 
 ### Cart checkout (cartcheckout)
 
 **Definition:** The cart after an order: it keeps what was not bought.
+
+**Type:** Feature
+
+### Cart oversight (cartoversight)
+
+**Definition:** The staff's view of every cart in the shop, across all customers — the one cart view that leaves
+the caller's own data, and therefore staff only.
 
 **Type:** Feature

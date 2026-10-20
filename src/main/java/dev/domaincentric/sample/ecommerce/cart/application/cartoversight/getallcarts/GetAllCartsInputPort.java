@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts;
+package dev.domaincentric.sample.ecommerce.cart.application.cartoversight.getallcarts;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 

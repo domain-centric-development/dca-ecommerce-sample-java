@@ -1636,7 +1636,7 @@ application/
 **Location:**
 - Product Use Cases: `dev.domaincentric.sample.ecommerce.product.application.{usecasename}` (flat — few use cases)
 - Cart Use Cases: `dev.domaincentric.sample.ecommerce.cart.application.{feature}.{usecasename}` — grouped into the
-  features `shopping`, `cartrecovery`, `cartcheckout`, `operations`
+  features `shopping`, `cartrecovery`, `cartcheckout`, `cartoversight`
 - Checkout Use Cases: `dev.domaincentric.sample.ecommerce.checkout.application.{feature}.{usecasename}` — grouped into
   `session`, `checkoutcompletion`, `cartsync`
 - Shared Output Ports: `dev.domaincentric.sample.ecommerce.{context}.application.shared` (context-wide, never per feature)

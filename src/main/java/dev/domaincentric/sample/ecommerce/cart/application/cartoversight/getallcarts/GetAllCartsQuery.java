@@ -1,4 +1,4 @@
-package dev.domaincentric.sample.ecommerce.cart.application.operations.getallcarts;
+package dev.domaincentric.sample.ecommerce.cart.application.cartoversight.getallcarts;
 
 /**
  * Input model for retrieving all shopping carts.
