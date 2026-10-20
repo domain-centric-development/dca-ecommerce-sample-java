@@ -48,6 +48,17 @@ Title: A guest who logs in from the buyer step returns to the checkout after the
 
 - answered: a guest who logs in from the buyer step returns to the checkout through the cart take-over, with the
   order; adopted where it already holds, built where not (planning/questions-2026-10-15.md Q6)
+- answered: the checkout session belongs to the cart, not to the person. Checkout finds the session through the
+  current customer's active cart and asks Cart (the existing Checkout → Cart direction) whether that cart belongs to
+  the current customer. The take-over keeps the guest cart itself (same cart id, same positions) as the account's when
+  the account's cart holds nothing, so after the login the same session is found and the person lands on the delivery
+  step (the buyer is known now). When the two carts are merged, Cart records that guest cart X was taken over into
+  cart Y; after the merge page the person lands on the delivery step, where Checkout follows that record (read through
+  Cart), moves the guest's open session to the account and cart Y and captures the merged cart anew. A reload changes
+  nothing further. This is the one place where a step page's GET updates an existing session; it never creates one,
+  so buyer-step-without-a-checkout-leads-to-the-cart and its three neighbours hold. An ADR names this exception. Cart
+  never calls Checkout. Built the same in both shops — answered by Christoph Bloemer on 2026-10-15 in the .NET shop's
+  decision logging-in-from-the-checkout-returns-to-it-01
 
 ## Notes
 
