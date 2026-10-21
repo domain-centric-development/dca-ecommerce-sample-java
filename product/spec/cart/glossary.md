@@ -26,7 +26,8 @@ The Cart context groups its use cases into four features — domain-named naviga
 cart gets none (the cart page then shows an empty cart, the API answers `404`); `getorcreateactivecart` is the
 command that opens one when a change needs it, as adding a product does.
 
-`RecoverCart` (in `recovercart`) moves the guest cart's lines into the account's cart. It is named after its
+`RecoverCart` (in `recovercart`) gives the account the guest cart itself when the account's cart holds nothing,
+and moves the guest cart's lines into the account's cart otherwise. It is named after its
 effect, not after the login that leads to it: when and by whom it runs is the adapter's business.
 
 `application/shared/` stays context-wide (`ShoppingCartRepository`, `ArticleDataPort`). The web
@@ -51,7 +52,7 @@ An editable collection of stable positions. Checkout copies a snapshot through t
 - `removeItemByProductId` — the position holding a product is gone from the cart; the API reaches it through `RemoveItemFromCart`
 - `updateItemQuantity` — sets a position's quantity; `increaseItemQuantity` / `decreaseItemQuantity` change it by one
 - `merge` — the positions of another cart are added to this one; the source cart is left untouched
-- taking over the guest cart (`RecoverCart`) — the guest cart's lines move into the account's cart; it runs when the form of the page after the login is sent (by the browser's script, or with "Continue"), never when a page is only opened
+- taking over the guest cart (`RecoverCart`) — when the account's cart holds nothing, the guest cart itself — same id, same positions — becomes the account's (`takeOverBy`; an empty account cart is deleted; no event); otherwise the guest cart's lines move into the account's cart; it runs when the form of the page after the login is sent (by the browser's script, or with "Continue"), never when a page is only opened
 - `clear` — every position is gone; the cart itself stays, active
 - `reconcileCheckout` — the units a checkout bought are taken out of their positions, positions left without units are gone; the cart stays active and editable
 - `abandon` — the cart is kept with status abandoned and rejects edits; it is not deleted

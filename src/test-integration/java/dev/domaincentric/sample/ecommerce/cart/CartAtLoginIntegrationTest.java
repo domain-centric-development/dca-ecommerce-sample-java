@@ -80,20 +80,22 @@ class CartAtLoginIntegrationTest {
   }
 
   @Test
-  @DisplayName("Login from the checkout keeps the cart, not the checkout")
-  void loggingInFromTheBuyerStepKeepsTheGuestsCartButNotTheirCheckout() throws Exception {
+  @DisplayName("Login from the checkout returns there over an account cart that was emptied")
+  void loggingInFromTheBuyerStepReturnsThereWhenTheAccountsCartWasEmptied() throws Exception {
     final String email = anAccount();
+    final Browser elsewhere = new Browser();
+    elsewhere.logIn("/login", email);
+    elsewhere.addToCart("Clean Architecture");
+    elsewhere.submit(elsewhere.page(CART).selectFirst("[data-test=cart-item-remove-form]"));
+    assertThat(linesOf(elsewhere.page(CART))).isEmpty();
     final Browser guest = new Browser();
     guest.addToCart("Domain-Driven Design");
-    final MvcResult started =
-        guest.submit(guest.page(CART).selectFirst("[data-test=cart-checkout-form]"));
-    assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
+    guest.submit(guest.page(CART).selectFirst("[data-test=cart-checkout-form]"));
 
     final Landing landed = guest.logIn("/login?returnUrl=" + BUYER_STEP, email);
 
-    assertThat(landed.path()).isEqualTo(CART);
-    assertThat(errorOn(landed.page())).isEqualTo("No active checkout session found");
-    assertThat(linesOf(landed.page())).containsExactly("Domain-Driven Design x1");
+    assertThat(landed.path()).isEqualTo(BUYER_STEP);
+    assertThat(summaryOf(landed.page())).containsExactly("Domain-Driven Design x1");
   }
 
   @Test
@@ -140,9 +142,15 @@ class CartAtLoginIntegrationTest {
         .toList();
   }
 
-  /** The cart page's error message, or null when it shows none. */
-  private static String errorOn(final Document page) {
-    return textOf(page, "cart-error-message");
+  /** A checkout step's order summary, each line as "name xQuantity". */
+  private static List<String> summaryOf(final Document step) {
+    return step.select("[data-test=order-summary-item]").stream()
+        .map(
+            item ->
+                item.selectFirst("[data-test=order-summary-item-name]").text()
+                    + " "
+                    + item.selectFirst("[data-test=order-summary-item-qty]").text())
+        .toList();
   }
 
   /** The text of the element with that {@code data-test} name, or null when the page has none. */

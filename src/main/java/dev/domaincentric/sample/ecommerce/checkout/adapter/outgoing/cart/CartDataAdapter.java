@@ -33,6 +33,13 @@ public class CartDataAdapter implements CartDataPort {
         .map(this::toCartData);
   }
 
+  @Override
+  public Optional<CartId> findActiveCartIdOf(final CustomerId customerId) {
+    return cartService
+        .findActiveCartId(customerId.value())
+        .map(cartId -> CartId.of(cartId.toString()));
+  }
+
   private CartData toCartData(final CartSnapshot snapshot) {
     final java.util.List<CartData.CartItemData> items =
         snapshot.items().stream()

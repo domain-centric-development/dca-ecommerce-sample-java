@@ -17,7 +17,7 @@ The Checkout context groups its use cases into three features — domain-named n
 | Feature | Meaning | Use cases |
 |---------|---------|-----------|
 | `session` | Starting a checkout session from a cart and reading it back in its lifecycle states | `startcheckout`, `getactivecheckoutsession`, `getcheckoutsession`, `getconfirmedcheckoutsession` |
-| `checkoutcompletion` | The steps that complete a checkout: buyer information, delivery, payment, confirmation | `submitbuyerinfo`, `getshippingoptions`, `submitdelivery`, `getpaymentproviders`, `submitpayment`, `confirmcheckout` |
+| `checkoutcompletion` | The steps that complete a checkout: buyer information, delivery, payment, confirmation | `resumecheckout`, `submitbuyerinfo`, `getshippingoptions`, `submitdelivery`, `getpaymentproviders`, `submitpayment`, `confirmcheckout` |
 | `cartsync` | Following changes of the underlying cart while the session is active | `synccheckoutwithcart` |
 
 `application/shared/` stays context-wide. The web adapters mirror `session` and `checkoutcompletion`
@@ -55,6 +55,9 @@ claim of durable distributed transactions or universal rollback of unenlisted re
 
 **Operations:**
 - `start` — the session comes into existence over a snapshot of the cart's positions, quantities and prices
+- resuming the checkout (`takeOverBy`, through `ResumeCheckout`) — the active session of the customer's active cart
+  becomes that customer's: same id, cart, step and line items; no event; never starts a session; refused on a session
+  that no longer takes changes. The buyer step's page resumes it when it finds no session of the customer (ADR-046)
 - `supersede` — kept with status superseded when a new checkout action replaces it; no event; only an active session can be superseded
 - `submitBuyerInfo`, `submitDelivery`, `submitPayment` — record the step's data and move on to the next step when standing on it
 - `assertReadyForPayment` — a question: the preconditions of `submitPayment`, checked without changing anything

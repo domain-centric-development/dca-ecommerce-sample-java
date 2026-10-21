@@ -51,17 +51,32 @@ class RecoverCartUseCaseTest {
   @DisplayName("moves the anonymous cart to an account that has none")
   void movesTheAnonymousCartToAnAccountThatHasNone() {
     final ProductId product = ProductId.generate();
-    cartFor(ANONYMOUS_USER_ID, product, 2);
+    final ShoppingCart guestCart = cartFor(ANONYMOUS_USER_ID, product, 2);
 
     final RecoverCartResult result = recover();
 
     assertEquals(1, result.itemsMerged());
-    assertTrue(result.anonymousCartDeleted());
+    assertEquals(guestCart.id().value(), result.cartId());
     final ShoppingCart recovered = activeCartOf(REGISTERED_USER_ID).orElseThrow();
+    assertEquals(guestCart.id(), recovered.id());
     assertEquals(1, recovered.itemCount());
     assertEquals(product, recovered.items().getFirst().productId());
     assertTrue(activeCartOf(ANONYMOUS_USER_ID).isEmpty());
-    assertFalse(eventPublisher.publishedEvents().isEmpty());
+    assertTrue(eventPublisher.publishedEvents().isEmpty());
+  }
+
+  @Test
+  @DisplayName("moves the anonymous cart to an account whose cart is empty, and drops that one")
+  void movesTheAnonymousCartToAnAccountWhoseCartIsEmpty() {
+    final ShoppingCart emptyAccountCart =
+        repository.save(ShoppingCart.create(CartId.generate(), CustomerId.of(REGISTERED_USER_ID)));
+    final ShoppingCart guestCart = cartFor(ANONYMOUS_USER_ID, ProductId.generate(), 1);
+
+    final RecoverCartResult result = recover();
+
+    assertEquals(guestCart.id().value(), result.cartId());
+    assertEquals(guestCart.id(), activeCartOf(REGISTERED_USER_ID).orElseThrow().id());
+    assertTrue(repository.findById(emptyAccountCart.id()).isEmpty());
   }
 
   @Test
@@ -113,11 +128,11 @@ class RecoverCartUseCaseTest {
     return useCase.execute(new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID));
   }
 
-  private void cartFor(final String userId, final ProductId productId, final int quantity) {
+  private ShoppingCart cartFor(final String userId, final ProductId productId, final int quantity) {
     final ShoppingCart cart = ShoppingCart.create(CartId.generate(), CustomerId.of(userId));
     cart.addItem(productId, Quantity.of(quantity), Price.of(Money.of(new BigDecimal("9.99"), EUR)));
     cart.clearDomainEvents();
-    repository.save(cart);
+    return repository.save(cart);
   }
 
   private Optional<ShoppingCart> activeCartOf(final String userId) {

@@ -48,7 +48,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
 
   private final CheckoutSessionId id;
   private final CartId cartId;
-  private final CustomerId customerId;
+  private CustomerId customerId;
   private final List<CheckoutLineItem> lineItems;
   private CheckoutTotals totals;
   private CheckoutStep currentStep;
@@ -107,6 +107,19 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
         CheckoutSessionStarted.now(sessionId, cartId, customerId, subtotal, lineItems.size()));
 
     return session;
+  }
+
+  /**
+   * The customer takes the session over: the same session, at the same step, with the same line
+   * items, is theirs now. The caller states that this customer owns the session's cart; the session
+   * does not check it.
+   *
+   * @param customer the customer the session belongs to from now on
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   */
+  public void takeOverBy(final CustomerId customer) {
+    ensureModifiable();
+    this.customerId = customer;
   }
 
   /** Replaced by a new explicit checkout action; confirmed orders cannot be superseded. */

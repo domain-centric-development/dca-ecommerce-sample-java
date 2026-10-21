@@ -2,6 +2,9 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.resumecheckout.ResumeCheckoutCommand;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.resumecheckout.ResumeCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.resumecheckout.ResumeCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
@@ -44,16 +47,19 @@ public class BuyerInfoPageController {
   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
   private final SubmitBuyerInfoInputPort submitBuyerInfoInputPort;
+  private final ResumeCheckoutInputPort resumeCheckoutInputPort;
   private final IdentityProvider identityProvider;
 
   public BuyerInfoPageController(
       final GetCheckoutSessionInputPort getCheckoutSessionInputPort,
       final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort,
       final SubmitBuyerInfoInputPort submitBuyerInfoInputPort,
+      final ResumeCheckoutInputPort resumeCheckoutInputPort,
       final IdentityProvider identityProvider) {
     this.getCheckoutSessionInputPort = getCheckoutSessionInputPort;
     this.getActiveCheckoutSessionInputPort = getActiveCheckoutSessionInputPort;
     this.submitBuyerInfoInputPort = submitBuyerInfoInputPort;
+    this.resumeCheckoutInputPort = resumeCheckoutInputPort;
     this.identityProvider = identityProvider;
   }
 
@@ -61,8 +67,8 @@ public class BuyerInfoPageController {
    * Displays the buyer information form.
    *
    * <p>This endpoint retrieves the active checkout session for the current user (via JWT identity)
-   * and displays the buyer info form. If no active session is found, redirects to cart with an
-   * error.
+   * and displays the buyer info form. Without one, the open checkout of the user's cart is resumed;
+   * if there is none either, redirects to cart with an error.
    *
    * @param model the Spring MVC model, holding the notice a redirect handed the page, if any
    * @param attributes the attributes of a redirect away from the page
@@ -75,19 +81,16 @@ public class BuyerInfoPageController {
     final IdentityProvider.Identity identity = identityProvider.getCurrentIdentity();
     final String customerId = identity.userId().value();
 
-    // Find active checkout session for the user
-    final GetActiveCheckoutSessionResult activeSession =
-        getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
+    final Optional<String> sessionId = activeOrResumedSessionId(customerId);
 
-    if (!activeSession.found()) {
+    if (sessionId.isEmpty()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
     final GetCheckoutSessionResult result =
         getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(
-                activeSession.sessionId(), customerId, CheckoutStep.BUYER_INFO));
+            GetCheckoutSessionQuery.forStep(sessionId.get(), customerId, CheckoutStep.BUYER_INFO));
 
     if (!result.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
@@ -150,6 +153,21 @@ public class BuyerInfoPageController {
 
           return "redirect:/checkout/delivery";
         });
+  }
+
+  /**
+   * The customer's active session, or the open checkout of their cart they resume — the one place a
+   * step page's GET changes a session (ADR-046): after a login the guest's checkout becomes theirs.
+   */
+  private Optional<String> activeOrResumedSessionId(final String customerId) {
+    final GetActiveCheckoutSessionResult activeSession =
+        getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
+    if (activeSession.found()) {
+      return Optional.ofNullable(activeSession.sessionId());
+    }
+    final ResumeCheckoutResult resumed =
+        resumeCheckoutInputPort.execute(new ResumeCheckoutCommand(customerId));
+    return resumed.resumed() ? Optional.ofNullable(resumed.sessionId()) : Optional.empty();
   }
 
   /** The domain's decision whether the step may be opened, for a submission sent too early. */

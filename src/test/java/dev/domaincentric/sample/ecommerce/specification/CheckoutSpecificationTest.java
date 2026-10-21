@@ -240,6 +240,10 @@ class CheckoutSpecificationTest {
               cart.isActive()));
     }
 
+    public Optional<CartId> findActiveCartIdOf(CustomerId customer) {
+      return Optional.of(CartId.of(cart.id().value()));
+    }
+
     public Map<ProductId, CheckoutArticle> getArticleData(Collection<ProductId> ids) {
       return ids.stream()
           .collect(

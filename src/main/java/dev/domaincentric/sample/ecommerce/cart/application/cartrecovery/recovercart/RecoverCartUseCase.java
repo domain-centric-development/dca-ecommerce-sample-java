@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recover
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
-import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
@@ -16,10 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>When a registered user logs in from a new device/browser:
  *
  * <ol>
- *   <li>Find cart for registered user's UserId
  *   <li>Find cart for anonymous user's UserId (if different)
- *   <li>If both exist, merge items from anonymous cart into registered cart
- *   <li>Delete the anonymous cart after merge
+ *   <li>Find cart for registered user's UserId
+ *   <li>If the registered user's cart is absent or holds nothing, the anonymous cart itself becomes
+ *       theirs (an empty registered cart is deleted)
+ *   <li>Otherwise, merge items from anonymous cart into registered cart and delete the anonymous
+ *       cart after merge
  * </ol>
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link RecoverCartInputPort}
@@ -58,19 +59,20 @@ public class RecoverCartUseCase implements RecoverCartInputPort {
       return RecoverCartResult.noRecoveryNeeded(registeredCustomerId.value());
     }
 
-    // Find or create registered user's active cart
-    final ShoppingCart registeredCart =
-        shoppingCartRepository
-            .findActiveCartByCustomerId(registeredCustomerId)
-            .orElseGet(
-                () -> {
-                  final ShoppingCart newCart =
-                      ShoppingCart.create(CartId.generate(), registeredCustomerId);
-                  return shoppingCartRepository.save(newCart);
-                });
-
-    // Merge items from anonymous cart into registered cart
     final ShoppingCart anonCart = anonymousCart.get();
+    final Optional<ShoppingCart> accountCart =
+        shoppingCartRepository.findActiveCartByCustomerId(registeredCustomerId);
+
+    // An account whose cart holds nothing takes the guest cart itself over: same id, same lines
+    if (accountCart.isEmpty() || accountCart.get().isEmpty()) {
+      accountCart.ifPresent(emptyCart -> shoppingCartRepository.deleteById(emptyCart.id()));
+      anonCart.takeOverBy(registeredCustomerId);
+      shoppingCartRepository.save(anonCart);
+      return RecoverCartResult.takenOver(anonCart);
+    }
+
+    // Merge items from anonymous cart into the account's cart
+    final ShoppingCart registeredCart = accountCart.get();
     int itemsMerged = 0;
 
     for (final CartItem item : anonCart.items()) {

@@ -3,6 +3,8 @@ package dev.domaincentric.sample.ecommerce.cart.api;
 import dev.domaincentric.dca.buildingblocks.ddd.strategic.relationships.OpenHostService;
 import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
@@ -31,12 +33,30 @@ import org.springframework.stereotype.Service;
 public class CartService {
 
   private final GetCartByIdInputPort getCartByIdInputPort;
+  private final GetActiveCartInputPort getActiveCartInputPort;
   private final CompleteCartInputPort completeCartInputPort;
 
   public CartService(
-      GetCartByIdInputPort getCartByIdInputPort, CompleteCartInputPort completeCartInputPort) {
+      GetCartByIdInputPort getCartByIdInputPort,
+      GetActiveCartInputPort getActiveCartInputPort,
+      CompleteCartInputPort completeCartInputPort) {
     this.getCartByIdInputPort = getCartByIdInputPort;
+    this.getActiveCartInputPort = getActiveCartInputPort;
     this.completeCartInputPort = completeCartInputPort;
+  }
+
+  /**
+   * The ID of the customer's active cart — the cart that belongs to that customer now, a guest cart
+   * the account took over at login included.
+   *
+   * @param customerId the customer the calling context is acting for
+   * @return the active cart's ID, empty when the customer has none
+   */
+  public Optional<UUID> findActiveCartId(String customerId) {
+    return getActiveCartInputPort
+        .execute(new GetActiveCartQuery(customerId))
+        .cartId()
+        .map(UUID::fromString);
   }
 
   /**

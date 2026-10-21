@@ -104,10 +104,16 @@ public class JpaShoppingCartRepository implements ShoppingCartRepository {
     }
   }
 
+  /**
+   * Deletes the cart at once, so a cart saved after it in the same transaction may claim the
+   * customer the deleted one held. Hibernate would otherwise run that update before the delete, and
+   * the unique index would refuse it.
+   */
   @Override
   @Transactional
   public void deleteById(final CartId id) {
     cartRepo.deleteById(id.value());
+    cartRepo.flush();
   }
 
   private CartSpecToJpa requireTranslator() {

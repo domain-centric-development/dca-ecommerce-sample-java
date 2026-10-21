@@ -68,6 +68,22 @@ class ActiveCartUniquenessTest {
   }
 
   @Test
+  @DisplayName("A cart that changes hands is its new owner's active cart, no longer the former's")
+  void aCartThatChangesHandsTakesItsClaimAlong() {
+    final InMemoryShoppingCartRepository carts = new InMemoryShoppingCartRepository();
+    final CustomerId guest = CustomerId.of("guest-" + System.nanoTime());
+    final CustomerId account = CustomerId.of("account-" + System.nanoTime());
+    final ShoppingCart cart = ShoppingCart.create(CartId.generate(), guest);
+    carts.save(cart);
+
+    cart.takeOverBy(account);
+    carts.save(cart);
+
+    assertTrue(carts.findActiveCartByCustomerId(guest).isEmpty());
+    assertEquals(cart.id(), carts.findActiveCartByCustomerId(account).orElseThrow().id());
+  }
+
+  @Test
   @DisplayName("Requests that arrive together end up on one cart, not several")
   void concurrentRequestsShareOneCart() throws Exception {
     for (int round = 0; round < ROUNDS; round++) {

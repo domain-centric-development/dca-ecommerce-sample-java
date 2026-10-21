@@ -27,4 +27,12 @@ public interface CartDataPort extends OutputPort {
    * @return the cart data if found, empty otherwise
    */
   Optional<CartData> findById(CartId cartId, CustomerId customerId);
+
+  /**
+   * Finds the ID of the cart that belongs to the customer now.
+   *
+   * @param customerId the customer this context is acting for
+   * @return the customer's active cart ID, empty when they have none
+   */
+  Optional<CartId> findActiveCartIdOf(CustomerId customerId);
 }

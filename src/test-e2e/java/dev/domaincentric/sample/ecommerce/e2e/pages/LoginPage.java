@@ -37,6 +37,24 @@ public class LoginPage extends BasePage {
   }
 
   /**
+   * Opens the login page with the page it is to return to, and creates a page object.
+   *
+   * @param page the Playwright page instance
+   * @param returnUrl the shop path the login returns to, e.g. {@code /checkout/buyer}
+   * @return a new LoginPage
+   */
+  public static LoginPage navigateTo(Page page, String returnUrl) {
+    page.navigate(BASE_URL + URL_PATTERN + "?returnUrl=" + returnUrl);
+    return new LoginPage(page, returnUrl);
+  }
+
+  /** The login page opened with that return URL, which the URL pattern alone does not match. */
+  private LoginPage(Page page, String returnUrl) {
+    super(page);
+    page.waitForURL(BASE_URL + URL_PATTERN + "?returnUrl=" + returnUrl);
+  }
+
+  /**
    * Fills the email field.
    *
    * @param email the email address

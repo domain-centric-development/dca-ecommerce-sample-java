@@ -44,7 +44,7 @@ import java.util.Optional;
 public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> {
 
   private final CartId id;
-  private final CustomerId customerId;
+  private CustomerId customerId;
   private final List<CartItem> items;
   private CartStatus status;
 
@@ -163,6 +163,17 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
 
   public CartStatus status() {
     return status;
+  }
+
+  /**
+   * The customer takes the cart over: the same cart, with the same positions, is theirs now.
+   *
+   * @param customer the customer the cart belongs to from now on
+   * @throws CartNotModifiableException if the cart is no longer active
+   */
+  public void takeOverBy(final CustomerId customer) {
+    ensureCartIsActive();
+    this.customerId = customer;
   }
 
   /**

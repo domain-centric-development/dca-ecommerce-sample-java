@@ -392,6 +392,11 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │       ├── GetConfirmedCheckoutSessionQuery.java
 │   │   │       └── GetConfirmedCheckoutSessionResult.java
 │   │   ├── checkoutcompletion/           # Feature: the steps that complete a checkout
+│   │   │   ├── resumecheckout/           # Use case: Resume Checkout
+│   │   │   │   ├── ResumeCheckoutInputPort.java
+│   │   │   │   ├── ResumeCheckoutUseCase.java
+│   │   │   │   ├── ResumeCheckoutCommand.java
+│   │   │   │   └── ResumeCheckoutResult.java
 │   │   │   ├── submitbuyerinfo/          # Use case: Submit Buyer Info
 │   │   │   │   ├── SubmitBuyerInfoInputPort.java
 │   │   │   │   ├── SubmitBuyerInfoUseCase.java

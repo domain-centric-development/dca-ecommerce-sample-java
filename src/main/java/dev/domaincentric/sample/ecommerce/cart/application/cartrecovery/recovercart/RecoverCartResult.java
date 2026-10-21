@@ -10,11 +10,12 @@ import org.jspecify.annotations.Nullable;
 /**
  * Output model for recovering a guest cart.
  *
- * @param cartId the resulting cart ID (registered user's cart)
+ * @param cartId the resulting cart ID (the registered user's cart, or the guest cart they took
+ *     over)
  * @param customerId the registered user's customer ID
- * @param items the merged list of cart items
- * @param total the total cart amount after merge
- * @param itemsMerged number of items merged from anonymous cart
+ * @param items the cart items after the recovery
+ * @param total the total cart amount after the recovery
+ * @param itemsMerged number of items the registered user's cart gained from the anonymous cart
  * @param anonymousCartDeleted whether the anonymous cart was deleted
  */
 public record RecoverCartResult(
@@ -31,14 +32,24 @@ public record RecoverCartResult(
         null, customerId, List.of(), Money.zero(Currency.getInstance("EUR")), 0, false);
   }
 
+  /** Builds the result from the guest cart the account took over, which was not deleted. */
+  public static RecoverCartResult takenOver(final ShoppingCart cart) {
+    return of(cart, cart.itemCount(), false);
+  }
+
   /** Builds the result from the registered cart as it stands after the recovery. */
   public static RecoverCartResult recovered(final ShoppingCart cart, final int itemsMerged) {
+    return of(cart, itemsMerged, true);
+  }
+
+  private static RecoverCartResult of(
+      final ShoppingCart cart, final int itemsMerged, final boolean anonymousCartDeleted) {
     return new RecoverCartResult(
         cart.id().value(),
         cart.customerId().value(),
         cart.items().stream().map(CartItemSummary::from).toList(),
         cart.calculateTotal(),
         itemsMerged,
-        true);
+        anonymousCartDeleted);
   }
 }

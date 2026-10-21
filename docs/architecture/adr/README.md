@@ -55,6 +55,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-043](adr-043-development-defaults-fail-closed.md) | A committed default must not start a real deployment | Accepted |
 | [ADR-044](adr-044-exception-layers-and-problem-details.md) | A failure carries its own type, and only the adapter turns it into an answer | Accepted |
 | [ADR-045](adr-045-the-active-cart-claim-reaches-the-relational-store.md) | The active-cart claim reaches the relational store | Accepted |
+| [ADR-046](adr-046-a-step-page-takes-the-checkout-over.md) | A step page takes the checkout over | Accepted |
 
 ### Proposed 🟡
 

@@ -86,6 +86,13 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
     // of the index and find nothing behind it.
     carts.put(cart.id(), cart);
 
+    // A cart an account took over is claimed by its new owner; the former owner's claim goes.
+    activeCartByCustomer
+        .entrySet()
+        .removeIf(
+            claim ->
+                claim.getValue().equals(cart.id()) && !claim.getKey().equals(cart.customerId()));
+
     if (cart.status() == CartStatus.ACTIVE) {
       final CartId claimed = activeCartByCustomer.putIfAbsent(cart.customerId(), cart.id());
       if (claimed != null && !claimed.equals(cart.id())) {
