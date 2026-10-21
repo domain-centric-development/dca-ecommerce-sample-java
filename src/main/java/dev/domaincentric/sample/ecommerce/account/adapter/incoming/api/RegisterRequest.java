@@ -27,5 +27,5 @@ public record RegisterRequest(
     @NotBlank(message = "Last name is required") @Size(max = 100, message = "Last name is too long")
         String lastName,
     @NotNull(message = "Date of birth is required")
-        @Past(message = "Date of birth cannot be in the future")
+        @Past(message = "Date of birth must lie in the past")
         LocalDate dateOfBirth) {}

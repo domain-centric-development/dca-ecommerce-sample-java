@@ -495,7 +495,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── HashedPassword.java
 │   │   │   └── AccountStatus.java
 │   │   ├── specification/                # Domain specifications
-│   │   │   └── UsableDateOfBirth.java    # Known, not in the future
+│   │   │   └── UsableDateOfBirth.java    # Known, before today
 │   │   ├── service/                      # Domain services
 │   │   │   └── PasswordHasher.java       # Interface for password hashing
 │   │   └── event/                        # Domain events

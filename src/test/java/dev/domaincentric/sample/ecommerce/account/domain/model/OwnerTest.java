@@ -80,9 +80,11 @@ class OwnerTest {
   }
 
   @Test
-  @DisplayName("accepts today as a date of birth")
-  void acceptsToday() {
-    assertEquals(LocalDate.now(), Owner.of("Jane", "Doe", LocalDate.now()).dateOfBirth());
+  @DisplayName("refuses today as a date of birth")
+  void refusesToday() {
+    final LocalDate today = LocalDate.now();
+
+    assertThrows(IllegalArgumentException.class, () -> Owner.of("Jane", "Doe", today));
   }
 
   @Test

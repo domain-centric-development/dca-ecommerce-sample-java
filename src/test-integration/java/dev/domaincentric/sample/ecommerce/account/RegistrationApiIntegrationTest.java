@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,6 +70,19 @@ class RegistrationApiIntegrationTest {
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(jsonPath("$.title").value("Unacceptable value"))
         .andExpect(jsonPath("$.detail").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("Todays date of birth is refused through the api")
+  void aDateOfBirthOfTodayIsAnUnacceptableValueNamingTheField() throws Exception {
+    final String today = LocalDate.now().toString();
+
+    mockMvc
+        .perform(registration("grace@example.com", "Secret123", "Grace", "Hopper", today))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.title").value("Unacceptable value"))
+        .andExpect(jsonPath("$.errors.dateOfBirth").value("Date of birth must lie in the past"));
   }
 
   @Test

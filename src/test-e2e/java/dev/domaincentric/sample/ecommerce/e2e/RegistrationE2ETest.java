@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.domaincentric.sample.ecommerce.e2e.pages.HomePage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.RegisterPage;
 import dev.domaincentric.sample.ecommerce.e2e.pages.SiteHeader;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -104,5 +105,22 @@ class RegistrationE2ETest extends BaseE2ETest {
     assertEquals("", register.fieldValue("confirmPassword"));
     assertTrue(
         new SiteHeader(page).offersRegister(), "a refused visitor is still offered to register");
+  }
+
+  @Test
+  @DisplayName("Todays date of birth is refused")
+  void aDateOfBirthOfTodayIsRefusedWithTheCheckYourEntriesSentence() {
+    RegisterPage register = RegisterPage.navigateTo(page);
+
+    register
+        .fillOwner("Anna", "Schmidt", LocalDate.now().toString())
+        .fillEmail("born.today@example.com")
+        .fillPassword("Secret123")
+        .fillConfirmPassword("Secret123")
+        .submitExpectingRefusal();
+
+    assertEquals(
+        "Please check the email address, your name and your date of birth.",
+        register.errorMessage());
   }
 }

@@ -70,7 +70,7 @@ profile page shows it).
 
 **Notes:** Names are trimmed but never otherwise normalized — capitalization, particles and spelling
 of a person's own name are not the account's to correct — and are limited to 100 characters. A date
-of birth is mandatory and may not lie in the future. Immutability of the name is a property of the
+of birth is mandatory and must lie before today. Immutability of the name is a property of the
 type rather than a rule callers must remember: there is no setter, and the one derivation
 (`withDateOfBirth`) copies the names. The date rule itself lives in the **Usable Date of Birth**
 specification below.
@@ -111,7 +111,7 @@ characters, so a multi-byte password within that hint can still be refused by th
 
 ### Usable Date of Birth
 
-**Definition:** A date of birth is usable when it is known and does not lie in the future.
+**Definition:** A date of birth is usable when it is known and lies before today.
 
 **Type:** Specification (`account.domain.specification.UsableDateOfBirth`, implements
 `Specification<LocalDate>`)

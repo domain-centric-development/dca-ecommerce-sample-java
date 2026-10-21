@@ -25,9 +25,23 @@ class UsableDateOfBirthTest {
   }
 
   @Test
-  @DisplayName("today satisfies the rule")
-  void todayIsSatisfying() {
-    assertTrue(UsableDateOfBirth.RULE.isSatisfiedBy(LocalDate.now()));
+  @DisplayName("yesterday satisfies the rule")
+  void yesterdayIsSatisfying() {
+    assertTrue(UsableDateOfBirth.RULE.isSatisfiedBy(LocalDate.now().minusDays(1)));
+  }
+
+  @Test
+  @DisplayName("today does not satisfy the rule")
+  void todayIsNotSatisfying() {
+    assertFalse(UsableDateOfBirth.RULE.isSatisfiedBy(LocalDate.now()));
+  }
+
+  @Test
+  @DisplayName("enforcing refuses today")
+  void enforcingRefusesToday() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> UsableDateOfBirth.RULE.requireSatisfiedBy(LocalDate.now()));
   }
 
   @Test

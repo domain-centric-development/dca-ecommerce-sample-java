@@ -9,10 +9,14 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.AccountNotAccessi
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordTooWeakException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -99,6 +103,21 @@ public class AccountApiExceptionHandler {
   }
 
   /**
+   * The body names a value the request refuses — a date of birth that is not in the past; {@code
+   * errors} names each field as the request spells it, and why.
+   */
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ProblemDetail handleRefusedField(final MethodArgumentNotValidException exception) {
+    final Map<String, String> errors = new LinkedHashMap<>();
+    for (final FieldError error : exception.getBindingResult().getFieldErrors()) {
+      errors.putIfAbsent(error.getField(), error.getDefaultMessage());
+    }
+    final ProblemDetail problem = unacceptableValue();
+    problem.setProperty("errors", errors);
+    return problem;
+  }
+
+  /**
    * A value the caller sent is not acceptable to a value object — a malformed address, a blank
    * name. The one mapping that stays imprecise: this is also the type a defect in this application
    * raises, and nothing in the type tells the two apart.
@@ -106,6 +125,10 @@ public class AccountApiExceptionHandler {
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleUnacceptableValue(final IllegalArgumentException exception) {
     LOG.debug("Rejected request value: {}", exception.getMessage());
+    return unacceptableValue();
+  }
+
+  private static ProblemDetail unacceptableValue() {
     return problem(HttpStatus.BAD_REQUEST, "Unacceptable value");
   }
 

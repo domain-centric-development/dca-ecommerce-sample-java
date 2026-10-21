@@ -24,6 +24,7 @@ its title alone. A refused request field adds `errors`: each field as the reques
 | Account | `AccountNotAccessibleException` | 403 | Account not accessible | This account cannot sign in. |
 | Account | any other `UseCaseException` | 422 | Request cannot be served | — |
 | Account | any other `DomainException` | 422 | Business rule violated | — |
+| Account | a refused request field | 400 | Unacceptable value | — (`errors` names each field and why) |
 | Account | argument exception | 400 | Unacceptable value | — |
 | Cart | `CartNotFoundException` | 404 | Cart not found | There is no cart {cartId}. |
 | Cart | `ArticleNotAvailableException` | 422 | Article not available | There is no article for product {productId}. |

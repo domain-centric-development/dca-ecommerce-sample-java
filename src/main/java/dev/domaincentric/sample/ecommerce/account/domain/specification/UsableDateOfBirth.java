@@ -4,7 +4,7 @@ import dev.domaincentric.dca.buildingblocks.ddd.tactical.Specification;
 import java.time.LocalDate;
 
 /**
- * A date of birth is usable when it is known and does not lie in the future.
+ * A date of birth is usable when it is known and lies before today.
  *
  * <p>A first-class rule rather than a check buried in a constructor, because two components need
  * it: the {@code Owner} Value Object refuses to exist without a usable date, and the change-profile
@@ -23,7 +23,7 @@ public final class UsableDateOfBirth implements Specification<LocalDate> {
 
   @Override
   public boolean isSatisfiedBy(final LocalDate candidate) {
-    return candidate != null && !candidate.isAfter(LocalDate.now());
+    return candidate != null && candidate.isBefore(LocalDate.now());
   }
 
   /**
@@ -32,14 +32,14 @@ public final class UsableDateOfBirth implements Specification<LocalDate> {
    * <p>The message is for the log; a page that shows the refusal words it itself.
    *
    * @param candidate the date to check
-   * @throws IllegalArgumentException if the date is missing or lies in the future
+   * @throws IllegalArgumentException if the date is missing or does not lie before today
    */
   public void requireSatisfiedBy(final LocalDate candidate) {
     if (candidate == null) {
       throw new IllegalArgumentException("Date of birth is required");
     }
-    if (candidate.isAfter(LocalDate.now())) {
-      throw new IllegalArgumentException("Date of birth cannot be in the future");
+    if (!candidate.isBefore(LocalDate.now())) {
+      throw new IllegalArgumentException("Date of birth cannot be today or in the future");
     }
   }
 }
