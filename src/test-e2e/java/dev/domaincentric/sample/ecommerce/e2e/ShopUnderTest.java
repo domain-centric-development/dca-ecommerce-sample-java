@@ -4,12 +4,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.boot.SpringApplication;
@@ -163,6 +170,42 @@ public final class ShopUnderTest {
                     .getBean(TokenService.class)
                     .generateRegisteredToken(
                         UserId.of(userId), email, Set.of(Role.CUSTOMER, Role.STAFF)));
+  }
+
+  /**
+   * A staff token from a shop this suite started with {@link #startedWith}: an account registered
+   * through its API, its token minted again with the staff role by that shop's own token service —
+   * no registration or login hands the role out.
+   *
+   * @param started the shop
+   * @return the token
+   * @throws Exception when the registration cannot be sent or read
+   */
+  public static String staffTokenOf(final ConfigurableApplicationContext started) throws Exception {
+    final HttpResponse<String> registered =
+        HttpClient.newHttpClient()
+            .send(
+                HttpRequest.newBuilder(URI.create(baseUrlOf(started) + "/api/auth/register"))
+                    .header("Content-Type", "application/json")
+                    .POST(
+                        HttpRequest.BodyPublishers.ofString(
+                            """
+                            {"email":"staff@example.com","password":"Secret123",\
+                            "firstName":"Ada","lastName":"Lovelace","dateOfBirth":"1815-12-10"}"""))
+                    .build(),
+                HttpResponse.BodyHandlers.ofString());
+    if (registered.statusCode() != 201) {
+      throw new IllegalStateException("registration answered " + registered.body());
+    }
+    final ObjectMapper json = new ObjectMapper();
+    final String token = json.readTree(registered.body()).path("token").asText();
+    final JsonNode claims = json.readTree(Base64.getUrlDecoder().decode(token.split("\\.")[1]));
+    return started
+        .getBean(TokenService.class)
+        .generateRegisteredToken(
+            UserId.of(claims.path("sub").asText()),
+            claims.path("email").asText(),
+            Set.of(Role.CUSTOMER, Role.STAFF));
   }
 
   private static WireMockServer authorizingPaymentProvider() {

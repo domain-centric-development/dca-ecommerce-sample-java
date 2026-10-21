@@ -3,10 +3,14 @@ package dev.domaincentric.sample.ecommerce.product.adapter.incoming.api;
 import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.DuplicateSkuException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -56,15 +60,34 @@ public class ProductApiExceptionHandler {
   }
 
   /**
-   * A value the caller sent is not acceptable to a value object — a malformed stock keeping unit, a
-   * blank name. This is the one mapping that stays imprecise: the same exception type is what the
-   * runtime raises for a defect in this application, and nothing in the type tells the two apart.
-   * Moving each such check into request validation is what removes the ambiguity, one field at a
-   * time.
+   * The body names a value the request refuses — a blank name, a price of zero, a negative stock;
+   * {@code errors} names each field as the request spells it, and why.
+   */
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ProblemDetail handleRefusedField(final MethodArgumentNotValidException exception) {
+    final Map<String, String> errors = new LinkedHashMap<>();
+    for (final FieldError error : exception.getBindingResult().getFieldErrors()) {
+      errors.putIfAbsent(error.getField(), error.getDefaultMessage());
+    }
+    final ProblemDetail problem = unacceptableValue();
+    problem.setProperty("errors", errors);
+    return problem;
+  }
+
+  /**
+   * A value the caller sent is not acceptable to a value object — a malformed stock keeping unit,
+   * an overlong name. This is the one mapping that stays imprecise: the same exception type is what
+   * the runtime raises for a defect in this application, and nothing in the type tells the two
+   * apart. Moving each such check into request validation is what removes the ambiguity, one field
+   * at a time.
    */
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleUnacceptableValue(final IllegalArgumentException exception) {
     LOG.debug("Rejected request value: {}", exception.getMessage());
+    return unacceptableValue();
+  }
+
+  private static ProblemDetail unacceptableValue() {
     return problem(HttpStatus.BAD_REQUEST, "Unacceptable value");
   }
 

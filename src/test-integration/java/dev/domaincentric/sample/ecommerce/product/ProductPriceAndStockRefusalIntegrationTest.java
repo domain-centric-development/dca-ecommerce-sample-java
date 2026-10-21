@@ -27,8 +27,8 @@ import org.springframework.test.web.servlet.MvcResult;
 /**
  * A price or an initial stock of a new product the shop refuses over the REST API — nothing, a
  * fraction of a cent that rounds to nothing, more than the highest amount, less than no stock — and
- * how the wired application says so: a bad request, as a problem document where the refusal comes
- * from the domain.
+ * how the wired application says so: a bad request, as a problem document titled "Unacceptable
+ * value" — naming the refused field where the request itself refuses it.
  */
 // A database of its own: the catalogue is asserted to hold exactly the 21 seeded products.
 @SpringBootTest(
@@ -49,13 +49,13 @@ class ProductPriceAndStockRefusalIntegrationTest {
 
   @Test
   @DisplayName("A price of zero is refused")
-  void aPriceOfZeroIsABadRequestAndNothingIsCreated() throws Exception {
+  void aPriceOfZeroIsAnUnacceptableValueNamingThePriceAndNothingIsCreated() throws Exception {
     final MvcResult result =
         create(
             """
             {"sku":"FREE-001","name":"Free Mug","price":0,"category":"Desk & Office","stock":5}""");
 
-    assertThat(result.getResponse().getStatus()).isEqualTo(400);
+    assertUnacceptableValueNaming("price", result);
     assertThat(getAllProducts.execute(new GetAllProductsQuery()).products()).hasSize(21);
   }
 
@@ -85,15 +85,27 @@ class ProductPriceAndStockRefusalIntegrationTest {
 
   @Test
   @DisplayName("A negative initial stock is refused")
-  void aNegativeInitialStockIsABadRequestAndNothingIsCreated() throws Exception {
+  void aNegativeInitialStockIsAnUnacceptableValueNamingTheStockAndNothingIsCreated()
+      throws Exception {
     final MvcResult result =
         create(
             """
             {"sku":"PIN-003","name":"Owed Pin","price":12.99,"category":"Stickers & Pins",\
             "stock":-1}""");
 
-    assertThat(result.getResponse().getStatus()).isEqualTo(400);
+    assertUnacceptableValueNaming("stock", result);
     assertThat(getAllProducts.execute(new GetAllProductsQuery()).products()).hasSize(21);
+  }
+
+  private static void assertUnacceptableValueNaming(final String field, final MvcResult result)
+      throws Exception {
+    assertThat(result.getResponse().getStatus()).isEqualTo(400);
+    assertThat(result.getResponse().getContentType()).startsWith("application/problem+json");
+    final JsonNode problem = JSON.readTree(result.getResponse().getContentAsString());
+    assertThat(problem.path("title").asText()).isEqualTo("Unacceptable value");
+    assertThat(problem.path("errors").path(field).asText())
+        .as("the reason the problem gives for %s: %s", field, problem)
+        .isNotBlank();
   }
 
   private static void assertUnacceptableValueWithoutDetail(final MvcResult result)

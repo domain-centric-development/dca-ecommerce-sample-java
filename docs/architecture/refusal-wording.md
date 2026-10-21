@@ -12,7 +12,7 @@ names as it is.
 ## API problem documents
 
 The `title` names the kind of refusal, the `detail` says it with the failure's values. A catch-all answers with
-its title alone.
+its title alone. A refused request field adds `errors`: each field as the request spells it, with its reason.
 
 | Context | Failure | Status | Title | Detail |
 |---|---|---|---|---|
@@ -36,6 +36,7 @@ its title alone.
 | Product | `DuplicateSkuException` | 409 | Stock keeping unit already in use | A product with SKU {sku} already exists. |
 | Product | any other `UseCaseException` | 422 | Request cannot be served | — |
 | Product | any other `DomainException` | 422 | Business rule violated | — |
+| Product | a refused request field | 400 | Unacceptable value | — (`errors` names each field and why) |
 | Product | argument exception | 400 | Unacceptable value | — |
 
 ## Pages
