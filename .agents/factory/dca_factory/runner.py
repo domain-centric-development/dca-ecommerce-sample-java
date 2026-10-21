@@ -524,8 +524,10 @@ def migrate_delivery(cwd, epics, runs, say):
 def migrate_spec(cwd, epics, runs, say):
     """The living spec from what is delivered (WP-98): every delivered story merged into its context's spec — or a
     journey item into `journeys.md` — in the order of its `delivered:` time, its test lines from its `tests.md` where
-    the run folder kept one; a story without a mapping is merged without test lines and named. A story whose criteria
-    the spec holds already is left alone, so a second run changes nothing."""
+    the run folder kept one; a story without a mapping is merged without test lines and named. Only a criterion the
+    spec lacks is merged — and not one a delivered story's plan removed at the same time or later: one the spec holds
+    in other words was changed since, one it lacks so was taken out, and taking either back would undo that. A story whose criteria the spec holds already is left alone, so a second run
+    changes nothing."""
     delivered = []
     for story_path in story_files(epics):
         try:
@@ -534,21 +536,30 @@ def migrate_spec(cwd, epics, runs, say):
             continue
         if is_delivered(front) and spec_target(front):
             delivered.append((delivered_on(front), story_id_of(story_path), story_path, front, body))
-    for _when, story_id, story_path, front, body in sorted(delivered):
+    place_of = lambda front: ("journeys" if story_kind(front) == "journey"
+                              else str(front.get("context", "")).strip().lower())
+    removed = {}
+    for when, story_id, _path, front, _body in delivered:
+        plan = os.path.join(runs, story_id, "plan.md")
+        if os.path.isfile(plan):
+            for key in read_delta(read_text(plan))["removes"]:
+                removed.setdefault((place_of(front), key), []).append(when)
+    for when, story_id, story_path, front, body in sorted(delivered):
         target, held, _features, _feature = story_spec(front)
         preamble, spec = read_spec(target)
         story = story_entries(body)
         # held anywhere in the context — its own file or a feature's (WP-105): a criterion moved into a feature
         # folder is not merged back into the file the story names
         found = derived(story, held)
-        if not story or all(verb == "holds" for verb in found.values()):
+        story = [item for item in story if found.get(item["key"]) == "adds"
+                 and not any(w >= when for w in removed.get((place_of(front), item["key"]), []))]
+        if not story:
             continue
         try:
             tests = read_mapping(runs, story_id)[1]
         except GateError:
             tests = {}
-        plan = os.path.join(runs, story_id, "plan.md")
-        delta = read_delta(read_text(plan)) if os.path.isfile(plan) else read_delta("")
+        delta = read_delta("")       # what the story's plan changed or removed holds already, or a later story undid it
         title = "Journeys" if story_kind(front) == "journey" else str(front.get("context", "")).strip()
         os.makedirs(os.path.dirname(target), exist_ok=True)
         with open(target, "w", encoding="utf-8") as handle:
@@ -902,7 +913,7 @@ test — {folder}/tests.md (gate after the stage: tests-mapped, tests-exist, com
   plan gave `level: browser-only`; every other scenario's test lives in a `test.<name>:` source set
 - titles: an end-user test's display name is the scenario's `Title:` line verbatim, else its key in words
   (`shows-empty-state` → "Shows empty state"); never the key itself in a name, display name or comment
-- `## Moved tests` (a spec test this story renamed): `| <key> | <selector> |` (`spec-tests`)
+- `## Moved tests` (a spec test the story renamed, of a key it does not carry): `| <key> | <new selector> |` (`spec-tests`)
 - one process per test command; each selector is read from its report by name
 - red: every selector in the table fails before any production code — the gate writes `{evidence}/.tests-red`
   (`<selector>\t<sha256 of the test file>`); the build gate refuses a test changed after it was seen red (`red-proof`)

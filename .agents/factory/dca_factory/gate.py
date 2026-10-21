@@ -2845,6 +2845,19 @@ def check_decisions(result, runs, story_id, cwd, gating=None, story_path=None):
                 f"{rid} has an `## Answer` that is not confirmed — {missing} missing in {rel}. "
                 f"A draft unblocks nothing; the person deciding signs it with a name and a time.",
             )
+        elif state == "answered" and stage == "integrate":
+            # The integrate step has no stage file of its own to cite an answer in, and its agent runs only on a
+            # conflict: the step applies the answer when it runs — its gate stamps it; every gate before it waits.
+            if gating == "integrate":
+                stamp_applied(path, stage)
+                story = story_path or find_story(place("epics"), story_id)
+                written = write_answered(story, runs, rid, answer_sentence(body, answer))
+                result.ok("decisions", f"{rid} applied by the integrate step ({answer.get('answer')!r} by "
+                                       f"{answer.get('by')}) — stamped in {rel}"
+                                       + (f", the answer an `answered:` line in {shown(story)}" if written else ""))
+            else:
+                result.note("decisions", f"{rid} is answered ({answer.get('answer')!r} by {answer.get('by')}) — the "
+                                         f"integrate step applies it; its gate stamps it.")
         elif state == "answered":
             text = stage_texts.get(stage)
             still_asking = text is not None and rid in (needs_human_ids(text) or [])
@@ -3204,10 +3217,29 @@ def record_main_tests(cwd, runs, story_id, target):
         os.remove(path)
 
 
-def main_tests_lost(cwd, runs, story_id):
+def main_tests_lost(cwd, runs, story_id, waive=True):
     """[(test file, [line, …])]: what the main line added to a test while the story ran that the story's tree no
     longer holds — a case another story added, an assertion it changed. Lines the main line kept from the base are
-    the story's to change (and `tests-kept` holds the story to them); the main line's own lines are not."""
+    the story's to change (and `tests-kept` holds the story to them); the main line's own lines are not. A file an
+    answered integrate decision names is the person's to settle (`waive`, #163): it is left out."""
+    lost = _main_tests_lost(cwd, runs, story_id)
+    return [(rel, lines) for rel, lines in lost if not main_tests_waiver(cwd, story_id, rel)] if waive else lost
+
+
+def main_tests_waiver(cwd, story_id, rel):
+    """The ids of the story's answered integrate decisions that name this test file — a person answered how its
+    main-line lines are resolved, so the check holds the resolution to that answer, not to the lines (#163). Read in
+    the main checkout, where the records are: the integrate step has taken the worktree's links down."""
+    try:
+        records = records_of(story_id, cwd=factory_home() or cwd)
+    except (GateError, OSError):
+        return []
+    return [str(front.get("id", "")).strip() for _p, front, body, state, _a in records
+            if state in ("answered", "applied") and str(front.get("stage", "")).strip() == "integrate"
+            and rel in body]
+
+
+def _main_tests_lost(cwd, runs, story_id):
     path = os.path.join(evidence_dir(runs, story_id), MAIN_TESTS)
     if not os.path.isfile(path):
         return []
@@ -3258,6 +3290,11 @@ def check_main_tests(result, cwd, runs, story_id):
         return
     lost = main_tests_lost(cwd, runs, story_id)
     target = integration_target(runs, story_id) or "the main line"
+    for rel, _lines in main_tests_lost(cwd, runs, story_id, waive=False):
+        ids = main_tests_waiver(cwd, story_id, rel)
+        if ids:
+            result.note("main-tests", f"{rel} keeps the resolution {', '.join(ids)} answered — the main line's lines "
+                                      f"there are not asked back")
     if lost:
         result.fail("main-tests", f"the merge's resolution changed a test the main line holds: {lost_text(lost)} — the "
                                   f"integrate stage puts the main line's side back (`git show {target}:<file>`) beside "
@@ -4687,7 +4724,17 @@ def check_spec_tests(result, cwd, runs, story_id, front, mapping):
     plan = os.path.join(runs, story_id, "plan.md")
     # a criterion the story takes away takes its test with it (WP-106 B): the delta's removals are not asked for
     removed = set(read_delta(read_text(plan))["removes"]) if os.path.isfile(plan) else set()
-    own = set(mapping or {}) | set(moved_tests(runs, story_id)) | removed
+    moved = moved_tests(runs, story_id)
+    if moved:
+        # a row names the test as it is now: the old one is gone, and the delivery writes the row into the spec
+        probe = Result()
+        check_exists(probe, cwd, moved)
+        absent = [message.split(" — ")[0] for state, _c, message in probe.entries if state == "fail"]
+        if absent:
+            result.fail("spec-tests", f"tests.md's `## Moved tests` names a test that is not there: {'; '.join(absent)}"
+                                      f" — a row names the test as it is now, not the one it replaced")
+            return
+    own = set(mapping or {}) | set(moved) | removed
     wanted = {item["key"]: item["tests"] for item in spec if item["tests"] and item["key"] not in own}
     if not wanted:
         return
@@ -4765,7 +4812,8 @@ def merge_spec(result, story_path, story_id, front, runs):
     except GateError:
         mapping = {}
     tests = dict(mapping)
-    tests.update(moved_tests(runs, story_id))
+    for key, selectors in moved_tests(runs, story_id).items():
+        tests.setdefault(key, selectors)        # a criterion of the story keeps the test its mapping names
     story = story_entries(body)
     context = str(front.get("context", "")).strip()
     journey = story_kind(front) == "journey"

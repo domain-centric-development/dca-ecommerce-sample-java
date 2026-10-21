@@ -50,6 +50,7 @@ product is the total I read back a moment later.
 
 - answered: cart answers carry today's price, in the field `price` in both shops; the price at addition stays
   internal (planning/questions-2026-10-15.md Q4.6)
+- answered: a — the two Test: lines are corrected on the main line (fa6873b8) to PaymentAtPlaceOrderIntegrationTest#choosingHowToPayRequestsNoPayment and #placeOrderRequestsThePaymentWithTheCheckoutReference; nothing in this story changes — merge the main line and run the build again. The cause, a Moved tests row naming the old test, is fixed in the pipeline (dca-factory 0.87.6). (every-cart-answer-shows-todays-price-01)
 
 ## Notes
 
