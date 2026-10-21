@@ -1,7 +1,9 @@
 ---
 id: a-date-of-birth-lies-in-the-past
 epic: shop-api
-status: approved
+status: delivered
+delivered: 2026-10-21T22:03:47Z
+delivered_by: gate
 created: 2026-10-15T07:50:52Z
 context: account
 feature: registration
@@ -47,6 +49,7 @@ past — so that a person who is refused on one way is refused on the other as w
 - answered: `unreadable-date-is-refused` and `future-date-is-refused` already hold with their tests, so the story no
   longer carries them; it keeps the two new scenarios (the user, 2026-10-21) (the .NET shop's decision
   a-date-of-birth-lies-in-the-past-01, for both shops; the rule's rename is withdrawn by this shop's decision -01, b)
+- answered: b — the rule "The date of birth must be a real date, and not in the future" keeps its words; the two new scenarios stand under a rule of their own, "The date of birth must be a real date in the past", as the .NET shop delivered it. A later task rewords the old rule and joins the two in both shops. (a-date-of-birth-lies-in-the-past-01)
 
 ## Notes
 

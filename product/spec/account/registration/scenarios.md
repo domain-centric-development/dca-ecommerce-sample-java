@@ -216,3 +216,19 @@ Test: dev.domaincentric.sample.ecommerce.account.RegistrationPageIntegrationTest
 - When they open `/register?returnUrl=https://elsewhere.example/`
 - Then the "Login here" link leads to `/login`
 Test: dev.domaincentric.sample.ecommerce.account.RegistrationPageIntegrationTest#loginLinkLeadsToTheLoginWithoutAReturnPageOfAnotherSite
+
+### Rule: The date of birth must be a real date in the past
+
+#### todays-date-of-birth-is-refused
+- Given a visitor with no cookies on `/register`
+- When they submit an otherwise valid registration with today's date as Date of Birth
+- Then the registration page shows "Please check the email address, your name and your date of birth."
+Test: dev.domaincentric.sample.ecommerce.e2e.RegistrationE2ETest#aDateOfBirthOfTodayIsRefusedWithTheCheckYourEntriesSentence
+
+#### todays-date-of-birth-is-refused-through-the-api
+- Given no account exists for "grace@example.com"
+- When a client registers "grace@example.com" through the API with password "Secret123" and today's date as date of
+  birth
+- Then the shop answers 400 with an `application/problem+json` body
+- And its title is "Unacceptable value" and its `errors` names `dateOfBirth` with the reason
+Test: dev.domaincentric.sample.ecommerce.account.RegistrationApiIntegrationTest#aDateOfBirthOfTodayIsAnUnacceptableValueNamingTheField
