@@ -65,7 +65,7 @@ public class LoginPageController {
       @RequestParam(required = false) final String logout) {
 
     model.addAttribute("title", "Login");
-    model.addAttribute("returnUrl", returnUrl);
+    addReturnPage(model, returnUrl);
     if (logout != null) {
       model.addAttribute("logoutSuccess", true);
     }
@@ -103,7 +103,7 @@ public class LoginPageController {
         model.addAttribute("title", "Login");
         model.addAttribute("error", result.errorMessage());
         model.addAttribute("email", email);
-        model.addAttribute("returnUrl", returnUrl);
+        addReturnPage(model, returnUrl);
         return "account/login";
       }
 
@@ -134,9 +134,30 @@ public class LoginPageController {
       model.addAttribute("title", "Login");
       model.addAttribute("error", messageFor(e));
       model.addAttribute("email", email);
-      model.addAttribute("returnUrl", returnUrl);
+      addReturnPage(model, returnUrl);
       return "account/login";
     }
+  }
+
+  /**
+   * Puts the return page on the login page: the form hands it to the login as it came, and the
+   * "Register here" link carries it on only when it is a page of the shop.
+   */
+  private static void addReturnPage(final Model model, final String returnUrl) {
+    model.addAttribute("returnUrl", returnUrl);
+    model.addAttribute(
+        "registerUrl", isShopPage(returnUrl) ? "/register?returnUrl=" + returnUrl : "/register");
+  }
+
+  /**
+   * Whether a return page is a page of the shop: a path of its own, never another site's address
+   * nor one a browser reads as such ({@code //host}, {@code /\host}).
+   */
+  private static boolean isShopPage(final String returnUrl) {
+    return returnUrl != null
+        && returnUrl.startsWith("/")
+        && !returnUrl.startsWith("//")
+        && !returnUrl.startsWith("/\\");
   }
 
   /**

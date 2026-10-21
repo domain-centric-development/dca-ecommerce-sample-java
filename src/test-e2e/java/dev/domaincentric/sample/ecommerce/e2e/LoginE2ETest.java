@@ -56,6 +56,14 @@ class LoginE2ETest extends BaseE2ETest {
   }
 
   @Test
+  @DisplayName("The register link drops an outside return page")
+  void theRegisterLinkLeadsToTheRegistrationWithoutAReturnPageOfAnotherSite() {
+    LoginPage login = LoginPage.navigateTo(page, "https://elsewhere.example/");
+
+    assertEquals("/register", login.registerLinkTarget());
+  }
+
+  @Test
   @DisplayName("Wrong password is refused")
   void aWrongPasswordIsRefusedWithTheGenericMessageAndKeepsTheEmail() {
     String email = "anna.schmidt." + UUID.randomUUID() + "@example.com";

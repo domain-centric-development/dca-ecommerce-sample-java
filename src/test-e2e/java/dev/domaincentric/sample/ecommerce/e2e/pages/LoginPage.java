@@ -148,6 +148,15 @@ public class LoginPage extends BasePage {
   }
 
   /**
+   * Where the "Register here" link leads.
+   *
+   * @return the link's {@code href} as the page writes it
+   */
+  public String registerLinkTarget() {
+    return page.locator("[data-test='" + REGISTER_LINK + "']").getAttribute("href");
+  }
+
+  /**
    * Navigates to the registration page.
    *
    * @return the RegisterPage
