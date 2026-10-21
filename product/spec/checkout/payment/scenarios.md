@@ -19,7 +19,7 @@ Title: A payment the provider refuses at Place Order keeps the customer at the r
 - When the customer presses "Place Order"
 - Then the review stays open at `/checkout/review` with "The payment was refused. Please choose another way to pay."
 - And no confirmation is shown
-Test: dev.domaincentric.sample.ecommerce.checkout.ProviderPaymentIntegrationTest#refusedPaymentKeepsTheCustomerAtThePaymentStep
+Test: dev.domaincentric.sample.ecommerce.checkout.ProviderPaymentIntegrationTest#refusedPaymentKeepsTheCustomerAtTheReview
 
 #### a-refused-payment-holds-no-stock
 - Given a guest at the review with "Wooden Hexagon Desk Model" twice, whose product page reads "8 units available"
