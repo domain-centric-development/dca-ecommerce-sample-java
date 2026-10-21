@@ -203,6 +203,25 @@ public class CartPage extends BasePage {
   }
 
   /**
+   * The note a cart line shows when its price changed since it was added.
+   *
+   * @param productName the name the line shows
+   * @return the note's locator
+   */
+  public Locator priceChangeOf(String productName) {
+    return lineOf(productName).locator("[data-test='price-change-alert']");
+  }
+
+  /**
+   * The note above the lines that some prices changed since they were added.
+   *
+   * @return the note's locator
+   */
+  public Locator priceChangeSummary() {
+    return page.locator("[data-test='price-change-summary']");
+  }
+
+  /**
    * The "Remove" button of a cart line.
    *
    * @param productName the name the line shows
