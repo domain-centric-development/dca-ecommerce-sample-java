@@ -19,16 +19,17 @@ Test: dev.domaincentric.sample.ecommerce.e2e.CartAtLoginE2ETest#theGuestCartFoll
 - Then the cart page shows one line "Clean Architecture" with quantity 1
 Test: dev.domaincentric.sample.ecommerce.cart.CartAtLoginIntegrationTest#anEmptyGuestCartShowsTheAccountsCartAsItIs
 
-### Rule: Logging in from the checkout keeps the guest's cart, not the guest's open checkout
+### Rule: Logging in from the checkout takes the guest's cart over and returns to the checkout, with the guest's order
 
 #### login-from-the-checkout-keeps-the-cart-not-the-checkout
+Title: A guest who logs in from the buyer step returns to the checkout after the cart take-over, with the order
 - Given the account "anna.schmidt@example.com", registered earlier, whose cart holds nothing
 - And a browser with no cookies in which a guest added "Domain-Driven Design" and pressed "Proceed to Checkout"
 - And the guest opened `/login?returnUrl=/checkout/buyer`
 - When they log in with "anna.schmidt@example.com" and "Secret123"
-- Then the cart page opens with the error "No active checkout session found"
-- And the cart shows one line "Domain-Driven Design" with quantity 1
-Test: dev.domaincentric.sample.ecommerce.cart.CartAtLoginIntegrationTest#loggingInFromTheBuyerStepKeepsTheGuestsCartButNotTheirCheckout
+- Then the buyer step `/checkout/buyer` opens
+- And its order summary shows "Domain-Driven Design x1"
+Test: dev.domaincentric.sample.ecommerce.e2e.LoginFromTheCheckoutE2ETest#aGuestWhoLogsInFromTheBuyerStepReturnsToTheCheckoutWithTheOrder, dev.domaincentric.sample.ecommerce.cart.CartAtLoginIntegrationTest#loggingInFromTheBuyerStepReturnsThereWhenTheAccountsCartWasEmptied
 
 ### Rule: A logged-in customer shops and checks out like a guest
 

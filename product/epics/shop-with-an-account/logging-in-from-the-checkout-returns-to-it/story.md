@@ -1,7 +1,9 @@
 ---
 id: logging-in-from-the-checkout-returns-to-it
 epic: shop-with-an-account
-status: approved
+status: delivered
+delivered: 2026-10-21T12:18:32Z
+delivered_by: gate
 created: 2026-10-15T07:50:52Z
 context: cart
 feature: cartrecovery
@@ -64,6 +66,8 @@ Title: A guest who logs in from the buyer step returns to the checkout after the
   are CheckoutCompletion's adapters, and an adapter drives one feature's commands (DCA-USE-018) — answered by
   Christoph Bloemer on 2026-10-20 in the .NET shop's decision logging-in-from-the-checkout-returns-to-it-02 (option a),
   for both shops
+- answered: Teach the gate (dca-factory, `reports.py` `display_name_of`) to read an annotation whose string sits on the next (logging-in-from-the-checkout-returns-to-it-01)
+- answered: Plan again so the plan follows the story's answer: `ResumeCheckout` in `checkoutcompletion/resumecheckout` (logging-in-from-the-checkout-returns-to-it-02)
 
 ## Notes
 
