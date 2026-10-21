@@ -1,7 +1,9 @@
 ---
 id: the-back-office-header-is-the-operators
 epic: run-the-shop
-status: approved
+status: delivered
+delivered: 2026-10-21T06:15:01Z
+delivered_by: gate
 created: 2026-10-14T23:44:13Z
 context: backoffice
 feature: access

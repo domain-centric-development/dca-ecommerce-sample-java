@@ -65,3 +65,18 @@ Test: dev.domaincentric.sample.ecommerce.backoffice.BackofficeAccessIntegrationT
 - When they open `/backoffice/events` again
 - Then the shop sends them to the backoffice login page `/backoffice/login`
 Test: dev.domaincentric.sample.ecommerce.backoffice.BackofficeAccessIntegrationTest#eventLogSendsTheOperatorToTheLoginAgainAfterTheLogout
+
+### Rule: A back-office page's header shows the shop's name, "Back office" and the operator's logout — nothing of a shopper
+
+#### the-back-office-header-offers-the-operators-logout
+- Given the operator is logged in to the back office in a browser that is not logged in to the shop
+- When they open `/backoffice/events`
+- Then the page's header shows the shop's name, "Back office" and a "Logout" button
+- And it shows neither "Login" nor "Register" nor a "Cart" entry
+Test: dev.domaincentric.sample.ecommerce.e2e.BackofficeHeaderE2ETest#eventLogHeaderShowsTheShopBackOfficeAndTheOperatorsLogout
+
+#### the-back-office-header-shows-no-shopper
+- Given a browser logged in to the shop as "anna.schmidt@example.com" whose operator then logged in to the back office
+- When they open `/backoffice/events`
+- Then the page's header shows neither "Welcome, anna.schmidt@example.com" nor "My Account" nor a "Cart" entry
+Test: dev.domaincentric.sample.ecommerce.backoffice.BackofficeHeaderIntegrationTest#eventLogHeaderShowsNothingOfTheShopperLoggedInToTheShop
