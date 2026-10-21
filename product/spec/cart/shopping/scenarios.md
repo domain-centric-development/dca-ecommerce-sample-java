@@ -383,3 +383,23 @@ Test: dev.domaincentric.sample.ecommerce.e2e.ShoppingCartApiE2ETest#theActiveCar
 - Then the shop answers 201
 - And the body has `items` [], `status` "ACTIVE" and `itemCount` 0
 Test: dev.domaincentric.sample.ecommerce.cart.ShoppingCartApiIntegrationTest#readingAMissingActiveCartLeavesNothingInTheWayOfOpeningOne
+
+### Rule: Adding is refused when the line would hold more than the product's stock, and the refusal names what the cart already holds
+
+#### adding-past-the-stock-on-the-page-is-refused
+- Given the seeded "Wooden Hexagon Desk Model" with a stock of 8
+- And a guest whose cart holds "Wooden Hexagon Desk Model" with quantity 8
+- When the guest presses "Add to Cart" on its product page
+- Then the cart page opens with the error
+  "There is not enough stock to add 1 of this product — your cart already holds 8, and 8 are in stock."
+- And the line "Wooden Hexagon Desk Model" still shows quantity 8
+Test: dev.domaincentric.sample.ecommerce.e2e.AddPastTheStockE2ETest#addingAUnitPastTheStockIsRefusedAndTheLineKeepsItsQuantity
+
+#### adding-past-the-stock-through-the-api-is-refused
+- Given Ada's open cart holds "Wooden Hexagon Desk Model" with quantity 5, and 8 are in stock
+- When her client adds "Wooden Hexagon Desk Model" with quantity 4
+- Then the shop answers 409 with an `application/problem+json` body
+- And its title is "Not enough stock" and its detail
+  "Requested 4 of product <id of Wooden Hexagon Desk Model>, more than is in stock."
+- And her cart still holds "Wooden Hexagon Desk Model" with quantity 5
+Test: dev.domaincentric.sample.ecommerce.cart.AddItemToCartIntegrationTest#addingMoreThanTheLineCanHoldBesideWhatItHoldsIsRefusedAndTheCartStaysAsItWas

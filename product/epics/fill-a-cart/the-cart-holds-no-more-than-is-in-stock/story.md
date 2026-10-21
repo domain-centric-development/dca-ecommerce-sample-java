@@ -1,7 +1,9 @@
 ---
 id: the-cart-holds-no-more-than-is-in-stock
 epic: fill-a-cart
-status: approved
+status: delivered
+delivered: 2026-10-21T15:29:46Z
+delivered_by: gate
 created: 2026-10-14T23:44:13Z
 context: cart
 feature: shopping
