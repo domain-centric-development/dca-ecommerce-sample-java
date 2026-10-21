@@ -173,6 +173,22 @@ public final class ShopUnderTest {
   }
 
   /**
+   * A staff token for a registered account, minted by a shop this suite started with {@link
+   * #startedWith} — no registration or login hands the role out.
+   *
+   * @param started the shop
+   * @param userId the account's user id
+   * @param email the account's email address
+   * @return the token
+   */
+  public static String staffTokenIn(
+      final ConfigurableApplicationContext started, final String userId, final String email) {
+    return started
+        .getBean(TokenService.class)
+        .generateRegisteredToken(UserId.of(userId), email, Set.of(Role.CUSTOMER, Role.STAFF));
+  }
+
+  /**
    * A staff token from a shop this suite started with {@link #startedWith}: an account registered
    * through its API, its token minted again with the staff role by that shop's own token service —
    * no registration or login hands the role out.

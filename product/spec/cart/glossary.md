@@ -405,6 +405,7 @@ The parts of the context's behaviour its people name; each groups what holds in 
 ### Cart oversight (cartoversight)
 
 **Definition:** The staff's view of every cart in the shop, across all customers — the one cart view that leaves
-the caller's own data, and therefore staff only.
+the caller's own data, and therefore staff only. Each cart in it is totalled at today's prices, as an
+`EnrichedCart` (`calculateCurrentSubtotal`), like the answer about one cart.
 
 **Type:** Feature
