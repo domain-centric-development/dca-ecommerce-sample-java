@@ -65,6 +65,25 @@ class RegistrationE2ETest extends BaseE2ETest {
   }
 
   @Test
+  @DisplayName("An outside return page leads home after registering")
+  void aRegistrationLeadsToTheHomePageInsteadOfAnotherSitesReturnPage() {
+    // The shared shop may already hold the address, and a taken address is refused.
+    shop = ShopUnderTest.startedWith("registration_outside_return_page_e2e");
+    final String shopUrl = ShopUnderTest.baseUrlOf(shop);
+
+    RegisterPage.navigateTo(page, shopUrl, "https://elsewhere.example/")
+        .fillOwner("Anna", "Schmidt", "1990-05-17")
+        .fillEmail("anna.schmidt@example.com")
+        .fillPassword("Secret123")
+        .fillConfirmPassword("Secret123")
+        .submit();
+
+    assertEquals(shopUrl + "/", page.url());
+    final HomePage home = new HomePage(page, shopUrl);
+    assertEquals(List.of("Account created successfully! Welcome!"), home.successMessages());
+  }
+
+  @Test
   @DisplayName("Differing passwords are refused")
   void differingPasswordsAreRefusedAndTheFormKeepsTheRest() {
     RegisterPage register = RegisterPage.navigateTo(page);

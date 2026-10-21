@@ -145,19 +145,7 @@ public class LoginPageController {
    */
   private static void addReturnPage(final Model model, final String returnUrl) {
     model.addAttribute("returnUrl", returnUrl);
-    model.addAttribute(
-        "registerUrl", isShopPage(returnUrl) ? "/register?returnUrl=" + returnUrl : "/register");
-  }
-
-  /**
-   * Whether a return page is a page of the shop: a path of its own, never another site's address
-   * nor one a browser reads as such ({@code //host}, {@code /\host}).
-   */
-  private static boolean isShopPage(final String returnUrl) {
-    return returnUrl != null
-        && returnUrl.startsWith("/")
-        && !returnUrl.startsWith("//")
-        && !returnUrl.startsWith("/\\");
+    model.addAttribute("registerUrl", ReturnPage.carriedOnTo("/register", returnUrl));
   }
 
   /**

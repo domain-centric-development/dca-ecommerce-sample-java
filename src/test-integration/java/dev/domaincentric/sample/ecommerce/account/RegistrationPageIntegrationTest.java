@@ -45,6 +45,8 @@ class RegistrationPageIntegrationTest {
   private static final Pattern CSRF_FIELD = Pattern.compile("name=\"_csrf\" value=\"([^\"]+)\"");
   private static final Pattern RETURN_URL_FIELD =
       Pattern.compile("name=\"returnUrl\" value=\"([^\"]*)\"");
+  private static final Pattern SUCCESS_MESSAGE =
+      Pattern.compile("data-test=\"success-message\"[^>]*>([^<]*)<");
 
   /** The register page's one sentence for a value its owner, address or date refuses. */
   private static final String CHECK_YOUR_ENTRIES =
@@ -130,6 +132,46 @@ class RegistrationPageIntegrationTest {
 
     assertThat(element(page, "register-login-link").attribute("href"))
         .isEqualTo("/login?returnUrl=/products");
+  }
+
+  @Test
+  @DisplayName("A scheme-relative return page leads home after registering")
+  void aRegistrationLeadsToTheHomePageInsteadOfASchemeRelativeReturnPage() throws Exception {
+    final Map<String, Cookie> cookies = new LinkedHashMap<>();
+    final String form = page("/register?returnUrl=//elsewhere.example/", cookies);
+
+    final MockHttpServletResponse submitted =
+        mockMvc
+            .perform(
+                post("/register")
+                    .cookie(cookies.values().toArray(Cookie[]::new))
+                    .param("_csrf", text(CSRF_FIELD, form))
+                    .param("returnUrl", text(RETURN_URL_FIELD, form))
+                    .param("firstName", "Anna")
+                    .param("lastName", "Schmidt")
+                    .param("dateOfBirth", "1990-05-17")
+                    // An address of its own: the class shares one database, and a taken one is
+                    // refused.
+                    .param("email", "anna.schmidt.elsewhere@example.com")
+                    .param("password", "Secret123")
+                    .param("confirmPassword", "Secret123"))
+            .andExpect(status().is3xxRedirection())
+            .andReturn()
+            .getResponse();
+    keep(cookies, submitted);
+
+    assertThat(submitted.getRedirectedUrl()).isEqualTo("/");
+    final String home = page("/", cookies);
+    assertThat(all(SUCCESS_MESSAGE, home))
+        .containsExactly("Account created successfully! Welcome!");
+  }
+
+  @Test
+  @DisplayName("The login link drops an outside return page")
+  void loginLinkLeadsToTheLoginWithoutAReturnPageOfAnotherSite() throws Exception {
+    final String page = page("/register?returnUrl=https://elsewhere.example/");
+
+    assertThat(element(page, "register-login-link").attribute("href")).isEqualTo("/login");
   }
 
   @Test

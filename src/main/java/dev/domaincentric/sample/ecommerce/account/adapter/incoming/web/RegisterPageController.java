@@ -62,7 +62,7 @@ public class RegisterPageController {
       final Model model, @RequestParam(required = false) final String returnUrl) {
 
     model.addAttribute("title", "Register");
-    model.addAttribute("returnUrl", returnUrl);
+    addReturnPage(model, returnUrl);
     return "account/register";
   }
 
@@ -75,10 +75,11 @@ public class RegisterPageController {
    * @param firstName the owner's first name
    * @param lastName the owner's last name
    * @param dateOfBirth the owner's date of birth, as the browser sent it
-   * @param returnUrl optional URL to redirect to after registration
+   * @param returnUrl optional page to redirect to after registration, followed only when it is a
+   *     page of the shop
    * @param model Spring MVC model
    * @param attributes the redirect's attributes, which take the notice that the account was created
-   * @return redirect to home or returnUrl on success, register page on failure
+   * @return redirect to the return page or else home on success, register page on failure
    */
   @PostMapping
   public String handleRegistration(
@@ -123,7 +124,7 @@ public class RegisterPageController {
 
       identitySession.setRegisteredIdentity(token);
 
-      final String target = returnUrl != null && !returnUrl.isBlank() ? returnUrl : "/";
+      final String target = ReturnPage.isShopPage(returnUrl) ? returnUrl : "/";
       return RegistrationNotice.ACCOUNT_CREATED.redirectTo(target, attributes);
 
     } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
@@ -146,8 +147,17 @@ public class RegisterPageController {
     model.addAttribute("firstName", submission.firstName());
     model.addAttribute("lastName", submission.lastName());
     model.addAttribute("dateOfBirth", submission.dateOfBirth());
-    model.addAttribute("returnUrl", submission.returnUrl());
+    addReturnPage(model, submission.returnUrl());
     return "account/register";
+  }
+
+  /**
+   * Puts the return page on the registration page: the form hands it to the registration as it
+   * came, and the "Login here" link carries it on only when it is a page of the shop.
+   */
+  private static void addReturnPage(final Model model, final @Nullable String returnUrl) {
+    model.addAttribute("returnUrl", returnUrl);
+    model.addAttribute("loginUrl", ReturnPage.carriedOnTo("/login", returnUrl));
   }
 
   /** The re-fillable part of a registration submission. */

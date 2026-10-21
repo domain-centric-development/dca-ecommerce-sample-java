@@ -63,6 +63,25 @@ public class RegisterPage extends BasePage {
   }
 
   /**
+   * Opens the register page of a shop the test started itself, with the page it is to return to.
+   *
+   * @param page the Playwright page instance
+   * @param shopUrl the base URL of that shop
+   * @param returnUrl the return page as a link hands it over, e.g. {@code /products}
+   * @return a new RegisterPage
+   */
+  public static RegisterPage navigateTo(Page page, String shopUrl, String returnUrl) {
+    final String path = URL_PATTERN + "?returnUrl=" + returnUrl;
+    page.navigate(shopUrl + path);
+    return new RegisterPage(page, shopUrl, path);
+  }
+
+  /** The register page opened with a return URL, which the URL pattern alone does not match. */
+  private RegisterPage(Page page, String shopUrl, String path) {
+    super(page, shopUrl, path);
+  }
+
+  /**
    * Fills the email field.
    *
    * @param email the email address
