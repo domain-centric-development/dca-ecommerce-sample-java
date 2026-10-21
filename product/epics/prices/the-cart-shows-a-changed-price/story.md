@@ -1,7 +1,7 @@
 ---
 id: the-cart-shows-a-changed-price
 epic: prices
-status: approved
+status: adopted
 created: 2026-10-15T07:50:52Z
 context: cart
 feature: shopping
@@ -36,6 +36,10 @@ it changed, so that I am not surprised at the checkout.
 ## Assumptions
 
 - answered: after a price change the cart shows today's price (planning/questions-2026-10-15.md Q4.7)
+- answered: the story is adopted — the cart page already shows today's price and the change notice once
+  `an-operator-changes-a-price` is delivered; the factory maps it to a test with a break and the spec gains the key —
+  Christoph Bloemer on 2026-10-21 in the .NET shop's decision the-cart-shows-a-changed-price-01 (option a), for both
+  shops
 
 ## Notes
 
