@@ -10,10 +10,14 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
+import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockInputPort;
 import jakarta.servlet.http.Cookie;
 import java.net.URI;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.awaitility.Awaitility;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -32,9 +36,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 /**
- * Paying on the payment page through the payment provider's REST contract ({@code POST /payments}:
- * {@code 201} authorized, {@code 402} refused, no answer within 2 seconds unavailable). The
- * provider is a stub on a free port; the shop's provider address points at it.
+ * Placing the order on the review page through the payment provider's REST contract ({@code POST
+ * /payments}: {@code 201} authorized, {@code 402} refused, no answer within 2 seconds unavailable).
+ * The provider is a stub on a free port; the shop's provider address points at it.
  */
 // MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
 // context — so this class gets a database of its own.
@@ -49,6 +53,8 @@ class ProviderPaymentIntegrationTest {
       "The payment was refused. Please choose another way to pay.";
   private static final String UNAVAILABLE =
       "The payment provider is not available right now. Please try again later.";
+  private static final String DESK_MODEL = "Wooden Hexagon Desk Model";
+  private static final String REVIEW_STEP = "/checkout/review";
 
   @RegisterExtension
   static WireMockExtension paymentProvider =
@@ -60,6 +66,7 @@ class ProviderPaymentIntegrationTest {
   }
 
   @Autowired private MockMvc mockMvc;
+  @Autowired private ProvisionInitialStockInputPort provisionInitialStock;
 
   private final Map<String, Cookie> cookies = new LinkedHashMap<>();
 
@@ -69,21 +76,38 @@ class ProviderPaymentIntegrationTest {
   }
 
   @Test
-  @DisplayName("A payment the provider refuses keeps the customer at the payment step")
-  void refusedPaymentKeepsTheCustomerAtThePaymentStep() throws Exception {
-    final String providerId = checkoutAtThePaymentStep();
+  @DisplayName("A payment the provider refuses at Place Order keeps the customer at the review")
+  void refusedPaymentKeepsTheCustomerAtTheReview() throws Exception {
+    checkoutAtTheReview(firstProductId(), 1);
     providerAnswers(aResponse().withStatus(402));
 
-    final MvcResult payment = pay(providerId);
+    final MvcResult placed = placeOrder();
 
-    assertStaysAtThePaymentStep(payment);
-    assertThat(errorShownAfter(payment)).isEqualTo(REFUSED);
+    assertStaysAtTheReview(placed);
+    assertThat(errorShownAfter(placed)).isEqualTo(REFUSED);
+    assertNoConfirmation();
   }
 
   @Test
-  @DisplayName("A provider that answers only after 5 seconds counts as unavailable")
+  @DisplayName("A refused payment holds no stock")
+  void aRefusedPaymentGivesTheReservedStockBack() throws Exception {
+    final String deskModel = productPageOf(DESK_MODEL).substring("/products/".length());
+    provisionInitialStock.execute(new ProvisionInitialStockCommand(deskModel, 8));
+    waitForAvailability(DESK_MODEL, "8 units available");
+    checkoutAtTheReview(deskModel, 2);
+    providerAnswers(aResponse().withStatus(402));
+
+    final MvcResult placed = placeOrder();
+
+    assertStaysAtTheReview(placed);
+    assertThat(errorShownAfter(placed)).isEqualTo(REFUSED);
+    assertThat(availabilityOf(DESK_MODEL)).isEqualTo("8 units available");
+  }
+
+  @Test
+  @DisplayName("A provider that answers Place Order only after 5 seconds counts as unavailable")
   void slowProviderCountsAsUnavailable() throws Exception {
-    final String providerId = checkoutAtThePaymentStep();
+    checkoutAtTheReview(firstProductId(), 1);
     providerAnswers(
         aResponse()
             .withStatus(201)
@@ -91,77 +115,88 @@ class ProviderPaymentIntegrationTest {
             .withBody("{\"reference\": \"pay-slow\"}")
             .withFixedDelay(5_000));
 
-    final MvcResult payment = pay(providerId);
+    final MvcResult placed = placeOrder();
 
-    assertStaysAtThePaymentStep(payment);
-    assertThat(errorShownAfter(payment)).isEqualTo(UNAVAILABLE);
+    assertStaysAtTheReview(placed);
+    assertThat(errorShownAfter(placed)).isEqualTo(UNAVAILABLE);
+    assertNoConfirmation();
   }
 
   @Test
   @DisplayName("A provider answering with a server error counts as unavailable")
   void providerServerErrorCountsAsUnavailable() throws Exception {
-    final String providerId = checkoutAtThePaymentStep();
+    checkoutAtTheReview(firstProductId(), 1);
     providerAnswers(aResponse().withStatus(500));
 
-    final MvcResult payment = pay(providerId);
+    final MvcResult placed = placeOrder();
 
-    assertStaysAtThePaymentStep(payment);
-    assertThat(errorShownAfter(payment)).isEqualTo(UNAVAILABLE);
+    assertStaysAtTheReview(placed);
+    assertThat(errorShownAfter(placed)).isEqualTo(UNAVAILABLE);
   }
 
   @Test
   @DisplayName("A provider that drops the connection counts as unavailable")
   void droppedConnectionCountsAsUnavailable() throws Exception {
-    final String providerId = checkoutAtThePaymentStep();
+    checkoutAtTheReview(firstProductId(), 1);
     providerAnswers(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER));
 
-    final MvcResult payment = pay(providerId);
+    final MvcResult placed = placeOrder();
 
-    assertStaysAtThePaymentStep(payment);
-    assertThat(errorShownAfter(payment)).isEqualTo(UNAVAILABLE);
+    assertStaysAtTheReview(placed);
+    assertThat(errorShownAfter(placed)).isEqualTo(UNAVAILABLE);
   }
 
   private void providerAnswers(final ResponseDefinitionBuilder answer) {
     paymentProvider.stubFor(post("/payments").willReturn(answer));
   }
 
-  private MvcResult pay(final String providerId) throws Exception {
-    return submit("/checkout/payment", page("/checkout/payment"), "providerId", providerId);
+  /** Presses "Place Order" on the review page. */
+  private MvcResult placeOrder() throws Exception {
+    return submit("/checkout/confirm", page(REVIEW_STEP), "sentFrom", "review");
   }
 
-  /** The form post went back to the payment page, and the review step is still closed. */
-  private void assertStaysAtThePaymentStep(final MvcResult payment) throws Exception {
-    assertThat(payment.getResponse().getRedirectedUrl()).isEqualTo("/checkout/payment");
-    assertThat(perform(get("/checkout/review")).getResponse().getRedirectedUrl())
-        .isEqualTo("/checkout/payment");
+  /** The form post went back to the review page. */
+  private static void assertStaysAtTheReview(final MvcResult placed) {
+    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
   }
 
-  /** The payment page the redirect leads to, with the message the redirect carried. */
-  private String errorShownAfter(final MvcResult payment) throws Exception {
-    final MvcResult page = perform(get(URI.create(payment.getResponse().getRedirectedUrl())));
+  /** No confirmed order to show: the confirmation page sends the visitor away. */
+  private void assertNoConfirmation() throws Exception {
+    assertThat(perform(get("/checkout/confirmation")).getResponse().getRedirectedUrl())
+        .as("no confirmation is shown")
+        .isEqualTo("/cart");
+  }
+
+  /** The review page the redirect leads to, with the message the redirect carried. */
+  private String errorShownAfter(final MvcResult placed) throws Exception {
+    final MvcResult page = perform(get(URI.create(placed.getResponse().getRedirectedUrl())));
     final Element error =
         Jsoup.parse(page.getResponse().getContentAsString())
-            .selectFirst("[data-test=payment-error-message]");
-    assertThat(error).as("the payment page shows an error").isNotNull();
+            .selectFirst("[data-test=review-error-message]");
+    assertThat(error).as("the review shows an error").isNotNull();
     return error.text();
   }
 
   /**
-   * A guest's checkout at the payment step: a product in the cart, checkout started, buyer and
-   * delivery filled in — all through the pages, so the session is the visitor's own.
-   *
-   * @return the id of the first payment provider the payment page offers
+   * A guest's checkout at the review: the product in the cart that often, checkout started, buyer
+   * and delivery filled in and the first payment provider chosen — all through the pages, so the
+   * session is the visitor's own. The provider authorizes until the test arranges otherwise.
    */
-  private String checkoutAtThePaymentStep() throws Exception {
-    final String productId =
-        page("/products").selectFirst("a[href^=/products/]").attr("href").substring(10);
-    submit(
-        "/cart/add-product",
-        page("/products/" + productId),
-        "productId",
-        productId,
-        "quantity",
-        "1");
+  private void checkoutAtTheReview(final String productId, final int quantity) throws Exception {
+    providerAnswers(
+        aResponse()
+            .withStatus(201)
+            .withHeader("Content-Type", "application/json")
+            .withBody("{\"reference\": \"pay-1\"}"));
+    for (int i = 0; i < quantity; i++) {
+      submit(
+          "/cart/add-product",
+          page("/products/" + productId),
+          "productId",
+          productId,
+          "quantity",
+          "1");
+    }
 
     final Document cart = page("/cart");
     submit("/checkout/start", cart, "cartId", cart.selectFirst("input[name=cartId]").val());
@@ -205,7 +240,53 @@ class ProviderPaymentIntegrationTest {
         "currencyCode",
         option.selectFirst("input[name=currencyCode]").val());
 
-    return page("/checkout/payment").selectFirst("[data-test=payment-provider-radio]").val();
+    final Document payment = page("/checkout/payment");
+    final MvcResult chosen =
+        submit(
+            "/checkout/payment",
+            payment,
+            "providerId",
+            payment.selectFirst("[data-test=payment-provider-radio]").val());
+    assertThat(chosen.getResponse().getRedirectedUrl()).isEqualTo(REVIEW_STEP);
+  }
+
+  private String firstProductId() throws Exception {
+    return page("/products").selectFirst("a[href^=/products/]").attr("href").substring(10);
+  }
+
+  /**
+   * Waits until the product page reads that availability — the stock changes shortly after an order
+   * or a stock change elsewhere.
+   */
+  private void waitForAvailability(final String productName, final String availability)
+      throws Exception {
+    final String productPage = productPageOf(productName);
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(15))
+        .until(() -> availability.equals(availabilityOn(page(productPage))));
+  }
+
+  /** What the product page of the product with that name reads under "Availability". */
+  private String availabilityOf(final String productName) throws Exception {
+    return availabilityOn(page(productPageOf(productName)));
+  }
+
+  private String productPageOf(final String productName) throws Exception {
+    return page("/products").select("[data-test=product-card]").stream()
+        .filter(c -> productName.equals(c.selectFirst("[data-test=product-card-title]").text()))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("no card titled " + productName))
+        .selectFirst("a[data-test=view-product]")
+        .attr("href");
+  }
+
+  private static String availabilityOn(final Document productPage) {
+    return productPage.select(".product-detail__meta-item").stream()
+        .filter(
+            item -> "Availability".equals(item.selectFirst(".product-detail__meta-label").text()))
+        .findFirst()
+        .map(item -> item.selectFirst(".product-detail__meta-value").text())
+        .orElse(null);
   }
 
   private Document page(final String path) throws Exception {

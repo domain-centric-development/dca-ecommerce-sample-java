@@ -30,8 +30,10 @@ import org.junit.jupiter.api.Test;
  * story not yet delivered ({@code product/epics/**}{@code /story.md}, {@code status:} neither
  * {@code delivered} nor {@code superseded}): its scenario reaches the specification only when the
  * gate delivers the story, and its browser test exists before that. The uniqueness of titles and
- * the {@code Test:} lines are checked on the specification alone. Checked against the sources of
- * {@code src/test-e2e}, so it holds without a running shop or a browser, on every build.
+ * the {@code Test:} lines are checked on the specification alone, except a scenario such a story
+ * changes or removes: its {@code Test:} line is rewritten when the gate delivers the story, and may
+ * name a browser test the story moved or took out until then. Checked against the sources of {@code
+ * src/test-e2e}, so it holds without a running shop or a browser, on every build.
  */
 class SharedScenariosTest {
   static final Path SPECIFICATION = Path.of("product/spec");
@@ -84,8 +86,11 @@ class SharedScenariosTest {
 
   static final Pattern METHOD = Pattern.compile("\\bvoid\\s+(\\w+)\\s*\\(");
 
-  /** A scenario: its title and the tests its {@code Test:} lines name. */
-  record Scenario(String title, List<String> tests) {}
+  /** A scenario key in backticks, as a story's {@code ## Changed expectations} names one. */
+  static final Pattern QUOTED_KEY = Pattern.compile("`([a-z0-9]+(?:-[a-z0-9]+)+)`");
+
+  /** A scenario: its key, its title and the tests its {@code Test:} lines name. */
+  record Scenario(String key, String title, List<String> tests) {}
 
   @Test
   void everyBrowserTestIsAScenarioOfThisShopsSpecification() throws IOException {
@@ -168,12 +173,39 @@ class SharedScenariosTest {
   }
 
   @Test
+  void aStoryNotYetDeliveredNamesTheScenariosItChanges() {
+    List<String> story =
+        List.of(
+            "---",
+            "id: a-story",
+            "status: approved",
+            "---",
+            "",
+            "## Acceptance criteria",
+            "",
+            "#### takes-the-line-out (happy path)",
+            "- Given a cart",
+            "",
+            "## Changed expectations",
+            "",
+            "- The scenario `keeps-the-order` goes; the message \"`Done.`\" stays.",
+            "",
+            "## Notes",
+            "",
+            "- `holds-anyway` is a guarantee.");
+
+    assertEquals(Set.of("takes-the-line-out", "keeps-the-order"), changedKeysIn(story));
+  }
+
+  @Test
   void everyBrowserTestAScenarioNamesExists() throws IOException {
     Set<String> browserTests = new HashSet<>();
     for (Path source : e2eSources()) browserTests.addAll(browserTestsIn(Files.readString(source)));
 
+    Set<String> changing = storyChangedKeys();
     var missing = new TreeSet<String>();
     for (Scenario scenario : scenarios()) {
+      if (changing.contains(scenario.key())) continue;
       for (String test : scenario.tests()) {
         if (test.startsWith(BROWSER_TEST_PACKAGE) && !browserTests.contains(test)) {
           missing.add(test);
@@ -208,6 +240,37 @@ class SharedScenariosTest {
       for (Scenario scenario : storyScenariosIn(lines)) titles.add(scenario.title());
     }
     return titles;
+  }
+
+  /**
+   * The keys of the scenarios a story not delivered yet changes or removes: its acceptance
+   * criteria, and the keys its {@code ## Changed expectations} names. The gate rewrites their
+   * {@code Test:} lines when it delivers the story; until then they may name a browser test the
+   * story moved or took out.
+   */
+  static Set<String> storyChangedKeys() throws IOException {
+    var keys = new HashSet<String>();
+    for (Path file : filesNamed(EPICS, "story.md")) {
+      List<String> lines = Files.readAllLines(file);
+      if (SETTLED.contains(status(lines).toLowerCase(Locale.ROOT))) continue;
+      keys.addAll(changedKeysIn(lines));
+    }
+    return keys;
+  }
+
+  /** A story's criterion keys and the keys its {@code ## Changed expectations} names. */
+  static Set<String> changedKeysIn(List<String> lines) {
+    var keys = new TreeSet<String>();
+    for (Scenario scenario : storyScenariosIn(lines)) keys.add(scenario.key());
+    boolean inChanged = false;
+    for (String line : lines) {
+      if (line.startsWith("## ")) {
+        inChanged = line.startsWith("## Changed expectations");
+      } else if (inChanged) {
+        QUOTED_KEY.matcher(line).results().forEach(key -> keys.add(key.group(1)));
+      }
+    }
+    return keys;
   }
 
   /** A story's {@code status:} from its front matter, empty without one. */
@@ -250,7 +313,9 @@ class SharedScenariosTest {
     lines.add("#### ");
     for (String line : lines) {
       if (line.startsWith("#### ") || line.startsWith("### ")) {
-        if (key != null) scenarios.add(new Scenario(title != null ? title : inWords(key), tests));
+        if (key != null) {
+          scenarios.add(new Scenario(key, title != null ? title : inWords(key), tests));
+        }
         key = line.startsWith("#### ") && line.length() > 5 ? line.substring(5).trim() : null;
         title = null;
         tests = new ArrayList<>();

@@ -46,17 +46,6 @@ public record PaymentSelection(
     return new PaymentSelection(providerId, providerReference, authorizedAmount);
   }
 
-  /**
-   * Whether this payment stands for the given total with the given provider.
-   *
-   * @param provider the provider the customer pays through now
-   * @param total the total to pay
-   * @return true when the provider authorized exactly that total
-   */
-  public boolean covers(final PaymentProviderId provider, final Money total) {
-    return hasReference() && this.providerId.equals(provider) && total.equals(authorizedAmount);
-  }
-
   public boolean hasReference() {
     return providerReference != null && !providerReference.isBlank();
   }

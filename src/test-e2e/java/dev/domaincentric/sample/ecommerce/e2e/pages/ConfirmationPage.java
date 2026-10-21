@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.e2e.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 /**
@@ -12,6 +13,7 @@ public class ConfirmationPage extends BasePage {
   private static final String URL_PATTERN = "/checkout/confirmation";
   private static final String ORDER_REFERENCE = ".confirmation__reference";
   private static final String ORDER_REFERENCE_LABEL = "Order Reference:";
+  private static final String ORDER_TOTAL = ".confirmation__details .order-summary__total > span";
 
   /**
    * Creates a new ConfirmationPage and waits for it to load.
@@ -30,6 +32,15 @@ public class ConfirmationPage extends BasePage {
    */
   public ConfirmationPage(Page page, String shopUrl) {
     super(page, shopUrl, URL_PATTERN);
+  }
+
+  /**
+   * The amount the page shows beside "Order Total", for assertions on it.
+   *
+   * @return the amount's locator, its text e.g. {@code "59.98 EUR"}
+   */
+  public Locator orderTotal() {
+    return page.locator(ORDER_TOTAL).last();
   }
 
   /**

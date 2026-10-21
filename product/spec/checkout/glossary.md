@@ -59,15 +59,13 @@ claim of durable distributed transactions or universal rollback of unenlisted re
   becomes that customer's: same id, cart, step and line items; no event; never starts a session; refused on a session
   that no longer takes changes. The buyer step's page resumes it when it finds no session of the customer (ADR-046)
 - `supersede` — kept with status superseded when a new checkout action replaces it; no event; only an active session can be superseded
-- `submitBuyerInfo`, `submitDelivery`, `submitPayment` — record the step's data and move on to the next step when standing on it
-- `assertReadyForPayment` — a question: the preconditions of `submitPayment`, checked without changing anything
-- `authorizedPaymentCovers` — a question: whether the payment the provider authorized stands for the session's total
-  with the provider the customer pays through now
-- keep the authorized payment (`keepAuthorizedPayment`) — moves a session whose authorized payment covers its total
-  from payment to review without a new payment request; no event, `PaymentSubmitted` was published when the provider
-  authorized it; refused when the payment does not cover the total
-- `releasePayment` — forgets a payment the provider cancelled, so it covers nothing any more; a session that holds
-  another payment by then keeps that one
+- `submitBuyerInfo`, `submitDelivery`, `submitPayment` — record the step's data and move on to the next step when
+  standing on it; `submitPayment` records the chosen provider only, requests nothing from it and raises no event
+- `assertReadyForPayment` — a question: the preconditions of `submitPayment` plus a positive total, checked without
+  changing anything
+- authorize the payment (`authorizePayment`) — at Place Order, records on a session at the review that its chosen
+  provider authorized the session's total under a payment reference; publishes `PaymentSubmitted`; refused on a
+  session not at the review or one that no longer takes changes
 - `goBackTo` — moves the current step back; data already submitted stays
 - `assertReadyForConfirmation` — a question: the preconditions of `confirm`, the pricing verdict included, checked without changing anything — asked before the order's stock is reserved
 - `confirm` — status confirmed, totals recomputed at current prices; refused while the pricing verdict reports a changed price or a shortage
@@ -117,17 +115,16 @@ and shipping cost — the cost the shop sets for the method, never one the buyer
 
 ### PaymentSelection
 
-**Definition:** Selected payment method consisting of `PaymentProviderId` and the provider
-reference (e.g. payment intent ID) the provider returned when the payment was initiated, together with its
-**authorized amount** (`authorizedAmount`): the total the provider authorized the payment for.
+**Definition:** Selected payment method consisting of `PaymentProviderId` — required — and, once the provider
+authorized the payment at Place Order, the provider reference it returned together with its **authorized amount**
+(`authorizedAmount`): the total the provider authorized the payment for. Chosen on the payment step, it carries the
+provider alone.
 
 **Type:** Value Object
 
 **Related terms:** `PaymentProviderId`, `PaymentSubmitted`, `PaymentResult`.
 
-**Operations:** `authorized`, `hasReference`, `covers` — whether the payment stands for a total with a provider: only
-with a payment reference, only for the provider that authorized it, and only when its authorized amount equals the
-total; a selection without an authorized amount covers nothing.
+**Operations:** `of`, `authorized`, `hasReference`.
 
 ### CheckoutLineItem
 
@@ -342,7 +339,8 @@ Kernel should be used here.
 
 ### PaymentSubmitted
 
-**Definition:** Payment method has been selected and submitted in the payment step.
+**Definition:** The chosen payment provider authorized the checkout session's total when the customer placed the
+order at the review (`authorizePayment`). Choosing how to pay on the payment step publishes none.
 
 **Type:** Domain Event
 
@@ -537,7 +535,8 @@ carries their product ids, in cart order.
 **Definition:** The selected provider is unknown to the shop; it is unavailable (it says it is not taking payments,
 cannot be reached, does not answer in time or answers outside its contract); or it refused to open a payment. The
 provider's reason travels on the failure and into the log; each carries the `PaymentProviderId` it met, not the raw
-input. The customer sees the shop's own text: "The payment was
+input. A refusal or an unavailable provider at Place Order keeps the customer at the review, places no order and
+gives the reserved stock back. The customer sees the shop's own text: "The payment was
 refused. Please choose another way to pay." for a refusal, "The payment provider is not available right now. Please
 try again later." when the provider is unavailable.
 
@@ -558,15 +557,15 @@ id it met. The delivery step opens again with "This shipping method is not offer
 ### PaymentResult
 
 **Definition:** What the payment provider made of a payment operation, as checkout understands it. A payment
-request carries the checkout session's total amount and currency and the checkout reference to the provider; its
-outcome is one of:
+request — sent at Place Order, after the review's checks and the stock reservation — carries the checkout session's
+total amount and currency and the checkout reference to the provider; its outcome is one of:
 
 - `SUCCEEDED` — an **authorized payment**: the provider accepted it and gave a payment reference. Only then
-  does the session record its `PaymentSelection` and publish `PaymentSubmitted`.
-- `REFUSED` — a **refused payment**: the provider answered and declined. The checkout stays at the payment
-  step (`PaymentInitiationFailed`).
+  does the session authorize the payment (`authorizePayment`), publish `PaymentSubmitted` and confirm.
+- `REFUSED` — a **refused payment**: the provider answered and declined. The checkout stays at the review
+  (`PaymentInitiationFailed`).
 - `UNAVAILABLE` — an **unavailable provider**: no answer within 2 seconds, no connection, or an answer outside
-  the provider's contract. The checkout stays at the payment step (`PaymentProviderUnavailable`).
+  the provider's contract. The checkout stays at the review (`PaymentProviderUnavailable`).
 
 **Type:** Concept (result of the `PaymentProvider` output port)
 
@@ -578,8 +577,7 @@ answers it with `REFUSED` without asking the provider.
 
 **Cancel a payment** (`cancelPayment`): releases an authorized payment at the provider by its payment reference
 (`POST /payments/{payment reference}/cancel`, no body). `204` is `SUCCEEDED`, any other answer `REFUSED`, no answer
-within 2 seconds `UNAVAILABLE`. Paying again for a changed total cancels the earlier payment before the new request;
-a refused or unanswered cancellation is logged and the new request still goes out.
+within 2 seconds `UNAVAILABLE`. The `PaymentProvider` port and its adapters offer it; no use case calls it.
 
 ---
 

@@ -5,6 +5,11 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublis
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutArticleDataPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProvider;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderRegistry;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.StockReservationPort;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticle;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticlePriceResolver;
@@ -16,6 +21,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidati
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ErrorType;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
@@ -35,15 +41,17 @@ import org.springframework.stereotype.Service;
  *   <li>Asking the session whether it may be confirmed with the checkout pricing's verdict
  *   <li>Reserving the stock of every line in Inventory via StockReservationPort — refused when the
  *       stock no longer covers a line, so two orders placed at once never count on the same units
- *   <li>Calling the domain method to confirm with validation
+ *   <li>Having the chosen payment provider authorize the session's total via PaymentProvider —
+ *       refused or unanswered, the order is not placed
+ *   <li>Calling the domain methods to record the authorized payment and to confirm with validation
  *   <li>Persisting the updated session
  *   <li>Publishing domain events — triggers cart completion and stock reduction in separate
  *       transactions via Interface Inversion pattern; the reduction consumes the reservation
  * </ul>
  *
- * <p>A confirmation that fails after the reservation gives the reservation back (ADR-041). A
- * process that dies between the two leaves the reservation behind; only a reconciliation would find
- * it.
+ * <p>A confirmation that fails after the reservation — the payment refused or unanswered included —
+ * gives the reservation back (ADR-041). A process that dies between the two leaves the reservation
+ * behind; only a reconciliation would find it.
  *
  * <p><b>One Aggregate Per Transaction:</b> This use case only modifies the {@code CheckoutSession}
  * aggregate. The reservation happens before, in Inventory's own transaction; cart completion and
@@ -61,6 +69,7 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
   private final DomainEventPublisher domainEventPublisher;
   private final TransactionBoundary transactionBoundary;
   private final StockReservationPort stockReservationPort;
+  private final PaymentProviderRegistry paymentProviderRegistry;
 
   public ConfirmCheckoutUseCase(
       final CheckoutSessionRepository checkoutSessionRepository,
@@ -68,13 +77,15 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
       final CheckoutPricing checkoutPricing,
       final DomainEventPublisher domainEventPublisher,
       final TransactionBoundary transactionBoundary,
-      final StockReservationPort stockReservationPort) {
+      final StockReservationPort stockReservationPort,
+      final PaymentProviderRegistry paymentProviderRegistry) {
     this.checkoutSessionRepository = checkoutSessionRepository;
     this.checkoutArticleDataPort = checkoutArticleDataPort;
     this.checkoutPricing = checkoutPricing;
     this.domainEventPublisher = domainEventPublisher;
     this.transactionBoundary = transactionBoundary;
     this.stockReservationPort = stockReservationPort;
+    this.paymentProviderRegistry = paymentProviderRegistry;
   }
 
   @Override
@@ -109,11 +120,16 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
           ready.assertReadyForConfirmation(checkoutPricing.validateItems(ready, facts));
           final List<StockReservationPort.Line> lines = reserveStockOf(ready);
 
-          // Short transaction: reload, confirm, save, publish
           try {
+            // The provider is asked only once the order's checks and its stock hold, for the total
+            // the review showed — outside the transaction, the provider being remote
+            final String paymentReference = authorizePaymentOf(ready);
+
+            // Short transaction: reload, record the payment, confirm, save, publish
             return transactionBoundary.inTransaction(
                 () -> {
                   final CheckoutSession session = loadSession(sessionId, command);
+                  session.authorizePayment(paymentReference);
                   session.confirm(
                       checkoutPricing.validateItems(session, facts),
                       checkoutPricing.calculateOrderTotal(session, facts));
@@ -122,12 +138,41 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
                   return ConfirmCheckoutResult.from(session);
                 });
           } catch (final Throwable t) {
-            // Every way out releases the reservation, an Error included: the release swallows its
-            // own failures, and stock held for an order never placed is worse than the attempt
+            // Every way out releases the reservation — a refused or unanswered payment, an Error
+            // included: the release swallows its own failures, and stock held for an order never
+            // placed is worse than the attempt
             releaseQuietly(lines);
             throw t;
           }
         });
+  }
+
+  /**
+   * Has the provider the customer chose authorize the session's total.
+   *
+   * @return the payment reference the provider answered with
+   * @throws PaymentProviderNotFoundException if the chosen provider is no longer offered
+   * @throws PaymentProviderUnavailableException if the provider is not available or did not answer
+   * @throws PaymentInitiationFailedException if the provider refused the payment
+   */
+  private String authorizePaymentOf(final CheckoutSession session) {
+    final PaymentProviderId providerId = session.paymentSelection().providerId();
+    final PaymentProvider provider =
+        paymentProviderRegistry
+            .findById(providerId)
+            .orElseThrow(() -> new PaymentProviderNotFoundException(providerId));
+    if (!provider.isAvailable()) {
+      throw new PaymentProviderUnavailableException(providerId);
+    }
+    final PaymentProvider.PaymentResult authorization =
+        provider.initiatePayment(session.id(), session.totals().total());
+    if (authorization.outcome() == PaymentProvider.PaymentResult.Outcome.UNAVAILABLE) {
+      throw new PaymentProviderUnavailableException(providerId);
+    }
+    if (!authorization.success()) {
+      throw new PaymentInitiationFailedException(providerId, authorization.errorMessage());
+    }
+    return authorization.providerReference();
   }
 
   /**

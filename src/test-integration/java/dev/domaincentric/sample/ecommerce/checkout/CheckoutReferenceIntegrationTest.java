@@ -16,18 +16,21 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocar
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentInputPort;
-import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionStatus;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsInputPort;
@@ -45,9 +48,10 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * Every payment request names the checkout it pays for: the payment use case through its input
- * port, the shop wired to a payment provider that is a stub on a free port, answering per checkout
- * reference what the test arranges.
+ * Every payment request names the checkout it pays for: Place Order through its input port, the
+ * shop wired to a payment provider that is a stub on a free port, answering per checkout reference
+ * what the test arranges. The requests are counted from the moment the checkouts stand at the
+ * review.
  */
 // The shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring context — so this class gets a
 // database of its own.
@@ -75,17 +79,19 @@ class CheckoutReferenceIntegrationTest {
   @Autowired private SubmitBuyerInfoInputPort submitBuyerInfo;
   @Autowired private SubmitDeliveryInputPort submitDelivery;
   @Autowired private SubmitPaymentInputPort submitPayment;
+  @Autowired private ConfirmCheckoutInputPort confirmCheckout;
   @Autowired private GetCheckoutSessionInputPort getCheckoutSession;
 
   @Test
-  @DisplayName("Two checkouts send two different checkout references")
+  @DisplayName("Two checkouts send two references")
   void twoCheckoutsSendTwoDifferentReferences() {
     providerAuthorizesEveryPayment();
-    final CustomersCheckout first = checkoutAtThePaymentStep();
-    final CustomersCheckout second = checkoutAtThePaymentStep();
+    final CustomersCheckout first = checkoutAtTheReview();
+    final CustomersCheckout second = checkoutAtTheReview();
+    paymentProvider.resetRequests();
 
-    pay(first);
-    pay(second);
+    placeOrder(first);
+    placeOrder(second);
 
     final List<@Nullable String> references = merchantReferences();
     assertThat(references).hasSize(2).doesNotContainNull().allMatch(r -> !r.isBlank());
@@ -93,30 +99,35 @@ class CheckoutReferenceIntegrationTest {
   }
 
   @Test
-  @DisplayName("The provider's answer for one checkout touches no other checkout")
+  @DisplayName("The provider answers per checkout")
   void theProvidersAnswerForOneCheckoutTouchesNoOther() {
-    final CustomersCheckout first = checkoutAtThePaymentStep();
-    final CustomersCheckout second = checkoutAtThePaymentStep();
     providerAuthorizesEveryPayment();
+    final CustomersCheckout first = checkoutAtTheReview();
+    final CustomersCheckout second = checkoutAtTheReview();
     providerRefusesThePaymentOf(first.sessionId());
 
-    assertThatThrownBy(() -> pay(first)).isInstanceOf(PaymentInitiationFailedException.class);
-    final SubmitPaymentResult paid = pay(second);
+    assertThatThrownBy(() -> placeOrder(first))
+        .isInstanceOf(PaymentInitiationFailedException.class);
+    final ConfirmCheckoutResult placed = placeOrder(second);
 
-    assertThat(currentStep(first)).isEqualTo(CheckoutStep.PAYMENT);
-    assertThat(paid.currentStep()).isEqualTo(CheckoutStep.REVIEW.name());
+    assertThat(currentStep(first)).isEqualTo(CheckoutStep.REVIEW);
+    assertThat(placed.status()).isEqualTo(CheckoutSessionStatus.CONFIRMED.name());
   }
 
   @Test
-  @DisplayName("A second attempt after a refusal carries the same checkout reference")
+  @DisplayName("A second attempt names the same checkout")
   void aSecondAttemptCarriesTheSameReference() {
-    final CustomersCheckout checkout = checkoutAtThePaymentStep();
+    providerAuthorizesEveryPayment();
+    final CustomersCheckout checkout = checkoutAtTheReview();
+    paymentProvider.resetRequests();
+    paymentProvider.resetMappings();
     paymentProvider.stubFor(post("/payments").willReturn(aResponse().withStatus(402)));
-    assertThatThrownBy(() -> pay(checkout)).isInstanceOf(PaymentInitiationFailedException.class);
+    assertThatThrownBy(() -> placeOrder(checkout))
+        .isInstanceOf(PaymentInitiationFailedException.class);
     paymentProvider.resetMappings();
     providerAuthorizesEveryPayment();
 
-    pay(checkout);
+    placeOrder(checkout);
 
     final List<@Nullable String> references = merchantReferences();
     assertThat(references).hasSize(2).containsOnly(checkout.sessionId());
@@ -149,9 +160,9 @@ class CheckoutReferenceIntegrationTest {
         .toList();
   }
 
-  private SubmitPaymentResult pay(final CustomersCheckout checkout) {
-    return submitPayment.execute(
-        new SubmitPaymentCommand(checkout.sessionId(), checkout.customerId(), PROVIDER_ID));
+  private ConfirmCheckoutResult placeOrder(final CustomersCheckout checkout) {
+    return confirmCheckout.execute(
+        new ConfirmCheckoutCommand(checkout.sessionId(), checkout.customerId()));
   }
 
   private CheckoutStep currentStep(final CustomersCheckout checkout) {
@@ -161,8 +172,11 @@ class CheckoutReferenceIntegrationTest {
         .step();
   }
 
-  /** A customer of their own whose checkout of one item has passed the buyer and delivery step. */
-  private CustomersCheckout checkoutAtThePaymentStep() {
+  /**
+   * A customer of their own whose checkout of one item has passed the buyer, delivery and payment
+   * step and stands at the review.
+   */
+  private CustomersCheckout checkoutAtTheReview() {
     final String customerId = "payer-" + UUID.randomUUID();
     final String cartId =
         getOrCreateActiveCart.execute(new GetOrCreateActiveCartCommand(customerId)).cartId();
@@ -184,6 +198,7 @@ class CheckoutReferenceIntegrationTest {
             "United States",
             "IL",
             "standard"));
+    submitPayment.execute(new SubmitPaymentCommand(sessionId, customerId, PROVIDER_ID));
 
     return new CustomersCheckout(sessionId, customerId);
   }

@@ -7,10 +7,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Domain Event indicating that payment method was submitted for a checkout session.
+ * Domain Event indicating that the payment provider authorized a checkout session's payment.
  *
- * <p>This event is raised when a customer completes the payment step, selecting their preferred
- * payment method.
+ * <p>This event is raised when the customer places the order at the review and the chosen provider
+ * authorizes the session's total; choosing how to pay on the payment step raises none.
  */
 public record PaymentSubmitted(
     UUID eventId, CheckoutSessionId sessionId, String paymentProviderId, Instant occurredOn)

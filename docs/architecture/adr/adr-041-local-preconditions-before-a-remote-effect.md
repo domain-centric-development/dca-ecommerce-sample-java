@@ -62,6 +62,22 @@ process that died in between leaves reserved is found only by reconciliation.
 - Neutral: the redirect flow of WP-16 will revisit this path. The check stays valid there; the compensation may
   be replaced by the authorisation round trip.
 
+## 2026-10-21 amendment: the payment is authorized at Place Order
+
+The payment's remote effect sits in `ConfirmCheckout` now, not in `SubmitPayment`. The payment step only records the
+chosen provider (`submitPayment`) and reaches no provider. Place Order asks `assertReadyForConfirmation(...)`,
+reserves the stock, then has the chosen provider authorize the session's total outside the transaction
+(`ConfirmCheckoutUseCase.authorizePaymentOf`). Only then does it record the reference (`authorizePayment`) and
+confirm, in one short transaction. A refused or unanswered payment releases the reservation like every other way
+out. The rule of this record holds unchanged: everything the aggregate can refuse is asked before the remote call.
+
+The intent compensation above is gone with it, and nothing calls `cancelPayment(...)` any more. The port keeps the
+operation, and its adapters still implement it. One window stays open. Between the check and the transaction, the
+session is reloaded, and `authorizePayment` and `confirm` can still refuse it if it expired or another tab changed it
+in the meantime (`CheckoutSession.authorizePayment`, `CheckoutSession.confirm`). Such an authorization stays at the
+provider without an order. Nothing in the shop cancels it; as with the intent above, only a reconciliation would
+find it.
+
 ## Harness questions
 
 - **Catalog:** yes — the pitfall "remote effect before local preconditions" belongs beside the existing

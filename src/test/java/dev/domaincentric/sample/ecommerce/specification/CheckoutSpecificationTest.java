@@ -219,7 +219,8 @@ class CheckoutSpecificationTest {
               new CheckoutPricing(),
               events,
               new InMemoryTransactionBoundary(),
-              new StockAlwaysReserved())
+              new StockAlwaysReserved(),
+              new PaymentAlwaysAuthorized())
           .execute(new ConfirmCheckoutCommand(session.id().value(), session.customerId().value()));
     }
 
@@ -259,6 +260,46 @@ class CheckoutSpecificationTest {
     }
 
     public void release(List<Line> lines) {}
+  }
+
+  /** A payment the vectors do not race for: every way to pay authorizes every total. */
+  static class PaymentAlwaysAuthorized implements PaymentProviderRegistry {
+    public Optional<PaymentProvider> findById(PaymentProviderId providerId) {
+      return Optional.of(
+          new PaymentProvider() {
+            public PaymentProviderId providerId() {
+              return providerId;
+            }
+
+            public String displayName() {
+              return "Always authorized";
+            }
+
+            public PaymentResult initiatePayment(CheckoutSessionId sessionId, Money amount) {
+              return PaymentResult.success("pay-" + sessionId.value());
+            }
+
+            public PaymentResult confirmPayment(String providerReference) {
+              return PaymentResult.success(providerReference);
+            }
+
+            public PaymentResult cancelPayment(String providerReference) {
+              return PaymentResult.success(providerReference);
+            }
+
+            public boolean isAvailable() {
+              return true;
+            }
+          });
+    }
+
+    public List<PaymentProvider> findAll() {
+      return List.of();
+    }
+
+    public List<PaymentProvider> findAvailable() {
+      return List.of();
+    }
   }
 
   static class Publisher implements DomainEventPublisher {

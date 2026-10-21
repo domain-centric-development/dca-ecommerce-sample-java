@@ -37,7 +37,7 @@ import org.jspecify.annotations.Nullable;
  *   <li>{@link CheckoutSessionStarted} - when checkout begins from cart
  *   <li>{@link BuyerInfoSubmitted} - when buyer info step is completed
  *   <li>{@link DeliverySubmitted} - when delivery step is completed
- *   <li>{@link PaymentSubmitted} - when payment step is completed
+ *   <li>{@link PaymentSubmitted} - when the provider authorized the payment at the review
  *   <li>{@link CheckoutConfirmed} - when order is confirmed at review
  *   <li>{@link CheckoutCompleted} - when checkout is fully processed
  *   <li>{@link CheckoutAbandoned} - when customer abandons checkout
@@ -255,8 +255,8 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * Asserts that this session may be paid for right now.
    *
    * <p>The same preconditions {@link #submitPayment(PaymentSelection)} enforces, without changing
-   * anything: a caller that is about to reach a payment provider asks this first, so a session that
-   * would be rejected afterwards never produces a payment intent at the provider.
+   * anything, plus a positive total: a way to pay is chosen only for a session that has something
+   * to pay.
    *
    * @throws CheckoutNotModifiableException if the session no longer takes changes
    * @throws CheckoutStepNotCompletedException if the buyer or delivery step is missing
@@ -264,10 +264,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * @throws NothingToPayException if the total is not positive
    */
   public void assertReadyForPayment() {
-    ensureModifiable();
-    ensureStepCompleted(CheckoutStep.BUYER_INFO);
-    ensureStepCompleted(CheckoutStep.DELIVERY);
-    ensureAtOrBeforeStep(CheckoutStep.PAYMENT);
+    ensurePaymentStepOpen();
 
     if (!totals.total().isPositive()) {
       throw new NothingToPayException(this.id, totals.total());
@@ -275,19 +272,16 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
-   * Submits payment method selection for the checkout.
-   *
-   * <p>Raises a {@link PaymentSubmitted} domain event.
+   * Submits payment method selection for the checkout: it records how the customer pays, nothing is
+   * requested from the provider yet.
    *
    * @param payment the payment method selection
    * @throws CheckoutNotModifiableException if the session no longer takes changes
-   * @throws CheckoutStepOutOfOrderException if the step is ahead of the current one
+   * @throws CheckoutStepNotCompletedException if the buyer or delivery step is missing
+   * @throws CheckoutStepOutOfOrderException if the session is past the payment step
    */
   public void submitPayment(final PaymentSelection payment) {
-    ensureModifiable();
-    ensureStepCompleted(CheckoutStep.BUYER_INFO);
-    ensureStepCompleted(CheckoutStep.DELIVERY);
-    ensureAtOrBeforeStep(CheckoutStep.PAYMENT);
+    ensurePaymentStepOpen();
 
     this.paymentSelection = payment;
 
@@ -295,50 +289,38 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     if (currentStep == CheckoutStep.PAYMENT) {
       this.currentStep = CheckoutStep.REVIEW;
     }
+  }
 
-    registerEvent(PaymentSubmitted.now(this.id, payment));
+  /** The payment step takes a choice: the session takes changes, buyer and delivery are given. */
+  private void ensurePaymentStepOpen() {
+    ensureModifiable();
+    ensureStepCompleted(CheckoutStep.BUYER_INFO);
+    ensureStepCompleted(CheckoutStep.DELIVERY);
+    ensureAtOrBeforeStep(CheckoutStep.PAYMENT);
   }
 
   /**
-   * Whether the payment the provider already authorized for this session stands for its total.
+   * Records that the chosen provider authorized this session's total under a payment reference.
    *
-   * @param provider the provider the customer pays through now
-   * @return true when the session holds an authorized payment of exactly its total by that provider
-   */
-  public boolean authorizedPaymentCovers(final PaymentProviderId provider) {
-    return paymentSelection != null && paymentSelection.covers(provider, totals.total());
-  }
-
-  /**
-   * Keeps the payment the provider already authorized and moves on to the review, without a new
-   * payment request.
+   * <p>Raises a {@link PaymentSubmitted} domain event.
    *
-   * @param provider the provider the customer pays through now
-   * @throws CheckoutStepNotCompletedException if the authorized payment does not cover the total
+   * @param paymentReference the payment reference the provider answered with
+   * @throws CheckoutNotModifiableException if the session no longer takes changes
+   * @throws CheckoutStepNotCompletedException if a step is still missing its data
+   * @throws CheckoutStepOutOfOrderException if the session does not stand at the review step
    */
-  public void keepAuthorizedPayment(final PaymentProviderId provider) {
-    assertReadyForPayment();
-    if (!authorizedPaymentCovers(provider)) {
-      throw new CheckoutStepNotCompletedException(this.id, CheckoutStep.PAYMENT);
+  public void authorizePayment(final String paymentReference) {
+    ensureModifiable();
+    ensureAllStepsCompleted();
+    if (currentStep != CheckoutStep.REVIEW) {
+      throw new CheckoutStepOutOfOrderException(this.id, CheckoutStep.REVIEW, currentStep);
     }
 
-    // The payment was announced when the provider authorized it; keeping it announces nothing new
-    if (currentStep == CheckoutStep.PAYMENT) {
-      this.currentStep = CheckoutStep.REVIEW;
-    }
-  }
+    this.paymentSelection =
+        PaymentSelection.authorized(
+            paymentSelection.providerId(), paymentReference, totals.total());
 
-  /**
-   * Forgets the payment the provider released, so it covers nothing any more and the payment step
-   * waits for a new one. A session that holds another payment by now keeps that one.
-   *
-   * @param providerReference the reference of the payment the provider released
-   */
-  public void releasePayment(final String providerReference) {
-    if (paymentSelection != null
-        && providerReference.equals(paymentSelection.providerReference())) {
-      this.paymentSelection = null;
-    }
+    registerEvent(PaymentSubmitted.now(this.id, paymentSelection));
   }
 
   /**

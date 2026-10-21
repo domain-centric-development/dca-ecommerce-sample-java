@@ -10,6 +10,7 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublis
 import dev.domaincentric.dca.spring.InMemoryTransactionBoundary;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.persistence.InMemoryCheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentUseCase;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProvider;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderRegistry;
@@ -17,9 +18,9 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.BuyerInfo;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItemId;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.DeliveryAddress;
@@ -34,11 +35,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * What the payment provider is told, and when.
- *
- * <p>Initiating a payment is a remote effect: it exists at the provider whether or not this shop
- * goes on to accept it. So everything the session itself can refuse is refused before the call, and
- * an intent that the session turns out not to accept afterwards is released again.
+ * What the payment provider is told at the payment step: nothing. The step only chooses how to pay;
+ * the payment is requested when the order is placed.
  */
 class SubmitPaymentUseCaseTest {
 
@@ -70,52 +68,15 @@ class SubmitPaymentUseCaseTest {
   }
 
   @Test
-  @DisplayName("An intent the session turns out not to accept is released again")
-  void anIntentTheSessionRejectsIsReleased() {
+  @DisplayName("A session that is ready moves to the review without a payment request")
+  void aReadySessionMovesToTheReviewWithoutAPaymentRequest() {
     final CheckoutSession session = readySession();
 
-    // The session moves on while the provider is being called — here by being abandoned, in
-    // production by a concurrent confirmation or an expiry.
-    provider.duringInitiation =
-        () -> {
-          session.abandon();
-          sessions.save(session);
-        };
+    final SubmitPaymentResult result =
+        useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock"));
 
-    assertThrows(
-        CheckoutNotModifiableException.class,
-        () -> useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock")));
-
-    assertEquals(1, provider.initiations.size(), "the intent was created before the session moved");
-    assertEquals(
-        provider.initiations, provider.cancellations, "and exactly that intent was released");
-  }
-
-  @Test
-  @DisplayName("An intent is released even when the failure is an Error")
-  void anIntentIsReleasedOnAnError() {
-    final CheckoutSession session = readySession();
-    events.failWith = new StackOverflowError("the write fails in a way nobody catches");
-
-    assertThrows(
-        StackOverflowError.class,
-        () -> useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock")));
-
-    assertEquals(
-        provider.initiations,
-        provider.cancellations,
-        "an intent must not survive a failure just because the failure was not an exception");
-  }
-
-  @Test
-  @DisplayName("A session that is ready keeps its intent")
-  void aReadySessionKeepsItsIntent() {
-    final CheckoutSession session = readySession();
-
-    useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock"));
-
-    assertEquals(1, provider.initiations.size());
-    assertTrue(provider.cancellations.isEmpty(), "a payment that was accepted stays");
+    assertEquals(CheckoutStep.REVIEW.name(), result.currentStep());
+    assertTrue(provider.initiations.isEmpty(), "the payment step only chooses how to pay");
   }
 
   private CheckoutSession sessionWithBuyerInfoOnly() {
@@ -146,9 +107,6 @@ class SubmitPaymentUseCaseTest {
     private final List<String> initiations = new ArrayList<>();
     private final List<String> cancellations = new ArrayList<>();
 
-    /** What happens at the provider's end while the call is in flight. */
-    private Runnable duringInitiation = () -> {};
-
     @Override
     public PaymentProviderId providerId() {
       return PaymentProviderId.of("mock");
@@ -163,7 +121,6 @@ class SubmitPaymentUseCaseTest {
     public PaymentResult initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
       final String reference = "intent-" + initiations.size();
       initiations.add(reference);
-      duringInitiation.run();
       return PaymentResult.success(reference);
     }
 
@@ -206,9 +163,6 @@ class SubmitPaymentUseCaseTest {
 
   private static final class SilentEventPublisher implements DomainEventPublisher {
 
-    /** What the write fails with, when the test is about a failing write. */
-    private Error failWith;
-
     @Override
     public void publish(final DomainEvent event) {
       // the events of this use case are not what is under test
@@ -216,9 +170,6 @@ class SubmitPaymentUseCaseTest {
 
     @Override
     public void publishAndClearEvents(final AggregateRoot<?, ?> aggregate) {
-      if (failWith != null) {
-        throw failWith;
-      }
       aggregate.clearDomainEvents();
     }
   }

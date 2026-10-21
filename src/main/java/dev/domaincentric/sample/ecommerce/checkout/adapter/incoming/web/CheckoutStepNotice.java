@@ -64,9 +64,7 @@ public enum CheckoutStepNotice {
   REVIEW_FIRST(Kind.REFUSAL, "review-first", "Please review your order before placing it."),
   ORDER_NOT_PLACED(
       Kind.REFUSAL, "order-not-placed", "Your order could not be placed. Please try again."),
-  ORDER_NOT_CONFIRMED(Kind.REFUSAL, "order-not-confirmed", "Order has not been confirmed yet"),
-  PAYMENT_ALREADY_AUTHORIZED(
-      Kind.INFORMATION, "payment-already-authorized", "Your payment is already authorized.");
+  ORDER_NOT_CONFIRMED(Kind.REFUSAL, "order-not-confirmed", "Order has not been confirmed yet");
 
   /** What a notice tells the customer, and so the page attribute it is shown under. */
   public enum Kind {

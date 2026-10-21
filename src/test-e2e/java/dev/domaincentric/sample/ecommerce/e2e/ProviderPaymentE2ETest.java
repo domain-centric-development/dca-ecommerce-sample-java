@@ -1,13 +1,10 @@
 package dev.domaincentric.sample.ecommerce.e2e;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,8 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import dev.domaincentric.sample.ecommerce.e2e.pages.*;
-import java.math.BigDecimal;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,87 +40,26 @@ class ProviderPaymentE2ETest extends BaseE2ETest {
   }
 
   @Test
-  @DisplayName("Authorized payment moves to review")
-  void authorizedPaymentMovesTheCheckoutToReview() throws Exception {
-    PaymentPage payment = checkoutAtThePaymentStep();
+  @DisplayName(
+      "Place Order has the payment provider authorize the total the review showed and opens the confirmation")
+  void placeOrderAuthorizesTheReviewedTotal() throws Exception {
     paymentProvider.stubFor(post("/payments").willReturn(ShopUnderTest.authorized()));
+    ReviewPage review =
+        ProductCatalogPage.navigateTo(page)
+            .viewProductNamed("Domain-Driven Design")
+            .addToCart()
+            .proceedToTheReviewAsJaneDoe();
+    assertEquals("59.98 EUR", review.total(), "the review's total");
     paymentProvider.resetRequests();
 
-    ReviewPage review = payment.selectFirstPaymentProvider().continueToReview();
+    ConfirmationPage confirmation = review.placeOrder();
 
-    assertTrue(review.showsEmail("guest@example.com"), "the checkout shows the review step");
+    assertThat(page).hasURL(Pattern.compile(".*/checkout/confirmation$"));
+    assertThat(confirmation.orderTotal()).hasText("59.98 EUR");
     List<LoggedRequest> requests =
         paymentProvider.findAll(postRequestedFor(urlEqualTo("/payments")));
     assertEquals(1, requests.size(), "the payment provider received one payment request");
-    String[] total = review.total().split("\\s+");
     JsonNode request = new ObjectMapper().readTree(requests.getFirst().getBodyAsString());
-    assertEquals(
-        0,
-        new BigDecimal(total[0]).compareTo(new BigDecimal(request.get("amount").asText())),
-        "the payment request is for the checkout session's total " + review.total());
-    assertEquals(total[1], request.get("currency").asText(), "the payment request's currency");
-  }
-
-  @Test
-  @DisplayName("The payment request names its checkout")
-  void thePaymentRequestCarriesTheCheckoutReference() throws Exception {
-    PaymentPage payment = checkoutAtThePaymentStep();
-    paymentProvider.stubFor(post("/payments").willReturn(ShopUnderTest.authorized()));
-
-    ReviewPage review = payment.selectFirstPaymentProvider().continueToReview();
-
-    String shownTotal = review.total();
-    String[] total = shownTotal.split("\\s+");
-    String checkoutReference = review.placeOrder().orderReference();
-    List<LoggedRequest> requests =
-        paymentProvider.findAll(
-            postRequestedFor(urlEqualTo("/payments"))
-                .withRequestBody(
-                    matchingJsonPath("$.merchantReference", equalTo(checkoutReference))));
-    assertEquals(
-        1,
-        requests.size(),
-        "the payment provider received one payment request carrying the checkout reference "
-            + checkoutReference);
-    JsonNode request = new ObjectMapper().readTree(requests.getFirst().getBodyAsString());
-    assertEquals(
-        0,
-        new BigDecimal(total[0]).compareTo(new BigDecimal(request.get("amount").asText())),
-        "the payment request is for the checkout session's total " + shownTotal);
-    assertEquals(total[1], request.get("currency").asText(), "the payment request's currency");
-  }
-
-  @Test
-  @DisplayName("Paying again for the same amount keeps the payment")
-  void payingAgainForTheSameAmountKeepsThePayment() {
-    paymentProvider.stubFor(post("/payments").willReturn(ShopUnderTest.authorized()));
-    PaymentPage paymentAgain =
-        checkoutAtThePaymentStep().selectFirstPaymentProvider().continueToReview().backToPayment();
-
-    ReviewPage review = paymentAgain.selectFirstPaymentProvider().continueToReview();
-
-    assertThat(review.notice()).hasText("Your payment is already authorized.");
-    String checkoutReference = review.placeOrder().orderReference();
-    List<LoggedRequest> requests =
-        paymentProvider.findAll(
-            postRequestedFor(urlEqualTo("/payments"))
-                .withRequestBody(
-                    matchingJsonPath("$.merchantReference", equalTo(checkoutReference))));
-    assertEquals(
-        1,
-        requests.size(),
-        "the payment provider received one payment request for the checkout session "
-            + checkoutReference);
-  }
-
-  private PaymentPage checkoutAtThePaymentStep() {
-    ProductCatalogPage.navigateTo(page).viewFirstProduct().addToCart();
-    return CartPage.navigateTo(page)
-        .proceedToCheckout()
-        .fillBuyerInfo("guest@example.com", "Test", "Guest", "+1-555-0100")
-        .continueToDelivery()
-        .fillAddress("123 Main Street", "Springfield", "12345", "United States", "IL")
-        .selectFirstShippingOption()
-        .continueToPayment();
+    assertEquals("59.98", request.get("amount").asText(), "the payment request's amount");
   }
 }
