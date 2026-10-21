@@ -3,6 +3,8 @@ package dev.domaincentric.sample.ecommerce.checkout.domain.readmodel;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.Value;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.BuyerInfo;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CartId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutReview;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionStatus;
@@ -83,17 +85,7 @@ public record CheckoutCartSnapshot(
     }
 
     final List<LineItemSnapshot> lineItemSnapshots =
-        session.lineItems().stream()
-            .map(
-                item ->
-                    new LineItemSnapshot(
-                        item.id(),
-                        item.productId(),
-                        item.productName(),
-                        item.unitPrice(),
-                        item.quantity(),
-                        item.imageUrl()))
-            .toList();
+        session.lineItems().stream().map(CheckoutCartSnapshot::lineOf).toList();
 
     return new CheckoutCartSnapshot(
         session.id(),
@@ -109,6 +101,43 @@ public record CheckoutCartSnapshot(
         session.shippingOption(),
         session.paymentSelection(),
         session.orderReference());
+  }
+
+  /**
+   * Creates a snapshot of the session as its review shows it: the review's lines and totals, the
+   * rest from the session.
+   *
+   * @param session the checkout session aggregate
+   * @param review the session's review at today's prices
+   * @return a snapshot of the session as reviewed
+   */
+  public static CheckoutCartSnapshot from(
+      final CheckoutSession session, final CheckoutReview review) {
+    final CheckoutCartSnapshot stored = from(session);
+    return new CheckoutCartSnapshot(
+        stored.sessionId(),
+        stored.cartId(),
+        stored.customerId(),
+        stored.step(),
+        stored.status(),
+        review.lineItems().stream().map(CheckoutCartSnapshot::lineOf).toList(),
+        review.totals().subtotal(),
+        review.totals(),
+        stored.buyerInfo(),
+        stored.deliveryAddress(),
+        stored.shippingOption(),
+        stored.paymentSelection(),
+        stored.orderReference());
+  }
+
+  private static LineItemSnapshot lineOf(final CheckoutLineItem item) {
+    return new LineItemSnapshot(
+        item.id(),
+        item.productId(),
+        item.productName(),
+        item.unitPrice(),
+        item.quantity(),
+        item.imageUrl());
   }
 
   /**

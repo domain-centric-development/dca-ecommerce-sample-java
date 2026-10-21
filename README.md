@@ -1194,9 +1194,10 @@ retains the same domain state. The legacy Completed cart status remains readable
 an active cart editable and never completes the whole cart.
 
 Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume
-immutable line/fact snapshots. Any changed price or shortage reports affected lines and leaves state, totals and events
-unchanged. The buyer explicitly starts a fresh checkout against the new prices. Success stores the recomputed total and
-publishes the same total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
+immutable line/fact snapshots. The review shows the lines at today's prices and changes nothing; "Place Order" carries
+a fingerprint of what the review showed. A shortage, or a review that is no longer the one shown, refuses the order and
+leaves state, totals and events unchanged, and the review shows the order as it is today. Success orders the reviewed
+lines and stores and publishes the reviewed total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
 claim of durable distributed transactions or universal rollback of unenlisted resources.
 
 The language-neutral specification is an independently owned, currently unpublished repository. It is **not part of the

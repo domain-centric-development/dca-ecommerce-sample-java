@@ -13,6 +13,8 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
@@ -72,6 +74,8 @@ class CheckoutFlowIntegrationTest {
   @Autowired private SubmitPaymentInputPort submitPaymentInputPort;
 
   @Autowired private ConfirmCheckoutInputPort confirmCheckoutInputPort;
+
+  @Autowired private GetCheckoutReviewInputPort getCheckoutReviewInputPort;
 
   @Autowired private ProductRepository productRepository;
 
@@ -159,7 +163,13 @@ class CheckoutFlowIntegrationTest {
 
     // Step 6: Confirm checkout
     ConfirmCheckoutResult confirmResponse =
-        confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId, customerId));
+        confirmCheckoutInputPort.execute(
+            new ConfirmCheckoutCommand(
+                sessionId,
+                customerId,
+                getCheckoutReviewInputPort
+                    .execute(new GetCheckoutReviewQuery(sessionId, customerId))
+                    .fingerprint()));
 
     assertEquals("CONFIRMED", confirmResponse.status(), "Session should be CONFIRMED");
     // Note: orderReference is set when complete() is called, not during confirm()

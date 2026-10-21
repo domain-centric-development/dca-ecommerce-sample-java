@@ -2,6 +2,9 @@ package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkou
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewQuery;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -38,14 +41,17 @@ public class ReviewPageController {
 
   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
   private final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort;
+  private final GetCheckoutReviewInputPort getCheckoutReviewInputPort;
   private final IdentityProvider identityProvider;
 
   public ReviewPageController(
       final GetCheckoutSessionInputPort getCheckoutSessionInputPort,
       final GetActiveCheckoutSessionInputPort getActiveCheckoutSessionInputPort,
+      final GetCheckoutReviewInputPort getCheckoutReviewInputPort,
       final IdentityProvider identityProvider) {
     this.getCheckoutSessionInputPort = getCheckoutSessionInputPort;
     this.getActiveCheckoutSessionInputPort = getActiveCheckoutSessionInputPort;
+    this.getCheckoutReviewInputPort = getCheckoutReviewInputPort;
     this.identityProvider = identityProvider;
   }
 
@@ -55,6 +61,9 @@ public class ReviewPageController {
    * <p>This endpoint retrieves the active checkout session for the current user (via JWT identity)
    * and displays all collected information including buyer info, delivery details, payment method,
    * and order summary for final review before purchase confirmation.
+   *
+   * <p>The order summary shows today's prices, and the page's "Place Order" carries the fingerprint
+   * of everything it shows. Opening the review changes nothing.
    *
    * @param model the Spring MVC model, holding the notice a redirect handed the page, if any
    * @param attributes the attributes of a redirect away from the page
@@ -89,8 +98,12 @@ public class ReviewPageController {
       return denied.get();
     }
 
-    // Convert to page-specific ViewModel
-    final ReviewPageViewModel viewModel = ReviewPageViewModel.fromSnapshot(result.session());
+    // The order as it stands today, at today's prices, and the fingerprint Place Order carries
+    final GetCheckoutReviewResult review =
+        getCheckoutReviewInputPort.execute(
+            new GetCheckoutReviewQuery(activeSession.sessionId(), customerId));
+    final ReviewPageViewModel viewModel =
+        ReviewPageViewModel.fromReview(review.review(), review.fingerprint());
 
     model.addAttribute("orderReview", viewModel);
     model.addAttribute("title", "Review Order - Checkout");

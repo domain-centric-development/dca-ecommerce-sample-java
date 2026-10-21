@@ -150,9 +150,16 @@ class ProviderPaymentIntegrationTest {
     paymentProvider.stubFor(post("/payments").willReturn(answer));
   }
 
-  /** Presses "Place Order" on the review page. */
+  /** Presses "Place Order" on the review page, which sends the fingerprint of what it showed. */
   private MvcResult placeOrder() throws Exception {
-    return submit("/checkout/confirm", page(REVIEW_STEP), "sentFrom", "review");
+    final Document review = page(REVIEW_STEP);
+    return submit(
+        "/checkout/confirm",
+        review,
+        "sentFrom",
+        "review",
+        "reviewFingerprint",
+        review.selectFirst("input[name=reviewFingerprint]").val());
   }
 
   /** The form post went back to the review page. */

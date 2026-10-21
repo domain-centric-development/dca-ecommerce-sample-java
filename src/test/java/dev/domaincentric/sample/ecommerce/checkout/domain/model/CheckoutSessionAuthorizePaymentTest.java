@@ -48,7 +48,9 @@ class CheckoutSessionAuthorizePaymentTest {
     final CheckoutSession session = sessionAtTheReview();
     session.goBackTo(CheckoutStep.PAYMENT);
 
-    assertThrows(CheckoutStepOutOfOrderException.class, () -> session.authorizePayment("pay-1"));
+    assertThrows(
+        CheckoutStepOutOfOrderException.class,
+        () -> session.authorizePayment("pay-1", Money.euro(15)));
   }
 
   @Test
@@ -57,7 +59,9 @@ class CheckoutSessionAuthorizePaymentTest {
     final CheckoutSession session = sessionAtTheReview();
     session.abandon();
 
-    assertThrows(CheckoutNotModifiableException.class, () -> session.authorizePayment("pay-1"));
+    assertThrows(
+        CheckoutNotModifiableException.class,
+        () -> session.authorizePayment("pay-1", Money.euro(15)));
   }
 
   @Test
@@ -65,10 +69,22 @@ class CheckoutSessionAuthorizePaymentTest {
   void theAuthorizedPaymentIsForTheSessionsTotal() {
     final CheckoutSession session = sessionAtTheReview();
 
-    session.authorizePayment("pay-1");
+    session.authorizePayment("pay-1", Money.euro(15));
 
     assertEquals(
         PaymentSelection.authorized(PROVIDER, "pay-1", Money.euro(15)), session.paymentSelection());
+  }
+
+  @Test
+  @DisplayName("the authorized payment records the amount the provider authorized")
+  void theAuthorizedPaymentIsForTheAmountAuthorized() {
+    final CheckoutSession session = sessionAtTheReview();
+
+    // The provider authorized 14 EUR — what the review showed — while the session holds 15 EUR
+    session.authorizePayment("pay-1", Money.euro(14));
+
+    assertEquals(
+        PaymentSelection.authorized(PROVIDER, "pay-1", Money.euro(14)), session.paymentSelection());
   }
 
   @Test
@@ -77,7 +93,7 @@ class CheckoutSessionAuthorizePaymentTest {
     final CheckoutSession session = sessionAtTheReview();
     session.clearDomainEvents();
 
-    session.authorizePayment("pay-1");
+    session.authorizePayment("pay-1", Money.euro(15));
 
     final List<DomainEvent> events = session.domainEvents();
     assertEquals(1, events.size());

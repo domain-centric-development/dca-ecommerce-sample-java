@@ -61,6 +61,14 @@ public enum CheckoutStepNotice {
       "Cannot place the order, %d item(s) unavailable or out of stock."),
   STOCK_RAN_SHORT(
       Kind.REFUSAL, "stock-ran-short", "Not enough stock left for '%s'. Please adjust your order."),
+  PRICE_CHANGED_SINCE_REVIEW(
+      Kind.REFUSAL,
+      "price-changed",
+      "The price of '%s' has changed. Please check your order and place it again."),
+  ORDER_CHANGED_SINCE_REVIEW(
+      Kind.REFUSAL,
+      "order-changed",
+      "Your order has changed since you reviewed it. Please check it and place it again."),
   REVIEW_FIRST(Kind.REFUSAL, "review-first", "Please review your order before placing it."),
   ORDER_NOT_PLACED(
       Kind.REFUSAL, "order-not-placed", "Your order could not be placed. Please try again."),

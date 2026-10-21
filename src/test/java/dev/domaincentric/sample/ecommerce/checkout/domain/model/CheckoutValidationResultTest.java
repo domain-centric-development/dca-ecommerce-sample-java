@@ -17,28 +17,27 @@ class CheckoutValidationResultTest {
   @Test
   @DisplayName("the line short of stock is the first unavailable or short line, in line order")
   void theLineShortOfStockIsTheFirstUnavailableOrShortLine() {
-    final ValidationError priceChanged =
-        new ValidationError(
-            ProductId.generate(), "Domain-Driven Design", "Price changed", ErrorType.PRICE_CHANGED);
     final ValidationError short1 =
         ValidationError.insufficientStock(ProductId.generate(), "Wooden Hexagon Desk Model", 5, 3);
     final ValidationError unavailable =
         ValidationError.productUnavailable(ProductId.generate(), "Brass Compass");
+    final ValidationError notReserved =
+        new ValidationError(
+            ProductId.generate(),
+            "Domain-Driven Design",
+            "Stock could not be reserved for 2 unit(s)",
+            ErrorType.INSUFFICIENT_STOCK);
 
     final CheckoutValidationResult result =
-        CheckoutValidationResult.withErrors(List.of(priceChanged, short1, unavailable));
+        CheckoutValidationResult.withErrors(List.of(short1, unavailable, notReserved));
 
     assertEquals(Optional.of(short1), result.shortOfStock());
   }
 
   @Test
-  @DisplayName("a verdict that only found changed prices names no line short of stock")
-  void aVerdictWithOnlyChangedPricesNamesNoLineShortOfStock() {
-    final ValidationError priceChanged =
-        new ValidationError(
-            ProductId.generate(), "Domain-Driven Design", "Price changed", ErrorType.PRICE_CHANGED);
-
-    final CheckoutValidationResult result = CheckoutValidationResult.withError(priceChanged);
+  @DisplayName("a valid verdict names no line short of stock")
+  void aValidVerdictNamesNoLineShortOfStock() {
+    final CheckoutValidationResult result = CheckoutValidationResult.valid();
 
     assertEquals(Optional.empty(), result.shortOfStock());
   }

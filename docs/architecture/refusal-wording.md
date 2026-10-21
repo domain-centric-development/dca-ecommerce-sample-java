@@ -164,7 +164,8 @@ Placing the order (`/checkout/confirm`):
 | Refusal | Sentence |
 |---|---|
 | `CheckoutValidationException` with a line unavailable or short of stock — at the check or at the reservation | Not enough stock left for '{product}'. Please adjust your order. (the first such line, in line order) |
-| `CheckoutValidationException` with changed prices only | Cannot place the order, {count} item(s) unavailable or out of stock. |
+| `CheckoutChangedSinceReviewException`, a line's price changed since the review | The price of '{product}' has changed. Please check your order and place it again. |
+| `CheckoutChangedSinceReviewException`, anything else changed since the review | Your order has changed since you reviewed it. Please check it and place it again. |
 | `CheckoutStepNotCompletedException` | Please complete the previous checkout steps first. |
 | `CheckoutStepOutOfOrderException` | Please review your order before placing it. |
 | not sent from the review's own form (checked by the page, Java shop) | Please review your order before placing it. — or, while an earlier step is still missing, Please complete the previous checkout steps first. on that step |

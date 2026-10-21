@@ -77,12 +77,15 @@ public class ConfirmationPageController {
    * to that step.
    *
    * @param sentFrom the page the form was sent from, {@code review} from the review's own form
+   * @param reviewFingerprint the fingerprint of the review the form was sent from; a form without
+   *     one matches no review
    * @param attributes the attributes of the redirect
    * @return redirect to confirmation page, or to the review or the step still open on refusal
    */
   @PostMapping("/confirm")
   public String confirmOrder(
       @RequestParam(name = "sentFrom", required = false) final @Nullable String sentFrom,
+      @RequestParam(name = "reviewFingerprint", defaultValue = "") final String reviewFingerprint,
       final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity
@@ -107,7 +110,7 @@ public class ConfirmationPageController {
         attributes,
         () -> {
           confirmCheckoutInputPort.execute(
-              new ConfirmCheckoutCommand(activeSession.sessionId(), customerId));
+              new ConfirmCheckoutCommand(activeSession.sessionId(), customerId, reviewFingerprint));
 
           return "redirect:/checkout/confirmation";
         });

@@ -10,9 +10,11 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutSessionS
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.DeliverySubmitted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.PaymentSubmitted;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -200,6 +202,50 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
+   * The review of this session at today's prices: what the review page shows and what "Place Order"
+   * orders. Changes nothing on the session.
+   *
+   * @param todaysPrices today's unit price per product; a line without one keeps its own
+   * @return the review
+   */
+  public CheckoutReview reviewAt(final Map<ProductId, Money> todaysPrices) {
+    final List<CheckoutLineItem> lines =
+        lineItems.stream()
+            .map(
+                item ->
+                    item.withUnitPrice(
+                        todaysPrices.getOrDefault(item.productId(), item.unitPrice())))
+            .toList();
+    final Money subtotal =
+        lines.stream()
+            .map(CheckoutLineItem::lineTotal)
+            .reduce(Money.zero(totals.subtotal().currency()), Money::add);
+    return new CheckoutReview(
+        id,
+        lines,
+        CheckoutTotals.calculate(subtotal, totals.shipping()),
+        buyerInfo,
+        deliveryAddress,
+        shippingOption,
+        paymentSelection);
+  }
+
+  /**
+   * Asserts that the review at today's prices is the one the customer was shown.
+   *
+   * @param todaysPrices today's unit price per product
+   * @param shown the fingerprint of the review the customer was shown
+   * @return the review, as the customer was shown it
+   * @throws CheckoutChangedSinceReviewException if the review has changed since
+   */
+  public CheckoutReview assertReviewed(
+      final Map<ProductId, Money> todaysPrices, final ReviewFingerprint shown) {
+    final CheckoutReview review = reviewAt(todaysPrices);
+    review.refuseUnlessShown(shown);
+    return review;
+  }
+
+  /**
    * Submits buyer information for the checkout.
    *
    * <p>Raises a {@link BuyerInfoSubmitted} domain event.
@@ -300,16 +346,17 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
-   * Records that the chosen provider authorized this session's total under a payment reference.
+   * Records that the chosen provider authorized the reviewed total under a payment reference.
    *
    * <p>Raises a {@link PaymentSubmitted} domain event.
    *
    * @param paymentReference the payment reference the provider answered with
+   * @param authorizedTotal the total the provider was asked for — the one the review showed
    * @throws CheckoutNotModifiableException if the session no longer takes changes
    * @throws CheckoutStepNotCompletedException if a step is still missing its data
    * @throws CheckoutStepOutOfOrderException if the session does not stand at the review step
    */
-  public void authorizePayment(final String paymentReference) {
+  public void authorizePayment(final String paymentReference, final Money authorizedTotal) {
     ensureModifiable();
     ensureAllStepsCompleted();
     if (currentStep != CheckoutStep.REVIEW) {
@@ -318,7 +365,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
 
     this.paymentSelection =
         PaymentSelection.authorized(
-            paymentSelection.providerId(), paymentReference, totals.total());
+            paymentSelection.providerId(), paymentReference, authorizedTotal);
 
     registerEvent(PaymentSubmitted.now(this.id, paymentSelection));
   }
@@ -326,9 +373,10 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   /**
    * Asserts that this session may be confirmed with that verdict right now.
    *
-   * <p>The same preconditions {@link #confirm(CheckoutValidationResult, Money)} enforces, without
-   * changing anything: a caller that is about to reserve the order's stock asks this first, so a
-   * session that would be refused afterwards never holds stock.
+   * <p>The same preconditions {@link #confirm(CheckoutValidationResult, Map, ReviewFingerprint)}
+   * enforces before it compares the review, without changing anything: a caller that is about to
+   * reserve the order's stock asks this first, so a session that would be refused afterwards never
+   * holds stock.
    *
    * @param validationResult the checkout pricing's verdict on the current line items
    * @throws CheckoutNotModifiableException if the session no longer takes changes
@@ -350,26 +398,41 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
-   * Confirms the checkout order once the checkout pricing has judged the current line items.
+   * Confirms the order the customer was shown in the review: its lines at today's prices and its
+   * total.
    *
-   * <p>The verdict and the recomputed subtotal are handed in by the use case: deciding them needs
-   * article facts the session does not own, so the domain service works them out and the session
-   * refuses to confirm an invalid one.
+   * <p>The verdict and today's prices are handed in by the use case: deciding them needs article
+   * facts the session does not own, so the domain service works them out and the session refuses to
+   * confirm an invalid one, or one that is no longer the review the customer was shown.
    *
    * <p>Raises a {@link CheckoutConfirmed} domain event on success.
    *
    * @param validationResult the checkout pricing's verdict on the current line items
-   * @param recomputedSubtotal the subtotal at current prices
+   * @param todaysPrices today's unit price per product
+   * @param shown the fingerprint of the review the customer was shown
    * @throws CheckoutNotModifiableException if the session no longer takes changes
    * @throws CheckoutStepNotCompletedException if a step is still missing its data
    * @throws CheckoutStepOutOfOrderException if the session does not stand at the review step
    * @throws CheckoutValidationException if a line item no longer passes validation
+   * @throws CheckoutChangedSinceReviewException if the review has changed since
+   * @throws AuthorizedAmountDiffersFromReviewException if the payment was authorized for an amount
+   *     other than the review's total
    */
   public void confirm(
-      final CheckoutValidationResult validationResult, final Money recomputedSubtotal) {
+      final CheckoutValidationResult validationResult,
+      final Map<ProductId, Money> todaysPrices,
+      final ReviewFingerprint shown) {
     assertReadyForConfirmation(validationResult);
+    final CheckoutReview review = assertReviewed(todaysPrices, shown);
+    final Money reviewedTotal = review.totals().total();
+    final Money authorized = paymentSelection.authorizedAmount();
+    if (authorized != null && !authorized.equals(reviewedTotal)) {
+      throw new AuthorizedAmountDiffersFromReviewException(this.id, authorized, reviewedTotal);
+    }
 
-    this.totals = CheckoutTotals.calculate(recomputedSubtotal, totals.shipping());
+    this.lineItems.clear();
+    this.lineItems.addAll(review.lineItems());
+    this.totals = review.totals();
     this.status = CheckoutSessionStatus.CONFIRMED;
     this.currentStep = CheckoutStep.CONFIRMATION;
 

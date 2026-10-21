@@ -265,8 +265,11 @@ class CheckoutCartSnapshotAccessTest {
                             item.unitPrice(), true, item.quantity())));
     final var pricing =
         new dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing();
+    final var todaysPrices = pricing.todaysPrices(session, facts);
     session.confirm(
-        pricing.validateItems(session, facts), pricing.calculateOrderTotal(session, facts));
+        pricing.validateItems(session, facts),
+        todaysPrices,
+        session.reviewAt(todaysPrices).fingerprint());
     return session;
   }
 

@@ -9,6 +9,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentIni
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.ShippingOptionNotFoundException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutChangedSinceReviewException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
@@ -106,18 +107,25 @@ final class CheckoutStepPage {
         return CheckoutRoutes.redirectFor(stillOpen, noticeFor(step, refusal), attributes);
       }
     }
+    if (step == CheckoutStep.REVIEW
+        && refusal instanceof CheckoutChangedSinceReviewException changed) {
+      // The review the redirect leads to shows the order as it stands today
+      return changed
+          .productWithChangedPrice()
+          .map(
+              product ->
+                  CheckoutRoutes.redirectTo(
+                      step, CheckoutStepNotice.PRICE_CHANGED_SINCE_REVIEW, product, attributes))
+          .orElseGet(
+              () ->
+                  CheckoutRoutes.redirectTo(
+                      step, CheckoutStepNotice.ORDER_CHANGED_SINCE_REVIEW, attributes));
+    }
     if (step == CheckoutStep.REVIEW && refusal instanceof CheckoutValidationException invalid) {
-      // A line short of stock is named, whichever check found it; changed prices only are counted
-      final Optional<ValidationError> shortOfStock = invalid.validation().shortOfStock();
-      if (shortOfStock.isPresent()) {
-        return CheckoutRoutes.redirectTo(
-            step, CheckoutStepNotice.STOCK_RAN_SHORT, shortOfStock.get().productName(), attributes);
-      }
+      // A line unavailable or short of stock is named, whichever check found it
+      final ValidationError shortOfStock = invalid.validation().shortOfStock().orElseThrow();
       return CheckoutRoutes.redirectTo(
-          step,
-          CheckoutStepNotice.ITEMS_UNAVAILABLE,
-          invalid.validation().errors().size(),
-          attributes);
+          step, CheckoutStepNotice.STOCK_RAN_SHORT, shortOfStock.productName(), attributes);
     }
     return CheckoutRoutes.redirectTo(step, noticeFor(step, refusal), attributes);
   }

@@ -209,6 +209,7 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── CheckoutSessionId, CheckoutLineItemId (Value Objects)
 │   │   │   ├── CheckoutStep, CheckoutSessionStatus
 │   │   │   ├── CheckoutTotals, CheckoutValidationResult
+│   │   │   ├── CheckoutReview, ReviewFingerprint, CheckoutChangedSinceReviewException
 │   │   │   ├── BuyerInfo, DeliveryAddress, ShippingOption
 │   │   │   ├── PaymentSelection, PaymentProviderId
 │   │   │   ├── CustomerId, CartId
@@ -238,6 +239,9 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── submitpayment/
 │   │   │   ├── SubmitPaymentInputPort, SubmitPaymentUseCase
 │   │   │   ├── SubmitPaymentCommand, SubmitPaymentResult
+│   │   ├── getcheckoutreview/
+│   │   │   ├── GetCheckoutReviewInputPort, GetCheckoutReviewUseCase
+│   │   │   ├── GetCheckoutReviewQuery, GetCheckoutReviewResult
 │   │   ├── confirmcheckout/
 │   │   │   ├── ConfirmCheckoutInputPort, ConfirmCheckoutUseCase
 │   │   │   ├── ConfirmCheckoutCommand, ConfirmCheckoutResult

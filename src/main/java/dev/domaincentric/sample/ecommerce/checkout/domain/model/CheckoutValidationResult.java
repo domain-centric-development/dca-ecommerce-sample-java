@@ -132,7 +132,6 @@ public record CheckoutValidationResult(List<ValidationError> errors) implements 
     /** The product is not available for purchase. */
     PRODUCT_UNAVAILABLE,
     /** The requested quantity exceeds available stock. */
-    INSUFFICIENT_STOCK,
-    PRICE_CHANGED
+    INSUFFICIENT_STOCK
   }
 }

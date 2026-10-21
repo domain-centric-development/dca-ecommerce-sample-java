@@ -100,7 +100,7 @@ class CheckoutOwnershipIntegrationTest {
         .hasMessageContaining("Session not found");
 
     assertThatThrownBy(
-            () -> confirmCheckout.execute(new ConfirmCheckoutCommand(sessionId, stranger)))
+            () -> confirmCheckout.execute(new ConfirmCheckoutCommand(sessionId, stranger, "")))
         .isInstanceOf(CheckoutSessionNotFoundException.class)
         .hasMessageContaining("Session not found");
   }

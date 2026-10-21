@@ -11,7 +11,6 @@ import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentPro
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderRegistry;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.StockReservationPort;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticle;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticlePriceResolver;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
@@ -22,7 +21,9 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidati
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.ReviewFingerprint;
 import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
 import java.util.Map;
@@ -38,11 +39,13 @@ import org.springframework.stereotype.Service;
  * <ul>
  *   <li>Loading and validating the checkout session
  *   <li>Fetching fresh article data (pricing, availability) via CheckoutArticleDataPort
- *   <li>Asking the session whether it may be confirmed with the checkout pricing's verdict
+ *   <li>Asking the session whether it may be confirmed with the checkout pricing's verdict, and
+ *       whether its review at today's prices is still the one the customer placed the order from —
+ *       the order is placed at exactly what that review showed
  *   <li>Reserving the stock of every line in Inventory via StockReservationPort — refused when the
  *       stock no longer covers a line, so two orders placed at once never count on the same units
- *   <li>Having the chosen payment provider authorize the session's total via PaymentProvider —
- *       refused or unanswered, the order is not placed
+ *   <li>Having the chosen payment provider authorize the total the review showed via
+ *       PaymentProvider — refused or unanswered, the order is not placed
  *   <li>Calling the domain methods to record the authorized payment and to confirm with validation
  *   <li>Persisting the updated session
  *   <li>Publishing domain events — triggers cart completion and stock reduction in separate
@@ -91,24 +94,16 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
   @Override
   public ConfirmCheckoutResult execute(final ConfirmCheckoutCommand command) {
     final CheckoutSessionId sessionId = CheckoutSessionId.of(command.sessionId());
+    final ReviewFingerprint shown = ReviewFingerprint.of(command.reviewFingerprint());
 
     // Article data comes from the Product Catalog (remote-capable) - fetched outside the
     // transaction, keyed by the line items of the session as it is now
     final CheckoutSession current = loadSession(sessionId, command);
     final List<ProductId> productIds =
         current.lineItems().stream().map(item -> item.productId()).toList();
-    final Map<ProductId, CheckoutArticle> articleDataMap =
-        checkoutArticleDataPort.getArticleData(productIds);
     final Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts =
-        articleDataMap.entrySet().stream()
-            .collect(
-                java.util.stream.Collectors.toUnmodifiableMap(
-                    Map.Entry::getKey,
-                    e ->
-                        new CheckoutArticlePriceResolver.ArticlePrice(
-                            e.getValue().currentPrice(),
-                            e.getValue().isAvailable(),
-                            e.getValue().availableStock())));
+        CheckoutArticlePriceResolver.ArticlePrice.allOf(
+            checkoutArticleDataPort.getArticleData(productIds));
 
     // Serialized against a replacement of the cart's checkout, as the confirmation itself is
     return checkoutSessionRepository.inCartSession(
@@ -118,21 +113,27 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
           // hold stock: a reservation must not exist for a checkout that cannot be confirmed
           final CheckoutSession ready = loadSession(sessionId, command);
           ready.assertReadyForConfirmation(checkoutPricing.validateItems(ready, facts));
+          final Money reviewedTotal =
+              ready
+                  .assertReviewed(checkoutPricing.todaysPrices(ready, facts), shown)
+                  .totals()
+                  .total();
           final List<StockReservationPort.Line> lines = reserveStockOf(ready);
 
           try {
             // The provider is asked only once the order's checks and its stock hold, for the total
             // the review showed — outside the transaction, the provider being remote
-            final String paymentReference = authorizePaymentOf(ready);
+            final String paymentReference = authorizePaymentOf(ready, reviewedTotal);
 
             // Short transaction: reload, record the payment, confirm, save, publish
             return transactionBoundary.inTransaction(
                 () -> {
                   final CheckoutSession session = loadSession(sessionId, command);
-                  session.authorizePayment(paymentReference);
+                  session.authorizePayment(paymentReference, reviewedTotal);
                   session.confirm(
                       checkoutPricing.validateItems(session, facts),
-                      checkoutPricing.calculateOrderTotal(session, facts));
+                      checkoutPricing.todaysPrices(session, facts),
+                      shown);
                   checkoutSessionRepository.save(session);
                   domainEventPublisher.publishAndClearEvents(session);
                   return ConfirmCheckoutResult.from(session);
@@ -148,14 +149,15 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
   }
 
   /**
-   * Has the provider the customer chose authorize the session's total.
+   * Has the provider the customer chose authorize the total the review showed.
    *
+   * @param total the reviewed total — the one the order is confirmed at
    * @return the payment reference the provider answered with
    * @throws PaymentProviderNotFoundException if the chosen provider is no longer offered
    * @throws PaymentProviderUnavailableException if the provider is not available or did not answer
    * @throws PaymentInitiationFailedException if the provider refused the payment
    */
-  private String authorizePaymentOf(final CheckoutSession session) {
+  private String authorizePaymentOf(final CheckoutSession session, final Money total) {
     final PaymentProviderId providerId = session.paymentSelection().providerId();
     final PaymentProvider provider =
         paymentProviderRegistry
@@ -165,7 +167,7 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
       throw new PaymentProviderUnavailableException(providerId);
     }
     final PaymentProvider.PaymentResult authorization =
-        provider.initiatePayment(session.id(), session.totals().total());
+        provider.initiatePayment(session.id(), total);
     if (authorization.outcome() == PaymentProvider.PaymentResult.Outcome.UNAVAILABLE) {
       throw new PaymentProviderUnavailableException(providerId);
     }

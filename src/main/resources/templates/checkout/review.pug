@@ -109,4 +109,5 @@ block content
         if _csrf
           input(type="hidden" name=_csrf.parameterName value=_csrf.token)
         input(type="hidden" name="sentFrom" value="review")
+        input(type="hidden" name="reviewFingerprint" value=orderReview.reviewFingerprint())
         button.btn.btn--primary.btn--lg(type="submit" data-test="review-place-order-button") Place Order

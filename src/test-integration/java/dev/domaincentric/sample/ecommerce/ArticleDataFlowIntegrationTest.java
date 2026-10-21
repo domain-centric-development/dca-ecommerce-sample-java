@@ -18,6 +18,8 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
@@ -109,6 +111,8 @@ class ArticleDataFlowIntegrationTest {
   @Autowired private SubmitPaymentInputPort submitPaymentInputPort;
 
   @Autowired private ConfirmCheckoutInputPort confirmCheckoutInputPort;
+
+  @Autowired private GetCheckoutReviewInputPort getCheckoutReviewInputPort;
 
   @Autowired private ProvisionInitialPriceInputPort provisionInitialPriceInputPort;
 
@@ -330,7 +334,9 @@ class ArticleDataFlowIntegrationTest {
 
       // When: Confirming checkout
       ConfirmCheckoutResult result =
-          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId, customerId));
+          confirmCheckoutInputPort.execute(
+              new ConfirmCheckoutCommand(
+                  sessionId, customerId, reviewFingerprintOf(sessionId, customerId)));
 
       // Then: Checkout should be confirmed successfully
       assertEquals("CONFIRMED", result.status(), "Checkout should be confirmed");
@@ -362,7 +368,9 @@ class ArticleDataFlowIntegrationTest {
 
       // When: Confirming - the resolver will fetch fresh prices from CheckoutArticleDataPort
       ConfirmCheckoutResult result =
-          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId, customerId));
+          confirmCheckoutInputPort.execute(
+              new ConfirmCheckoutCommand(
+                  sessionId, customerId, reviewFingerprintOf(sessionId, customerId)));
 
       // Then: Confirmation should use prices from the resolver
       assertEquals("CONFIRMED", result.status());
@@ -609,7 +617,9 @@ class ArticleDataFlowIntegrationTest {
 
       // Step 4: Confirm (uses resolver with fresh pricing)
       ConfirmCheckoutResult confirmResult =
-          confirmCheckoutInputPort.execute(new ConfirmCheckoutCommand(sessionId, customerId));
+          confirmCheckoutInputPort.execute(
+              new ConfirmCheckoutCommand(
+                  sessionId, customerId, reviewFingerprintOf(sessionId, customerId)));
       assertEquals(
           "CONFIRMED",
           confirmResult.status(),
@@ -635,6 +645,13 @@ class ArticleDataFlowIntegrationTest {
       assertTrue(cartArticle.isPresent(), "CompositeAdapter should return aggregated data");
       assertEquals(productInfo.get().name(), cartArticle.get().name(), "Product name should match");
     }
+  }
+
+  /** The fingerprint of the session's review as the review page would show it now. */
+  private String reviewFingerprintOf(String sessionId, String customerId) {
+    return getCheckoutReviewInputPort
+        .execute(new GetCheckoutReviewQuery(sessionId, customerId))
+        .fingerprint();
   }
 
   /** Helper method to complete all checkout steps before confirmation. */

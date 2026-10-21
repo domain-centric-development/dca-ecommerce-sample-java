@@ -17,7 +17,7 @@ The Checkout context groups its use cases into three features — domain-named n
 | Feature | Meaning | Use cases |
 |---------|---------|-----------|
 | `session` | Starting a checkout session from a cart and reading it back in its lifecycle states | `startcheckout`, `getactivecheckoutsession`, `getcheckoutsession`, `getconfirmedcheckoutsession` |
-| `checkoutcompletion` | The steps that complete a checkout: buyer information, delivery, payment, confirmation | `resumecheckout`, `submitbuyerinfo`, `getshippingoptions`, `submitdelivery`, `getpaymentproviders`, `submitpayment`, `confirmcheckout` |
+| `checkoutcompletion` | The steps that complete a checkout: buyer information, delivery, payment, confirmation | `resumecheckout`, `submitbuyerinfo`, `getshippingoptions`, `submitdelivery`, `getpaymentproviders`, `submitpayment`, `getcheckoutreview`, `confirmcheckout` |
 | `cartsync` | Following changes of the underlying cart while the session is active | `synccheckoutwithcart` |
 
 `application/shared/` stays context-wide. The web adapters mirror `session` and `checkoutcompletion`
@@ -43,9 +43,11 @@ retains the same domain state. Legacy CheckedOut/Completed cart statuses remain 
 an active cart editable and never completes the whole cart.
 
 Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume
-immutable line/fact snapshots. Any changed price or shortage reports affected lines and leaves state, totals and events
-unchanged. The buyer explicitly starts a fresh checkout against the new prices. Success stores the recomputed total and
-publishes the same total; there is no no-argument confirmation path. Before its transaction, confirmation reserves the
+immutable line/fact snapshots. The review shows the session's lines at today's prices (`reviewAt`, a
+`CheckoutReview`) and changes nothing; "Place Order" carries the review fingerprint of what the customer was shown. A
+shortage, or a review that is no longer the one shown, refuses the order and leaves state, totals and events
+unchanged; the review then shows the order as it is today. Success orders the reviewed lines and stores and publishes
+the reviewed total; there is no no-argument confirmation path. Before its transaction, confirmation reserves the
 stock of every line in Inventory (reserve stock, through `StockReservationPort`), all lines or none; a refused
 reservation is a shortage of that line, and a confirmation that then fails gives the reservation back (release stock).
 Local in-memory repository serialization is not a
@@ -64,11 +66,17 @@ claim of durable distributed transactions or universal rollback of unenlisted re
 - `assertReadyForPayment` — a question: the preconditions of `submitPayment` plus a positive total, checked without
   changing anything
 - authorize the payment (`authorizePayment`) — at Place Order, records on a session at the review that its chosen
-  provider authorized the session's total under a payment reference; publishes `PaymentSubmitted`; refused on a
-  session not at the review or one that no longer takes changes
+  provider authorized the total the review showed under a payment reference, and records that amount; publishes
+  `PaymentSubmitted`; refused on a session not at the review or one that no longer takes changes
 - `goBackTo` — moves the current step back; data already submitted stays
+- work out the review (`reviewAt`, through `GetCheckoutReview`) — the session's lines at today's prices, quantities
+  kept, a line without today's price at its own; totals follow, shipping kept; changes nothing and raises no event
+- `assertReviewed` — a question: is the review at today's prices the one the customer was shown (its review
+  fingerprint)? Answers with that review, refuses with `CheckoutChangedSinceReviewException`
 - `assertReadyForConfirmation` — a question: the preconditions of `confirm`, the pricing verdict included, checked without changing anything — asked before the order's stock is reserved
-- `confirm` — status confirmed, totals recomputed at current prices; refused while the pricing verdict reports a changed price or a shortage
+- `confirm` — status confirmed, ordering the reviewed lines at the reviewed total; refused on a shortage, when the
+  review is no longer the one shown, or when the payment was authorized for an amount other than the reviewed total
+  (`AuthorizedAmountDiffersFromReviewException`)
 - `complete` — after payment: status completed, with the order reference
 - `abandon` — kept with status abandoned; the cart's contents stay
 - `expire` — kept with status expired, for inactivity; the cart's contents stay
@@ -201,10 +209,37 @@ total.
 
 **Operations:** `of`, `calculate`, `zero`, `withShipping`, `withTax`.
 
+### Review (CheckoutReview)
+
+**Definition:** The order as the review shows it: the session's lines at today's prices, the buyer, the delivery
+address, the shipping method, the payment method and the totals. Worked out by the session (`reviewAt`), stored
+nowhere.
+
+**Type:** Value Object
+
+**Related terms:** `CheckoutSession`, `ReviewFingerprint`, `CheckoutChangedSinceReviewException`,
+`CheckoutCartSnapshot`.
+
+**Operations:** `fingerprint`; `refuseUnlessShown` — refuses unless the given fingerprint is its own, naming the
+line's product when only that line's price differs.
+
+### Review fingerprint (ReviewFingerprint)
+
+**Definition:** What the review showed — lines with product, quantity and unit price, buyer, delivery address,
+shipping method and price, payment method, total — sent with "Place Order" (the form field `reviewFingerprint`). A
+blank or malformed value matches no review.
+
+**Type:** Value Object
+
+**Related terms:** `CheckoutReview`, `CheckoutChangedSinceReviewException`.
+
+**Operations:** `of`; `firstChangedLine` — the line whose price alone differs from the one shown, if any.
+
 ### CheckoutValidationResult
 
-**Definition:** Result of validating the line items against current price and availability data;
-contains a list of `ValidationError` entries.
+**Definition:** Result of validating the line items against current availability and stock data;
+contains a list of `ValidationError` entries. A changed price is no validation error: the review
+fingerprint decides it.
 
 **Type:** Value Object
 
@@ -339,7 +374,7 @@ Kernel should be used here.
 
 ### PaymentSubmitted
 
-**Definition:** The chosen payment provider authorized the checkout session's total when the customer placed the
+**Definition:** The chosen payment provider authorized the total the review showed when the customer placed the
 order at the review (`authorizePayment`). Choosing how to pay on the payment step publishes none.
 
 **Type:** Domain Event
@@ -512,10 +547,31 @@ confirmation step was navigated to directly.
 
 ### CheckoutValidation
 
-**Definition:** At confirmation time a line item no longer passes validation — price moved, stock ran out. Carries
+**Definition:** At confirmation time a line item no longer passes validation — unavailable, stock ran out. Carries
 the per-item result.
 
 **Type:** Domain failure (`DomainException`) · **Related terms:** `CheckoutValidationResult`
+
+---
+
+### refuse an order changed since the review (CheckoutChangedSinceReviewException)
+
+**Definition:** "Place Order" works the review out again; when its review fingerprint is not the one the customer
+was shown, nothing is ordered or paid and the review shows the order as it is today. A price change names the
+product (`priceChanged`, "The price of '…' has changed."); any other change — one made in another tab included —
+names none (`orderChanged`, "Your order has changed since you reviewed it.").
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `CheckoutReview`, `ReviewFingerprint`
+
+---
+
+### refuse an order whose payment differs from the review (AuthorizedAmountDiffersFromReviewException)
+
+**Definition:** A checkout would be confirmed at a total other than the amount its payment was authorized for. The
+order is placed at the total the review showed and the payment covers exactly that, so an order and a payment that
+disagree are never confirmed; the page answers "Your order could not be placed. Please try again."
+
+**Type:** Domain failure (`DomainException`) · **Related terms:** `CheckoutSession`, `PaymentSelection`, `CheckoutReview`
 
 ---
 

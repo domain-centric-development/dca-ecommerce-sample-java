@@ -6,37 +6,42 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidati
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.*;
 import java.util.*;
 
+/**
+ * Prices and checks a checkout's lines against today's article facts. A price changed since the
+ * checkout started is no refusal here: the review shows today's prices, and "Place Order" orders
+ * them only while they are what the review showed. An unavailable line or one short of stock is.
+ */
 public final class CheckoutPricing implements DomainService {
-  public Money calculateOrderTotal(
+
+  /**
+   * Today's unit price of every line whose article is available.
+   *
+   * @param session the checkout whose lines are priced
+   * @param facts today's article facts per product
+   * @return today's price per product; an unavailable or unknown article has none
+   */
+  public Map<ProductId, Money> todaysPrices(
       final CheckoutSession session,
-      final java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
-    final var lines = session.lineItems();
-    final var currency = session.totals().subtotal().currency();
-    Money total = Money.zero(currency);
-    for (final CheckoutLineItem item : lines) {
+      final Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+    final Map<ProductId, Money> prices = new HashMap<>();
+    for (final CheckoutLineItem item : session.lineItems()) {
       final CheckoutArticlePriceResolver.ArticlePrice articlePrice = facts.get(item.productId());
-      final Money itemTotal = articlePrice.price().multiply(item.quantity());
-      total = total.add(itemTotal);
+      if (articlePrice != null && articlePrice.isAvailable()) {
+        prices.put(item.productId(), articlePrice.price());
+      }
     }
-    return total;
+    return Map.copyOf(prices);
   }
 
   public CheckoutValidationResult validateItems(
       final CheckoutSession session,
-      final java.util.Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+      final Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
     final var lines = session.lineItems();
     final List<ValidationError> errors = new ArrayList<>();
     for (final CheckoutLineItem item : lines) {
       final CheckoutArticlePriceResolver.ArticlePrice articlePrice = facts.get(item.productId());
       if (articlePrice == null || !articlePrice.isAvailable()) {
         errors.add(ValidationError.productUnavailable(item.productId(), item.productName()));
-      } else if (!articlePrice.price().equals(item.unitPrice())) {
-        errors.add(
-            new ValidationError(
-                item.productId(),
-                item.productName(),
-                "Price changed; start a fresh checkout to accept it",
-                CheckoutValidationResult.ErrorType.PRICE_CHANGED));
       } else if (articlePrice.availableStock() < item.quantity()) {
         errors.add(
             ValidationError.insufficientStock(

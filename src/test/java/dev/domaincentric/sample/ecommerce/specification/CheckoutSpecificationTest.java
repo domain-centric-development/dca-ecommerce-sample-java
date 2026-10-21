@@ -8,6 +8,7 @@ import dev.domaincentric.dca.spring.InMemoryTransactionBoundary;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.persistence.InMemoryCheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.application.cartsync.synccheckoutwithcart.*;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.*;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.*;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.*;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.*;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutConfirmed;
@@ -97,7 +98,23 @@ class CheckoutSpecificationTest {
         f.start();
         assertEquals(CheckoutSessionStatus.COMPLETED, session.status());
       }
-      case "checkout.confirm.price-changed", "checkout.confirm.out-of-stock" -> {
+      case "checkout.confirm.price-changed" -> {
+        var totals = session.totals();
+        int events = f.events.published.size();
+        var shown = f.reviewOf(session);
+        f.price = Money.of(new java.math.BigDecimal(vector.path("newUnitPrice").asText()), EUR);
+        var failure =
+            assertThrows(
+                CheckoutChangedSinceReviewException.class, () -> f.confirm(session, shown));
+        assertFalse(vector.path("accept").asBoolean());
+        assertEquals(
+            vector.path("errors").asInt(), failure.productWithChangedPrice().stream().count());
+        assertEquals(CheckoutSessionStatus.ACTIVE, session.status());
+        assertEquals(totals, session.totals());
+        assertTrue(session.domainEvents().isEmpty());
+        assertEquals(events, f.events.published.size());
+      }
+      case "checkout.confirm.out-of-stock" -> {
         var totals = session.totals();
         int events = f.events.published.size();
         if (vector.hasNonNull("newUnitPrice")) {
@@ -213,6 +230,10 @@ class CheckoutSpecificationTest {
     }
 
     void confirm(CheckoutSession session) {
+      confirm(session, reviewOf(session));
+    }
+
+    void confirm(CheckoutSession session, String reviewFingerprint) {
       new ConfirmCheckoutUseCase(
               repository,
               this,
@@ -221,7 +242,16 @@ class CheckoutSpecificationTest {
               new InMemoryTransactionBoundary(),
               new StockAlwaysReserved(),
               new PaymentAlwaysAuthorized())
-          .execute(new ConfirmCheckoutCommand(session.id().value(), session.customerId().value()));
+          .execute(
+              new ConfirmCheckoutCommand(
+                  session.id().value(), session.customerId().value(), reviewFingerprint));
+    }
+
+    /** The fingerprint of the session's review as it would be shown now. */
+    String reviewOf(CheckoutSession session) {
+      return new GetCheckoutReviewUseCase(repository, this, new CheckoutPricing())
+          .execute(new GetCheckoutReviewQuery(session.id().value(), session.customerId().value()))
+          .fingerprint();
     }
 
     public Optional<CartData> findById(CartId id, CustomerId customer) {

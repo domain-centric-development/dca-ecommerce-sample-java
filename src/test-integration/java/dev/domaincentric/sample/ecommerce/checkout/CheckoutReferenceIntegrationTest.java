@@ -19,6 +19,8 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
@@ -79,6 +81,7 @@ class CheckoutReferenceIntegrationTest {
   @Autowired private SubmitBuyerInfoInputPort submitBuyerInfo;
   @Autowired private SubmitDeliveryInputPort submitDelivery;
   @Autowired private SubmitPaymentInputPort submitPayment;
+  @Autowired private GetCheckoutReviewInputPort getCheckoutReview;
   @Autowired private ConfirmCheckoutInputPort confirmCheckout;
   @Autowired private GetCheckoutSessionInputPort getCheckoutSession;
 
@@ -160,9 +163,14 @@ class CheckoutReferenceIntegrationTest {
         .toList();
   }
 
+  /** Place Order from the review as it is shown now. */
   private ConfirmCheckoutResult placeOrder(final CustomersCheckout checkout) {
+    final String reviewFingerprint =
+        getCheckoutReview
+            .execute(new GetCheckoutReviewQuery(checkout.sessionId(), checkout.customerId()))
+            .fingerprint();
     return confirmCheckout.execute(
-        new ConfirmCheckoutCommand(checkout.sessionId(), checkout.customerId()));
+        new ConfirmCheckoutCommand(checkout.sessionId(), checkout.customerId(), reviewFingerprint));
   }
 
   private CheckoutStep currentStep(final CustomersCheckout checkout) {

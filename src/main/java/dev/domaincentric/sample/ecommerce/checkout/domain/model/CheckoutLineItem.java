@@ -67,4 +67,9 @@ public record CheckoutLineItem(
     return new CheckoutLineItem(
         id, productId, productName, unitPrice, newQuantity, imageUrl, positionSnapshot);
   }
+
+  public CheckoutLineItem withUnitPrice(final Money newUnitPrice) {
+    return new CheckoutLineItem(
+        id, productId, productName, newUnitPrice, quantity, imageUrl, positionSnapshot);
+  }
 }

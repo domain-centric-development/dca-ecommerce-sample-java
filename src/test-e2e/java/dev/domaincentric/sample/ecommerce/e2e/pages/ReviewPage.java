@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.e2e.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import java.util.List;
 
 /**
  * Page object for the order review page in checkout.
@@ -53,6 +54,15 @@ public class ReviewPage extends BasePage {
    */
   public String total() {
     return page.locator("[data-test='" + TOTAL + "']").textContent().trim();
+  }
+
+  /**
+   * The items the review lists.
+   *
+   * @return each as "name xQuantity price", e.g. {@code "Domain-Driven Design x1 54.99 EUR"}
+   */
+  public List<String> items() {
+    return OrderSummaryItems.of(page.locator(".order-summary"));
   }
 
   /**

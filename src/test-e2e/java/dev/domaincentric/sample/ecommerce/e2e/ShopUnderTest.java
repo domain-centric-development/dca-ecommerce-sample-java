@@ -224,6 +224,52 @@ public final class ShopUnderTest {
             Set.of(Role.CUSTOMER, Role.STAFF));
   }
 
+  /**
+   * The id of a shop's catalogue product with this name, as its API lists it.
+   *
+   * @param shopUrl the shop's base URL
+   * @param name the product's name
+   * @return the product's id
+   * @throws Exception when the catalogue cannot be read
+   */
+  public static String productIdOf(final String shopUrl, final String name) throws Exception {
+    final HttpResponse<String> catalogue =
+        HttpClient.newHttpClient()
+            .send(
+                HttpRequest.newBuilder(URI.create(shopUrl + "/api/products")).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+    for (final JsonNode product : new ObjectMapper().readTree(catalogue.body())) {
+      if (name.equals(product.path("name").asText())) {
+        return product.path("id").asText();
+      }
+    }
+    throw new AssertionError("no product named " + name);
+  }
+
+  /**
+   * Sets a product's price through the staff API of a shop.
+   *
+   * @param shopUrl the shop's base URL
+   * @param staffToken a token carrying the staff role
+   * @param productId the product's id
+   * @param price the new price, e.g. {@code "49.99"}
+   * @return the status the API answered
+   * @throws Exception when the request cannot be sent
+   */
+  public static int changePrice(
+      final String shopUrl, final String staffToken, final String productId, final String price)
+      throws Exception {
+    return HttpClient.newHttpClient()
+        .send(
+            HttpRequest.newBuilder(URI.create(shopUrl + "/api/products/" + productId + "/price"))
+                .header("Authorization", "Bearer " + staffToken)
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString("{\"price\":" + price + "}"))
+                .build(),
+            HttpResponse.BodyHandlers.ofString())
+        .statusCode();
+  }
+
   private static WireMockServer authorizingPaymentProvider() {
     WireMockServer provider = new WireMockServer(wireMockConfig().dynamicPort());
     provider.start();

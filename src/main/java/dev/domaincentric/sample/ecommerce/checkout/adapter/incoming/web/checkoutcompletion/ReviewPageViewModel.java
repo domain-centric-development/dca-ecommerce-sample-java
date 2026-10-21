@@ -20,10 +20,17 @@ public record ReviewPageViewModel(
     TotalsViewModel totals,
     @Nullable BuyerInfoViewModel buyerInfo,
     @Nullable DeliveryViewModel delivery,
-    @Nullable PaymentViewModel payment) {
+    @Nullable PaymentViewModel payment,
+    String reviewFingerprint) {
 
-  /** Creates a ReviewPageViewModel from a CheckoutCartSnapshot. */
-  public static ReviewPageViewModel fromSnapshot(final CheckoutCartSnapshot snapshot) {
+  /**
+   * Creates a ReviewPageViewModel from the checkout as its review shows it.
+   *
+   * @param snapshot the checkout at today's prices
+   * @param reviewFingerprint the fingerprint of what the review shows, sent back with "Place Order"
+   */
+  public static ReviewPageViewModel fromReview(
+      final CheckoutCartSnapshot snapshot, final String reviewFingerprint) {
     return new ReviewPageViewModel(
         snapshot.sessionId().value(),
         stepOf(snapshot.step()),
@@ -31,7 +38,8 @@ public record ReviewPageViewModel(
         TotalsViewModel.fromSnapshot(snapshot),
         BuyerInfoViewModel.fromSnapshot(snapshot),
         DeliveryViewModel.fromSnapshot(snapshot),
-        PaymentViewModel.fromSnapshot(snapshot));
+        PaymentViewModel.fromSnapshot(snapshot),
+        reviewFingerprint);
   }
 
   /** The step as the page names it, written out per value. */
