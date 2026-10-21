@@ -80,8 +80,9 @@ Test: dev.domaincentric.sample.ecommerce.e2e.LoginApiE2ETest#loggingInWithTheRig
 #### a-wrong-password-is-refused
 - Given an account "ada@example.com" with password "Secret123"
 - When a client sends `POST /api/auth/login` with `{"email":"ada@example.com","password":"Wrong1234"}`
-- Then the shop answers 401
-Test: dev.domaincentric.sample.ecommerce.account.LoginApiIntegrationTest#aLoginWithTheWrongPasswordIsUnauthorized
+- Then the shop answers 401 with an `application/problem+json` body and the header `WWW-Authenticate: Bearer`
+- And its title is "Authentication failed" and it carries no detail
+Test: dev.domaincentric.sample.ecommerce.e2e.LoginApiE2ETest#aWrongPasswordIsRefusedWithAProblemDocumentAndABearerChallenge
 
 ### Rule: Logging out through the API is the client discarding its token
 
