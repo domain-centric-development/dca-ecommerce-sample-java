@@ -154,6 +154,23 @@ setting the automatic retry reads (`IntegrationEventRecovery`).
 
 ---
 
+### Operator
+
+**Definition:** The person who logs in to the back office (`/backoffice/login`) to run the
+shop — not a shopper. A back-office page's header is the operator's: the shop's name,
+"Back office" and the operator's Logout, nothing of a shopper logged in to the shop in
+the same browser.
+
+**Type:** Concept (actor)
+
+**Related terms:** `BackofficeSecurityProperties` (the operator's credentials),
+`block operator` in `src/main/resources/templates/backoffice/layout.pug` (the operator's
+actions in the header)
+
+**Synonyms (avoid):** "admin" — the name of the development operator account, not the role.
+
+---
+
 ## Store / Repository — Distinction
 
 **Store** is used in Backoffice instead of **Repository** because the data has

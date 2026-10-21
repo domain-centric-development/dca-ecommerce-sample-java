@@ -1,0 +1,8 @@
+extends ../layout
+
+//- The back office's header beside the shop's name: the section, and what the operator may do there.
+block navigation
+  nav.nav(aria-label="Back office")
+    span.nav__link(data-test="backoffice-section") Back office
+  .site-header__actions
+    block operator

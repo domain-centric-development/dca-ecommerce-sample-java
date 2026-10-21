@@ -31,39 +31,40 @@ html(lang="en")
           span.site-header__wordmark
             | domaincentric
             span.brand-tld .commerce
-        nav.nav(aria-label="Main navigation")
-          ul.nav__list
-            li.nav__item
-              a.nav__link(href="/" data-test="nav-home-link") Home
-            li.nav__item
-              a.nav__link(href="/products" data-test="nav-products-link") Products
-        .site-header__actions
-          if identity != null && !identity.isAnonymous()
-            a.nav__link(href="/account" data-test="nav-my-account-link") My Account
-          .mini-basket(data-test="mini-basket")
-            a.mini-basket__trigger(href="/cart" data-test="mini-basket-trigger")
-              span Cart
+        block navigation
+          nav.nav(aria-label="Main navigation")
+            ul.nav__list
+              li.nav__item
+                a.nav__link(href="/" data-test="nav-home-link") Home
+              li.nav__item
+                a.nav__link(href="/products" data-test="nav-products-link") Products
+          .site-header__actions
+            if identity != null && !identity.isAnonymous()
+              a.nav__link(href="/account" data-test="nav-my-account-link") My Account
+            .mini-basket(data-test="mini-basket")
+              a.mini-basket__trigger(href="/cart" data-test="mini-basket-trigger")
+                span Cart
+                if miniBasketItemCount > 0
+                  span.mini-basket__count(data-test="mini-basket-count")= miniBasketItemCount
               if miniBasketItemCount > 0
-                span.mini-basket__count(data-test="mini-basket-count")= miniBasketItemCount
-            if miniBasketItemCount > 0
-              .mini-basket__dropdown(data-test="mini-basket-dropdown")
-                each item in miniBasketItems
-                  .mini-basket__item
-                    span= item.name()
-                    span x#{item.quantity()}
-                .mini-basket__total
-                  span Total
-                  span= miniBasketTotal
-                a.mini-basket__link.btn.btn--primary.btn--sm(href="/cart" data-test="mini-basket-view-cart-link") View Cart
-          if identity != null && !identity.isAnonymous()
-            span.nav__link(data-test="user-greeting") Welcome, #{identity.email().orElse('User')}
-            form.nav__logout-form(method="post" action="/logout" data-test="logout-form")
-              if _csrf
-                input(type="hidden" name=_csrf.parameterName value=_csrf.token)
-              button.nav__link.nav__logout-btn(type="submit" data-test="logout-button") Logout
-          else
-            a.nav__link(href="/login" data-test="nav-login-link") Login
-            a.nav__link(href="/register" data-test="nav-register-link") Register
+                .mini-basket__dropdown(data-test="mini-basket-dropdown")
+                  each item in miniBasketItems
+                    .mini-basket__item
+                      span= item.name()
+                      span x#{item.quantity()}
+                  .mini-basket__total
+                    span Total
+                    span= miniBasketTotal
+                  a.mini-basket__link.btn.btn--primary.btn--sm(href="/cart" data-test="mini-basket-view-cart-link") View Cart
+            if identity != null && !identity.isAnonymous()
+              span.nav__link(data-test="user-greeting") Welcome, #{identity.email().orElse('User')}
+              form.nav__logout-form(method="post" action="/logout" data-test="logout-form")
+                if _csrf
+                  input(type="hidden" name=_csrf.parameterName value=_csrf.token)
+                button.nav__link.nav__logout-btn(type="submit" data-test="logout-button") Logout
+            else
+              a.nav__link(href="/login" data-test="nav-login-link") Login
+              a.nav__link(href="/register" data-test="nav-register-link") Register
 
     main.site-main
       .container

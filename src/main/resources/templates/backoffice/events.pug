@@ -1,4 +1,10 @@
-extends ../layout
+extends layout
+
+block operator
+  form.nav__logout-form(method="POST" action="/backoffice/logout" data-test="backoffice-logout-form")
+    if _csrf
+      input(type="hidden" name=_csrf.parameterName value=_csrf.token)
+    button.nav__link.nav__logout-btn(type="submit" data-test="backoffice-logout-button") Logout
 
 block content
   .event-log__header
@@ -8,10 +14,6 @@ block content
       span.breadcrumb__current Event Publication Log
     .event-log__actions
       a.btn.btn--secondary.btn--sm(href="/backoffice/events" data-test="event-log-refresh") Refresh
-      form.event-log__logout-form(method="POST" action="/backoffice/logout" data-test="event-log-logout-form")
-        if _csrf
-          input(type="hidden" name=_csrf.parameterName value=_csrf.token)
-        button.btn.btn--secondary.btn--sm(type="submit" data-test="event-log-logout") Logout
 
   h1 Event Publication Log
 
