@@ -263,10 +263,13 @@ Test: dev.domaincentric.sample.ecommerce.cart.ShoppingCartApiIntegrationTest#eac
 
 #### an-unknown-product-is-not-available
 - Given Ada's open, empty cart
-- When her client sends `POST /api/carts/<cartId>/items` with `{"productId":"no-such-product","quantity":1}`
-- Then the shop answers 404 with an `application/problem+json` body
-- And its title is "Article not available" and its detail "There is no article for product no-such-product."
-Test: dev.domaincentric.sample.ecommerce.cart.ShoppingCartApiIntegrationTest#addingAProductTheCatalogueDoesNotKnowIsNotFoundStatedAsAProblem
+- When her client sends `POST /api/carts/<cartId>/items` with
+  `{"productId":"00000000-0000-4000-8000-000000000001","quantity":1}`
+- Then the shop answers 422 with an `application/problem+json` body
+- And its title is "Article not available" and its detail
+  "There is no article for product 00000000-0000-4000-8000-000000000001."
+- And her cart is still empty
+Test: dev.domaincentric.sample.ecommerce.e2e.ShoppingCartApiE2ETest#addingAProductTheCatalogueDoesNotKnowIsUnprocessableAndLeavesTheCartEmpty
 
 ### Rule: No more can be added than is in stock
 
