@@ -25,8 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
  * <p>This controller handles server-side rendered login pages using Pug templates.
  *
  * <p><b>Clean Architecture:</b> This controller only depends on its own bounded context (account).
- * After successful login, it redirects to the cart merge page with URL parameters, allowing the
- * cart context to decide if a merge is actually needed. This avoids cross-context dependencies.
+ * After successful login, it redirects to the cart merge page, allowing the cart context to decide
+ * if a merge is actually needed. This avoids cross-context dependencies.
  *
  * <p><b>Template Location:</b> {@code src/main/resources/templates/account/login.pug}
  */
@@ -75,9 +75,9 @@ public class LoginPageController {
   /**
    * Handles login form submission.
    *
-   * <p>After successful login, always redirects to the cart merge page with the anonymous user ID
-   * as a URL parameter. The cart context will determine if a merge is actually required and
-   * redirect appropriately if not.
+   * <p>After successful login, always redirects to the cart merge page; the session token names the
+   * guest the browser was before. The cart context will determine if a merge is actually required
+   * and redirect appropriately if not.
    *
    * @param email the user's email
    * @param password the user's password
@@ -107,19 +107,24 @@ public class LoginPageController {
         return "account/login";
       }
 
-      final String registeredUserId = result.userId();
+      final UserId registeredUserId = UserId.of(result.userId());
 
+      // The session names the guest this browser was, so that the cart context brings only that
+      // guest's cart along — never one a request names.
       final String token =
-          tokenService.generateRegisteredToken(
-              UserId.of(registeredUserId), result.email(), result.roles());
+          anonymousUserId.equals(registeredUserId.value())
+              ? tokenService.generateRegisteredToken(
+                  registeredUserId, result.email(), result.roles())
+              : tokenService.generateRegisteredToken(
+                  registeredUserId, result.email(), result.roles(), UserId.of(anonymousUserId));
 
       identitySession.setRegisteredIdentity(token);
 
       // Always redirect to merge page - let cart context decide if merge is needed
       // This avoids cross-context dependency (account → cart)
-      String mergeUrl = "/cart/merge?anonymousUserId=" + anonymousUserId;
+      String mergeUrl = "/cart/merge";
       if (returnUrl != null && !returnUrl.isBlank()) {
-        mergeUrl += "&returnUrl=" + URLEncoder.encode(returnUrl, StandardCharsets.UTF_8);
+        mergeUrl += "?returnUrl=" + URLEncoder.encode(returnUrl, StandardCharsets.UTF_8);
       }
       return "redirect:" + mergeUrl;
 

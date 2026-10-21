@@ -51,7 +51,6 @@ block content
     form(method="POST" action="/cart/merge" data-test="merge-form")
       if _csrf
         input(type="hidden" name=_csrf.parameterName value=_csrf.token)
-      input(type="hidden" name="anonymousUserId" value=cartMerge.anonymousUserId())
       if cartMerge.returnUrl()
         input(type="hidden" name="returnUrl" value=cartMerge.returnUrl())
 

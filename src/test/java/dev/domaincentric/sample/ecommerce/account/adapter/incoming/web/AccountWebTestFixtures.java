@@ -109,6 +109,15 @@ final class AccountWebTestFixtures {
       return "token-for-" + email;
     }
 
+    @Override
+    public String generateRegisteredToken(
+        final UserId userId,
+        final String email,
+        final Set<Role> roles,
+        final UserId guestBeforeLogin) {
+      return generateRegisteredToken(userId, email, roles);
+    }
+
     List<IssuedToken> issuedTokens() {
       return List.copyOf(issuedTokens);
     }

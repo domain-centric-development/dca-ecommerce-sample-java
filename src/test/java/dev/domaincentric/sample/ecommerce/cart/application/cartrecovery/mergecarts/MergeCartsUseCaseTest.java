@@ -353,6 +353,29 @@ class MergeCartsUseCaseTest {
   }
 
   @Nested
+  @DisplayName("A guest cart without a line")
+  class GuestCartWithoutALine {
+
+    @Test
+    @DisplayName("moves nothing and reports no guest cart deleted")
+    void anAbsentGuestCartMovesNothingAndReportsNoGuestCartDeleted() {
+      ProductId product = ProductId.generate();
+      Price price = Price.of(Money.of(BigDecimal.valueOf(10.00), EUR));
+      ShoppingCart accountCart = createCart(REGISTERED_USER_ID);
+      accountCart.addItem(product, Quantity.of(1), price);
+      repository.save(accountCart);
+
+      MergeCartsResult response =
+          useCase.execute(
+              new MergeCartsCommand(
+                  ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH));
+
+      assertFalse(response.anonymousCartDeleted());
+      assertEquals(1, response.items().size());
+    }
+  }
+
+  @Nested
   @DisplayName("Cart Creation")
   class CartCreation {
 

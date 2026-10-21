@@ -3,9 +3,12 @@ package dev.domaincentric.sample.ecommerce.cart;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import jakarta.servlet.http.Cookie;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +47,8 @@ class CartMergeChoiceIntegrationTest {
   private static final String CART = "/cart";
   private static final String CLEAN_ARCHITECTURE = "Clean Architecture";
   private static final String MUG = "\"Ubiquitous Language\" Mug";
+  private static final String IDENTITY_COOKIE = "shop-identity";
+  private static final ObjectMapper JSON = new ObjectMapper();
 
   /** The class shares one database, so every test registers an address of its own. */
   private static final AtomicInteger ACCOUNTS = new AtomicInteger();
@@ -156,12 +161,63 @@ class CartMergeChoiceIntegrationTest {
         .isEqualTo("Invalid merge option selected");
   }
 
+  @Test
+  @DisplayName("Another guest's cart is not merged")
+  void theMergeOfAnotherBrowsersGuestCartMovesNothing() throws Exception {
+    final String email = anAccountWhoseCartHoldsCleanArchitectureOnce();
+    final Browser annasBrowser = new Browser();
+    annasBrowser.logIn(email);
+    final Browser otherGuest = new Browser();
+    otherGuest.addToCart(MUG);
+
+    final Landing landed =
+        annasBrowser.send(
+            MERGE_PAGE, Map.of("strategy", "MERGE_BOTH", "anonymousUserId", otherGuest.guestId()));
+
+    assertThat(landed.path()).isEqualTo(CART);
+    assertThat(linesOf(landed.page())).containsExactly("Clean Architecture x1");
+    assertThat(landed.page().selectFirst("[data-test=cart-success-message]"))
+        .as("the cart page's message")
+        .isNull();
+    assertThat(linesOf(otherGuest.page(CART))).containsExactly(MUG + " x1");
+  }
+
+  @Test
+  @DisplayName("An outside return page after the merge opens the cart")
+  void theMergeLeadsToTheCartInsteadOfAReturnPageOfAnotherSite() throws Exception {
+    final TwoCarts carts = theTwoCarts();
+    final Landing mergePage =
+        carts.guest().logIn("/login?returnUrl=https://elsewhere.example/", carts.email());
+    assertThat(mergePage.path()).isEqualTo(MERGE_PAGE);
+
+    final Landing landed = carts.guest().choose(mergePage.page(), "MERGE_BOTH");
+
+    assertThat(landed.path()).isEqualTo(CART);
+    assertThat(textOf(landed.page(), "[data-test=cart-success-message]"))
+        .isEqualTo("Carts merged successfully!");
+  }
+
   /**
    * The two carts: an account registered earlier whose cart holds "Clean Architecture" once, added
    * while logged in in another browser; and a browser without cookies in which a guest added "Clean
    * Architecture" twice and the mug once.
    */
   private TwoCarts theTwoCarts() throws Exception {
+    final String email = anAccountWhoseCartHoldsCleanArchitectureOnce();
+    final Browser guest = new Browser();
+    guest.addToCart(CLEAN_ARCHITECTURE);
+    guest.addToCart(CLEAN_ARCHITECTURE);
+    guest.addToCart(MUG);
+    return new TwoCarts(email, guest);
+  }
+
+  /**
+   * An account registered earlier whose cart holds "Clean Architecture" once, added while logged in
+   * in another browser.
+   *
+   * @return the account's address
+   */
+  private String anAccountWhoseCartHoldsCleanArchitectureOnce() throws Exception {
     final String email = "anna.schmidt." + ACCOUNTS.incrementAndGet() + "@example.com";
     final Browser registration = new Browser();
     final Element form = registration.page("/register").selectFirst("[data-test=register-form]");
@@ -175,11 +231,7 @@ class CartMergeChoiceIntegrationTest {
     final Browser elsewhere = new Browser();
     elsewhere.logIn(email);
     elsewhere.addToCart(CLEAN_ARCHITECTURE);
-    final Browser guest = new Browser();
-    guest.addToCart(CLEAN_ARCHITECTURE);
-    guest.addToCart(CLEAN_ARCHITECTURE);
-    guest.addToCart(MUG);
-    return new TwoCarts(email, guest);
+    return email;
   }
 
   private static String textOf(final Element scope, final String selector) {
@@ -246,10 +298,43 @@ class CartMergeChoiceIntegrationTest {
 
     /** Logs in on the login page; follows the shop's redirects to the end. */
     Landing logIn(final String email) throws Exception {
-      final Element form = page("/login").selectFirst("[data-test=login-form]");
+      return logIn("/login", email);
+    }
+
+    /** Logs in on the login page opened at {@code loginPage}; follows the redirects to the end. */
+    Landing logIn(final String loginPage, final String email) throws Exception {
+      final Element form = page(loginPage).selectFirst("[data-test=login-form]");
       form.selectFirst("input[name=email]").val(email);
       form.selectFirst("input[name=password]").val(PASSWORD);
       return followed(submit(form));
+    }
+
+    /**
+     * Sends a form of its own making to {@code action}, with the CSRF token of a page this
+     * logged-in browser was shown (its logout form) and {@code fields}; follows the redirects to
+     * the end.
+     */
+    Landing send(final String action, final Map<String, String> fields) throws Exception {
+      final Element csrf =
+          page("/products").selectFirst("[data-test=logout-form] input[type=hidden]");
+      assertThat(csrf).as("the logout form's CSRF token").isNotNull();
+      final MockHttpServletRequestBuilder request =
+          MockMvcRequestBuilders.post(action).param(csrf.attr("name"), csrf.val());
+      fields.forEach(request::param);
+      final MvcResult result = perform(request);
+      assertThat(result.getResponse().getStatus()).as("POST " + action).isEqualTo(302);
+      return followed(result);
+    }
+
+    /** The guest this browser is: the subject of the identity token its cookie carries. */
+    String guestId() throws Exception {
+      final Cookie identity = cookies.get(IDENTITY_COOKIE);
+      assertThat(identity).as("the browser's " + IDENTITY_COOKIE + " cookie").isNotNull();
+      final String claims =
+          new String(
+              Base64.getUrlDecoder().decode(identity.getValue().split("\\.")[1]),
+              StandardCharsets.UTF_8);
+      return JSON.readTree(claims).get("sub").asText();
     }
 
     /** Presses "Add to Cart" on the product page of the product with that name. */

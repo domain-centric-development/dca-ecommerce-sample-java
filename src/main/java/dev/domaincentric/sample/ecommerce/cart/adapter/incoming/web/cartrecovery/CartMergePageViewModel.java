@@ -14,18 +14,14 @@ import org.jspecify.annotations.Nullable;
 public record CartMergePageViewModel(
     CartSummaryViewModel anonymousCart,
     CartSummaryViewModel accountCart,
-    String anonymousUserId,
     @Nullable String returnUrl) {
 
   /** Creates a CartMergePageViewModel from GetCartMergeOptionsResult. */
   public static CartMergePageViewModel fromResult(
-      final GetCartMergeOptionsResult result,
-      final String anonymousUserId,
-      final @Nullable String returnUrl) {
+      final GetCartMergeOptionsResult result, final @Nullable String returnUrl) {
     return new CartMergePageViewModel(
         CartSummaryViewModel.fromSummary(result.anonymousCart()),
         CartSummaryViewModel.fromSummary(result.accountCart()),
-        anonymousUserId,
         returnUrl);
   }
 

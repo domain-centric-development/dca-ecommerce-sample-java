@@ -33,4 +33,17 @@ public interface TokenService {
    * @return the generated token string
    */
   String generateRegisteredToken(UserId userId, String email, Set<Role> roles);
+
+  /**
+   * Generates a token for a registered user that names the guest the browser was before the login,
+   * so that only that guest's cart can be brought into the account's cart.
+   *
+   * @param userId the user's unique identifier
+   * @param email the user's email address
+   * @param roles the user's roles
+   * @param guestBeforeLogin the guest the browser was before the login
+   * @return the generated token string
+   */
+  String generateRegisteredToken(
+      UserId userId, String email, Set<Role> roles, UserId guestBeforeLogin);
 }

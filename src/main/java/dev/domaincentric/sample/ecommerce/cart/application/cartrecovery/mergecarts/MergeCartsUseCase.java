@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>USE_ANONYMOUS_CART: Replace account cart with anonymous cart items
  * </ul>
  *
+ * <p>An anonymous cart that is absent or holds no line changes no cart, whichever the strategy; the
+ * result then reports no anonymous cart deleted.
+ *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link MergeCartsInputPort}
  * interface, which is a primary/driving port in the application layer.
  */
@@ -60,6 +63,11 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
             });
 
     final int originalAccountItems = accountCart.itemCount();
+
+    // A guest cart that is absent or holds no line has nothing to bring: no cart changes
+    if (anonymousCartOpt.isEmpty() || anonymousCartOpt.get().isEmpty()) {
+      return MergeCartsResult.from(accountCart, input.strategy(), 0, originalAccountItems, false);
+    }
 
     return switch (input.strategy()) {
       case MERGE_BOTH -> mergeBothCarts(anonymousCartOpt, accountCart, input.strategy());

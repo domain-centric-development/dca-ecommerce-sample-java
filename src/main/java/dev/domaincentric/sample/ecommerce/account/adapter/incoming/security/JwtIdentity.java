@@ -16,12 +16,21 @@ import java.util.Set;
  * @param type the identity type (ANONYMOUS or REGISTERED)
  * @param email the user's email (only present for registered users)
  * @param roles the user's roles (typically empty for anonymous, contains CUSTOMER for registered)
+ * @param guestBeforeLogin the guest the browser was before the login, where the session token names
+ *     one
  */
 public record JwtIdentity(
-    UserId userId, JwtIdentityType type, Optional<String> email, Set<Role> roles)
+    UserId userId,
+    JwtIdentityType type,
+    Optional<String> email,
+    Set<Role> roles,
+    Optional<UserId> guestBeforeLogin)
     implements IdentityProvider.Identity {
 
   public JwtIdentity {
+    if (guestBeforeLogin == null) {
+      guestBeforeLogin = Optional.empty();
+    }
     if (userId == null) {
       throw new IllegalArgumentException("UserId cannot be null");
     }
@@ -43,7 +52,8 @@ public record JwtIdentity(
    * @return a new anonymous identity
    */
   public static JwtIdentity anonymous(final UserId userId) {
-    return new JwtIdentity(userId, JwtIdentityType.ANONYMOUS, Optional.empty(), Set.of());
+    return new JwtIdentity(
+        userId, JwtIdentityType.ANONYMOUS, Optional.empty(), Set.of(), Optional.empty());
   }
 
   /**
@@ -56,7 +66,18 @@ public record JwtIdentity(
    */
   public static JwtIdentity registered(
       final UserId userId, final String email, final Set<Role> roles) {
-    return new JwtIdentity(userId, JwtIdentityType.REGISTERED, Optional.of(email), roles);
+    return new JwtIdentity(
+        userId, JwtIdentityType.REGISTERED, Optional.of(email), roles, Optional.empty());
+  }
+
+  /**
+   * The same identity, naming the guest the browser was before the login.
+   *
+   * @param guest the guest's UserId
+   * @return a new identity carrying the guest
+   */
+  public JwtIdentity withGuestBeforeLogin(final UserId guest) {
+    return new JwtIdentity(userId, type, email, roles, Optional.of(guest));
   }
 
   /**

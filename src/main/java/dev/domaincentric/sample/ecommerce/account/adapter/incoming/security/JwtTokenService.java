@@ -5,6 +5,7 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -39,6 +40,7 @@ import org.springframework.stereotype.Service;
  *   "type": "anonymous" | "registered",
  *   "email": "user@example.com",  // only for registered
  *   "roles": ["CUSTOMER"],        // only for registered
+ *   "guest": "guest-user-id",     // only for a registered session that brought a guest along
  *   "iss": "dca-ecommerce-sample",
  *   "iat": 1706688000,
  *   "exp": 1707292800
@@ -53,6 +55,7 @@ public class JwtTokenService implements TokenService {
   private static final String CLAIM_TYPE = "type";
   private static final String CLAIM_EMAIL = "email";
   private static final String CLAIM_ROLES = "roles";
+  private static final String CLAIM_GUEST = "guest";
 
   private static final String TYPE_ANONYMOUS = "anonymous";
   private static final String TYPE_REGISTERED = "registered";
@@ -96,6 +99,22 @@ public class JwtTokenService implements TokenService {
   @Override
   public String generateRegisteredToken(
       final UserId userId, final String email, final Set<Role> roles) {
+    return registeredToken(userId, email, roles).compact();
+  }
+
+  @Override
+  public String generateRegisteredToken(
+      final UserId userId,
+      final String email,
+      final Set<Role> roles,
+      final UserId guestBeforeLogin) {
+    return registeredToken(userId, email, roles)
+        .claim(CLAIM_GUEST, guestBeforeLogin.value())
+        .compact();
+  }
+
+  private JwtBuilder registeredToken(
+      final UserId userId, final String email, final Set<Role> roles) {
     final Date now = new Date();
     final Date expiration = new Date(now.getTime() + properties.registeredExpirationMs());
 
@@ -107,8 +126,7 @@ public class JwtTokenService implements TokenService {
         .issuer(properties.issuer())
         .issuedAt(now)
         .expiration(expiration)
-        .signWith(secretKey)
-        .compact();
+        .signWith(secretKey);
   }
 
   /**
@@ -232,7 +250,11 @@ public class JwtTokenService implements TokenService {
         throw new IllegalArgumentException("Registered JWT missing email claim");
       }
 
-      return JwtIdentity.registered(userId, email, roles);
+      final JwtIdentity registered = JwtIdentity.registered(userId, email, roles);
+      final String guest = claims.get(CLAIM_GUEST, String.class);
+      return guest == null || guest.isBlank()
+          ? registered
+          : registered.withGuestBeforeLogin(UserId.of(guest));
     }
 
     // Default to anonymous if type is missing or "anonymous"

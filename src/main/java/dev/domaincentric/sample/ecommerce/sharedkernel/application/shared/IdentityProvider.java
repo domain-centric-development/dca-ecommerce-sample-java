@@ -87,6 +87,16 @@ public interface IdentityProvider extends OutputPort {
     Set<Role> roles();
 
     /**
+     * The guest this browser was before it logged in, where the login recorded one — the only guest
+     * whose cart may be brought into the account's cart.
+     *
+     * @return the guest's UserId, or empty when the identity names none
+     */
+    default Optional<UserId> guestBeforeLogin() {
+      return Optional.empty();
+    }
+
+    /**
      * Checks if this is an anonymous identity.
      *
      * @return true if the identity is anonymous
