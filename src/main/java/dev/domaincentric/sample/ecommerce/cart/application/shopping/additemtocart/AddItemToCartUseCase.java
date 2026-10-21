@@ -20,10 +20,11 @@ import org.springframework.stereotype.Service;
  * <p>This use case orchestrates adding an item to the cart by:
  *
  * <ol>
- *   <li>Retrieving the article data and validating business rules (product existence, stock
- *       availability) - outside the transaction, because the port may reach another context
- *   <li>Inside one short {@link TransactionBoundary}: loading the cart, adding the item (business
- *       logic in aggregate), persisting the cart and publishing its domain events
+ *   <li>Retrieving the article data and checking that the product exists - outside the transaction,
+ *       because the port may reach another context
+ *   <li>Inside one short {@link TransactionBoundary}: loading the cart, checking that the stock
+ *       covers what the line would hold — its quantity plus the one added — adding the item
+ *       (business logic in aggregate), persisting the cart and publishing its domain events
  * </ol>
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link AddItemToCartInputPort}
@@ -67,18 +68,20 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
         articleDataPort
             .getArticleData(productId)
             .orElseThrow(() -> new ArticleNotAvailableException(productId));
-    if (!cartArticle.hasStockFor(quantity.value())) {
-      throw new InsufficientArticleStockException(productId, quantity.value());
-    }
     final Price priceAtAddition = Price.of(cartArticle.currentPrice());
 
-    // Short transaction: load, mutate, save, publish
+    // Short transaction: load, check the line against the stock, mutate, save, publish
     return transactionBoundary.inTransaction(
         () -> {
           final ShoppingCart cart =
               shoppingCartRepository
                   .findByIdForCustomer(cartId, CustomerId.of(input.customerId()))
                   .orElseThrow(() -> new CartNotFoundException(cartId));
+          final int held = cart.quantityOf(productId);
+          if (!cartArticle.hasStockFor(held + quantity.value())) {
+            throw new InsufficientArticleStockException(
+                productId, quantity.value(), held, cartArticle.availableStock());
+          }
           cart.addItem(productId, quantity, priceAtAddition);
           shoppingCartRepository.save(cart);
           eventPublisher.publishAndClearEvents(cart);

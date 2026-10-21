@@ -1,6 +1,8 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ui.Model;
@@ -12,16 +14,21 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  *
  * <p>The notice travels with the redirect as a flash attribute, which the shop keeps in a sealed
  * cookie addressed to the page the redirect leads to: only its code ({@value #KEY}), never the
- * text, and the number a sentence names beside it ({@value #COUNT_KEY}); the page words the
- * sentence. A code the page does not know, or a number it needs and does not get, shows nothing.
+ * text, and the numbers a sentence names beside it — the first as {@value #COUNT_KEY}, each further
+ * one as {@value #COUNT_KEY} followed by its position ({@code notice.count.2}, {@code
+ * notice.count.3}); the page words the sentence. A code the page does not know, or a number it
+ * needs and does not get, shows nothing.
  *
  * <p>The checkout sends the customer back to the cart with some of these codes; it knows them, and
- * the two attributes, as the cart page's contract, the sentences stay here.
+ * the code and the first number's attribute, as the cart page's contract, the sentences stay here.
  */
 public enum CartPageNotice {
   PRODUCT_ADDED("product-added", Kind.SUCCESS, "Product added to cart!"),
   NOT_ENOUGH_STOCK(
-      "not-enough-stock", Kind.ERROR, "There is not enough stock to add %d of this product."),
+      "not-enough-stock",
+      Kind.ERROR,
+      "There is not enough stock to add %d of this product — your cart already holds %d, and %d"
+          + " are in stock."),
   PRODUCT_UNAVAILABLE("product-unavailable", Kind.ERROR, "This product is no longer available."),
   CART_NOT_FOUND("cart-not-found", Kind.ERROR, "Your cart could not be found."),
   CART_NOT_MODIFIABLE("cart-not-modifiable", Kind.ERROR, "This cart can no longer be changed."),
@@ -52,7 +59,7 @@ public enum CartPageNotice {
   /** The flash attribute that carries a cart page notice's code. */
   public static final String KEY = "notice.cart";
 
-  /** The flash attribute that carries the number a notice names. */
+  /** The flash attribute that carries the first number a notice names. */
   public static final String COUNT_KEY = "notice.count";
 
   /** Whether the page shows a notice as a success or as an error. */
@@ -92,7 +99,7 @@ public enum CartPageNotice {
         .ifPresent(
             notice ->
                 notice
-                    .sentence(model.getAttribute(COUNT_KEY) instanceof Integer count ? count : null)
+                    .sentence(countsOn(model))
                     .ifPresent(
                         text ->
                             model.addAttribute(
@@ -102,14 +109,15 @@ public enum CartPageNotice {
   /**
    * The sentence the page shows.
    *
-   * @param count the number the redirect carried, if any
-   * @return the sentence, or empty for a notice that names a number the redirect did not carry
+   * @param counts the numbers the redirect carried, in the order the sentence names them
+   * @return the sentence, or empty when the redirect did not carry every number it names
    */
-  public Optional<String> sentence(final @Nullable Integer count) {
-    if (!namesANumber()) {
-      return Optional.of(sentence);
+  public Optional<String> sentence(final List<Integer> counts) {
+    final int named = numbersNamed();
+    if (counts.size() < named) {
+      return Optional.empty();
     }
-    return Optional.ofNullable(count).map(number -> sentence.formatted(number));
+    return Optional.of(sentence.formatted(counts.subList(0, named).toArray()));
   }
 
   /**
@@ -134,7 +142,22 @@ public enum CartPageNotice {
    */
   public String redirectTo(
       final String path, final int count, final RedirectAttributes attributes) {
-    attributes.addFlashAttribute(COUNT_KEY, count);
+    return redirectTo(path, attributes, count);
+  }
+
+  /**
+   * The Spring MVC redirect to a cart page, handing it this notice and the numbers it names.
+   *
+   * @param path the page's path, with the query it needs
+   * @param attributes the redirect's attributes, which take the notice
+   * @param counts the numbers the sentence names, in its order
+   * @return {@code redirect:} followed by the path
+   */
+  public String redirectTo(
+      final String path, final RedirectAttributes attributes, final int... counts) {
+    for (int position = 1; position <= counts.length; position++) {
+      attributes.addFlashAttribute(countKey(position), counts[position - 1]);
+    }
     return redirectTo(path, attributes);
   }
 
@@ -146,7 +169,20 @@ public enum CartPageNotice {
     return kind;
   }
 
-  private boolean namesANumber() {
-    return sentence.contains("%d");
+  /** The numbers on the model, in order, up to the first position the redirect did not carry. */
+  private static List<Integer> countsOn(final Model model) {
+    final List<Integer> counts = new ArrayList<>();
+    while (model.getAttribute(countKey(counts.size() + 1)) instanceof Integer count) {
+      counts.add(count);
+    }
+    return counts;
+  }
+
+  private static String countKey(final int position) {
+    return position == 1 ? COUNT_KEY : COUNT_KEY + "." + position;
+  }
+
+  private int numbersNamed() {
+    return sentence.split("%d", -1).length - 1;
   }
 }

@@ -98,7 +98,7 @@ and the account API alike — the rule, never the attempt.
 
 | Refusal | Sentence |
 |---|---|
-| `InsufficientArticleStockException` | There is not enough stock to add {requested} of this product. |
+| `InsufficientArticleStockException` | There is not enough stock to add {requested} of this product — your cart already holds {held}, and {inStock} are in stock. |
 | `ArticleNotAvailableException` | This product is no longer available. |
 | `CartNotFoundException` | Your cart could not be found. |
 | `CartNotModifiableException` | This cart can no longer be changed. |

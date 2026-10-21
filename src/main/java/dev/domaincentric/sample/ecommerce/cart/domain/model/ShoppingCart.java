@@ -427,6 +427,16 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> 
   }
 
   /**
+   * The quantity the cart holds of a product.
+   *
+   * @param productId the product ID
+   * @return the quantity of the product's line, 0 when the cart holds none
+   */
+  public int quantityOf(final ProductId productId) {
+    return findItemByProductId(productId).map(item -> item.quantity().value()).orElse(0);
+  }
+
+  /**
    * Merges items from another cart into this cart.
    *
    * <p>For each item in the source cart:

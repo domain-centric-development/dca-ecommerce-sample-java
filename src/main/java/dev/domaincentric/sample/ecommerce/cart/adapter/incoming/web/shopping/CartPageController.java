@@ -195,7 +195,8 @@ public class CartPageController {
       final RuntimeException failure, final RedirectAttributes attributes) {
     return switch (failure) {
       case InsufficientArticleStockException e ->
-          CartPageNotice.NOT_ENOUGH_STOCK.redirectTo(CART_PATH, e.requested(), attributes);
+          CartPageNotice.NOT_ENOUGH_STOCK.redirectTo(
+              CART_PATH, attributes, e.requested(), e.held(), e.inStock());
       case ArticleNotAvailableException e ->
           CartPageNotice.PRODUCT_UNAVAILABLE.redirectTo(CART_PATH, attributes);
       case CartNotFoundException e ->

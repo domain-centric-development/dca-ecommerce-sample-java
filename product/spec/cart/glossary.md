@@ -48,6 +48,7 @@ An editable collection of stable positions. Checkout copies a snapshot through t
 - `create` — the cart comes into existence, active and empty
 - `reconstitute` — restores a stored cart; no rule re-evaluated, no event
 - `addItem` — a product goes into the cart as a new position, or the position already holding it grows by the quantity
+- what the cart holds of a product (`quantityOf`) — the quantity of the product's position, 0 when the cart holds none; read, changes nothing
 - remove a line (`removeItem`) — one `CartItem`, named by its `CartItemId`, is gone from the cart, whatever its quantity; the cart page's "Remove" reaches it through `RemoveCartItem`
 - `removeItemByProductId` — the position holding a product is gone from the cart; the API reaches it through `RemoveItemFromCart`
 - `updateItemQuantity` — sets a position's quantity; `increaseItemQuantity` / `decreaseItemQuantity` change it by one
@@ -376,8 +377,10 @@ contract: only the store sees every cart at once.
 
 ### ArticleNotAvailable / InsufficientArticleStock
 
-**Definition:** The article facts a position needs are missing for a product, or do not cover the quantity asked
-for. Read through the cart's own port, so a statement about the request rather than about the cart.
+**Definition:** The article facts a position needs are missing for a product, or their stock does not cover what
+the position would hold: the quantity added beside the quantity the position holds already. The facts are read
+through the cart's own port. `InsufficientArticleStock` carries the quantity asked for (`requested`), the quantity
+held (`held`) and the stock the facts name (`inStock`, the customer's "in stock" for `CartArticle`'s available stock).
 
 **Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ArticleDataPort`, `CartArticle`
 

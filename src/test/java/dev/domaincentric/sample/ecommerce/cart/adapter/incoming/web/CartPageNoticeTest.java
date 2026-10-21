@@ -3,6 +3,7 @@ package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -27,12 +28,31 @@ class CartPageNoticeTest {
   }
 
   @Test
-  @DisplayName("a notice that names a number words it, and says nothing without one")
-  void aNoticeThatNamesANumberWordsIt() {
+  @DisplayName("a notice that names numbers words them, and says nothing without all of them")
+  void aNoticeThatNamesNumbersWordsThem() {
     assertEquals(
-        Optional.of("There is not enough stock to add 3 of this product."),
-        CartPageNotice.NOT_ENOUGH_STOCK.sentence(3));
-    assertEquals(Optional.empty(), CartPageNotice.NOT_ENOUGH_STOCK.sentence(null));
+        Optional.of(
+            "There is not enough stock to add 5 of this product — your cart already holds 5, and 8"
+                + " are in stock."),
+        CartPageNotice.NOT_ENOUGH_STOCK.sentence(List.of(5, 5, 8)));
+    assertEquals(Optional.empty(), CartPageNotice.NOT_ENOUGH_STOCK.sentence(List.of(5)));
+    assertEquals(Optional.empty(), CartPageNotice.NOT_ENOUGH_STOCK.sentence(List.of()));
+  }
+
+  @Test
+  @DisplayName("the stock refusal the page shows names what was asked, held and in stock")
+  void theStockRefusalShowsTheThreeNumbersTheRedirectCarried() {
+    final RedirectAttributesModelMap attributes = new RedirectAttributesModelMap();
+    CartPageNotice.NOT_ENOUGH_STOCK.redirectTo("/cart", attributes, 1, 8, 8);
+    final ExtendedModelMap model = new ExtendedModelMap();
+    model.addAllAttributes(attributes.getFlashAttributes());
+
+    CartPageNotice.show(model);
+
+    assertEquals(
+        "There is not enough stock to add 1 of this product — your cart already holds 8, and 8"
+            + " are in stock.",
+        model.getAttribute("error"));
   }
 
   @Test

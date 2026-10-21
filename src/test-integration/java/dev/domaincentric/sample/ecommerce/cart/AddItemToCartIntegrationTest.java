@@ -1,9 +1,11 @@
 package dev.domaincentric.sample.ecommerce.cart;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.InsufficientArticleStockException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
@@ -58,6 +60,36 @@ class AddItemToCartIntegrationTest {
         .containsExactlyInAnyOrder("Domain-Driven Design x1", "Clean Architecture x1");
   }
 
+  @Test
+  @DisplayName("Adding past the stock through the API is refused")
+  void addingMoreThanTheLineCanHoldBesideWhatItHoldsIsRefusedAndTheCartStaysAsItWas() {
+    final String ada = "ada-" + System.nanoTime();
+    final String cartId = activeCartOf(ada);
+    final String deskModel = productIdOf("Wooden Hexagon Desk Model");
+    add(cartId, ada, deskModel, 5);
+
+    final Throwable refusal = catchThrowable(() -> add(cartId, ada, deskModel, 4));
+
+    assertThat(refusal).isInstanceOf(InsufficientArticleStockException.class);
+    final InsufficientArticleStockException notEnough = (InsufficientArticleStockException) refusal;
+    assertThat(notEnough.requested()).isEqualTo(4);
+    assertThat(notEnough.productId().value().toString()).isEqualTo(deskModel);
+    assertThat(linesOf(cartId, ada)).containsExactly("Wooden Hexagon Desk Model x5");
+  }
+
+  @Test
+  @DisplayName("Adding up to exactly the stock is accepted")
+  void addingUpToExactlyTheStockBesideWhatTheLineHoldsIsAccepted() {
+    final String ada = "ada-" + System.nanoTime();
+    final String cartId = activeCartOf(ada);
+    final String deskModel = productIdOf("Wooden Hexagon Desk Model");
+    add(cartId, ada, deskModel, 5);
+
+    add(cartId, ada, deskModel, 3);
+
+    assertThat(linesOf(cartId, ada)).containsExactly("Wooden Hexagon Desk Model x8");
+  }
+
   private String activeCartOf(final String customerId) {
     return getOrCreateActiveCart.execute(new GetOrCreateActiveCartCommand(customerId)).cartId();
   }
@@ -65,6 +97,11 @@ class AddItemToCartIntegrationTest {
   private void add(final String cartId, final String customerId, final String productName) {
     addItemToCart.execute(
         new AddItemToCartCommand(cartId, customerId, productIdOf(productName), 1));
+  }
+
+  private void add(
+      final String cartId, final String customerId, final String productId, final int quantity) {
+    addItemToCart.execute(new AddItemToCartCommand(cartId, customerId, productId, quantity));
   }
 
   /** The cart's lines as {@code name xquantity}, the way the cart page lists them. */
