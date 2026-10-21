@@ -194,3 +194,25 @@ Test: dev.domaincentric.sample.ecommerce.e2e.RegistrationE2ETest#theHomePageAReg
 - When they submit a valid registration for "anna.schmidt@example.com"
 - Then the catalogue page `/products` opens and shows "Account created successfully! Welcome!"
 Test: dev.domaincentric.sample.ecommerce.account.RegistrationNoticeIntegrationTest#thePageTheVisitorCameFromSaysTheAccountWasCreated
+
+### Rule: A return page outside the shop is not followed; the registration then leads to the home page
+
+#### an-outside-return-page-leads-home-after-registering
+- Given a visitor with no cookies who opened `/register?returnUrl=https://elsewhere.example/`
+- When they submit a valid registration for "anna.schmidt@example.com"
+- Then the home page `/` opens and shows "Account created successfully! Welcome!"
+Test: dev.domaincentric.sample.ecommerce.e2e.RegistrationE2ETest#aRegistrationLeadsToTheHomePageInsteadOfAnotherSitesReturnPage
+
+#### a-scheme-relative-return-page-leads-home-after-registering
+- Given a visitor with no cookies who opened `/register?returnUrl=//elsewhere.example/`
+- When they submit a valid registration for "anna.schmidt@example.com"
+- Then the home page `/` opens and shows "Account created successfully! Welcome!"
+Test: dev.domaincentric.sample.ecommerce.account.RegistrationPageIntegrationTest#aRegistrationLeadsToTheHomePageInsteadOfASchemeRelativeReturnPage
+
+### Rule: The "Login here" link carries a return page on only when it is a page of the shop
+
+#### the-login-link-drops-an-outside-return-page
+- Given a visitor with no cookies
+- When they open `/register?returnUrl=https://elsewhere.example/`
+- Then the "Login here" link leads to `/login`
+Test: dev.domaincentric.sample.ecommerce.account.RegistrationPageIntegrationTest#loginLinkLeadsToTheLoginWithoutAReturnPageOfAnotherSite
