@@ -96,7 +96,7 @@ public final class ShoppingCartDtoConverter {
   }
 
   private CartItemDto toItemDto(final EnrichedCartItem item) {
-    // Use current price from article data
+    // Every answer about a cart carries today's price, from the article data
     final Money currentPrice = item.currentArticle().currentPrice();
     return new CartItemDto(
         item.cartItemId().value(),

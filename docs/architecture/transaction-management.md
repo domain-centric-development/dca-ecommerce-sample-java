@@ -44,13 +44,15 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
   public AddItemToCartResult execute(AddItemToCartCommand input) {
     CartArticle article = articleDataPort.getArticleData(productId).orElseThrow();   // remote-capable, no tx
 
-    return transactionBoundary.inTransaction(() -> {                                                    // short transaction
-      ShoppingCart cart = shoppingCartRepository.findById(cartId).orElseThrow();     // (re)load inside
-      cart.addItem(productId, quantity, Price.of(article.currentPrice()));
-      shoppingCartRepository.save(cart);
-      eventPublisher.publishAndClearEvents(cart);
-      return toResult(cart);
+    ShoppingCart cart = transactionBoundary.inTransaction(() -> {                                       // short transaction
+      ShoppingCart loaded = shoppingCartRepository.findById(cartId).orElseThrow();   // (re)load inside
+      loaded.addItem(productId, quantity, Price.of(article.currentPrice()));
+      shoppingCartRepository.save(loaded);
+      eventPublisher.publishAndClearEvents(loaded);
+      return loaded;
     });
+
+    return AddItemToCartResult.from(atTodaysPrices(cart));                           // remote-capable, after the commit
   }
 }
 ```

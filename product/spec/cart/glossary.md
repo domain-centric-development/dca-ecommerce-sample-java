@@ -309,13 +309,14 @@ line and `ArticlePrice` snapshots retrieved by the use case.
 ### Price Snapshot (priceAtAddition)
 
 **Definition:** The price of a cart item frozen at the time it was added.
-Serves price-change detection and transparency toward the customer, but is
-NOT the price used for settlement at checkout time (that one is read fresh
-when the checkout is priced).
+Serves price-change detection inside the shop, but is NOT the price used for
+settlement at checkout time (that one is read fresh when the checkout is priced).
 
 **Type:** Concept
 
-**Notes:** Open question: which price is binding for the customer — the one
+**Notes:** It stays inside the shop. Every answer of the cart API about a cart (reading, adding, removing) prices
+each item at today's price, in the field `price` (`CartItemDto`), and totals it at today's prices
+(`EnrichedCart.calculateCurrentSubtotal`). Open question: which price is binding for the customer — the one
 at the time of adding or the current one? Clarify the business policy.
 
 ### Guest before login (guestBeforeLogin)

@@ -7,11 +7,16 @@ import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundEx
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartArticle;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartFactory;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 /**
@@ -25,6 +30,8 @@ import org.springframework.stereotype.Service;
  *   <li>Inside one short {@link TransactionBoundary}: loading the cart, checking that the stock
  *       covers what the line would hold — its quantity plus the one added — adding the item
  *       (business logic in aggregate), persisting the cart and publishing its domain events
+ *   <li>After the commit: enriching the cart with today's article data of every product it holds,
+ *       so the answer prices each item at today's price, as reading the cart does
  * </ol>
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link AddItemToCartInputPort}
@@ -45,16 +52,19 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
   private final ArticleDataPort articleDataPort;
   private final DomainEventPublisher eventPublisher;
   private final TransactionBoundary transactionBoundary;
+  private final EnrichedCartFactory enrichedCartFactory;
 
   public AddItemToCartUseCase(
       final ShoppingCartRepository shoppingCartRepository,
       final ArticleDataPort articleDataPort,
       final DomainEventPublisher eventPublisher,
-      final TransactionBoundary transactionBoundary) {
+      final TransactionBoundary transactionBoundary,
+      final EnrichedCartFactory enrichedCartFactory) {
     this.shoppingCartRepository = shoppingCartRepository;
     this.articleDataPort = articleDataPort;
     this.eventPublisher = eventPublisher;
     this.transactionBoundary = transactionBoundary;
+    this.enrichedCartFactory = enrichedCartFactory;
   }
 
   @Override
@@ -71,21 +81,34 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
     final Price priceAtAddition = Price.of(cartArticle.currentPrice());
 
     // Short transaction: load, check the line against the stock, mutate, save, publish
-    return transactionBoundary.inTransaction(
-        () -> {
-          final ShoppingCart cart =
-              shoppingCartRepository
-                  .findByIdForCustomer(cartId, CustomerId.of(input.customerId()))
-                  .orElseThrow(() -> new CartNotFoundException(cartId));
-          final int held = cart.quantityOf(productId);
-          if (!cartArticle.hasStockFor(held + quantity.value())) {
-            throw new InsufficientArticleStockException(
-                productId, quantity.value(), held, cartArticle.availableStock());
-          }
-          cart.addItem(productId, quantity, priceAtAddition);
-          shoppingCartRepository.save(cart);
-          eventPublisher.publishAndClearEvents(cart);
-          return AddItemToCartResult.from(cart);
-        });
+    final ShoppingCart cart =
+        transactionBoundary.inTransaction(
+            () -> {
+              final ShoppingCart loaded =
+                  shoppingCartRepository
+                      .findByIdForCustomer(cartId, CustomerId.of(input.customerId()))
+                      .orElseThrow(() -> new CartNotFoundException(cartId));
+              final int held = loaded.quantityOf(productId);
+              if (!cartArticle.hasStockFor(held + quantity.value())) {
+                throw new InsufficientArticleStockException(
+                    productId, quantity.value(), held, cartArticle.availableStock());
+              }
+              loaded.addItem(productId, quantity, priceAtAddition);
+              shoppingCartRepository.save(loaded);
+              eventPublisher.publishAndClearEvents(loaded);
+              return loaded;
+            });
+
+    return AddItemToCartResult.from(atTodaysPrices(cart));
+  }
+
+  /**
+   * The cart enriched with today's article data of every product it holds - a remote-capable read,
+   * so only after the commit.
+   */
+  private EnrichedCart atTodaysPrices(final ShoppingCart cart) {
+    final Set<ProductId> productIds =
+        cart.items().stream().map(CartItem::productId).collect(Collectors.toSet());
+    return enrichedCartFactory.create(cart, articleDataPort.getArticleData(productIds));
   }
 }

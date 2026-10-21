@@ -225,6 +225,20 @@ public final class ShopUnderTest {
   }
 
   /**
+   * The id of the catalogue's product with this name in a shop this suite started with {@link
+   * #startedWith}, as its API lists it.
+   *
+   * @param started the shop
+   * @param name the product's name
+   * @return the product id
+   * @throws Exception when the catalogue cannot be read
+   */
+  public static String productIdIn(final ConfigurableApplicationContext started, final String name)
+      throws Exception {
+    return productIdOf(baseUrlOf(started), name);
+  }
+
+  /**
    * The id of a shop's catalogue product with this name, as its API lists it.
    *
    * @param shopUrl the shop's base URL
