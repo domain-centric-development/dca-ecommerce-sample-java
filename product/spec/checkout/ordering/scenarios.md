@@ -126,3 +126,44 @@ Test: dev.domaincentric.sample.ecommerce.checkout.PlaceTheOrderIntegrationTest#t
   "Not enough stock left for 'Wooden Hexagon Desk Model'. Please adjust your order."
 - And shortly afterwards the product page of "Wooden Hexagon Desk Model" reads "3 units available"
 Test: dev.domaincentric.sample.ecommerce.e2e.TwoOrdersAtOnceE2ETest#ofTwoOrdersPlacedAtOnceOnlyTheOneTheStockCoversIsPlaced
+
+### Rule: The review shows today's prices whenever it is opened
+
+#### the-review-opened-again-shows-todays-price
+- Given a guest at the review with "Domain-Driven Design" once and "Standard Shipping", shown at 54.99 EUR
+- And the price of "Domain-Driven Design" has since been set to 49.99 EUR through the staff API
+- When the guest opens the review again
+- Then the review shows "Domain-Driven Design x1 49.99 EUR" and Total "54.98 EUR"
+Test: dev.domaincentric.sample.ecommerce.checkout.ReviewTakesTodaysPricesIntegrationTest#theReviewOpenedAgainShowsTodaysPrice
+
+### Rule: Place Order orders only what the review showed; anything changed since refuses it and shows today's order
+
+#### place-order-after-a-price-change-since-the-review-is-refused
+Title: Place Order after a price change since the review is refused and the review shows today's price
+- Given a guest at the review with "Domain-Driven Design" once and "Standard Shipping", shown at 54.99 EUR
+- And the price of "Domain-Driven Design" has since been set to 49.99 EUR through the staff API
+- When the guest presses "Place Order"
+- Then the review stays open at `/checkout/review` with "The price of 'Domain-Driven Design' has changed. Please check
+  your order and place it again."
+- And it shows "Domain-Driven Design x1 49.99 EUR" and Total "54.98 EUR"
+- And no confirmation is shown
+- And the payment provider received no payment request
+Test: dev.domaincentric.sample.ecommerce.e2e.OrderAtTheReviewedPriceE2ETest#placeOrderAfterAPriceChangeSinceTheReviewIsRefusedAndShowsTodaysPrice
+
+#### place-order-after-a-change-in-another-tab-is-refused
+- Given a guest at the review with "Domain-Driven Design" once and "Standard Shipping", shown at 54.99 EUR
+- And in a second tab of the same browser the guest has since chosen "Express Shipping" on the delivery step
+- When the guest presses "Place Order" on the first tab's review
+- Then the review stays open at `/checkout/review` with "Your order has changed since you reviewed it. Please check it
+  and place it again."
+- And it shows "Express Shipping"
+- And no confirmation is shown
+Test: dev.domaincentric.sample.ecommerce.checkout.OrderChangedSinceTheReviewIntegrationTest#placeOrderAfterAChangeInAnotherTabIsRefused, dev.domaincentric.sample.ecommerce.checkout.OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest#placeOrderAfterAChangeInAnotherTabIsRefused
+
+#### place-order-after-the-refusal-orders-what-the-review-now-shows
+- Given a guest whose "Place Order" was refused because the price of "Domain-Driven Design" changed from 54.99 EUR to
+  49.99 EUR, and the review now shows 49.99 EUR
+- When the guest presses "Place Order" again
+- Then the confirmation page shows under "Items Ordered" "Domain-Driven Design x1 49.99 EUR"
+- And the payment provider received one payment request, of "54.98"
+Test: dev.domaincentric.sample.ecommerce.checkout.OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest#placeOrderAfterTheRefusalOrdersWhatTheReviewNowShows, dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionAuthorizePaymentTest#theAuthorizedPaymentIsForTheAmountAuthorized
