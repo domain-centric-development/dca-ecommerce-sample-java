@@ -403,3 +403,22 @@ Test: dev.domaincentric.sample.ecommerce.e2e.AddPastTheStockE2ETest#addingAUnitP
   "Requested 4 of product <id of Wooden Hexagon Desk Model>, more than is in stock."
 - And her cart still holds "Wooden Hexagon Desk Model" with quantity 5
 Test: dev.domaincentric.sample.ecommerce.cart.AddItemToCartIntegrationTest#addingMoreThanTheLineCanHoldBesideWhatItHoldsIsRefusedAndTheCartStaysAsItWas
+
+### Rule: Every answer about a cart prices its items at today's price, in the field `price`
+
+#### adding-answers-at-todays-prices
+- Given Ada's cart holds "Domain-Driven Design" once, added at 54.99 EUR
+- And the price of "Domain-Driven Design" has since been set to 49.99 EUR through the staff API
+- When her client adds "Clean Architecture" with quantity 1
+- Then the shop answers 200 with the cart, whose "Domain-Driven Design" item has `price` 49.99 and whose `total` is
+  89.98
+- And no item of the answer carries a field `priceAtAddition`
+Test: dev.domaincentric.sample.ecommerce.e2e.CartApiPriceE2ETest#addingToTheCartAnswersEveryItemAtTodaysPrice
+
+#### removing-answers-at-todays-prices
+- Given Ada's cart holds "Domain-Driven Design" once, added at 54.99 EUR, and "Clean Architecture" once
+- And the price of "Domain-Driven Design" has since been set to 49.99 EUR through the staff API
+- When her client removes "Clean Architecture"
+- Then the shop answers 200 with the cart, whose "Domain-Driven Design" item has `price` 49.99 and whose `total` is
+  49.99
+Test: dev.domaincentric.sample.ecommerce.cart.RemoveItemFromCartPriceIntegrationTest#removingAProductAnswersTheRestOfTheCartAtTodaysPrice

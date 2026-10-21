@@ -1,7 +1,9 @@
 ---
 id: every-cart-answer-shows-todays-price
 epic: shop-api
-status: approved
+status: delivered
+delivered: 2026-10-21T20:59:46Z
+delivered_by: gate
 created: 2026-10-14T23:44:13Z
 context: cart
 feature: shopping
