@@ -1,7 +1,9 @@
 ---
 id: the-cart-shows-a-changed-price
 epic: prices
-status: adopted
+status: delivered
+delivered: 2026-10-21T21:15:44Z
+delivered_by: gate
 created: 2026-10-15T07:50:52Z
 context: cart
 feature: shopping

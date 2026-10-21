@@ -422,3 +422,13 @@ Test: dev.domaincentric.sample.ecommerce.e2e.CartApiPriceE2ETest#addingToTheCart
 - Then the shop answers 200 with the cart, whose "Domain-Driven Design" item has `price` 49.99 and whose `total` is
   49.99
 Test: dev.domaincentric.sample.ecommerce.cart.RemoveItemFromCartPriceIntegrationTest#removingAProductAnswersTheRestOfTheCartAtTodaysPrice
+
+### Rule: After a price change the cart prices the line at today's price and says that the price changed
+
+#### the-cart-shows-todays-price-after-a-change
+- Given a guest whose cart holds "Domain-Driven Design" once, added at 54.99 EUR
+- When a client holding a staff token sets the price of "Domain-Driven Design" to 49.99 EUR
+- Then the guest's cart page shows the line "Domain-Driven Design" with "Unit Price" "49.99 EUR" and
+  "Price decreased by 5.00 EUR"
+- And the page shows "Some items have price changes since they were added to your cart."
+Test: dev.domaincentric.sample.ecommerce.e2e.CartPriceChangeE2ETest#theCartShowsTodaysPriceAndThatItChangedAfterAPriceChange
