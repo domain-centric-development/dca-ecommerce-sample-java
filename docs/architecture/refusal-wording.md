@@ -16,6 +16,7 @@ its title alone.
 
 | Context | Failure | Status | Title | Detail |
 |---|---|---|---|---|
+| Account | login refused (an outcome of the authentication use case, answered with `WWW-Authenticate: Bearer`) | 401 | Authentication failed | — |
 | Account | `EmailAlreadyRegisteredException` | 409 | Email already registered | The email address {email} is already registered. |
 | Account | `AccountAlreadyExistsException` | 409 | Account already exists | The signed-in user already has an account. |
 | Account | `PasswordTooWeakException` | 422 | Password too weak | the sentence for its broken rule, see [Password rules](#password-rules) |

@@ -1,20 +1,16 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.api;
 
 /**
- * API result DTO for login endpoint.
+ * API result DTO for a successful login. A refused login answers a problem document instead.
  *
- * @param success whether login was successful
- * @param token the JWT token (only present on success)
- * @param email the user's email (only present on success)
- * @param errorMessage error message (only present on failure)
+ * @param success always {@code true}
+ * @param token the JWT token
+ * @param email the user's email
+ * @param errorMessage always {@code null}; kept so the answer keeps its shape
  */
 public record LoginResponse(boolean success, String token, String email, String errorMessage) {
 
   public static LoginResponse success(final String token, final String email) {
     return new LoginResponse(true, token, email, null);
-  }
-
-  public static LoginResponse failure(final String errorMessage) {
-    return new LoginResponse(false, null, null, errorMessage);
   }
 }

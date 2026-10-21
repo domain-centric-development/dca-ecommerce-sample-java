@@ -52,6 +52,39 @@ class LoginApiE2ETest {
     assertEquals(email, body.path("email").asText());
   }
 
+  @Test
+  @DisplayName("A wrong password is refused")
+  void aWrongPasswordIsRefusedWithAProblemDocumentAndABearerChallenge() throws Exception {
+    // A shop started elsewhere may keep accounts from an earlier run: the address is new each time.
+    final String email =
+        "ada+" + Long.toHexString(System.nanoTime()).toLowerCase(Locale.ROOT) + "@example.com";
+    final HttpResponse<String> registration =
+        post(
+            "/api/auth/register",
+            """
+            {"email":"%s","password":"Secret123","firstName":"Ada",\
+            "lastName":"Lovelace","dateOfBirth":"1815-12-10"}"""
+                .formatted(email));
+    assertEquals(201, registration.statusCode(), registration.body());
+
+    final HttpResponse<String> response =
+        post(
+            "/api/auth/login",
+            """
+            {"email":"%s","password":"Wrong1234"}"""
+                .formatted(email));
+
+    assertEquals(401, response.statusCode(), response.body());
+    final String contentType = response.headers().firstValue("Content-Type").orElse("");
+    assertTrue(
+        contentType.startsWith("application/problem+json"),
+        "the refusal is a problem document, not " + contentType);
+    assertEquals("Bearer", response.headers().firstValue("WWW-Authenticate").orElse(""));
+    final JsonNode problem = new ObjectMapper().readTree(response.body());
+    assertEquals("Authentication failed", problem.path("title").asText());
+    assertFalse(problem.has("detail"), "the problem carries no detail: " + response.body());
+  }
+
   private HttpResponse<String> post(final String path, final String json) throws Exception {
     return client.send(
         HttpRequest.newBuilder(URI.create(ShopUnderTest.baseUrl() + path))

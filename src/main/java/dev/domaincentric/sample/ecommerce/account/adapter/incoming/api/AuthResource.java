@@ -10,7 +10,10 @@ import dev.domaincentric.sample.ecommerce.account.application.registeraccount.Re
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,7 +59,7 @@ public class AuthResource {
   }
 
   @PostMapping("/login")
-  public ResponseEntity<LoginResponse> login(@Valid @RequestBody final LoginRequest request) {
+  public ResponseEntity<?> login(@Valid @RequestBody final LoginRequest request) {
 
     final AuthenticateAccountCommand command =
         new AuthenticateAccountCommand(request.email(), request.password());
@@ -64,8 +67,7 @@ public class AuthResource {
     final AuthenticateAccountResult result = authenticateAccountUseCase.execute(command);
 
     if (!result.success()) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(LoginResponse.failure(result.errorMessage()));
+      return refusedLogin();
     }
 
     final String token =
@@ -73,6 +75,20 @@ public class AuthResource {
             UserId.of(result.userId()), result.email(), result.roles());
 
     return ResponseEntity.ok(LoginResponse.success(token, result.email()));
+  }
+
+  /**
+   * A refused login is a problem document like every other refusal of the API, with the scheme the
+   * caller should authenticate with. It names no reason: an unknown address and a wrong password
+   * answer alike.
+   */
+  private static ResponseEntity<ProblemDetail> refusedLogin() {
+    final ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
+    problem.setTitle("Authentication failed");
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .body(problem);
   }
 
   @PostMapping("/register")

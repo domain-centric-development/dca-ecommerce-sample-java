@@ -823,6 +823,7 @@ context's own `*ApiExceptionHandler`. The status follows what went wrong, not wh
 
 | Status | When |
 |---|---|
+| `401` | a login whose address or password does not hold — titled "Authentication failed", no detail, with `WWW-Authenticate: Bearer`; `AuthResource` answers it, since the refusal is an outcome of the use case, not a failure |
 | `404` | the addressed thing is not there, or not the caller's — a cart, a session, an article, a position in a cart, a product in the price address |
 | `409` | a conflict with existing state — a stock keeping unit already in use, a second active cart, a cart that no longer takes changes |
 | `422` | the request was understood and a rule refused it — a password below the strength rules, a checkout step that has no data yet |
