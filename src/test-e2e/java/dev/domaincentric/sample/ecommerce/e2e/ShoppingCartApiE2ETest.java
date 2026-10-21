@@ -126,6 +126,42 @@ class ShoppingCartApiE2ETest {
   }
 
   @Test
+  @DisplayName("A quantity of zero is refused")
+  void addingAQuantityOfZeroIsAnUnacceptableValueNamingTheQuantityAndLeavesTheCartEmpty()
+      throws Exception {
+    final String token = registeredToken();
+    final String cartId =
+        JSON.readTree(send(authorized(token, "/api/carts").POST(noBody())).body())
+            .get("cartId")
+            .asText();
+    final String productId = productIdOf("Domain-Driven Design");
+
+    final HttpResponse<String> response =
+        send(
+            authorized(token, "/api/carts/" + cartId + "/items")
+                .header("Content-Type", "application/json")
+                .POST(
+                    HttpRequest.BodyPublishers.ofString(
+                        """
+                        {"productId":"%s","quantity":0}"""
+                            .formatted(productId))));
+
+    assertEquals(400, response.statusCode(), response.body());
+    assertEquals(
+        "application/problem+json",
+        response.headers().firstValue("Content-Type").orElse("").split(";")[0]);
+    final JsonNode problem = JSON.readTree(response.body());
+    assertEquals("Unacceptable value", problem.path("title").asText());
+    assertFalse(
+        problem.path("errors").path("quantity").asText().isBlank(),
+        "the reason the problem gives for quantity: " + problem);
+    final JsonNode cart =
+        JSON.readTree(send(authorized(token, "/api/carts/" + cartId).GET()).body());
+    assertTrue(cart.path("items").isArray(), cart.toString());
+    assertEquals(0, cart.path("items").size(), "the cart is still empty");
+  }
+
+  @Test
   @DisplayName("An unknown product is not available")
   void addingAProductTheCatalogueDoesNotKnowIsUnprocessableAndLeavesTheCartEmpty()
       throws Exception {

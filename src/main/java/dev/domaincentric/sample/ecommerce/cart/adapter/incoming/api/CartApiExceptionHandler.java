@@ -7,10 +7,14 @@ import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundEx
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.ArticleNotAvailableException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.InsufficientArticleStockException;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItemNotFoundException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -101,6 +105,21 @@ public class CartApiExceptionHandler {
   }
 
   /**
+   * The body names a value the request refuses — a quantity below one; {@code errors} names each
+   * field as the request spells it, and why.
+   */
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ProblemDetail handleRefusedField(final MethodArgumentNotValidException exception) {
+    final Map<String, String> errors = new LinkedHashMap<>();
+    for (final FieldError error : exception.getBindingResult().getFieldErrors()) {
+      errors.putIfAbsent(error.getField(), error.getDefaultMessage());
+    }
+    final ProblemDetail problem = unacceptableValue();
+    problem.setProperty("errors", errors);
+    return problem;
+  }
+
+  /**
    * A value the caller sent is not acceptable to a value object, or a product id that does not
    * parse in {@link ShoppingCartResource} — a malformed call either way. The one mapping that stays
    * imprecise: this is also the type a defect in this application raises, and nothing in the type
@@ -110,6 +129,10 @@ public class CartApiExceptionHandler {
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleUnacceptableValue(final IllegalArgumentException exception) {
     LOG.debug("Rejected request value: {}", exception.getMessage());
+    return unacceptableValue();
+  }
+
+  private static ProblemDetail unacceptableValue() {
     return problem(HttpStatus.BAD_REQUEST, "Unacceptable value");
   }
 

@@ -32,6 +32,7 @@ its title alone. A refused request field adds `errors`: each field as the reques
 | Cart | `ActiveCartAlreadyExistsException` | 409 | Active cart already exists | Customer {customerId} already has an active cart. |
 | Cart | any other `UseCaseException` | 422 | Request cannot be served | — |
 | Cart | any other `DomainException` | 409 | Cart refuses the change | — |
+| Cart | a refused request field | 400 | Unacceptable value | — (`errors` names each field and why) |
 | Cart | argument exception | 400 | Unacceptable value | — |
 | Product | `DuplicateSkuException` | 409 | Stock keeping unit already in use | A product with SKU {sku} already exists. |
 | Product | any other `UseCaseException` | 422 | Request cannot be served | — |
