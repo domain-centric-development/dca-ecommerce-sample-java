@@ -1,7 +1,9 @@
 ---
 id: the-payment-is-authorized-at-place-order
 epic: provider-payment
-status: approved
+status: delivered
+delivered: 2026-10-21T17:09:03Z
+delivered_by: gate
 created: 2026-10-21T14:31:50Z
 context: checkout
 feature: payment
