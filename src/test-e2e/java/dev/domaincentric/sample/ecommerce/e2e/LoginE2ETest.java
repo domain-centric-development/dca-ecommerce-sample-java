@@ -41,6 +41,21 @@ class LoginE2ETest extends BaseE2ETest {
   }
 
   @Test
+  @DisplayName("An outside return page opens the cart after login")
+  void aLoginOpensTheCartInsteadOfAReturnPageOfAnotherSite() {
+    String email = "anna.schmidt." + UUID.randomUUID() + "@example.com";
+    try (BrowserContext registration = browser.newContext()) {
+      RegisterPage.navigateTo(registration.newPage()).register(email, PASSWORD);
+    }
+
+    LoginPage.navigateTo(page, "https://elsewhere.example/").login(email, PASSWORD);
+
+    CartPage cart = new CartPage(page);
+    assertEquals("/cart", cart.shownPath());
+    assertEquals("Welcome back!", cart.successMessage());
+  }
+
+  @Test
   @DisplayName("Wrong password is refused")
   void aWrongPasswordIsRefusedWithTheGenericMessageAndKeepsTheEmail() {
     String email = "anna.schmidt." + UUID.randomUUID() + "@example.com";

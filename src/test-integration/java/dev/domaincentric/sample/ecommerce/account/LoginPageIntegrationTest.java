@@ -105,6 +105,21 @@ class LoginPageIntegrationTest {
   }
 
   @Test
+  @DisplayName("A scheme-relative return page opens the cart after login")
+  void aLoginOpensTheCartInsteadOfASchemeRelativeReturnPage() throws Exception {
+    registerTheAccount();
+    final Map<String, Cookie> cookies = new LinkedHashMap<>();
+    final String form = page("/login?returnUrl=//elsewhere.example/", cookies);
+
+    final String afterLogin = logIn(form, cookies);
+
+    final MockHttpServletResponse landed = follow(afterLogin, cookies);
+    assertThat(landed.getRedirectedUrl()).isEqualTo("/cart");
+    final String cart = page(landed.getRedirectedUrl(), cookies);
+    assertThat(element(cart, "cart-success-message").text()).isEqualTo("Welcome back!");
+  }
+
+  @Test
   @DisplayName("Register link keeps the return page")
   void registerLinkCarriesTheReturnPageOn() throws Exception {
     final String page = page("/login?returnUrl=/products");
