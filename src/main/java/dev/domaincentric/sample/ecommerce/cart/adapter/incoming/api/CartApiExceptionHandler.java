@@ -42,11 +42,14 @@ public class CartApiExceptionHandler {
         "There is no cart " + exception.cartId().value() + ".");
   }
 
-  /** The assortment carries no article for that product. */
+  /**
+   * The assortment carries no article for that product. The product is named in the body, not in
+   * the address: the cart the address names is there, so this is {@code 422}, not {@code 404}.
+   */
   @ExceptionHandler(ArticleNotAvailableException.class)
   public ProblemDetail handleArticleNotAvailable(final ArticleNotAvailableException exception) {
     return problem(
-        HttpStatus.NOT_FOUND,
+        HttpStatus.UNPROCESSABLE_ENTITY,
         "Article not available",
         "There is no article for product " + exception.productId().value() + ".");
   }

@@ -126,6 +126,40 @@ class ShoppingCartApiE2ETest {
   }
 
   @Test
+  @DisplayName("An unknown product is not available")
+  void addingAProductTheCatalogueDoesNotKnowIsUnprocessableAndLeavesTheCartEmpty()
+      throws Exception {
+    final String token = registeredToken();
+    final String cartId =
+        JSON.readTree(send(authorized(token, "/api/carts").POST(noBody())).body())
+            .get("cartId")
+            .asText();
+
+    final HttpResponse<String> response =
+        send(
+            authorized(token, "/api/carts/" + cartId + "/items")
+                .header("Content-Type", "application/json")
+                .POST(
+                    HttpRequest.BodyPublishers.ofString(
+                        """
+                        {"productId":"00000000-0000-4000-8000-000000000001","quantity":1}""")));
+
+    assertEquals(422, response.statusCode(), response.body());
+    assertEquals(
+        "application/problem+json",
+        response.headers().firstValue("Content-Type").orElse("").split(";")[0]);
+    final JsonNode problem = JSON.readTree(response.body());
+    assertEquals("Article not available", problem.path("title").asText());
+    assertEquals(
+        "There is no article for product 00000000-0000-4000-8000-000000000001.",
+        problem.path("detail").asText());
+    final JsonNode cart =
+        JSON.readTree(send(authorized(token, "/api/carts/" + cartId).GET()).body());
+    assertTrue(cart.path("items").isArray(), cart.toString());
+    assertEquals(0, cart.path("items").size(), "the cart is still empty");
+  }
+
+  @Test
   @DisplayName("No active cart is not found")
   void theActiveCartOfACustomerWithoutOneIsNotFound() throws Exception {
     final String token = registeredToken();

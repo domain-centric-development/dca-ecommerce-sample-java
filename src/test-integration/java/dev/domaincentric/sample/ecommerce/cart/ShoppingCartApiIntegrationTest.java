@@ -142,12 +142,12 @@ class ShoppingCartApiIntegrationTest {
 
   @Test
   @DisplayName("An unknown product is not available")
-  void addingAProductTheCatalogueDoesNotKnowIsNotFoundStatedAsAProblem() throws Exception {
+  void addingAProductTheCatalogueDoesNotKnowIsUnprocessableStatedAsAProblem() throws Exception {
     final String token = register("ada-adds-unknown@example.com");
     final String cartId = open(token).get("cartId").asText();
 
     add(token, cartId, "00000000-0000-4000-8000-000000000001", 1)
-        .andExpect(status().isNotFound())
+        .andExpect(status().is(422))
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(jsonPath("$.title").value("Article not available"))
         .andExpect(

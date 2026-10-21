@@ -26,7 +26,7 @@ its title alone.
 | Account | any other `DomainException` | 422 | Business rule violated | — |
 | Account | argument exception | 400 | Unacceptable value | — |
 | Cart | `CartNotFoundException` | 404 | Cart not found | There is no cart {cartId}. |
-| Cart | `ArticleNotAvailableException` | 404 | Article not available | There is no article for product {productId}. |
+| Cart | `ArticleNotAvailableException` | 422 | Article not available | There is no article for product {productId}. |
 | Cart | `CartItemNotFoundException` | 404 | Position not in cart | The cart holds no position for {reference}. |
 | Cart | `InsufficientArticleStockException` | 409 | Not enough stock | Requested {requested} of product {productId}, more than is in stock. |
 | Cart | `ActiveCartAlreadyExistsException` | 409 | Active cart already exists | Customer {customerId} already has an active cart. |
