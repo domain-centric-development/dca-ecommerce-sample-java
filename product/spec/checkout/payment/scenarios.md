@@ -8,7 +8,7 @@
 - When the customer chooses "Mock Payment (Test)" and presses "Continue to Review"
 - Then the checkout shows the review step
 - And the payment provider received no payment request
-Test: dev.domaincentric.sample.ecommerce.e2e.ProviderPaymentE2ETest#authorizedPaymentMovesTheCheckoutToReview
+Test: dev.domaincentric.sample.ecommerce.checkout.PaymentAtPlaceOrderIntegrationTest#choosingHowToPayRequestsNoPayment
 
 ### Rule: A refused payment keeps the customer at the review and places no order
 
@@ -112,7 +112,7 @@ Test: dev.domaincentric.sample.ecommerce.e2e.ProviderPaymentE2ETest#placeOrderAu
 - When the customer presses "Place Order"
 - Then the payment provider received one payment request for the checkout session's total
 - And that request carries the checkout reference, the checkout session's id as text, as `merchantReference`
-Test: dev.domaincentric.sample.ecommerce.e2e.ProviderPaymentE2ETest#thePaymentRequestCarriesTheCheckoutReference
+Test: dev.domaincentric.sample.ecommerce.checkout.PaymentAtPlaceOrderIntegrationTest#placeOrderRequestsThePaymentWithTheCheckoutReference
 
 #### two-checkouts-send-two-references
 - Given two customers, each with a checkout session at the review
