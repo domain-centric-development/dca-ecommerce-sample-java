@@ -166,7 +166,10 @@ class CheckoutSpecificationTest {
                 else f.confirm(session);
               });
       assertTrue(attempted.await(5, TimeUnit.SECONDS));
-      assertFalse(second.isDone());
+      // A start that comes second cannot finish while the confirmation holds the repository
+      // operation; a confirmation that comes second to a replacement may already be refused — it
+      // checks the session before it reserves any stock.
+      if (confirmationWins) assertFalse(second.isDone());
       f.events.release.countDown();
       first.get(5, TimeUnit.SECONDS);
       if (confirmationWins) {
