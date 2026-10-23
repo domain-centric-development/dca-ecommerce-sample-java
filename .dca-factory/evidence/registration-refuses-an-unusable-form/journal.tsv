@@ -1,0 +1,55 @@
+2026-10-12T21:02:08Z	gate	plan	exit=0	by=runner	seq=1
+2026-10-12T21:02:09Z	stage-start	builder	tool=claude	stages=plan,test	seq=2
+2026-10-12T21:03:24Z	wrote	plan.md	sha=106d33fe696e12084cf73d27b727736d1f4a63a38a36d446b391ecad862f132a	seq=3
+2026-10-12T21:03:24Z	gate	plan	exit=1	fail=decisions	by=builder	backlog=77ff761c1d039cba41b57bdea5c65c9763c94d3e19597ba727c8daf731c0899f	seq=4
+2026-10-12T21:03:33Z	usage	builder	tool=claude	model=claude-opus-5-5	input=28	cache_read=643021	cache_write=64092	output=7641	cost=0.7943	seconds=83	seq=5
+2026-10-12T21:03:33Z	stage-end	builder	exit=0	seq=6
+2026-10-12T21:26:02Z	gate	plan	exit=0	by=runner	seq=7
+2026-10-12T21:26:03Z	stage-start	builder	tool=claude	stages=plan,test	seq=8
+2026-10-12T21:27:11Z	wrote	plan.md	sha=70c184437d2ca9aeebd7b9b245befb0d5648a00bbe9fa4173101fc8047ca7417	seq=9
+2026-10-12T21:27:11Z	gate	plan	exit=0	by=builder	seq=10
+2026-10-12T21:29:45Z	wrote	tests.md	sha=020a449b4e4fea826c76139c6107bd4021223d708a5c250417169c7128a7b445	seq=11
+2026-10-12T21:29:51Z	gate	test	exit=1	fail=files-listed	by=builder	seq=12
+2026-10-12T21:30:08Z	wrote	tests.md	sha=e494003a045e255f3687a752db19ff09cf9f1bbb2d231e6c5771778adeda3611	seq=13
+2026-10-12T21:30:56Z	gate	test	exit=0	by=builder	seq=14
+2026-10-12T21:31:09Z	usage	builder	tool=claude	model=claude-opus-5-5	input=62	cache_read=2209588	cache_write=93489	output=21896	cost=1.6280	seconds=306	seq=15
+2026-10-12T21:31:09Z	stage-end	builder	exit=0	seq=16
+2026-10-12T21:31:10Z	wrote	plan.md	sha=70c184437d2ca9aeebd7b9b245befb0d5648a00bbe9fa4173101fc8047ca7417	same=1	seq=17
+2026-10-12T21:31:10Z	pipeline-changed	test	seq=18
+2026-10-12T21:34:03Z	stage-start	builder	tool=claude	stages=test	seq=19
+2026-10-12T21:35:08Z	gate	test	exit=0	by=builder	seq=20
+2026-10-12T21:35:16Z	usage	builder	tool=claude	model=claude-opus-5-5	input=18	cache_read=352780	cache_write=55177	output=2390	cost=0.5598	seconds=73	seq=21
+2026-10-12T21:35:16Z	stage-end	builder	exit=0	seq=22
+2026-10-12T21:35:16Z	wrote	plan.md	sha=70c184437d2ca9aeebd7b9b245befb0d5648a00bbe9fa4173101fc8047ca7417	same=1	seq=23
+2026-10-12T21:35:16Z	wrote	tests.md	sha=e494003a045e255f3687a752db19ff09cf9f1bbb2d231e6c5771778adeda3611	same=1	seq=24
+2026-10-12T21:35:54Z	gate	test	exit=0	by=runner	seq=25
+2026-10-12T21:35:54Z	stage-start	verifier	tool=claude	stages=judge	seq=26
+2026-10-12T21:36:53Z	usage	verifier	tool=claude	model=claude-opus-5-5	input=22	cache_read=403713	cache_write=46757	output=4850	cost=0.5519	seconds=58	seq=27
+2026-10-12T21:36:53Z	stage-end	verifier	exit=0	seq=28
+2026-10-12T21:36:53Z	wrote	judge.md	sha=734e3b67d59b916fabeef79acc2c757f92549176c66cd857aa9a7e095582d005	seq=29
+2026-10-12T21:39:15Z	gate	adopt	exit=0	by=runner	seq=30
+2026-10-12T21:45:22Z	stage-start	integrate	tool=claude	seq=31
+2026-10-12T21:45:57Z	usage	integrate	tool=claude	model=claude-opus-5-5	input=16	cache_read=233860	cache_write=32036	output=2986	cost=0.3628	seconds=35	seq=32
+2026-10-12T21:45:57Z	stage-end	integrate	exit=0	seq=33
+2026-10-12T21:50:54Z	gate	integrate	exit=0	by=runner	seq=34
+2026-10-23T13:21:55Z	part	plan	process=builder	stream=builder.210208.out	seconds=78.4	input=28	cache_read=643021	cache_write=64092	output=7641	cost=0.794272	seq=35
+2026-10-23T13:21:55Z	denied	plan	process=builder	stream=builder.210208.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls .dca-factory/runs/registration-refuses-an-unusable-form/; find product/epics -path '*registration-…	seq=36
+2026-10-23T13:21:55Z	stream	builder.210208.out	process=builder	parts=1	denied=1	seq=37
+2026-10-23T13:21:55Z	part	plan	process=builder	stream=builder.212602.out	seconds=64.232	input=24	cache_read=549913	cache_write=60456	output=5770	cost=0.644233	seq=38
+2026-10-23T13:21:55Z	part	test	process=builder	stream=builder.212602.out	seconds=234.684	input=38	cache_read=1659675	cache_write=33033	output=16126	cost=0.983765	seq=39
+2026-10-23T13:21:55Z	denied	-	process=builder	stream=builder.212602.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls .dca-factory/runs/registration-refuses-an-unusable-form/	seq=40
+2026-10-23T13:21:55Z	stream	builder.212602.out	process=builder	parts=2	denied=1	seq=41
+2026-10-23T13:21:55Z	part	test	process=builder	stream=builder.213403.out	seconds=69.492	input=18	cache_read=352780	cache_write=55177	output=2390	cost=0.559844	seq=42
+2026-10-23T13:21:55Z	denied	test	process=builder	stream=builder.213403.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls .dca-factory/runs/registration-refuses-an-unusable-form/	seq=43
+2026-10-23T13:21:55Z	stream	builder.213403.out	process=builder	parts=1	denied=1	seq=44
+2026-10-23T13:21:55Z	denied	-	process=integrate	stream=integrate.214522.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md | head -80; cat .dca-factory/evidence/registration-refuses-an-unusable-form/conflicts; cat src/test-e2…	seq=45
+2026-10-23T13:21:55Z	stream	integrate.214522.out	process=integrate	parts=0	denied=1	seq=46
+2026-10-23T13:21:55Z	part	judge	process=verifier	stream=verifier.213554.out	seconds=53.877	input=22	cache_read=403713	cache_write=46757	output=4850	cost=0.551887	seq=47
+2026-10-23T13:21:55Z	denied	judge	process=verifier	stream=verifier.213554.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; R=.dca-factory/runs/registration-refuses-an-unusable-form; ls -la $R $R/reviews; python3 .agents/fact…	seq=48
+2026-10-23T13:21:55Z	denied	judge	process=verifier	stream=verifier.213554.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md	seq=49
+2026-10-23T13:21:55Z	denied	judge	process=verifier	stream=verifier.213554.out	tool=Bash	call=cd /Users/christoph/Privat/domain-centric-architecture/dca-ecommerce-sample-java; cat product/epics/account/registration-refuses-an-unusable-form/story.md prod…	seq=50
+2026-10-23T13:21:55Z	stream	verifier.213554.out	process=verifier	parts=1	denied=3	seq=51
+2026-10-23T13:21:55Z	signal	plan	run=20261023T132155.626705Z	open=1	seq=52
+2026-10-23T13:21:55Z	signal	judge	run=20261023T132155.627260Z	sha=734e3b67d59b916f	findings=0	seq=53
+2026-10-23T13:21:55Z	record	1	seq=54
+2026-10-23T13:22:32Z	pruned	-	files=10	days=7	seq=55

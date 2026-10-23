@@ -40,7 +40,12 @@ __pycache__/
 .opencode/skills/dca-review
 Thumbs.db
 .claude/skills/dca-audit
-/.dca-factory
+/.dca-factory/*
+!/.dca-factory/evidence/
+/.dca-factory/evidence/*
+!/.dca-factory/evidence/*/
+/.dca-factory/evidence/*/*
+!/.dca-factory/evidence/*/journal.tsv
 .claude/skills/factory-backlog
 .claude/skills/factory-decisions
 .claude/skills/factory-discover

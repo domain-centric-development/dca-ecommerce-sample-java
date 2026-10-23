@@ -1,0 +1,5 @@
+2026-10-21T06:36:45.703Z	window-start	backlog	tool=claude-session	seq=1
+2026-10-21T06:37:10.253Z	window-end	backlog	seq=2
+2026-10-21T06:37:10.253Z	usage	backlog	tool=claude-session	window=2026-10-21T06:36:45.703Z/2026-10-21T06:37:10.253Z	session=claude:f91240e2-548f-4b86-9372-a32d5d2a33f5	seq=3
+2026-10-21T06:37:10.253Z	usage	backlog	tool=claude-session	model=claude-opus-5-5	input=4	cache_read=593717	cache_write=21621	output=2482	window=2026-10-21T06:36:45.703Z/2026-10-21T06:37:10.253Z	seq=4
+2026-10-23T13:21:56Z	record	1	seq=5
