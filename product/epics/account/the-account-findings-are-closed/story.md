@@ -2,7 +2,7 @@
 id: the-account-findings-are-closed
 epic: account
 kind: task
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: account
 title: The account's open findings are closed

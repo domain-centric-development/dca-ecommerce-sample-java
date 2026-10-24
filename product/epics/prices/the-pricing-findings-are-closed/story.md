@@ -2,7 +2,7 @@
 id: the-pricing-findings-are-closed
 epic: prices
 kind: task
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: pricing
 title: The pricing's open findings are closed

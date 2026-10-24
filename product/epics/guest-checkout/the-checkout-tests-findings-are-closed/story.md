@@ -2,7 +2,7 @@
 id: the-checkout-tests-findings-are-closed
 epic: guest-checkout
 kind: task
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: checkout
 title: The checkout's open findings in its tests and test support are closed
