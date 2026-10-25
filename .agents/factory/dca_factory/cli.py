@@ -79,10 +79,16 @@ from .gate import (
     criteria_of, DESCRIPTION_CHANGES, scenarios_of, spec_target, story_signals, story_spec, description_part, discovery_items, perspectives_of, story_ids)
 from .tools import (
     isolation_args, TOOL, TOOLS, tool_invocation, unprobed_flags)
+from .requests import (
+    drop_request, Duplicate, KIND, KINDS, list_requests, mark_pending, out_path, request_of, RequestError, retry_request,
+    write_request)
+from .requests import counts as request_counts, view as requests_view
+from . import service
 from .runner import (
     contract_text, document_skeleton, files_skeleton, integrate_finish, integrate_prepare, link_places, migrate_layout,
     command_heads, first_word, model_for, needs_human_lines, open_decision_files, PASS_MARKS, plan_skeleton, run_main,
-    stage_names, stages_shell, verdict_of_story, worktree_prepare, worktree_prune, worktree_remove)
+    stage_names, stages_shell, verdict_of_story, worktree_prepare, worktree_prune, worktree_remove, request_main,
+    settle_command)
 
 
 def resolve(epics, argument):
@@ -126,9 +132,15 @@ def discovery_model(cwd, epics):
         for pid, fields in discovery_items(text, "Proposed work"):
             epic = next((e["epic"] for e in held if pid in (e["epic"], e["folder"])), "")
             proposals.append(dict(id=pid, **{k: fields.get(k, "") for k in ("intent", "goal", "metric", "domain_contact")},
-                                  epic=epic))
-        changes = [dict(target=target, change=fields.get("change", ""), why=fields.get("why", ""))
+                                  epic=epic, actions=[] if epic else offered(make_action(
+                                      text="the proposal, written as an epic", skill=f"/factory-backlog epic {pid} --from {report}",
+                                      label="make epic", primary=True))))
+        changes = [dict(target=target, change=fields.get("change", ""), why=fields.get("why", ""),
+                        actions=offered(make_action(text="the change, written into the description",
+                                                    skill=f"/dca-describe {target}: {fields.get('change', '')}",
+                                                    label="apply")))
                    for target, fields in discovery_items(text, DESCRIPTION_CHANGES)]
+        mark_pending([a for item in proposals + changes for a in item["actions"]])
         topics.append(dict(topic=name, report=report, title=title.group(1).strip() if title else name,
                            proposals=proposals, description_changes=changes))
     return dict(project=os.path.basename(os.path.abspath(cwd)), store=folder.replace(os.sep, "/") + "/", topics=topics)
@@ -156,10 +168,35 @@ def discovery_list(cwd, epics, fmt="text", colour="auto"):
     return 0
 
 
+def record_actions(record):
+    """What a person can answer to an open record: an acceptance is accepted or corrected (a reason code and their
+    words); a question takes one of its options — the stage's recommendation first in weight — or their words."""
+    story, rid = record["story"], record["id"]
+    head = f"/factory-decisions {story} {rid}" if story else f"/factory-decisions {rid}"
+    if record["kind"] == "acceptance":
+        return offered(
+            make_action(text="the story does what you wanted", skill=f"{head}: answer accepted", label="accept",
+                        primary=True),
+            make_action(text="What should be different?", skill=f"{head}: answer correction:", label="correct"))
+    return offered(*[dict(make_action(text=o["text"], skill=f"{head}: answer {o['key']}", label=o["key"],
+                                      primary=o["key"] == record["recommended"]),
+                          note="the stage's recommendation" if o["key"] == record["recommended"] else "")
+                     for o in record["options"]],
+                   make_action(text="Your answer, in your words", skill=f"{head}: answer", label="answer"))
+
+
+def record_sections(body):
+    """What a record says beyond its title, as a view shows it beside the options: the question and its evidence,
+    or what an acceptance asks to look at — never the options, the recommendation or the answer, which the view
+    draws as the actions they are."""
+    return [s for s in sections_of(body, "options")[0]
+            if s["heading"].split("(")[0].strip().lower() not in ("recommendation", "answer")]
+
+
 def list_decisions(cwd, story_id=None, fmt="text", colour="auto"):
     """The inbox: every record, what waits for a person first — open, drafts, answered, applied — read
     from the files alone; the same view as the status, in text, Markdown or JSON."""
-    records = []
+    records, pending = [], [r for r in list_requests() if r["state"] in ("queued", "running", "waiting")]
     for name, front, body, state, error, path in decision_files(cwd):
         if error:
             records.append(dict(rank=-1, id=name, state="unreadable", kind="question", story="?", stage="?",
@@ -178,7 +215,9 @@ def list_decisions(cwd, story_id=None, fmt="text", colour="auto"):
                             stage=str(front.get("stage", "?")).strip(),
                             asked=parse_time(str(front.get("asked", ""))), text=question + given,
                             options=[dict(key=o["key"], text=o["text"]) for o in options],
-                            recommended=recommended_option(body, options), path=shown(path)))
+                            recommended=recommended_option(body, options), path=shown(path),
+                            sections=record_sections(body)))
+        records[-1]["actions"] = mark_pending(record_actions(records[-1]) if state in ("open", "draft") else [], pending)
     records.sort(key=lambda r: (r["rank"], r["id"]))
     waiting = [r for r in records if r["state"] in ("open", "draft", "unreadable")]
     model = dict(project=os.path.basename(os.path.abspath(cwd)), story=story_id, records=records,
@@ -560,19 +599,29 @@ def last_tool_call(path):
     return ""
 
 
-def activity_line(cwd, owner, started, now):
+def activity_line(cwd, owner, started, now, output=None):
     """The sign of life inside a stage: a stage writes to the journal only at its start and its end,
-    while its session log grows with every tool call. Read only where session logs may be read."""
+    while its session log grows with every tool call — and a runner's stage process its output (<output>, what
+    `follow` shows), read where no session log is. Session logs only where they may be read."""
+    if output and os.path.isfile(output) and os.path.getmtime(output) >= (parse_time(started) or now).timestamp():
+        age = int(now.timestamp() - os.path.getmtime(output))
+        lines, _ended = follow_lines(read_text(output))
+        last = next((line.strip() for line in reversed(lines) if line.strip()), "")
+        return f"activity: {age_text(age)}" + (f" — {last}" if last else "")
     if not session_usage_allowed(cwd):
         return "activity: not read — session logs are switched off (sessionUsage)"
     logs = [path for path in activity_logs(cwd, owner, parse_time(started)) if os.path.isfile(path)]
     if not logs:
         return "activity: unknown — no session log of this stage found on this machine"
     newest = max(logs, key=os.path.getmtime)
-    age = int(now.timestamp() - os.path.getmtime(newest))
-    ago = f"{age} s ago" if age < 120 else f"{age // 60} min ago"
     call = last_tool_call(newest)
-    return f"activity: {ago}" + (f" — last tool call {call}" if call else "")
+    return f"activity: {age_text(int(now.timestamp() - os.path.getmtime(newest)))}" \
+        + (f" — last tool call {call}" if call else "")
+
+
+def age_text(seconds):
+    """`40 s ago`, `3 min ago` — how long since a sign of life."""
+    return f"{seconds} s ago" if seconds < 120 else f"{seconds // 60} min ago"
 
 
 def status(cwd, epics, runs, story_filter=None, fmt="text", colour="auto", live=False, part="all", every=False,
@@ -638,6 +687,13 @@ HELP_COMMANDS = (
      "status --epic <epic>"),
     ("follow a stage", "what the running stage reads, edits and runs, as it happens — whoever started it", "",
      "follow"),
+    ("start the factory", "a process of its own in the background: your requests and the backlog, until it is "
+                          "ended — --serve the page too", "", "up [--serve]"),
+    ("end the factory", "after its running stage; --now interrupts that stage too", "", "down"),
+    ("the page", "the factory in the browser, on this machine alone — every press a request", "", "serve"),
+    ("ask the factory", "one request it works before its next story: a wish, a release, an answer, an acceptance, …",
+     "", "request <kind> …"),
+    ("the requests", "what you asked and where each stands — retry or drop one", "", "requests"),
     ("find the problem", "a problem or a wished deliverable → a report with sources and proposed epics, each with "
                          "its outcome event", "/factory-discover <topic>", "discover --check <topic>"),
     ("the discoveries", "every topic, its proposed epics and which are epics already, its proposed description changes",
@@ -961,10 +1017,31 @@ def story_records(cwd, story_id, story_path=None):
 RUNNER = "bash .agents/factory/factory.sh"
 
 
-def make_action(text="", skill="", shell="", look=""):
-    """What to do, both ways: `skill` in an agent session, `shell` in a terminal — empty where a
-    terminal cannot do it (writing a story needs an agent)."""
-    return dict(text=text, skill=skill, shell=shell, look=look)
+def make_action(text="", skill="", shell="", look="", label="", primary=False):
+    """What to do, every way: `skill` in an agent session, `shell` in a terminal — empty where a
+    terminal cannot do it (writing a story needs an agent) —, and `request` from a page. `label` is the
+    word on its button and `primary` marks the one to press: a view draws them, it never chooses them."""
+    action = dict(text=text, skill=skill, shell=shell, look=look, label=label, primary=primary)
+    request = request_of(skill)                     # the same press from a page: the request it writes (WP-91)
+    if request:
+        action["request"] = request
+    return action
+
+
+def offered(*actions):
+    """The actions a page can press — those a request does — in the order given."""
+    return [a for a in actions if a and a.get("request")]
+
+
+#: Where a person starts something in their own words: a wish, a change to the description, a discovery.
+def entry_actions():
+    return dict(
+        wish=make_action(text="What should the product do that it does not do yet?", skill="/factory-backlog",
+                         label="wish", primary=True),
+        describe=make_action(text="e.g. tech: the shop runs on PostgreSQL 17", skill="/dca-describe",
+                             label="describe", primary=True),
+        discover=make_action(text="What problem is worth solving, or what should exist?", skill="/factory-discover",
+                             label="discover", primary=True))
 
 
 def story_attention(cwd, story_id, story, profile):
@@ -978,19 +1055,22 @@ def story_attention(cwd, story_id, story, profile):
         record = next(shown(p) for p, f in open_records if is_acceptance(f))
         return "look", "waiting for your acceptance", make_action(
             skill="/factory-decisions", look=str(profile.get("run", "")).strip() or "start the application",
-            shell=f"write accepted or your correction into {record} under `## Answer`")
+            shell=f"write accepted or your correction into {record} under `## Answer`", label="look at it",
+            primary=True)
     if state == "waiting":
-        return "question", "waiting for your answer", make_action(skill="/factory-decisions", shell=by_hand)
+        return "question", "waiting for your answer", make_action(skill="/factory-decisions", shell=by_hand,
+                                                                  label="answer", primary=True)
     if state == "unreleased":
         return "question", "draft — waits for your release", make_action(
             text="release it", skill=f"/factory-backlog release {story_id}",
-            shell=f"set `status: approved` in {str(story.get('path', 'the story')).replace(os.sep, '/')}")
+            shell=f"set `status: approved` in {str(story.get('path', 'the story')).replace(os.sep, '/')}",
+            label="release", primary=True)
     if state == "stopped":
         return "stopped", "stopped", make_action(text=detail, skill=f"/factory-status {story_id}",
                                             shell=f"{RUNNER} status --story {story_id}")
     if "possibly interrupted" in detail:
         return "stopped", "interrupted?", make_action(text=detail, skill=f"/factory-run {story_id}",
-                                                 shell=f"{RUNNER} run --story {story_id}")
+                                                 shell=f"{RUNNER} run --story {story_id}", label="run it again")
     if state == "running":
         return "running", "running", make_action()
     if state == "delivered":
@@ -1017,11 +1097,12 @@ def status_model(cwd, epics, runs, live=False):
     data = schedule_data(cwd, epics, runs)
     stories, order = data["stories"], data["order"]
     now = datetime.now(timezone.utc)
-    rows, waiting = [], []
+    rows, waiting, attention = [], [], {}
     for story_id in order:
         story = stories[story_id]
         facts = story_facts(cwd, runs, story_id, story.get("front"))
         mark, words, action = story_attention(cwd, story_id, story, profile)
+        attention[story_id] = action
         done = story["state"] == "delivered"
         stage = "" if done else next((st for sid, st, _t in running_stages(runs) if sid == story_id),
                                      story.get("start") or "")
@@ -1047,7 +1128,8 @@ def status_model(cwd, epics, runs, live=False):
         if error or state in ("open", "draft"):
             waiting.append(dict(mark="question", story=story_id or name, what="an open question", record=shown(path), draft=False,
                                 action=make_action(skill="/factory-decisions",
-                                              shell=f"write the answer into {shown(path)} under `## Answer`")))
+                                              shell=f"write the answer into {shown(path)} under `## Answer`",
+                                              label="answer", primary=True)))
     running = []
     held = read_claim(claim_path(cwd)) if live else None
     for story_id, stage, started in running_stages(runs):
@@ -1061,7 +1143,8 @@ def status_model(cwd, epics, runs, live=False):
         if live:
             since = parse_time(started)
             entry["ago"] = took_text((now - since).total_seconds()) + " ago" if since else ""
-            entry["activity"] = activity_line(cwd, (held or {}).get("owner", ""), started, now).split(": ", 1)[-1]
+            output = (follow_newest(runs, story_id) or (None, None, None))[2]
+            entry["activity"] = activity_line(cwd, (held or {}).get("owner", ""), started, now, output).split(": ", 1)[-1]
         running.append(entry)
     epics = []
     for row in rows:
@@ -1103,36 +1186,79 @@ def status_model(cwd, epics, runs, live=False):
                         and r["story"] not in {x["story"] for x in running}],
                  blocked=sum(1 for r in rows if stories[r["story"]]["state"] == "blocked"),
                  drafts=sum(1 for r in rows if stories[r["story"]]["state"] == "unreleased"))
+    # what a person can do with each story and each epic — every view draws these, none composes its own
+    for row in rows:
+        story_id = row["story"]
+        row["actions"] = offered(attention[story_id], make_action(
+            text=f"run {story_id} now, before the schedule's next", skill=f"/factory-run {story_id}",
+            shell=f"{RUNNER} run --story {story_id}", label="run now") if story_id in queue["ready"] else None)
+        row.update(figures(row))
+    guards = {hint["epic"]: hint for hint in journeys}
+    # a story whose release is asked for already is no draft the epic's button still has to release
+    pending = [r for r in list_requests() if r["state"] in ("queued", "running", "waiting")]
+    asked = {r.get("story") for r in pending if r["kind"] == "release" and r.get("story")}
+    for epic in epics:
+        drafts = sum(1 for r in epic["rows"] if stories[r["story"]]["state"] == "unreleased")
+        to_release = sum(1 for r in epic["rows"] if stories[r["story"]]["state"] == "unreleased" and r["story"] not in asked)
+        epic["actions"] = offered(
+            make_action(text="the epic's next stories, written as drafts for you to release",
+                        skill=f"/factory-backlog stories {epic['epic']}", label="suggest stories",
+                        primary=not epic["total"]),
+            make_action(text="every draft of the epic, released where its question pass leaves nothing open",
+                        skill=f"/factory-backlog release {epic['epic']}",
+                        label=f"release {to_release} draft" + ("s" if to_release > 1 else "")) if to_release else None,
+            guards[epic["epic"]]["action"] if epic["epic"] in guards else None)
+        epic.update(figures(epic), drafts=drafts)
     # the delivered stories, the newest delivery first; one without a time (delivered before the field) last
     delivered_order = [r["story"] for r in newest_first([r for r in rows if r["done"]], key="delivered")]
     nxt = data["next"]
     if nxt:
         next_line = dict(text=f"{nxt} can start from {stories[nxt]['start'] or 'plan'} — run it.",
-                         action=make_action(skill=f"/factory-run {nxt}", shell=f"{RUNNER} run --story {nxt}"))
+                         action=make_action(skill=f"/factory-run {nxt}", shell=f"{RUNNER} run --story {nxt}", label="run it",
+                                            primary=True))
     elif empty and all(r["state"] in ("delivered", "superseded") for r in rows):
         next_line = dict(text=f"The epic {empty[0]} has no story yet — cut its stories.",
-                         action=make_action(skill=f"/factory-backlog stories {empty[0]}", shell=""))
+                         action=make_action(skill=f"/factory-backlog stories {empty[0]}", shell="", label="suggest stories",
+                                            primary=True))
     elif not rows:
         next_line = dict(text="The backlog is empty — write the first story.",
-                         action=make_action(skill="/factory-backlog", shell=""))
+                         action=make_action(skill="/factory-backlog", shell="", label="write a wish", primary=True))
     elif all(r["state"] in ("delivered", "superseded") for r in rows):
         next_line = dict(text="Every story is delivered — write the next one.",
-                         action=make_action(skill="/factory-backlog", shell=""))
+                         action=make_action(skill="/factory-backlog", shell="", label="write a wish", primary=True))
     else:
         holder = next((r for r in rows if r["mark"] in ("look", "question", "stopped")), None)
         busy = next((r for r in rows if r["mark"] == "running"), None)
-        if holder:
+        action = make_action()
+        if holder and stories[holder["story"]]["state"] == "unreleased":
+            text, action = f"{holder['story']} is a draft — release it, and it runs.", attention[holder["story"]]
+        elif holder:
             until = {"look": "is accepted", "question": "has its answer", "stopped": "is unblocked"}[holder["mark"]]
             text = f"Nothing else starts until {holder['story']} {until} — see Waiting for you."
+            action = attention[holder["story"]]
         elif busy:
             text = f"{busy['story']} is running — one story at a time; nothing to do but wait."
         else:
             text = data["reason"] + "."
-        next_line = dict(text=text, action=make_action())
+        next_line = dict(text=text, action=action)
     extra = []
+    requests = request_counts()                       # what a person asked the factory to do (WP-91)
+    if any(requests.values()):
+        extra.append("requests: " + ", ".join(f"{n} {state}" for state, n in requests.items() if n)
+                     + " — `factory.sh requests`")
+    worker = service.worker(cwd) if live else None
+    if worker:
+        worker["since_text"] = stamp_text(worker.get("since")) + " UTC"
+    # a factory that ended on its own says why, where a person looks — not only in its log
+    gone = service.ended(cwd) if live and not (worker or {}).get("alive") else None
+    if gone:
+        gone["text"] = f"the factory ended on its own: {gone['why']}"
+        extra.append(f"{gone['text']} — its log: {gone['log']}")
     if live:
         if held:
-            extra.append(f"worker: {held.get('owner')} since {stamp_text(held.get('since'))} UTC")
+            how = {"up": ", started by `factory.sh up`", "session": ", a session's run"}.get((worker or {}).get("how"), "")
+            extra.append(f"worker: {held.get('owner')} since {stamp_text(held.get('since'))} UTC{how}"
+                         + (" — stopping after its stage" if (worker or {}).get("stopping") else ""))
         listening = listener_line(cwd)
         extra.append(listening or "listening: no session has looked at the backlog")
         note = duplicate_pipeline_note(cwd)
@@ -1142,6 +1268,8 @@ def status_model(cwd, epics, runs, live=False):
     description = [description_part(cwd, profile, "product", PRODUCT_HEADINGS),
                    description_part(cwd, profile, "tech", TECH_HEADINGS),
                    description_part(cwd, profile, "domain", ())]
+    for part in description:
+        part["mark"] = "done" if part["present"] and not part["missing"] and not part["empty"] else "question"
     # what else waits for a person: the judge's open minors, other factories' claims (WP-104)
     findings = []
     for found in finding_records(epics_dir):
@@ -1154,18 +1282,35 @@ def status_model(cwd, epics, runs, live=False):
                              fix=found["fix"], file=kept,
                              action=make_action(text=f"fix it in a story, or set its Status to done or wont-fix in {kept}",
                                                 skill=f"/factory-backlog {found['row'] if found['project'] else story}: "
-                                                      f"{plain or defect}")))
+                                                      f"{plain or defect}", label="to the backlog")))
     # the review perspectives the profile asks for now — a view shows a story's `review:<name>` processes for these
     # alone, never a reviewer a profile named before (an old `reviews/dca.md`, a `review:dca` in the journal)
     perspectives = [dict(name=name, carrier=carrier) for name, carrier in perspectives_of(profile)]
+    # an action whose request is written already says so instead of offering it twice
+    mark_pending([a for row in rows for a in row["actions"]] + [a for epic in epics for a in epic["actions"]]
+                 + [w["action"] for w in waiting] + [next_line["action"]] + [f["action"] for f in findings], pending)
     return dict(project=os.path.basename(os.path.abspath(cwd)), waiting=waiting, running=running, epics=epics,
-                findings=findings, claims=foreign_claims(epics_dir, runs), perspectives=perspectives,
+                worker=worker, ended=gone, requests=requests, findings=findings, claims=foreign_claims(epics_dir, runs), perspectives=perspectives,
                 description=description, queue=queue, delivered_order=delivered_order,
                 rows=rows, next=next_line, journeys=journeys,
                 priced=any(r["priced"] for r in rows), extra=extra, hint=data["hint"],
                 delivered=sum(r["done"] for r in rows), total=len(rows),
                 tokens=sum(r["tokens"] for r in rows), measured=sum(r["measured"] for r in rows),
-                seconds=sum(r["seconds"] for r in rows), signals=signal_totals(rows))
+                seconds=sum(r["seconds"] for r in rows), signals=signal_totals(rows), entries=entry_actions(),
+                worker_text=service.worker_text(worker) if live else "",
+                **figures(dict(tokens=sum(r["tokens"] for r in rows), measured=sum(r["measured"] for r in rows),
+                               seconds=sum(r["seconds"] for r in rows), cost=sum(r["cost"] or 0 for r in rows),
+                               priced=any(r["priced"] for r in rows))))
+
+
+def figures(entry):
+    """An entry's figures as every view writes them — tokens, time worked, cost, when it was delivered (a story's;
+    an epic's `delivered` is a count) — beside the numbers."""
+    tokens, delivered = entry.get("tokens") or 0, entry.get("delivered")
+    return dict(tokens_text=f"{tokens:,}" if tokens else "",
+                seconds_text=took_text(entry.get("seconds")) if entry.get("seconds") else "",
+                cost_text=f"${entry['cost']:.2f}" if entry.get("priced") and entry.get("cost") else "",
+                delivered_text=stamp_text(delivered) if delivered and not isinstance(delivered, int) else "")
 
 
 RULE_VERDICTS = ("red", "killed", "survived", "no-break", "unchecked")
@@ -1356,7 +1501,8 @@ def journey_hints(stories, epics):
             else "its journey is still open" if re.search(r"^\s*-\s*open:", section, re.M) or not section.strip() \
             else "its journey has no journey test yet"
         hints.append(dict(epic=epic["epic"], text=f"delivered, unguarded — {said}",
-                          action=make_action(skill=f"/factory-backlog journey {epic['epic']}", shell="")))
+                          action=make_action(skill=f"/factory-backlog journey {epic['epic']}", shell="",
+                                             label="add guard")))
     return hints
 
 
@@ -1944,6 +2090,12 @@ def story_model(cwd, epics, runs, story_id, live=False):
     models = sorted({m for e in facts["stages"].values() for m in e["models"]})
     not_applied = sorted({r for e in facts["stages"].values() if e["not_applied"] for r in e["requested"]})
     front, body = data.get("front") or {}, data.get("body") or ""
+    for entry in facts["stages"].values():
+        entry.update(figures(entry))
+    # a delivered story is corrected in the person's words: the correction goes back into it
+    actions = row["actions"] + (mark_pending(offered(make_action(text="What should be different?",
+                                                                 skill=f"/factory-decisions {story_id}: answer correction:",
+                                                                 label="correct"))) if row["done"] else [])
     return dict(row=row, story=story_id, title=data.get("title", ""), epic=data.get("epic", ""),
                 path=shown(data["path"]) if data.get("path") else "", kind=story_kind(front),
                 created=created_of(front), intent=front_text(front.get("intent")),
@@ -1954,7 +2106,7 @@ def story_model(cwd, epics, runs, story_id, live=False):
                 passes=passes, stages=facts["stages"], decisions=decisions, models=models, not_applied=not_applied,
                 signals=story_signals(runs, story_id, records, body),
                 priced=facts["priced"] > 0, waiting=[w for w in overview["waiting"] if w["story"] == story_id],
-                next=overview["next"])
+                next=overview["next"], actions=actions)
 
 
 def story_description(body):
@@ -2934,7 +3086,13 @@ def follow_newest(runs, story=None, process=None):
             os.path.basename(path).split(".")[0], path)
 
 
-def follow(runs, story, once, fmt, width, process=None, every=False):
+def follow(runs, story, once, fmt, width, process=None, every=False, request=None):
+    if request:
+        # a request's process (WP-91): its one output beside the requests, read as a stage's
+        path = out_path(request)
+        newest = lambda: ("request", request, path) if os.path.isfile(path) else None
+    else:
+        newest = lambda: follow_newest(runs, story, process)
     if every:
         if not story:
             print("factory: follow --all names a story (--story <id>)", file=sys.stderr)
@@ -2954,7 +3112,7 @@ def follow(runs, story, once, fmt, width, process=None, every=False):
                     print(line)
                 print()
         return 0
-    found = follow_newest(runs, story, process)
+    found = newest()
     if once:
         if not found:
             if fmt == "json":
@@ -2976,7 +3134,7 @@ def follow(runs, story, once, fmt, width, process=None, every=False):
     current, offset, pending = None, 0, ""
     try:
         while True:
-            found = follow_newest(runs, story, process)
+            found = newest()
             if found and found[2] != current:
                 name, stage, current = found
                 offset, pending = 0, ""
@@ -2999,9 +3157,170 @@ def follow(runs, story, once, fmt, width, process=None, every=False):
         return 0
 
 
+# --- the factory as a process of its own, and what a person asks of it (WP-91) -----------------------------------------
+def placed(profile_arg=None):
+    """The places as the profile names them, for a command that reads no other option."""
+    set_places(read_profile(resolve_profile(profile_arg, os.getcwd())))
+
+
+def request_command(argv):
+    """`factory.sh request <kind> [<target>…] [<words>…] [--story|--epic|--record|--topic|--proposal <id>]
+    [--option <key>] [--from <stage>] [--by <who>] [--settle]` — `-` as the words reads them from stdin. `--settle`
+    settles it at once where the factory can, writing no request (exit 3 where a skill must work it)."""
+    parser = argparse.ArgumentParser(prog="factory.sh request",
+                                     description="write one request the factory works before its next story")
+    parser.add_argument("kind", choices=[k.name for k in KINDS])
+    parser.add_argument("rest", nargs="*", help="the target the kind names, then the person's words")
+    parser.add_argument("--story")
+    parser.add_argument("--epic")
+    parser.add_argument("--record")
+    parser.add_argument("--topic")
+    parser.add_argument("--proposal")
+    parser.add_argument("--option", help="an answer's option key, a correction's reason code")
+    parser.add_argument("--from", dest="start", help="with run: the stage the story starts at")
+    parser.add_argument("--by", help="who asks (default: git user.name)")
+    parser.add_argument("--settle", action="store_true",
+                        help="settle it now where the factory can, no request written; exit 3 where a skill must work it")
+    parser.add_argument("--format", choices=("text", "json"), default="text")
+    args = parser.parse_args(argv)
+    placed()
+    kind, rest = KIND[args.kind], list(args.rest)
+    fields = {key: getattr(args, key) for key in ("story", "epic", "record", "topic", "proposal", "option")
+              if getattr(args, key)}
+    if args.start:
+        fields["from"] = args.start
+    for spec in kind.keys:
+        names = spec.split("|")
+        if any(name in fields for name in names) or not rest:
+            continue
+        if kind.name == "release":                  # every id given: the stories, or the one epic
+            fields[names[0]] = " ".join(rest)
+            rest = []
+        else:
+            fields[names[0]] = rest.pop(0)
+    words = " ".join(rest)
+    if words == "-":
+        words = sys.stdin.read()
+    if args.settle:
+        return settle_press(kind.name, fields, words, args.by or "", args.format)
+    try:
+        request_id, path = write_request(os.getcwd(), kind.name, fields, words, args.by or "")
+    except Duplicate as same:
+        print(f"factory: {same}")
+        return 0
+    except (RequestError, GateError) as error:
+        print(f"factory: request refused — {error}", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        print(json.dumps(dict(id=request_id, path=shown(path))))
+    else:
+        print(f"factory: request {request_id} written ({shown(path)}) — the factory works it before its next story")
+    return 0
+
+
+def settle_press(kind_name, fields, words, by, fmt):
+    """`request … --settle`: settled now, or exit 3 — the caller then runs the action's skill, as before."""
+    try:
+        # the runner's own lines go to stderr where the caller reads one JSON object from stdout
+        with contextlib.redirect_stdout(sys.stderr) if fmt == "json" else contextlib.nullcontext():
+            code, request_id, commit = settle_command(os.getcwd(), kind_name, fields, words, by)
+    except Duplicate as same:
+        print(json.dumps(dict(id=same.existing, settled=False, queued=True)) if fmt == "json" else f"factory: {same}")
+        return 0
+    except (RequestError, GateError) as error:
+        print(f"factory: request refused — {error}", file=sys.stderr)
+        return 2
+    if fmt == "json":
+        print(json.dumps(dict(id=request_id, settled=code == 0, commit=commit)))
+    elif code == 0:
+        print(f"factory: {kind_name} settled by the factory, no tool" + (f" — committed {commit}" if commit else ""))
+    elif code == 3:
+        print(f"factory: {kind_name} needs its skill — nothing written")
+    return code
+
+
+def requests_command(argv):
+    parser = argparse.ArgumentParser(prog="factory.sh requests", description="the requests and their state")
+    parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument("--drop", metavar="ID", help="take a request back (not while it runs)")
+    parser.add_argument("--retry", metavar="ID", help="queue a failed request again")
+    args = parser.parse_args(argv)
+    placed()
+    try:
+        if args.drop:
+            drop_request(args.drop)
+            print(f"factory: request {args.drop} dropped")
+            return 0
+        if args.retry:
+            retry_request(args.retry)
+            print(f"factory: request {args.retry} queued again")
+            return 0
+    except (RequestError, OSError) as error:
+        print(f"factory: {error}", file=sys.stderr)
+        return 2
+    return requests_view(args.format)
+
+
+def up_command(argv):
+    parser = argparse.ArgumentParser(prog="factory.sh up", description="start the factory in the background")
+    parser.add_argument("--serve", action="store_true", help="the page too")
+    parser.add_argument("--port", type=int)
+    parser.add_argument("--by")
+    args, run_args = parser.parse_known_args(argv)
+    allowed = {"--tool", "--parallel", "--interval", "--max-stages", "--story-budget", "--keep-going",
+               "--separate-stages", "--shared-builder", "--shared-verifier"}
+    stray = [a for a in run_args if a.startswith("-") and a not in allowed]
+    if stray:
+        print(f"factory: up takes no {' '.join(stray)} — the runner's flags it passes on: {' '.join(sorted(allowed))}",
+              file=sys.stderr)
+        return 2
+    placed()
+    return service.up(os.getcwd(), run_args, args.serve, args.port, args.by or "")
+
+
+def down_command(argv):
+    parser = argparse.ArgumentParser(prog="factory.sh down", description="end the factory after its running stage")
+    parser.add_argument("--now", action="store_true", help="interrupt the running stage too")
+    parser.add_argument("--no-wait", action="store_true", help="say stop and return at once")
+    parser.add_argument("--by")
+    args = parser.parse_args(argv)
+    placed()
+    return service.down(os.getcwd(), args.now, not args.no_wait, args.by or "")
+
+
+def serve_command(argv):
+    parser = argparse.ArgumentParser(prog="factory.sh serve", description="the factory's page, on this machine alone")
+    parser.add_argument("--port", type=int)
+    parser.add_argument("--open", action="store_true", help="open it in the browser")
+    parser.add_argument("--background", action="store_true", help="start it detached and return")
+    parser.add_argument("--by-up", action="store_true", help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    placed()
+    if args.by_up:
+        return service.serve_here(os.getcwd(), args.port, by_up=True)
+    return service.serve(os.getcwd(), args.port, background=args.background, open_browser=args.open)
+
+
+def worker_command(argv):
+    parser = argparse.ArgumentParser(prog="factory-cli.py --worker")
+    parser.add_argument("--format", choices=("text", "json"), default="text")
+    args = parser.parse_args(argv)
+    placed()
+    info = service.worker(os.getcwd())
+    print(json.dumps(info) if args.format == "json" else service.worker_line(info))
+    return 0
+
+
+LIFECYCLE = {"--request": request_command, "--requests": requests_command, "--work-request": request_main,
+             "--up": up_command, "--down": down_command, "--serve": serve_command, "--worker": worker_command}
+
+
 def main(argv):
     if argv[:1] == ["--run"]:                    # `factory.sh run` once its checks passed: the runner itself
         return run_main(argv[1:])
+    lifecycle = LIFECYCLE.get(argv[0]) if argv else None
+    if lifecycle:                                # the factory as a process, its requests and its page (WP-91)
+        return lifecycle(argv[1:])
     parser = argparse.ArgumentParser(add_help=True, description="factory cli")
     parser.add_argument("--version", action="version", version=f"factory-cli {VERSION} (file contract {CONTRACT})")
     parser.add_argument("--story")
@@ -3011,6 +3330,7 @@ def main(argv):
                         help="print what the stage in flight does, one line per tool call, as it happens (--once: the last lines and exit)")
     parser.add_argument("--once", action="store_true", help="with --follow: print the newest output's last lines and exit")
     parser.add_argument("--process", help="with --follow: only that process's output — builder, verifier, review-ddd, plan, …")
+    parser.add_argument("--request", help="with --follow: the output of that request's process")
     parser.add_argument("--all", dest="every", action="store_true",
                         help="with --follow --story: every process of the story, in the order they began, and exit; "
                              "with --stages: every row of the table, the steps after the run order too; "
@@ -3294,7 +3614,8 @@ def main(argv):
         print("\n".join(open_decision_files(cwd, args.open_decisions)))
         return 0
     if args.follow:
-        return follow(args.runs, args.story, args.once, args.format, args.lines, args.process, args.every)
+        return follow(args.runs, args.story, args.once, args.format, args.lines, args.process, args.every,
+                      args.request)
     if args.list_decisions:
         return list_decisions(cwd, args.story, args.format, args.color)
     if args.discover_list:
