@@ -35,13 +35,17 @@ BACKTICKED = re.compile(r"`([^`\n]{2,120})`")
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _PACKAGE_DIR = _HERE if os.path.isdir(os.path.join(_HERE, "dca_factory")) else \
     os.path.join(_HERE, "..", "..", "factory-run", "scripts")
-# No bytecode beside the package: a `__pycache__` in the project is an untracked file the commit check would
-# refuse, and a cache is nothing a project should carry.
-sys.dont_write_bytecode = True
+# Bytecode in the user's cache, never beside the package: a `__pycache__` in the project is an untracked file the
+# commit check would refuse, and a cache is nothing a project should carry — but compiling the package's modules on
+# every start would cost each call a tenth of a second.
+sys.pycache_prefix = sys.pycache_prefix or os.path.join(os.path.expanduser("~"), ".cache", "dca-factory")
 sys.path.insert(0, _PACKAGE_DIR)
-from dca_factory import contract as _contract  # noqa: E402
-CRITERION, MAPPING_ROW, SELECTOR = _contract.CRITERION, _contract.MAPPING_ROW, _contract.SELECTOR
-GateError = _contract.GateError
+from dca_factory.delivery.adapter.outgoing.files import hand_over_patterns as _patterns  # noqa: E402
+from dca_factory.sharedkernel.adapter.outgoing.profile import profile_files as _profile  # noqa: E402
+from dca_factory.sharedkernel.adapter.outgoing.markdown import front_matter as _markdown  # noqa: E402
+from dca_factory.delivery.adapter.outgoing.files import story_layout as _layout  # noqa: E402
+CRITERION, MAPPING_ROW, SELECTOR = _patterns.CRITERION, _patterns.MAPPING_ROW, _patterns.SELECTOR
+GateError = _markdown.GateError
 
 
 
@@ -98,7 +102,7 @@ def read(path):
 def front_of(path):
     """The front matter of a file, read by the gate; {} where the gate cannot read it."""
     try:
-        return _contract.read_front_matter(path)[0]
+        return _markdown.read_front_matter(path)[0]
     except GateError:
         return {}
 
@@ -106,7 +110,7 @@ def front_of(path):
 def story_file(epics, story_id):
     """The story as the gate finds it — one file per id, or nothing."""
     try:
-        return _contract.find_story(epics, story_id)
+        return _layout.find_story(epics, story_id)
     except GateError:
         return None
 
@@ -201,7 +205,7 @@ def locate(project, selector):
     simple = cls.rsplit(".", 1)[-1]
     for root, dirs, files in os.walk(project):
         dirs[:] = [d for d in dirs if d not in ("build", "out", "bin", "obj", "target",
-                                                "node_modules", ".git", _contract.runs_top())]
+                                                "node_modules", ".git", _profile.runs_top())]
         for name in files:
             if os.path.splitext(name)[0] == simple:
                 path = os.path.join(root, name)
@@ -214,9 +218,9 @@ def locate(project, selector):
 def observe(project, runs, epics, story_id):
     report = Report()
     run_dir = os.path.join(project, runs, story_id)
-    journal_dir = _contract.evidence_dir(os.path.join(project, runs), story_id)
-    journal = os.path.join(journal_dir, _contract.JOURNAL)
-    pruned = [l.split("\t") for l in _contract.read_text(journal).splitlines()
+    journal_dir = _profile.evidence_dir(os.path.join(project, runs), story_id)
+    journal = os.path.join(journal_dir, _profile.JOURNAL)
+    pruned = [l.split("\t") for l in _markdown.read_text(journal).splitlines()
               if l.split("\t")[1:2] == ["pruned"]] if os.path.isfile(journal) else []
     if pruned:
         days = next((f[5:] for f in pruned[-1] if f.startswith("days=")), "?")
@@ -299,7 +303,7 @@ def observe(project, runs, epics, story_id):
                 if re.match(rf"story\s+{re.escape(story_id)}\s+stage\s+\w+$", detail):
                     continue
                 report.finding("gate", f"{name.split('.')[0]} reported: {detail}",
-                               os.path.join(_contract.evidence_dir(runs, story_id), name).replace(os.sep, "/"))
+                               os.path.join(_profile.evidence_dir(runs, story_id), name).replace(os.sep, "/"))
             skipped = [l.strip()[10:] for l in text.splitlines() if l.startswith("gate:skip")]
             for entry in skipped:
                 report.blind("gate", f"{name.split('.')[0]} skipped: {entry}")
@@ -417,7 +421,7 @@ def observe(project, runs, epics, story_id):
             report.ok("plan-coverage", "every changed file was named in the plan")
 
     # --- 7. commands a stage claims vs. what the project declares --------
-    profile = read(os.path.join(project, _contract.resolve_profile(None, project) or _contract.PROFILE_FILE)) or ""
+    profile = read(os.path.join(project, _profile.resolve_profile(None, project) or _profile.PROFILE_FILE)) or ""
     declared = {}
     for line in profile.splitlines():
         if ":" in line and not line.strip().startswith("#"):
@@ -502,8 +506,8 @@ def main(argv=None):
 
     project = os.path.abspath(args.root)
     # the places as the gate resolves them — the profile's keys with their defaults, a flag winning
-    _contract.set_places(_contract.read_profile(_contract.resolve_profile(None, project)), epics=args.epics, runs=args.runs)
-    report = observe(project, _contract.place("runs"), _contract.place("epics"), args.story)
+    _profile.set_places(_profile.read_profile(_profile.resolve_profile(None, project)), epics=args.epics, runs=args.runs)
+    report = observe(project, _profile.place("runs"), _profile.place("epics"), args.story)
 
     if args.json:
         print(json.dumps({"story": args.story, "findings": report.findings,
