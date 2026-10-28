@@ -8,21 +8,13 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Event listener for Shopping Cart domain events.
+ * Logs every item added to a cart, after the transaction that added it committed.
  *
- * <p>Demonstrates handling domain events after the owning transaction committed — the hook where a
- * context reacts to its own facts (analytics, abandonment timers) without coupling the aggregate to
- * those concerns.
- *
- * <p><b>Transactional Event Handling:</b>
- *
- * <p>Uses {@code @TransactionalEventListener} to ensure events are only handled after the
- * transaction commits successfully. This guarantees that the cart state changes were persisted
- * before triggering downstream operations.
- *
- * <p>This is the DDD pattern of using events to coordinate between aggregates and bounded contexts
- * while maintaining loose coupling (Vaughn Vernon's Rule #4: Use eventual consistency outside the
- * boundary).
+ * <p>An after-commit callback that only writes a log line: it calls no port, so it needs no
+ * transaction of its own, and a log line lost to a process that stops right after the commit is
+ * acceptable. A reaction that changes state or reaches another system does not belong here: it is a
+ * transactional listener ({@code @ApplicationModuleListener}) that drives a use case - see the
+ * guide's "Reacting to an event".
  */
 @Component
 public class CartEventConsumer {
@@ -30,19 +22,7 @@ public class CartEventConsumer {
   private static final Logger log = LoggerFactory.getLogger(CartEventConsumer.class);
 
   /**
-   * Handles CartItemAddedToCart events after transaction commit.
-   *
-   * <p>This handler only executes after the transaction commits successfully, ensuring the cart
-   * item was actually added before processing the event.
-   *
-   * <p>This is where you might:
-   *
-   * <ul>
-   *   <li>Update cart abandonment tracking
-   *   <li>Trigger product recommendation engine
-   *   <li>Track analytics (which products are added together)
-   *   <li>Update customer's recent activity
-   * </ul>
+   * Logs the added item.
    *
    * @param event the cart item added event
    */
@@ -54,14 +34,5 @@ public class CartEventConsumer {
         event.quantity().value(),
         event.cartId().value(),
         event.occurredOn());
-
-    // Example: Track analytics
-    // analyticsService.trackCartItemAdded(event);
-
-    // Example: Update recommendations
-    // recommendationService.updateBasedOnCartItem(event.customerId(), event.productId());
-
-    // Example: Reset cart abandonment timer
-    // cartAbandonmentService.resetTimer(event.cartId());
   }
 }

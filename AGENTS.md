@@ -84,6 +84,13 @@ This is a **sample e-commerce application** demonstrating best practices for:
 **Purpose:**
 This project serves as a reference implementation showing how to properly structure an enterprise application using modern architectural patterns.
 
+**Two listener kinds for events** (guide: *Reacting to an event*). A synchronous `@EventListener` runs inside the
+use case's transaction and calls output ports only — the `*EventPublisher` translators in `adapter/outgoing/event/`.
+Every listener that drives an input port — an `*EventConsumer` in `adapter/incoming/event/`, for a foreign
+integration event or this context's own domain event — is `@ApplicationModuleListener`: after the commit, in its own
+transaction, from the event publication registry. A bare `@TransactionalEventListener` is only for a log line.
+The .NET sample spells the same as `EventListener<T>` and `TransactionalEventListener<T>`.
+
 **One markup for both shops.** The .NET sample (`../dca-ecommerce-sample-dotnet/`) renders the same pages: the
 same routes, CSS classes, `data-test` attributes and `main.css`, so either browser suite runs against either shop.
 A page change the .NET sample delivered first is taken over from there — its views under

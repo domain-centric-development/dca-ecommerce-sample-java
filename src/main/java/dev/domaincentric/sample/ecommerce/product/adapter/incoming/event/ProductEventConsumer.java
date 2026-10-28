@@ -8,37 +8,14 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Event listener for Product domain events.
+ * Logs every created product, after the transaction that created it committed.
  *
- * <p>Demonstrates handling domain events to implement cross-cutting concerns like logging, audit
- * trails, notifications, or updating read models for CQRS.
- *
- * <p><b>Transactional Event Handling:</b>
- *
- * <p>Uses {@code @TransactionalEventListener} to ensure events are only handled after the
- * transaction commits successfully. This guarantees:
- *
- * <ul>
- *   <li>Events are only published for successful operations
- *   <li>No duplicate events if transaction is rolled back
- *   <li>Consistent state when event handlers execute
- * </ul>
- *
- * <p><b>Responsibilities:</b>
- *
- * <ul>
- *   <li>Logging domain events for audit trail
- *   <li>Triggering notifications (email, webhooks, etc.)
- *   <li>Updating denormalized read models
- *   <li>Coordinating with other bounded contexts
- * </ul>
- *
- * <p><b>Note:</b> In a production system, you might want to use {@code @Async} to handle events
- * asynchronously and avoid blocking the main transaction.
- *
- * <p><b>Note:</b> Price change events are now handled by the Pricing bounded context. See {@code
- * dev.domaincentric.sample.ecommerce.pricing.adapter.incoming.event} for pricing-related event
- * consumers.
+ * <p>An after-commit callback that only writes a log line: it calls no port, so it needs no
+ * transaction of its own, and a log line lost to a process that stops right after the commit is
+ * acceptable. A reaction that changes state or reaches another system does not belong here: it is a
+ * transactional listener ({@code @ApplicationModuleListener}) that drives a use case - see the
+ * guide's "Reacting to an event". Pricing and Inventory react to the published {@code
+ * ProductCreatedEvent} in their own contexts.
  */
 @Component
 public class ProductEventConsumer {
@@ -46,19 +23,7 @@ public class ProductEventConsumer {
   private static final Logger log = LoggerFactory.getLogger(ProductEventConsumer.class);
 
   /**
-   * Handles ProductCreated events after transaction commit.
-   *
-   * <p>This handler only executes after the transaction commits successfully, ensuring the product
-   * was actually persisted before processing the event.
-   *
-   * <p>This is where you might:
-   *
-   * <ul>
-   *   <li>Send notification to inventory team
-   *   <li>Update search index for product catalog
-   *   <li>Publish event to message queue for other services
-   *   <li>Create audit log entry
-   * </ul>
+   * Logs the created product.
    *
    * @param event the product created event
    */
@@ -70,14 +35,5 @@ public class ProductEventConsumer {
         event.sku().value(),
         event.name().value(),
         event.occurredOn());
-
-    // Example: Update search index
-    // searchIndexService.indexProduct(event.productId());
-
-    // Example: Send notification
-    // notificationService.sendProductCreatedNotification(event);
-
-    // Example: Publish to message queue for other microservices
-    // messagePublisher.publish("product.created", event);
   }
 }
