@@ -36,3 +36,4 @@ Delivery order is `depends_on`, ties by id.
 - the-back-office-stays-closed-to-others — The back office stays closed to others
 - failed-deliveries-are-retried-on-their — Failed deliveries are retried on their own
 - retry-a-failed-delivery — Retry a failed delivery
+- the-event-log-lists-a-reaction-to-an-own-event — The event log lists a reaction to a context's own event

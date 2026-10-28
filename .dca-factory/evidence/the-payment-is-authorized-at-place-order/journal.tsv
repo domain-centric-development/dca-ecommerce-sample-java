@@ -228,3 +228,4 @@
 2026-10-23T13:40:24Z	part	document	process=verifier	stream=verifier.170315.out	seconds=38.906	input=16	cache_read=605391	cache_write=17039	output=2543	cost=0.357372	seq=228
 2026-10-23T13:40:24Z	denied	judge	process=verifier	stream=verifier.170315.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls -la .dca-factory/runs/the-payment-is-authorized-at-place-order/ .dca-factory/runs/the-payment-is-a…	seq=229
 2026-10-23T13:40:24Z	stream	verifier.170315.out	process=verifier	parts=2	denied=1	version=2	seq=230
+2026-10-28T17:19:09Z	pruned	-	files=21	days=7	seq=231

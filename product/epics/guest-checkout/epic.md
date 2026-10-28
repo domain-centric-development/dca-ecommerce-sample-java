@@ -44,3 +44,5 @@ Delivery order is `depends_on`, ties by id.
 - stock-goes-down-by-what-was-bought — Stock goes down by what was bought
 - starting-and-placing-check-the-cart — Starting and placing check the cart against what can still be sold
 - a-visitor-never-reaches-another-visitors — A visitor never reaches another visitor's checkout
+- the-order-confirmation-findings-are-closed — The order confirmation's open findings are closed
+- the-mail-provider-is-on-the-context-map — The mail provider is on the context map
