@@ -1,7 +1,9 @@
 ---
 id: the-buyer-gets-an-order-confirmation
 epic: guest-checkout
-status: approved
+status: delivered
+delivered: 2026-10-28T20:38:19Z
+delivered_by: gate
 context: checkout
 feature: orderconfirmation
 title: The buyer gets an order confirmation

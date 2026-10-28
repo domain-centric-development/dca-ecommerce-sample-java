@@ -433,6 +433,12 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │       ├── SyncCheckoutWithCartUseCase.java
 │   │   │       ├── SyncCheckoutWithCartCommand.java
 │   │   │       └── SyncCheckoutWithCartResult.java
+│   │   ├── orderconfirmation/            # Feature: informing the buyer that the order went through
+│   │   │   └── sendorderconfirmation/    # Use case: Send the Order Confirmation
+│   │   │       ├── SendOrderConfirmationInputPort.java
+│   │   │       ├── SendOrderConfirmationUseCase.java
+│   │   │       ├── SendOrderConfirmationCommand.java
+│   │   │       └── SendOrderConfirmationResult.java
 │   │   └── shared/                       # Context-wide output ports (never per feature)
 │   │       ├── CheckoutSessionRepository.java
 │   │       ├── CartDataPort.java
@@ -442,9 +448,11 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── PaymentProvider.java
 │   │       ├── PaymentProviderRegistry.java
 │   │       ├── ShippingOptionRegistry.java
-│   │       └── StockReservationPort.java  # Holds an order's stock while it is placed
+│   │       ├── StockReservationPort.java  # Holds an order's stock while it is placed
+│   │       └── OrderConfirmationMailer.java  # Hands the order confirmation to the mail provider
 │   ├── infrastructure/                   # Per-context infrastructure
 │   │   ├── CheckoutDomainConfiguration.java
+│   │   ├── CheckoutMailConfiguration.java     # Binds the mail provider's address
 │   │   └── CheckoutPaymentConfiguration.java  # Binds the payment provider's address
 │   └── adapter/                          # Adapters
 │       ├── incoming/                     # Incoming adapters
@@ -463,8 +471,10 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │   │       ├── ConfirmationPageController.java
 │       │   │       └── ConfirmationPageViewModel.java
 │       │   └── event/
-│       │       └── cartsync/
-│       │           └── CartChangeEventConsumer.java
+│       │       ├── cartsync/
+│       │       │   └── CartChangeEventConsumer.java
+│       │       └── orderconfirmation/
+│       │           └── OrderConfirmationEventConsumer.java  # Sends it once CheckoutConfirmed committed
 │       └── outgoing/                     # Outgoing adapters
 │           ├── event/
 │           │   └── CheckoutConfirmedEventPublisher.java
@@ -480,6 +490,10 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           │   ├── PaymentProviderProperties.java  # checkout.payment-provider.base-url
 │           │   ├── MockPaymentProvider.java      # The stand-in, where no address is set
 │           │   └── InMemoryPaymentProviderRegistry.java
+│           ├── mail/
+│           │   ├── RestMailProvider.java         # ACL to the mail provider's REST contract, where its address is set
+│           │   ├── MailProviderProperties.java   # checkout.mail-provider.base-url
+│           │   └── StandInMailProvider.java      # The stand-in, where no address is set
 │           ├── inventory/
 │           │   └── InventoryStockReservationAdapter.java  # ACL to Inventory's OHS: reserve and release stock
 │           └── shipping/

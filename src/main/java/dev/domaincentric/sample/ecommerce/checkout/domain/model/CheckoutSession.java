@@ -528,10 +528,19 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
       case BUYER_INFO -> buyerInfo != null;
       case DELIVERY -> deliveryAddress != null && shippingOption != null;
       case PAYMENT -> paymentSelection != null;
-      case REVIEW ->
-          status == CheckoutSessionStatus.CONFIRMED || status == CheckoutSessionStatus.COMPLETED;
+      case REVIEW -> isOrderPlaced();
       case CONFIRMATION -> status == CheckoutSessionStatus.COMPLETED;
     };
+  }
+
+  /**
+   * Checks if an order was placed with this session: it was confirmed, and may have been completed
+   * since.
+   *
+   * @return true if status is CONFIRMED or COMPLETED
+   */
+  public boolean isOrderPlaced() {
+    return status == CheckoutSessionStatus.CONFIRMED || status == CheckoutSessionStatus.COMPLETED;
   }
 
   /**

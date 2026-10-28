@@ -41,12 +41,34 @@ final class GuestCheckout {
    * @return the review page
    */
   Document toTheReview() throws Exception {
+    return toTheReviewAs("jane@example.com");
+  }
+
+  /**
+   * The same way to the review as {@link #toTheReview()}, with that buyer e-mail.
+   *
+   * @param buyerEmail the e-mail the guest enters at the buyer step
+   * @return the review page
+   */
+  Document toTheReviewAs(final String buyerEmail) throws Exception {
     addToCart("Domain-Driven Design");
     startTheCheckout();
-    enterTheBuyer();
+    enterTheBuyer(buyerEmail);
     enterTheDelivery("Standard Shipping");
     choosePayment("Mock Payment (Test)");
     return page(REVIEW_STEP);
+  }
+
+  /**
+   * Presses "Place Order" on the review page that is open now; lands on the confirmation page.
+   *
+   * @return the confirmation page
+   */
+  Document placeTheOrder() throws Exception {
+    final MvcResult placed =
+        submit(page(REVIEW_STEP).selectFirst("[data-test=review-confirm-form]"));
+    assertThat(placed.getResponse().getRedirectedUrl()).isEqualTo("/checkout/confirmation");
+    return page("/checkout/confirmation");
   }
 
   /** Presses "Checkout" in the cart; lands on the buyer step. */
@@ -55,10 +77,10 @@ final class GuestCheckout {
     assertThat(started.getResponse().getRedirectedUrl()).isEqualTo(BUYER_STEP);
   }
 
-  /** Enters Jane Doe as the buyer; lands on the delivery step. */
-  private void enterTheBuyer() throws Exception {
+  /** Enters Jane Doe, with that e-mail, as the buyer; lands on the delivery step. */
+  private void enterTheBuyer(final String email) throws Exception {
     final Element buyerForm = page(BUYER_STEP).selectFirst("[data-test=buyer-form]");
-    buyerForm.selectFirst("input[name=email]").val("jane@example.com");
+    buyerForm.selectFirst("input[name=email]").val(email);
     buyerForm.selectFirst("input[name=firstName]").val("Jane");
     buyerForm.selectFirst("input[name=lastName]").val("Doe");
     buyerForm.selectFirst("input[name=phone]").val("+49 30 1234567");

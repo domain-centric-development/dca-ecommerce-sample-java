@@ -19,7 +19,7 @@ block content
     .confirmation__message(data-test="confirmation-message")
       .confirmation__icon
       h3.confirmation__title(data-test="confirmation-title") Your order has been placed successfully
-      p.confirmation__reference Order Reference: #{orderConfirmation.sessionId()}
+      p.confirmation__reference Order Reference: #[span(data-test="order-reference") #{orderConfirmation.sessionId()}]
 
     .confirmation__details
       h3.confirmation__details-title Order Summary

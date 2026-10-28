@@ -263,6 +263,9 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── synccheckoutwithcart/
 │   │   │   ├── SyncCheckoutWithCartInputPort, SyncCheckoutWithCartUseCase
 │   │   │   ├── SyncCheckoutWithCartCommand, SyncCheckoutWithCartResult
+│   │   ├── sendorderconfirmation/
+│   │   │   ├── SendOrderConfirmationInputPort, SendOrderConfirmationUseCase
+│   │   │   ├── SendOrderConfirmationCommand, SendOrderConfirmationResult
 │   │   └── shared/                 # Shared output ports
 │   │       ├── CheckoutSessionRepository
 │   │       ├── CartDataPort, CartData
@@ -271,6 +274,7 @@ dev.domaincentric.sample.ecommerce
 │   │       ├── PaymentProvider, PaymentProviderRegistry
 │   │       ├── ShippingOptionRegistry
 │   │       ├── StockReservationPort    # Holds an order's stock while it is placed
+│   │       ├── OrderConfirmationMailer # Hands the order confirmation to the mail provider
 │   └── adapter/
 │       ├── incoming/
 │       │   ├── web/
@@ -281,7 +285,8 @@ dev.domaincentric.sample.ecommerce
 │       │   │   ├── ReviewPageController, ReviewPageViewModel
 │       │   │   └── ConfirmationPageController, ConfirmationPageViewModel
 │       │   └── event/
-│       │       └── CartChangeEventConsumer
+│       │       ├── CartChangeEventConsumer
+│       │       └── OrderConfirmationEventConsumer
 │       └── outgoing/
 │           ├── persistence/
 │           │   └── InMemoryCheckoutSessionRepository
@@ -294,6 +299,9 @@ dev.domaincentric.sample.ecommerce
 │           │   ├── RestPaymentProvider, PaymentProviderProperties
 │           │   ├── MockPaymentProvider
 │           │   └── InMemoryPaymentProviderRegistry
+│           ├── mail/
+│           │   ├── RestMailProvider, MailProviderProperties
+│           │   └── StandInMailProvider
 │           ├── inventory/
 │           │   └── InventoryStockReservationAdapter   # ACL to Inventory's OHS: reserve and release stock
 │           └── shipping/

@@ -28,12 +28,14 @@ import org.springframework.context.ConfigurableApplicationContext;
  * <p>With {@code -De2e.baseUrl=<url>} the suite drives a shop started elsewhere instead (the
  * compose {@code e2e} service does that); without it, nothing has to run beforehand and every
  * dependency the shop needs in its default profile starts with it — the payment provider included:
- * a stub on a free port that authorizes every payment until a test arranges another answer.
+ * a stub on a free port that authorizes every payment until a test arranges another answer — and
+ * the mail provider: a stub on a free port that accepts every mail.
  */
 public final class ShopUnderTest {
 
   private static ConfigurableApplicationContext shop;
   private static WireMockServer paymentProvider;
+  private static WireMockServer mailProvider;
 
   private ShopUnderTest() {}
 
@@ -44,13 +46,16 @@ public final class ShopUnderTest {
     }
     if (shop == null) {
       paymentProvider = authorizingPaymentProvider();
+      mailProvider = acceptingMailProvider();
       shop =
           SpringApplication.run(
               EcommerceSampleApplication.class,
               "--server.port=0",
-              "--checkout.payment-provider.base-url=" + paymentProvider.baseUrl());
+              "--checkout.payment-provider.base-url=" + paymentProvider.baseUrl(),
+              "--checkout.mail-provider.base-url=" + mailProvider.baseUrl());
       Runtime.getRuntime().addShutdownHook(new Thread(shop::close));
       Runtime.getRuntime().addShutdownHook(new Thread(paymentProvider::stop));
+      Runtime.getRuntime().addShutdownHook(new Thread(mailProvider::stop));
     }
     return "http://localhost:" + shop.getEnvironment().getProperty("local.server.port");
   }
@@ -98,6 +103,17 @@ public final class ShopUnderTest {
   public static synchronized Optional<WireMockServer> paymentProvider() {
     baseUrl();
     return Optional.ofNullable(paymentProvider);
+  }
+
+  /**
+   * The mail provider the shop sends its mails through, for a test to read the mails it received.
+   * Empty when the suite drives a shop started elsewhere: that shop's provider is not the suite's.
+   *
+   * @return the provider stub, or empty
+   */
+  public static synchronized Optional<WireMockServer> mailProvider() {
+    baseUrl();
+    return Optional.ofNullable(mailProvider);
   }
 
   /**
@@ -282,6 +298,13 @@ public final class ShopUnderTest {
                 .build(),
             HttpResponse.BodyHandlers.ofString())
         .statusCode();
+  }
+
+  private static WireMockServer acceptingMailProvider() {
+    WireMockServer provider = new WireMockServer(wireMockConfig().dynamicPort());
+    provider.start();
+    provider.stubFor(post("/messages").willReturn(aResponse().withStatus(202)));
+    return provider;
   }
 
   private static WireMockServer authorizingPaymentProvider() {

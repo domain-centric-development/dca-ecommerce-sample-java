@@ -1638,7 +1638,7 @@ application/
 - Cart Use Cases: `dev.domaincentric.sample.ecommerce.cart.application.{feature}.{usecasename}` — grouped into the
   features `shopping`, `cartrecovery`, `cartcheckout`, `cartoversight`
 - Checkout Use Cases: `dev.domaincentric.sample.ecommerce.checkout.application.{feature}.{usecasename}` — grouped into
-  `session`, `checkoutcompletion`, `cartsync`
+  `session`, `checkoutcompletion`, `cartsync`, `orderconfirmation`
 - Shared Output Ports: `dev.domaincentric.sample.ecommerce.{context}.application.shared` (context-wide, never per feature)
 
 **Features.** A feature is an optional, domain-named group of related use cases inside one bounded context —

@@ -19,11 +19,46 @@ The Checkout context groups its use cases into three features — domain-named n
 | `session` | Starting a checkout session from a cart and reading it back in its lifecycle states | `startcheckout`, `getactivecheckoutsession`, `getcheckoutsession`, `getconfirmedcheckoutsession` |
 | `checkoutcompletion` | The steps that complete a checkout: buyer information, delivery, payment, confirmation | `resumecheckout`, `submitbuyerinfo`, `getshippingoptions`, `submitdelivery`, `getpaymentproviders`, `submitpayment`, `getcheckoutreview`, `confirmcheckout` |
 | `cartsync` | Following changes of the underlying cart while the session is active | `synccheckoutwithcart` |
+| `orderconfirmation` | Informing the buyer that the order went through | `sendorderconfirmation` |
 
 `application/shared/` stays context-wide. The web adapters mirror `session` and `checkoutcompletion`
 (`adapter/incoming/web/{feature}`); `CheckoutRoutes`, `CheckoutStepNotice` and `CartNotice` (the codes the cart page
 knows) stay beside them, shared. `CheckoutStepPage` in `checkoutcompletion/` is the one place a step page is opened
-or a refused submission translated. The event consumer sits in `adapter/incoming/event/cartsync/`.
+or a refused submission translated. The event consumers sit in `adapter/incoming/event/cartsync/` and
+`adapter/incoming/event/orderconfirmation/`.
+
+### Order confirmation (orderconfirmation)
+
+**Definition:** Informing the buyer that the order went through: one mail with the template
+`order-confirmation` to the buyer e-mail of a checkout with a placed order, carrying the order total.
+Sent after the order's transaction committed, as a reaction to `CheckoutConfirmed`; an unavailable mail
+provider delays it and never undoes the order.
+
+**Type:** Feature
+
+**Groups:** send the order confirmation (`sendorderconfirmation`).
+
+**Operations:**
+- send the order confirmation (`sendorderconfirmation`, through `SendOrderConfirmationInputPort`) — mails the placed
+  checkout's total to its buyer e-mail through the mail provider, under one key per checkout
+  (`order-confirmation-<checkout session id>`), so a repeated delivery reaches the buyer once; a session with no
+  placed order is answered `NO_PLACED_ORDER`; a provider that does not accept the mail is
+  `MailProviderUnavailableException`, and the confirmation is tried again
+
+**Notes:** "Order confirmation" is the mail to the buyer — not the confirmation step (`CheckoutStep.CONFIRMATION`),
+not `confirm` and not `CheckoutConfirmed`, which all mean placing the order.
+
+**Related terms:** `CheckoutConfirmed`, `BuyerInfo`, Mail provider.
+
+### Mail provider
+
+**Definition:** The outside service that sends the shop's mails; it accepts a mail under a key and sends one
+mail per key. Behind the output port `OrderConfirmationMailer`; with no provider address configured, a stand-in
+accepts every mail and sends nothing.
+
+**Type:** Concept
+
+**Related terms:** Order confirmation, `MailProviderUnavailableException`.
 
 ---
 
@@ -78,6 +113,8 @@ claim of durable distributed transactions or universal rollback of unenlisted re
   review is no longer the one shown, or when the payment was authorized for an amount other than the reviewed total
   (`AuthorizedAmountDiffersFromReviewException`)
 - `complete` — after payment: status completed, with the order reference
+- `isOrderPlaced` — a question: was an order placed with this session? True once it is confirmed, and after it was
+  completed
 - `abandon` — kept with status abandoned; the cart's contents stay
 - `expire` — kept with status expired, for inactivity; the cart's contents stay
 - `syncLineItems` — exists only to refuse: a session's positions are immutable, a changed cart needs a new session

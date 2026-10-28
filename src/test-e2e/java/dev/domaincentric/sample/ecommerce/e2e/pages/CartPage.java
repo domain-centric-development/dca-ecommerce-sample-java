@@ -80,8 +80,18 @@ public class CartPage extends BasePage {
    * @return the ReviewPage
    */
   public ReviewPage proceedToTheReviewAsJaneDoe() {
+    return proceedToTheReviewWithBuyerEmail("jane@example.com");
+  }
+
+  /**
+   * Proceeds to checkout and walks every step to the review as Jane Doe, with that buyer e-mail.
+   *
+   * @param buyerEmail the e-mail entered at the buyer step
+   * @return the ReviewPage
+   */
+  public ReviewPage proceedToTheReviewWithBuyerEmail(String buyerEmail) {
     return proceedToCheckout()
-        .fillBuyerInfo("jane@example.com", "Jane", "Doe", "+49 30 1234567")
+        .fillBuyerInfo(buyerEmail, "Jane", "Doe", "+49 30 1234567")
         .continueToDelivery()
         .fillStreet("Hauptstrasse 1")
         .fillCity("Berlin")
