@@ -173,3 +173,4 @@
 2026-10-23T13:40:23Z	denied	judge	process=verifier	stream=verifier.075325.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; R=.dca-factory/runs/logging-in-from-the-checkout-returns-to-it; ls -la $R $R/reviews	seq=173
 2026-10-23T13:40:23Z	denied	judge	process=verifier	stream=verifier.075325.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls -la .dca-factory/runs/logging-in-from-the-checkout-returns-to-it .dca-factory/runs/logging-in-from…	seq=174
 2026-10-23T13:40:23Z	stream	verifier.075325.out	process=verifier	parts=2	denied=2	version=2	seq=175
+2026-10-28T16:18:10Z	pruned	-	files=17	days=7	seq=176

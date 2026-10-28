@@ -38,6 +38,7 @@ Delivery order is `depends_on`, ties by id.
 - the-steps-show-the-progress — The steps show the progress and are taken in order
 - go-back-to-an-earlier-step-and-change-it — Go back to an earlier step and change it
 - without-an-open-checkout-the-steps-lead — Without an open checkout the steps lead to the cart
+- the-buyer-gets-an-order-confirmation — The buyer gets an order confirmation
 - the-open-checkout-keeps-its-order-while — The open checkout keeps its order while the cart changes
 - after-the-order-the-cart-keeps-only — After the order the cart keeps only what was not bought
 - stock-goes-down-by-what-was-bought — Stock goes down by what was bought

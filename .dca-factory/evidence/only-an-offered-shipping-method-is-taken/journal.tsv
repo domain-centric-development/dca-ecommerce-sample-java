@@ -73,3 +73,4 @@
 2026-10-23T13:40:23Z	part	judge	process=verifier	stream=verifier.094316.out	seconds=50.399	input=12	cache_read=208997	cache_write=47207	output=3558	cost=0.448322	seq=73
 2026-10-23T13:40:23Z	part	document	process=verifier	stream=verifier.094316.out	seconds=46.192	input=16	cache_read=481798	cache_write=10560	output=3229	cost=0.287825	seq=74
 2026-10-23T13:40:23Z	stream	verifier.094316.out	process=verifier	parts=2	denied=0	version=2	seq=75
+2026-10-28T16:18:10Z	pruned	-	files=10	days=7	seq=76

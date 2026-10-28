@@ -34,3 +34,4 @@
 2026-10-23T13:40:22Z	denied	judge	process=verifier	stream=verifier.160216.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; R=.dca-factory/runs/a-login-follows-only-a-return-page-of-the-shop; ls -la $R $R/reviews; python3 .ag…	seq=34
 2026-10-23T13:40:22Z	denied	judge	process=verifier	stream=verifier.160216.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls -la .dca-factory/runs/a-login-follows-only-a-return-page-of-the-shop .dca-factory/runs/a-login-fol…	seq=35
 2026-10-23T13:40:22Z	stream	verifier.160216.out	process=verifier	parts=1	denied=2	version=2	seq=36
+2026-10-28T16:18:10Z	pruned	-	files=7	days=7	seq=37

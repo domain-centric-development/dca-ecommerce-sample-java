@@ -80,3 +80,4 @@
 2026-10-23T13:40:24Z	part	document	process=verifier	stream=verifier.104712.out	seconds=106.731	input=32	cache_read=2119120	cache_write=38171	output=13060	cost=1.102930	seq=80
 2026-10-23T13:40:24Z	denied	-	process=verifier	stream=verifier.104712.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls .dca-factory/runs/two-orders-never-sell-more-than-the-stock/ 2>/dev/null || ls .dca-factory/runs/t…	seq=81
 2026-10-23T13:40:24Z	stream	verifier.104712.out	process=verifier	parts=2	denied=1	version=2	seq=82
+2026-10-28T16:18:10Z	pruned	-	files=10	days=7	seq=83

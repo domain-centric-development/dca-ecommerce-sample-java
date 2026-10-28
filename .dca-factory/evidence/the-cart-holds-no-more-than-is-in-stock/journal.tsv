@@ -74,3 +74,4 @@
 2026-10-23T13:40:23Z	denied	judge	process=verifier	stream=verifier.124105.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; R=.dca-factory/runs/the-cart-holds-no-more-than-is-in-stock; ls -la $R $R/reviews; cat dca-factory.pr…	seq=74
 2026-10-23T13:40:23Z	denied	judge	process=verifier	stream=verifier.124105.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md	seq=75
 2026-10-23T13:40:23Z	stream	verifier.124105.out	process=verifier	parts=2	denied=2	version=2	seq=76
+2026-10-28T16:18:10Z	pruned	-	files=10	days=7	seq=77

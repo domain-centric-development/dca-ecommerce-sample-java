@@ -18,6 +18,7 @@ interface.
 - Back-office pages for the operator: the event publication log and administrative views.
 - A JSON REST API with token authentication for the same shopper operations.
 - An MCP server that exposes the product catalogue to AI assistants.
+- Mails the shop sends on its own through the mail provider: the order confirmation to the buyer.
 
 ## How it works
 
