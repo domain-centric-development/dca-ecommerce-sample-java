@@ -21,7 +21,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The order confirmation mail a guest gets after placing the order, read from the mail provider the
- * suite's shop sends through.
+ * suite's shop sends through. The suite's classes run in parallel against one shop and other tests
+ * place orders for the same buyer, so the test reads only the mails of its own order — the key the
+ * mail is sent under names the order reference the confirmation page shows.
  */
 @DisplayName("The buyer gets an order confirmation")
 class OrderConfirmationMailE2ETest extends BaseE2ETest {
@@ -49,12 +51,13 @@ class OrderConfirmationMailE2ETest extends BaseE2ETest {
     final ConfirmationPage confirmation = review.placeOrder();
 
     final String totalShown = confirmation.orderTotal().textContent().trim();
+    final String key = "order-confirmation-" + confirmation.orderReference();
     Awaitility.await()
         .atMost(Duration.ofSeconds(15))
-        .untilAsserted(() -> assertThat(mailsTo(BUYER_EMAIL)).isNotEmpty());
-    final List<JsonNode> mails = mailsTo(BUYER_EMAIL);
+        .untilAsserted(() -> assertThat(mailsTo(BUYER_EMAIL, key)).isNotEmpty());
+    final List<JsonNode> mails = mailsTo(BUYER_EMAIL, key);
     assertThat(mails)
-        .as("the mail provider has received one mail to the buyer")
+        .as("the mail provider has received one mail to the buyer for this order")
         .singleElement()
         .satisfies(
             mail -> assertThat(mail.path("template").asText()).isEqualTo("order-confirmation"));
@@ -63,11 +66,12 @@ class OrderConfirmationMailE2ETest extends BaseE2ETest {
         .isEqualTo(totalShown);
   }
 
-  /** The bodies of every mail request to that address the provider received. */
-  private List<JsonNode> mailsTo(final String address) {
+  /** The bodies of every mail request to that address under that key the provider received. */
+  private List<JsonNode> mailsTo(final String address, final String key) {
     return mailProvider.findAll(postRequestedFor(urlEqualTo("/messages"))).stream()
         .map(request -> parse(request.getBodyAsString()))
         .filter(body -> address.equals(body.path("to").asText()))
+        .filter(body -> key.equals(body.path("key").asText()))
         .toList();
   }
 
