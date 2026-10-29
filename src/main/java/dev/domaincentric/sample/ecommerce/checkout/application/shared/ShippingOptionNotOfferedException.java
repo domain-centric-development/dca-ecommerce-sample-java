@@ -9,13 +9,13 @@ import java.io.Serial;
  * <p>The registry is the shop's list of shipping options; an identifier outside it names nothing
  * this checkout can deliver with or price.
  */
-public final class ShippingOptionNotFoundException extends UseCaseException {
+public final class ShippingOptionNotOfferedException extends UseCaseException {
 
   @Serial private static final long serialVersionUID = 1L;
 
   private final String shippingOptionId;
 
-  public ShippingOptionNotFoundException(final String shippingOptionId) {
+  public ShippingOptionNotOfferedException(final String shippingOptionId) {
     super("Shipping option not offered: " + shippingOptionId);
     this.shippingOptionId = shippingOptionId;
   }

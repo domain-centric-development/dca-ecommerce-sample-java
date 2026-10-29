@@ -147,10 +147,12 @@ postal code, country, and optional state. Captured in the delivery step.
 
 **Operations:** `formattedAddress`.
 
-### Shipping method (ShippingOption)
+### Shipping option (ShippingOption)
 
-**Definition:** Selectable shipping method with identifier, display name, estimated delivery time
-and shipping cost — the cost the shop sets for the method, never one the buyer sends.
+**Definition:** A way of shipping the shop offers at checkout — its title (for example "Standard",
+"Express"), the estimated delivery and the cost the shop sets, never one the buyer sends. The buyer
+selects one. Agent commerce protocols call it a fulfillment option of type shipping (UCP, ACP) or a
+shipping option (W3C Payment Request); a carrier, where one is named, is a field of its own.
 
 **Type:** Value Object
 
@@ -249,7 +251,7 @@ total.
 ### Review (CheckoutReview)
 
 **Definition:** The order as the review shows it: the session's lines at today's prices, the buyer, the delivery
-address, the shipping method, the payment method and the totals. Worked out by the session (`reviewAt`), stored
+address, the shipping option, the payment method and the totals. Worked out by the session (`reviewAt`), stored
 nowhere.
 
 **Type:** Value Object
@@ -263,7 +265,7 @@ line's product when only that line's price differs.
 ### Review fingerprint (ReviewFingerprint)
 
 **Definition:** What the review showed — lines with product, quantity and unit price, buyer, delivery address,
-shipping method and price, payment method, total — sent with "Place Order" (the form field `reviewFingerprint`). A
+shipping option and price, payment method, total — sent with "Place Order" (the form field `reviewFingerprint`). A
 blank or malformed value matches no review.
 
 **Type:** Value Object
@@ -638,9 +640,9 @@ try again later." when the provider is unavailable.
 
 ---
 
-### ShippingOptionNotFound (ShippingOptionNotFoundException)
+### ShippingOptionNotOffered (ShippingOptionNotOfferedException)
 
-**Definition:** The shipping method the delivery form names is not one the shop offers. Carries the shipping option
+**Definition:** The shipping option the delivery form names is not one the shop offers. Carries the shipping option
 id it met. The delivery step opens again with "This shipping method is not offered. Please choose another one."
 
 **Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ShippingOptionRegistry`, `ShippingOption`
@@ -711,7 +713,7 @@ The parts of the context's behaviour its people name; each groups what holds in 
 
 ### Delivery (delivery)
 
-**Definition:** The delivery address and the shipping method.
+**Definition:** The delivery address and the shipping option.
 
 **Type:** Feature
 
