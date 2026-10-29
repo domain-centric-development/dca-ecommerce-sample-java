@@ -2,7 +2,7 @@
 id: a-guest-cart-not-owned-is-a-named-failure
 epic: account
 kind: task
-status: draft
+status: approved
 created: 2026-10-29T15:12:47Z
 context: cart
 title: A guest cart not owned is a named failure
@@ -20,3 +20,4 @@ has it.
 
 A change no actor sees: no acceptance criterion, no test stage. It runs plan, build, tidy, judge and document, and
 the existing suite, run whole, is its evidence; a test that existed before it stays as it is.
+The new refusal is proven by a unit test of the use case.

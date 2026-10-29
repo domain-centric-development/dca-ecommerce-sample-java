@@ -2,7 +2,7 @@
 id: the-payment-differs-from-the-review-checks-the-provider
 epic: provider-payment
 kind: task
-status: draft
+status: approved
 created: 2026-10-29T15:12:47Z
 context: checkout
 title: The payment differs from the review and checks the provider
@@ -21,3 +21,4 @@ payment is requested from the selected provider. The checkout glossary's entry i
 
 A change no actor sees: no acceptance criterion, no test stage. It runs plan, build, tidy, judge and document, and
 the existing suite, run whole, is its evidence; a test that existed before it stays as it is.
+The new refusal of another provider is proven by a unit test of the use case.
