@@ -143,6 +143,17 @@ in the same transaction — a redelivery cannot reset a price that changed since
 
 ---
 
+## Failures
+
+### Product without a price (ProductPriceNotFoundException)
+
+**Definition:** A price change named a product Pricing holds no price for — answered "not found". Pricing knows no
+catalogue, so a product created but not yet priced is refused the same way.
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ProductPriceRepository.findByProductId`, Price change (`ChangePrice`)
+
+---
+
 ## Concepts (not in code, but in conversation)
 
 ### Current price

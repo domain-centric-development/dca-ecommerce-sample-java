@@ -27,41 +27,6 @@ knows) stay beside them, shared. `CheckoutStepPage` in `checkoutcompletion/` is 
 or a refused submission translated. The event consumers sit in `adapter/incoming/event/cartsync/` and
 `adapter/incoming/event/orderconfirmation/`.
 
-### Order confirmation (orderconfirmation)
-
-**Definition:** Informing the buyer that the order went through: one mail with the template
-`order-confirmation` to the buyer e-mail of a checkout with a placed order, carrying the order total.
-Sent after the order's transaction committed, as a reaction to `CheckoutConfirmed`; an unavailable mail
-provider delays it and never undoes the order.
-
-**Type:** Feature
-
-**Groups:** send the order confirmation (`sendorderconfirmation`).
-
-**Operations:**
-- send the order confirmation (`sendorderconfirmation`, through `SendOrderConfirmationInputPort`) — mails the placed
-  checkout's total to its buyer e-mail through the mail provider, under one key per checkout
-  (`order-confirmation-<checkout session id>`), so a repeated delivery reaches the buyer once; a session with no
-  placed order is answered `NO_PLACED_ORDER`; a provider that does not accept the mail is
-  `MailProviderUnavailableException`, and the confirmation is tried again
-
-**Notes:** "Order confirmation" is the mail to the buyer — not the confirmation step (`CheckoutStep.CONFIRMATION`),
-not `confirm` and not `CheckoutConfirmed`, which all mean placing the order.
-
-**Related terms:** `CheckoutConfirmed`, `BuyerInfo`, Mail provider.
-
-### Mail provider
-
-**Definition:** The outside service that sends the shop's mails; it accepts a mail under a key and sends one
-mail per key. Behind the output port `OrderConfirmationMailer`; with no provider address configured, a stand-in
-accepts every mail and sends nothing.
-
-**Type:** Concept
-
-**Related terms:** Order confirmation, `MailProviderUnavailableException`.
-
----
-
 ## Aggregate Roots
 
 ### CheckoutSession
@@ -172,6 +137,15 @@ provider alone.
 **Related terms:** `PaymentProviderId`, `PaymentSubmitted`, `PaymentResult`.
 
 **Operations:** `of`, `authorized`, `hasReference`.
+
+### Authorized amount (AuthorizedAmount)
+
+**Definition:** The total the review showed, authorized by the payment provider at Place Order. The order is
+confirmed only when it equals the total the review showed (`AuthorizedAmountDiffersFromReviewException` otherwise).
+
+**Type:** Value Object (`Money`, part of `PaymentSelection`)
+
+**Related terms:** `PaymentSelection`, `CheckoutTotals`, Payment cancellation.
 
 ### CheckoutLineItem
 
@@ -640,6 +614,16 @@ try again later." when the provider is unavailable.
 
 ---
 
+### MailProviderUnavailable (MailProviderUnavailableException)
+
+**Definition:** The mail provider did not accept a mail: it answered other than `202`, did not answer in time or
+could not be reached. The failure carries the mail's key; the delivery that asked for the mail is tried again later,
+under the same key. No customer sees it.
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `OrderConfirmationMailer`, Order confirmation
+
+---
+
 ### ShippingOptionNotOffered (ShippingOptionNotOfferedException)
 
 **Definition:** The shipping option the delivery form names is not one the shop offers. Carries the shipping option
@@ -675,6 +659,17 @@ answers it with `REFUSED` without asking the provider.
 within 2 seconds `UNAVAILABLE`. The `PaymentProvider` port and its adapters offer it; no use case calls it.
 
 ---
+
+### Payment cancellation (cancelPayment)
+
+**Definition:** Releases an authorized payment at the payment provider by its payment reference, so the provider
+no longer holds it for the checkout. The REST adapter sends `POST /payments/{payment reference}/cancel`; `204`
+cancels the payment, any other answer, no answer in time or no connection counts as unavailable. No checkout step
+asks for a cancellation.
+
+**Type:** Concept (operation `cancelPayment` of the `PaymentProvider` output port)
+
+**Related terms:** `PaymentResult`, `PaymentSelection`, Authorized amount.
 
 ### Checkout reference (merchantReference)
 
@@ -734,3 +729,36 @@ The parts of the context's behaviour its people name; each groups what holds in 
 **Definition:** The open checkout keeps its order while the cart changes.
 
 **Type:** Feature
+
+### Order confirmation (orderconfirmation)
+
+**Definition:** Informing the buyer that the order went through: one mail with the template
+`order-confirmation` to the buyer e-mail of a checkout with a placed order, carrying the order total.
+Sent after the order's transaction committed, as a reaction to `CheckoutConfirmed`; an unavailable mail
+provider delays it and never undoes the order.
+
+**Type:** Feature
+
+**Groups:** send the order confirmation (`sendorderconfirmation`).
+
+**Operations:**
+- send the order confirmation (`sendorderconfirmation`, through `SendOrderConfirmationInputPort`) — mails the placed
+  checkout's total to its buyer e-mail through the mail provider, under one key per checkout
+  (`order-confirmation-<checkout session id>`), so a repeated delivery reaches the buyer once; a session with no
+  placed order is answered `NO_PLACED_ORDER`; a provider that does not accept the mail is
+  `MailProviderUnavailableException`, and the confirmation is tried again
+
+**Notes:** "Order confirmation" is the mail to the buyer — not the confirmation step (`CheckoutStep.CONFIRMATION`),
+not `confirm` and not `CheckoutConfirmed`, which all mean placing the order.
+
+**Related terms:** `CheckoutConfirmed`, `BuyerInfo`, Mail provider.
+
+### Mail provider
+
+**Definition:** The outside service that sends the shop's mails; it accepts a mail under a key and sends one
+mail per key. Behind the output port `OrderConfirmationMailer`; with no provider address configured, a stand-in
+accepts every mail and sends nothing.
+
+**Type:** Concept
+
+**Related terms:** Order confirmation, `MailProviderUnavailableException`.
