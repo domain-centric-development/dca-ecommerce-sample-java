@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
@@ -96,7 +97,8 @@ class RecoverCartUseCaseTest {
     cartFor(REGISTERED_USER_ID, ProductId.generate(), 1);
 
     final RecoverCartResult result =
-        useCase.execute(new RecoverCartCommand(REGISTERED_USER_ID, REGISTERED_USER_ID));
+        useCase.execute(
+            new RecoverCartCommand(REGISTERED_USER_ID, REGISTERED_USER_ID, REGISTERED_USER_ID));
 
     assertEquals(0, result.itemsMerged());
     assertFalse(result.anonymousCartDeleted());
@@ -124,8 +126,40 @@ class RecoverCartUseCaseTest {
     assertTrue(activeCartOf(REGISTERED_USER_ID).isEmpty());
   }
 
+  @Test
+  @DisplayName("refuses a guest other than the one before the login, and changes no cart")
+  void refusesAGuestOtherThanTheOneBeforeTheLogin() {
+    cartFor(ANONYMOUS_USER_ID, ProductId.generate(), 2);
+
+    final GuestCartNotOwnedException refusal =
+        assertThrows(
+            GuestCartNotOwnedException.class,
+            () ->
+                useCase.execute(
+                    new RecoverCartCommand(
+                        ANONYMOUS_USER_ID, REGISTERED_USER_ID, "another-guest-789")));
+
+    assertEquals(CustomerId.of(ANONYMOUS_USER_ID), refusal.guest());
+    assertEquals(1, activeCartOf(ANONYMOUS_USER_ID).orElseThrow().itemCount());
+    assertTrue(activeCartOf(REGISTERED_USER_ID).isEmpty());
+    assertTrue(eventPublisher.publishedEvents().isEmpty());
+  }
+
+  @Test
+  @DisplayName("refuses the take-over when no guest before the login is known")
+  void refusesTheTakeOverWhenNoGuestBeforeTheLoginIsKnown() {
+    cartFor(ANONYMOUS_USER_ID, ProductId.generate(), 1);
+
+    assertThrows(
+        GuestCartNotOwnedException.class,
+        () -> useCase.execute(new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID, null)));
+
+    assertEquals(1, activeCartOf(ANONYMOUS_USER_ID).orElseThrow().itemCount());
+  }
+
   private RecoverCartResult recover() {
-    return useCase.execute(new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID));
+    return useCase.execute(
+        new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID, ANONYMOUS_USER_ID));
   }
 
   private ShoppingCart cartFor(final String userId, final ProductId productId, final int quantity) {

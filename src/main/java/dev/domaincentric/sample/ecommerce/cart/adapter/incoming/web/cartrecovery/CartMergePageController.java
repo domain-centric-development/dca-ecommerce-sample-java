@@ -11,11 +11,13 @@ import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecar
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart.RecoverCartResult;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -34,9 +36,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  *
  * <p><b>Whose cart:</b> the anonymous cart is only ever the one of the guest this browser was
  * before the login, as the identity names it ({@link IdentityProvider.Identity#guestBeforeLogin()}
- * — the browser's own signed session). No request parameter names it, so a request cannot reach
- * another guest's cart; a take-over or merge with nothing to bring shows the cart as it is, without
- * a notice.
+ * — the browser's own signed session). No request parameter names it, and the use cases hold the
+ * ownership for every caller: a guest other than the one before the login is refused with {@link
+ * GuestCartNotOwnedException}, which this page answers like a take-over or merge with nothing to
+ * bring — the cart as it is, without a notice.
  *
  * <p><b>Where it leads:</b> to the return URL only when it is a page of the shop, otherwise to the
  * cart page.
@@ -132,10 +135,13 @@ public class CartMergePageController {
       return CART_AS_IT_IS;
     }
 
-    final RecoverCartResult result =
-        recoverCartUseCase.execute(
-            new RecoverCartCommand(guest.get().value(), identity.userId().value()));
-    if (result.cartId() == null) {
+    final String ownGuest = guest.get().value();
+    final Optional<RecoverCartResult> result =
+        ownGuestCartOnly(
+            () ->
+                recoverCartUseCase.execute(
+                    new RecoverCartCommand(ownGuest, identity.userId().value(), ownGuest)));
+    if (result.isEmpty() || result.get().cartId() == null) {
       return CART_AS_IT_IS;
     }
 
@@ -174,10 +180,14 @@ public class CartMergePageController {
       return CART_AS_IT_IS;
     }
 
-    final MergeCartsResult result =
-        mergeCartsUseCase.execute(
-            new MergeCartsCommand(guest.get().value(), identity.userId().value(), mergeStrategy));
-    if (!result.anonymousCartDeleted()) {
+    final String ownGuest = guest.get().value();
+    final Optional<MergeCartsResult> result =
+        ownGuestCartOnly(
+            () ->
+                mergeCartsUseCase.execute(
+                    new MergeCartsCommand(
+                        ownGuest, identity.userId().value(), mergeStrategy, ownGuest)));
+    if (result.isEmpty() || !result.get().anonymousCartDeleted()) {
       return CART_AS_IT_IS;
     }
 
@@ -189,6 +199,20 @@ public class CartMergePageController {
           case USE_ANONYMOUS_CART -> CartPageNotice.RECENT_CART_USED;
         };
     return redirectAfterLogin(returnUrl, notice, attributes);
+  }
+
+  /**
+   * Moves a cart through the use case and translates its one refusal: a guest the use case does not
+   * own moves nothing, and the page shows the cart as it is. This page names no guest of its own —
+   * the one the request moves is the one the identity names — so the refusal is the port's contract
+   * held for every caller, not a path a form can take.
+   */
+  private static <T> Optional<T> ownGuestCartOnly(final Supplier<T> move) {
+    try {
+      return Optional.of(move.get());
+    } catch (final GuestCartNotOwnedException notOwned) {
+      return Optional.empty();
+    }
   }
 
   /**

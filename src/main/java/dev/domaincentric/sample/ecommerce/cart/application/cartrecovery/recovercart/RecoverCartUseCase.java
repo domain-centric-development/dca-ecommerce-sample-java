@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
@@ -23,6 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
  *       cart after merge
  * </ol>
  *
+ * <p>Only the cart of the guest the caller was before the login is taken over: a command that names
+ * another guest is refused with {@link GuestCartNotOwnedException} before any cart is read (ADR-036
+ * — ownership is the use case's).
+ *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link RecoverCartInputPort}
  * interface, which is a primary/driving port in the application layer.
  */
@@ -44,6 +49,10 @@ public class RecoverCartUseCase implements RecoverCartInputPort {
   public RecoverCartResult execute(final RecoverCartCommand input) {
     final CustomerId anonymousCustomerId = CustomerId.of(input.anonymousUserId());
     final CustomerId registeredCustomerId = CustomerId.of(input.registeredUserId());
+
+    if (!input.anonymousUserId().equals(input.guestBeforeLogin())) {
+      throw new GuestCartNotOwnedException(anonymousCustomerId);
+    }
 
     // If same user ID, no merge needed
     if (anonymousCustomerId.equals(registeredCustomerId)) {

@@ -322,12 +322,13 @@ at the time of adding or the current one? Clarify the business policy.
 ### Guest before login (guestBeforeLogin)
 
 **Definition:** The guest identity this browser carried when it logged in, kept in its own signed session
-cookie. Its cart is the only guest cart the take-over and the merge may move. No request names it, so a request
-that names another guest's cart changes no cart, and the customer's own cart is shown as it is, without a message.
+cookie. Its cart is the only guest cart the take-over and the merge may move. No request names it; a command that
+names another guest is refused as not owned (`GuestCartNotOwned`) and changes no cart, and the customer's own cart
+is shown as it is, without a message.
 
 **Type:** Concept (read through the Shared Kernel's `IdentityProvider.Identity.guestBeforeLogin()`)
 
-**Related terms:** `RecoverCart`, `MergeCarts`, `UserId`
+**Related terms:** `RecoverCart`, `MergeCarts`, `UserId`, Guest cart not owned
 
 ### Shared contract revision (2026-09-09)
 
@@ -339,8 +340,8 @@ product-created v1 exposes only eventId, occurredOn, productId, amount, currency
 
 ## Failures
 
-Named refusals. The first three are rules of the cart itself; the last two are failures of a request, raised by
-the use case or by the store that sees every cart of a customer.
+Named refusals. The first three are rules of the cart itself; the rest are failures of a request, raised by the
+use case or by the store that sees every cart of a customer.
 
 ### CartNotModifiable
 
@@ -374,6 +375,18 @@ the use case or by the store that sees every cart of a customer.
 exist" and "belongs to somebody else" (ADR-036).
 
 **Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ShoppingCartRepository.findByIdForCustomer`
+
+---
+
+### Guest cart not owned (GuestCartNotOwned)
+
+**Definition:** A merge or a take-over names a guest other than the guest the customer was before the login — the
+guest before login (`guestBeforeLogin`), which the identity carries for the session. Only that guest's cart follows
+into the account; the use case refuses before any cart is read, so a refused request changes no cart, and the merge
+page answers it with the cart page, without a notice. Carries the `CustomerId` the request named.
+
+**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `MergeCarts`, `RecoverCart`, Guest before login,
+ADR-036
 
 ---
 

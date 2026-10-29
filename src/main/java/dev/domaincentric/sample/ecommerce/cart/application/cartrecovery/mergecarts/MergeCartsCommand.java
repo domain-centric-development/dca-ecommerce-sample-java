@@ -1,17 +1,24 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Command to merge carts according to the user's chosen strategy.
  *
  * <p>This command executes the selected cart merge strategy when a user logs in and has items in
- * both their anonymous cart and account cart.
+ * both their anonymous cart and account cart. Only the cart of the guest the caller was before the
+ * login is merged: a command naming another guest is refused.
  *
  * @param anonymousUserId the user ID from the anonymous session
  * @param registeredUserId the user ID of the registered account
  * @param strategy the merge strategy chosen by the user
+ * @param guestBeforeLogin the guest the caller was before the login, absent where none is known
  */
 public record MergeCartsCommand(
-    String anonymousUserId, String registeredUserId, CartMergeStrategy strategy) {
+    String anonymousUserId,
+    String registeredUserId,
+    CartMergeStrategy strategy,
+    @Nullable String guestBeforeLogin) {
 
   public MergeCartsCommand {
     if (anonymousUserId == null || anonymousUserId.isBlank()) {

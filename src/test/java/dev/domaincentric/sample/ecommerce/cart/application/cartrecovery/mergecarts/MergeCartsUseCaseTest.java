@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
@@ -76,7 +77,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.MERGE_BOTH,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);
@@ -110,7 +114,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.MERGE_BOTH,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);
@@ -135,7 +142,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.MERGE_BOTH,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);
@@ -169,7 +179,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.USE_ACCOUNT_CART);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.USE_ACCOUNT_CART,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);
@@ -201,7 +214,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.USE_ACCOUNT_CART);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.USE_ACCOUNT_CART,
+              ANONYMOUS_USER_ID);
 
       // Act
       useCase.execute(command);
@@ -223,7 +239,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.USE_ACCOUNT_CART);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.USE_ACCOUNT_CART,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);
@@ -257,7 +276,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.USE_ANONYMOUS_CART);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.USE_ANONYMOUS_CART,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);
@@ -290,7 +312,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.USE_ANONYMOUS_CART);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.USE_ANONYMOUS_CART,
+              ANONYMOUS_USER_ID);
 
       // Act
       useCase.execute(command);
@@ -319,7 +344,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.USE_ANONYMOUS_CART);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.USE_ANONYMOUS_CART,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);
@@ -342,7 +370,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.USE_ANONYMOUS_CART);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.USE_ANONYMOUS_CART,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);
@@ -368,10 +399,67 @@ class MergeCartsUseCaseTest {
       MergeCartsResult response =
           useCase.execute(
               new MergeCartsCommand(
-                  ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH));
+                  ANONYMOUS_USER_ID,
+                  REGISTERED_USER_ID,
+                  CartMergeStrategy.MERGE_BOTH,
+                  ANONYMOUS_USER_ID));
 
       assertFalse(response.anonymousCartDeleted());
       assertEquals(1, response.items().size());
+    }
+  }
+
+  @Nested
+  @DisplayName("A guest other than the one before the login")
+  class AGuestOtherThanTheOneBeforeTheLogin {
+
+    @Test
+    @DisplayName("is refused as not owned, and no cart changes")
+    void isRefusedAsNotOwnedAndNoCartChanges() {
+      Price price = Price.of(Money.of(BigDecimal.valueOf(10.00), EUR));
+      ShoppingCart anonymousCart = createCart(ANONYMOUS_USER_ID);
+      anonymousCart.addItem(ProductId.generate(), Quantity.of(2), price);
+      repository.save(anonymousCart);
+      ShoppingCart accountCart = createCart(REGISTERED_USER_ID);
+      accountCart.addItem(ProductId.generate(), Quantity.of(1), price);
+      repository.save(accountCart);
+
+      GuestCartNotOwnedException refusal =
+          assertThrows(
+              GuestCartNotOwnedException.class,
+              () ->
+                  useCase.execute(
+                      new MergeCartsCommand(
+                          ANONYMOUS_USER_ID,
+                          REGISTERED_USER_ID,
+                          CartMergeStrategy.MERGE_BOTH,
+                          "another-guest-789")));
+
+      assertEquals(CustomerId.of(ANONYMOUS_USER_ID), refusal.guest());
+      assertEquals(
+          1,
+          repository
+              .findActiveCartByCustomerId(CustomerId.of(ANONYMOUS_USER_ID))
+              .orElseThrow()
+              .itemCount());
+      assertEquals(
+          1,
+          repository
+              .findActiveCartByCustomerId(CustomerId.of(REGISTERED_USER_ID))
+              .orElseThrow()
+              .itemCount());
+      assertTrue(eventPublisher.getPublishedEvents().isEmpty());
+    }
+
+    @Test
+    @DisplayName("is refused when no guest before the login is known")
+    void isRefusedWhenNoGuestBeforeTheLoginIsKnown() {
+      assertThrows(
+          GuestCartNotOwnedException.class,
+          () ->
+              useCase.execute(
+                  new MergeCartsCommand(
+                      ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH, null)));
     }
   }
 
@@ -392,7 +480,10 @@ class MergeCartsUseCaseTest {
 
       MergeCartsCommand command =
           new MergeCartsCommand(
-              ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH);
+              ANONYMOUS_USER_ID,
+              REGISTERED_USER_ID,
+              CartMergeStrategy.MERGE_BOTH,
+              ANONYMOUS_USER_ID);
 
       // Act
       MergeCartsResult response = useCase.execute(command);

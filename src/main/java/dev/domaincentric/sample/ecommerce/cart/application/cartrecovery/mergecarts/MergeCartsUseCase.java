@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
@@ -25,6 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>An anonymous cart that is absent or holds no line changes no cart, whichever the strategy; the
  * result then reports no anonymous cart deleted.
  *
+ * <p>Only the cart of the guest the caller was before the login is merged: a command that names
+ * another guest is refused with {@link GuestCartNotOwnedException} before any cart is read (ADR-036
+ * — ownership is the use case's).
+ *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link MergeCartsInputPort}
  * interface, which is a primary/driving port in the application layer.
  */
@@ -46,6 +51,10 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
   public MergeCartsResult execute(final MergeCartsCommand input) {
     final CustomerId anonymousCustomerId = CustomerId.of(input.anonymousUserId());
     final CustomerId registeredCustomerId = CustomerId.of(input.registeredUserId());
+
+    if (!input.anonymousUserId().equals(input.guestBeforeLogin())) {
+      throw new GuestCartNotOwnedException(anonymousCustomerId);
+    }
 
     // Find both carts
     final Optional<ShoppingCart> anonymousCartOpt =
