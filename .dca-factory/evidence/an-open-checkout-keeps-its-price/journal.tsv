@@ -498,3 +498,4 @@
 2026-10-23T13:40:23Z	denied	-	process=verifier	stream=verifier.204026.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls .dca-factory/runs/an-open-checkout-keeps-its-price/	seq=498
 2026-10-23T13:40:23Z	denied	judge	process=verifier	stream=verifier.204026.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; R=.dca-factory/runs/an-open-checkout-keeps-its-price; ls -la $R $R/reviews; ls .dca-factory/evidence/…	seq=499
 2026-10-23T13:40:23Z	stream	verifier.204026.out	process=verifier	parts=2	denied=2	version=2	seq=500
+2026-10-29T20:53:13Z	pruned	-	files=43	days=7	seq=501

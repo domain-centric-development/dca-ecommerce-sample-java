@@ -170,3 +170,4 @@
 2026-10-23T13:40:23Z	denied	judge	process=verifier	stream=verifier.185420.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; R=.dca-factory/runs/every-cart-answer-shows-todays-price; ls -la $R $R/reviews; ls .dca-factory/evide…	seq=170
 2026-10-23T13:40:23Z	denied	judge	process=verifier	stream=verifier.185420.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls -la .dca-factory/runs/every-cart-answer-shows-todays-price .dca-factory/runs/every-cart-answer-sho…	seq=171
 2026-10-23T13:40:23Z	stream	verifier.185420.out	process=verifier	parts=2	denied=2	version=2	seq=172
+2026-10-29T20:53:14Z	pruned	-	files=17	days=7	seq=173

@@ -30,3 +30,4 @@
 2026-10-23T13:40:24Z	part	judge	process=verifier	stream=verifier.210852.out	seconds=68.334	input=24	cache_read=499767	cache_write=53627	output=6864	cost=0.666345	seq=30
 2026-10-23T13:40:24Z	denied	judge	process=verifier	stream=verifier.210852.out	tool=Bash	call=cat .claude/skills/factory-run/reference/stage-common.md; ls -la .dca-factory/runs/the-cart-shows-a-changed-price/ .dca-factory/runs/the-cart-shows-a-changed-p…	seq=31
 2026-10-23T13:40:24Z	stream	verifier.210852.out	process=verifier	parts=1	denied=1	version=2	seq=32
+2026-10-29T20:53:14Z	pruned	-	files=7	days=7	seq=33

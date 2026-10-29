@@ -2,7 +2,9 @@
 id: a-guest-cart-not-owned-is-a-named-failure
 epic: account
 kind: task
-status: approved
+status: delivered
+delivered: 2026-10-29T23:06:50Z
+delivered_by: gate
 created: 2026-10-29T15:12:47Z
 context: cart
 title: A guest cart not owned is a named failure

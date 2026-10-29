@@ -100,3 +100,4 @@
 2026-10-28T20:36:18.958Z	usage	decisions	tool=claude-session	window=2026-10-28T20:36:18.367Z/2026-10-28T20:36:18.958Z	session=claude:e8493306-8deb-460e-8ffd-c38e0cf66d22	seq=100
 2026-10-28T20:38:19Z	gate	document	exit=0	by=session	seq=101
 2026-10-28T20:36:18.958Z	usage	decisions	tool=claude-session	model=	input=0	cache_read=0	cache_write=0	output=0	window=2026-10-28T20:36:18.367Z/2026-10-28T20:36:18.958Z	seq=102
+2026-10-29T22:22:55Z	record	1	seq=103
