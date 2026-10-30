@@ -19,44 +19,44 @@ block content
     .confirmation__message(data-test="confirmation-message")
       .confirmation__icon
       h3.confirmation__title(data-test="confirmation-title") Your order has been placed successfully
-      p.confirmation__reference Order Reference: #[span(data-test="order-reference") #{orderConfirmation.sessionId()}]
+      p.confirmation__reference Order Reference: #[span(data-test="order-reference") #{confirmedCheckout.sessionId()}]
 
     .confirmation__details
       h3.confirmation__details-title Order Summary
 
-      if orderConfirmation.buyerInfo()
+      if confirmedCheckout.buyerInfo()
         .confirmation__detail-section
           h4 Contact Information
-          p #{orderConfirmation.buyerInfo().firstName()} #{orderConfirmation.buyerInfo().lastName()}
-          p #{orderConfirmation.buyerInfo().email()}
-          if orderConfirmation.buyerInfo().phone()
-            p #{orderConfirmation.buyerInfo().phone()}
+          p #{confirmedCheckout.buyerInfo().firstName()} #{confirmedCheckout.buyerInfo().lastName()}
+          p #{confirmedCheckout.buyerInfo().email()}
+          if confirmedCheckout.buyerInfo().phone()
+            p #{confirmedCheckout.buyerInfo().phone()}
 
-      if orderConfirmation.delivery()
+      if confirmedCheckout.delivery()
         .confirmation__detail-section
           h4 Delivery Address
-          p #{orderConfirmation.delivery().address().street()}
-          if orderConfirmation.delivery().address().streetLine2()
-            p #{orderConfirmation.delivery().address().streetLine2()}
-          p #{orderConfirmation.delivery().address().city()}, #{orderConfirmation.delivery().address().postalCode()}
-          if orderConfirmation.delivery().address().state()
-            p #{orderConfirmation.delivery().address().state()}, #{orderConfirmation.delivery().address().country()}
+          p #{confirmedCheckout.delivery().address().street()}
+          if confirmedCheckout.delivery().address().streetLine2()
+            p #{confirmedCheckout.delivery().address().streetLine2()}
+          p #{confirmedCheckout.delivery().address().city()}, #{confirmedCheckout.delivery().address().postalCode()}
+          if confirmedCheckout.delivery().address().state()
+            p #{confirmedCheckout.delivery().address().state()}, #{confirmedCheckout.delivery().address().country()}
           else
-            p #{orderConfirmation.delivery().address().country()}
+            p #{confirmedCheckout.delivery().address().country()}
 
           h4 Shipping Method
-          p #{orderConfirmation.delivery().shippingOption().name()}
-          p Estimated Delivery: #{orderConfirmation.delivery().shippingOption().estimatedDelivery()}
+          p #{confirmedCheckout.delivery().shippingOption().name()}
+          p Estimated Delivery: #{confirmedCheckout.delivery().shippingOption().estimatedDelivery()}
 
-      if orderConfirmation.payment()
+      if confirmedCheckout.payment()
         .confirmation__detail-section
           h4 Payment Method
-          p #{orderConfirmation.payment().providerId()}
+          p #{confirmedCheckout.payment().providerId()}
 
-      if orderConfirmation.lineItems() && orderConfirmation.lineItems().size() > 0
+      if confirmedCheckout.lineItems() && confirmedCheckout.lineItems().size() > 0
         .confirmation__detail-section
           h4 Items Ordered
-          each item in orderConfirmation.lineItems()
+          each item in confirmedCheckout.lineItems()
             .order-summary__item
               .order-summary__item-image
                 if item.imageUrl()
@@ -65,22 +65,22 @@ block content
               span.order-summary__item-qty x#{item.quantity()}
               span.order-summary__item-price #{item.lineTotal()} #{item.currencyCode()}
 
-      if orderConfirmation.totals()
+      if confirmedCheckout.totals()
         .confirmation__detail-section
           .order-summary__line
             span Subtotal
-            span #{orderConfirmation.totals().subtotal()} #{orderConfirmation.totals().currencyCode()}
-          if orderConfirmation.totals().shipping()
+            span #{confirmedCheckout.totals().subtotal()} #{confirmedCheckout.totals().currencyCode()}
+          if confirmedCheckout.totals().shipping()
             .order-summary__line
               span Shipping
-              span #{orderConfirmation.totals().shipping()} #{orderConfirmation.totals().currencyCode()}
-          if orderConfirmation.totals().tax()
+              span #{confirmedCheckout.totals().shipping()} #{confirmedCheckout.totals().currencyCode()}
+          if confirmedCheckout.totals().tax()
             .order-summary__line
               span Tax
-              span #{orderConfirmation.totals().tax()} #{orderConfirmation.totals().currencyCode()}
+              span #{confirmedCheckout.totals().tax()} #{confirmedCheckout.totals().currencyCode()}
           .order-summary__total
             span Order Total
-            span #{orderConfirmation.totals().total()} #{orderConfirmation.totals().currencyCode()}
+            span #{confirmedCheckout.totals().total()} #{confirmedCheckout.totals().currencyCode()}
 
     .confirmation__footer
       a.btn.btn--primary.btn--lg(href="/" data-test="confirmation-continue-link") Continue Shopping

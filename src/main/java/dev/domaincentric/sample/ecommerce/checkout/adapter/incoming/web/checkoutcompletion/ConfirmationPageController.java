@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * MVC Controller for order confirmation in checkout.
+ * MVC Controller for the confirmation step of checkout.
  *
  * <p>This controller handles the confirmation step of checkout where the customer confirms their
  * order and views the thank you page.
@@ -71,10 +71,9 @@ public class ConfirmationPageController {
    * Confirms the checkout and places the order.
    *
    * <p>This endpoint finds the active checkout session for the current user (via JWT identity),
-   * processes the order confirmation, and redirects to the confirmation page on success. An order
-   * is placed only from the review page, the last check before it: a "Place Order" sent from
-   * anywhere else leads to the review, asking for it — or, while an earlier step is still missing,
-   * to that step.
+   * places the order, and redirects to the confirmation page on success. An order is placed only
+   * from the review page, the last check before it: a "Place Order" sent from anywhere else leads
+   * to the review, asking for it — or, while an earlier step is still missing, to that step.
    *
    * @param sentFrom the page the form was sent from, {@code review} from the review's own form
    * @param reviewFingerprint the fingerprint of the review the form was sent from; a form without
@@ -130,7 +129,7 @@ public class ConfirmationPageController {
   }
 
   /**
-   * Displays the order confirmation (thank you) page.
+   * Displays the confirmation (thank you) page of a placed order.
    *
    * <p>This endpoint shows the confirmation page after a successful order. It looks up the
    * confirmed/completed session for the current user (via JWT identity). It is only accessible
@@ -176,7 +175,7 @@ public class ConfirmationPageController {
     final ConfirmationPageViewModel viewModel =
         ConfirmationPageViewModel.fromSnapshot(result.session());
 
-    model.addAttribute("orderConfirmation", viewModel);
+    model.addAttribute("confirmedCheckout", viewModel);
     model.addAttribute("title", "Order Confirmed - Thank You!");
 
     return "checkout/confirmation";

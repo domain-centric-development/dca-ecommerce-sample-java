@@ -176,7 +176,7 @@ ViewModels reside in `adapter.incoming.web` alongside the controller that uses t
 | Cart merge | `CartMergePageViewModel` | `cartMerge` |
 | Buyer info | `BuyerInfoPageViewModel` | `buyerInfoPage` |
 | Order review | `ReviewPageViewModel` | `orderReview` |
-| Confirmation | `ConfirmationPageViewModel` | `orderConfirmation` |
+| Confirmation | `ConfirmationPageViewModel` | `confirmedCheckout` |
 
 ### 3. Data Types
 ViewModels use only primitives and primitive wrappers:
