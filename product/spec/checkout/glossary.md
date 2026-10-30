@@ -756,9 +756,11 @@ not `confirm` and not `CheckoutConfirmed`, which all mean placing the order.
 ### Mail provider
 
 **Definition:** The outside service that sends the shop's mails; it accepts a mail under a key and sends one
-mail per key. Behind the output port `OrderConfirmationMailer`; with no provider address configured, a stand-in
-accepts every mail and sends nothing.
+mail per key. An external upstream of checkout — outbound, over REST — translated by an anti-corruption layer:
+the REST adapter `RestMailProvider` turns the provider's answers into the port's `ACCEPTED` or `UNAVAILABLE`
+behind the output port `OrderConfirmationMailer`; with no provider address configured, the stand-in
+`StandInMailProvider` accepts every mail and sends nothing.
 
-**Type:** Concept
+**Type:** Concept (external system, declared `@ExternalUpstream` on the checkout package)
 
 **Related terms:** Order confirmation, `MailProviderUnavailableException`.

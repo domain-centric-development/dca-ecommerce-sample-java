@@ -60,6 +60,18 @@
     rationale =
         "Will trigger order fulfillment; the payload is the provider's contract, to be translated"
             + " into a local command at the incoming adapter — no webhook adapter exists yet")
+@ExternalUpstream(
+    name = "Mail Provider",
+    translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
+    interaction = ExternalUpstream.Interaction.OUTBOUND,
+    protocol = "REST",
+    exchanges =
+        "order confirmation mail (recipient, template, idempotency key, total) and its answer"
+            + " (accepted, unavailable)",
+    rationale =
+        "Behind the caller-owned OrderConfirmationMailer port; a REST adapter translates the"
+            + " provider's answers where its address is configured, a stand-in accepts every mail"
+            + " and sends nothing otherwise")
 @Partnership(
     context = "cart",
     rationale =
