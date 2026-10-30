@@ -2,7 +2,9 @@
 id: the-mail-provider-is-on-the-context-map
 epic: guest-checkout
 kind: task
-status: approved
+status: delivered
+delivered: 2026-10-30T03:52:18Z
+delivered_by: gate
 created: 2026-10-28T20:44:04Z
 context: checkout
 title: The mail provider is on the context map
