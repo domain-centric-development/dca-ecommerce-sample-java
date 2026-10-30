@@ -146,3 +146,12 @@ Test: dev.domaincentric.sample.ecommerce.cart.CartMergeChoiceIntegrationTest#the
 - When they press "Continue" with "Merge Both Carts" chosen
 - Then the cart page `/cart` opens and shows "Carts merged successfully!"
 Test: dev.domaincentric.sample.ecommerce.cart.CartMergeChoiceIntegrationTest#theMergeLeadsToTheCartInsteadOfAReturnPageOfAnotherSite
+
+### Rule: The take-over leads only to pages of the shop
+
+#### an-outside-return-page-after-the-take-over-opens-the-cart
+- Given an account whose cart is empty, and a guest cart holding "Clean Architecture" once
+- And the guest opened `/login?returnUrl=https://elsewhere.example/` and logged in to that account
+- When the take-over of the guest cart is sent
+- Then the cart page `/cart` opens and holds "Clean Architecture" with quantity 1
+Test: dev.domaincentric.sample.ecommerce.e2e.CartAtLoginE2ETest#theTakeOverOpensTheCartInsteadOfAReturnPageOfAnotherSite

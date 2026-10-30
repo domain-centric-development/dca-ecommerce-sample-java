@@ -22,3 +22,7 @@
 2026-10-30T08:31:18Z	gate	plan	exit=1	fail=decisions	by=builder	backlog=fd3a06d9169098f074d64fab61f525facfdd1a33db7ba2bf66714ce3c4218a9f	seq=22
 2026-10-30T08:31:26Z	usage	builder	tool=claude	model=claude-fable-5-1	input=706	cache_read=2379896	cache_write=191836	output=50875	cost=6.9825	seconds=15116	seq=23
 2026-10-30T08:31:26Z	stage-end	builder	exit=0	seq=24
+2026-10-30T08:59:46.771Z	window-start	decisions	tool=claude-session	seq=25
+2026-10-30T09:00:32.926Z	window-end	decisions	seq=26
+2026-10-30T09:00:32.926Z	usage	decisions	tool=claude-session	window=2026-10-30T08:59:46.771Z/2026-10-30T09:00:32.926Z	session=claude:73b79340-1015-4639-b169-2c46eb4b0050	seq=27
+2026-10-30T09:00:32.926Z	usage	decisions	tool=claude-session	model=claude-fable-5-1	input=34	cache_read=211761	cache_write=2216	output=1181	window=2026-10-30T08:59:46.771Z/2026-10-30T09:00:32.926Z	seq=28

@@ -24,3 +24,6 @@
 2026-10-29T23:14:16Z	stream	builder.230656.out	process=builder	parts=5	denied=1	version=2	seq=24
 2026-10-29T23:14:16Z	stage-end	builder	exit=0	seq=25
 2026-10-30T08:21:13.787Z	window-start	decisions	tool=claude-session	seq=26
+2026-10-30T08:56:59.384Z	window-end	decisions	seq=27
+2026-10-30T08:56:59.384Z	usage	decisions	tool=claude-session	window=2026-10-30T08:21:13.787Z/2026-10-30T08:56:59.384Z	session=claude:73b79340-1015-4639-b169-2c46eb4b0050	seq=28
+2026-10-30T08:56:59.384Z	usage	decisions	tool=claude-session	model=claude-fable-5-1	input=356	cache_read=1022119	cache_write=18714	output=6968	window=2026-10-30T08:21:13.787Z/2026-10-30T08:56:59.384Z	seq=29
