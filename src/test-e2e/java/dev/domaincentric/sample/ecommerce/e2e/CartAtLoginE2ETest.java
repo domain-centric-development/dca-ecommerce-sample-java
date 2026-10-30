@@ -35,4 +35,21 @@ class CartAtLoginE2ETest extends BaseE2ETest {
     assertEquals("Welcome back!", cart.successMessage());
     assertEquals(List.of("\"Ubiquitous Language\" Mug x1"), cart.lineItems());
   }
+
+  @Test
+  @DisplayName("An outside return page after the take over opens the cart")
+  void theTakeOverOpensTheCartInsteadOfAReturnPageOfAnotherSite() {
+    String email = "anna.schmidt." + UUID.randomUUID() + "@example.com";
+    try (BrowserContext registration = browser.newContext()) {
+      RegisterPage.navigateTo(registration.newPage()).register(email, PASSWORD);
+    }
+    ProductCatalogPage.navigateTo(page).viewProductNamed("Clean Architecture").addToCart();
+
+    // The browser's script sends the take-over form of the page after the login by itself.
+    LoginPage.navigateTo(page, "https://elsewhere.example/").login(email, PASSWORD);
+
+    CartPage cart = new CartPage(page);
+    assertEquals("/cart", cart.shownPath());
+    assertEquals(List.of("Clean Architecture x1"), cart.lineItems());
+  }
 }
