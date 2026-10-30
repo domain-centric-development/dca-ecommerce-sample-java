@@ -23,3 +23,4 @@
 2026-10-29T23:14:16Z	denied	plan	process=builder	stream=builder.230656.out	tool=Bash	call=./gradlew spotlessApply -q 2>&1 | tail -5; echo "exit=$?"; git status --short -- src docs product/spec	seq=23
 2026-10-29T23:14:16Z	stream	builder.230656.out	process=builder	parts=5	denied=1	version=2	seq=24
 2026-10-29T23:14:16Z	stage-end	builder	exit=0	seq=25
+2026-10-30T08:21:13.787Z	window-start	decisions	tool=claude-session	seq=26

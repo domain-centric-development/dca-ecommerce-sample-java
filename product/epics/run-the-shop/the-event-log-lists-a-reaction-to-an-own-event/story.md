@@ -1,7 +1,9 @@
 ---
 id: the-event-log-lists-a-reaction-to-an-own-event
 epic: run-the-shop
-status: adopted
+status: delivered
+delivered: 2026-10-30T08:44:43Z
+delivered_by: gate
 context: backoffice
 feature: eventlog
 title: The event log lists a reaction to a context's own event

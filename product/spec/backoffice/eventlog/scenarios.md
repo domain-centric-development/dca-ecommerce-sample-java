@@ -87,3 +87,13 @@ Test: dev.domaincentric.sample.ecommerce.e2e.AttemptsPerListenerE2ETest#theEntri
 - Then the first listener's entry reads "Status: FAILED, attempts: 5" on its first line
 - And the second listener's entry reads "Status: COMPLETED, attempts: 1"
 Test: dev.domaincentric.sample.ecommerce.backoffice.AttemptsPerListenerIntegrationTest#aListenerFailingEveryTimeLeavesTheCountOfTheOneThatHandledTheEventAtOne
+
+### Rule: A delivery of a context's own event to a reaction is an entry like any other
+
+#### the-log-lists-the-order-confirmations-delivery
+- Given a guest has placed an order, and the operator is logged in
+- When they open `/backoffice/events`
+- Then the log lists an entry whose type label names the confirmed checkout and whose "Listener" names the order
+  confirmation
+- And the entry shows the badge "Completed"
+Test: dev.domaincentric.sample.ecommerce.e2e.OrderConfirmationInTheEventLogE2ETest#theLogListsTheDeliveryOfTheOrderConfirmation
