@@ -44,3 +44,6 @@ checks.backlog: test
 acceptance: pages
 run: ./gradlew bootRun
 carrier.plan: dca-modelling
+
+# The model every Claude stage runs with; without it a stage takes the tool default of the moment.
+model.claude: opus
