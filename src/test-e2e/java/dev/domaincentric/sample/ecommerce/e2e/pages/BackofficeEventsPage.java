@@ -353,7 +353,27 @@ public class BackofficeEventsPage extends BasePage {
     return content.split("\n", 2)[0];
   }
 
-  private String statusOfEntry(String text, String listener) {
+  /**
+   * Gets the type label of the entry carrying the given text for the given listener.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @param listener a text the entry shows under "Listener"
+   * @return the type label, the event's name without its package
+   */
+  public String typeOfEntry(String text, String listener) {
+    Locator entry = entryOf(text, listener);
+    assertThat(entry).hasCount(1);
+    return entry.locator("[data-test='" + EVENT_TYPE + "']").textContent().trim();
+  }
+
+  /**
+   * Gets the status badge of the entry carrying the given text for the given listener.
+   *
+   * @param text a text the entry's payload carries, such as the event's id
+   * @param listener a text the entry shows under "Listener"
+   * @return the badge text, or empty when the page lists no such entry
+   */
+  public String statusOfEntry(String text, String listener) {
     Locator entry = entryOf(text, listener);
     if (entry.count() == 0) {
       return "";
