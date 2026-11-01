@@ -33,8 +33,10 @@ def pipeline_owned() -> typing.Callable[[str], bool]:
     return lambda path: path.replace("\\", "/").startswith(prefixes)
 
 
-#: Where an install or an update writes its copies: the pipeline itself and the agent tools' skill folders.
-INSTALL_PLACES = (PIPELINE_DIR, ".claude/skills/", ".codex/skills/", ".opencode/skills/", ".agents/skills/")
+#: Where an install or an update writes its copies: the pipeline itself, its commit hook and the agent tools' skill
+#: folders.
+INSTALL_PLACES = (PIPELINE_DIR, ".githooks/pre-commit", ".claude/skills/", ".codex/skills/", ".opencode/skills/",
+                  ".agents/skills/")
 
 
 def installed(path: str) -> bool:

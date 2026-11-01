@@ -529,10 +529,8 @@ function picked(flow, rules, story) {
   const graph = flow.graph || {edges: [], every_gate: [], anywhere: []}, p = S.flowPick;
   const ids = es => [...new Set(es.flatMap(e => e.rules.map(r => r.rule)))];
   if (!p) {
-    return card("The flow", "pick a step, a gate or a way in the drawing",
-      `<p class="hint">A teal dot is a gate: the checks between two steps. A dashed arc above is a round — a refused gate sends the story back into its step, three times at most. A way back appears below while the pointer is on its step. A red mark stops the run; a grey one waits for a person.</p>`
-      + ruleGroup("at every gate", flow.every_gate, rules, story)
-      + ruleGroup("anywhere in a run", ids(graph.anywhere || []), rules, story));
+    return card("", "", `<p class="empty">Pick a step, a gate or a way in the drawing — its rules show here.</p>
+      <p class="hint">A teal dot is a gate: the checks between two steps. A dashed arc above is a round — a refused gate sends the story back into its step, three times at most. A way back appears below while the pointer is on its step. A red mark stops the run; a grey one waits for a person.</p>`);
   }
   if (p.type === "stage") {
     const step = flow.steps.find(s => s.stage === p.stage) || {gate_before: [], told: [], gate_after: [], passed: [], decided: []};
@@ -554,6 +552,12 @@ function picked(flow, rules, story) {
   return card(esc(title), esc(p.way), ruleGroup("the rules that take it", edge ? ids([edge]) : [], rules, story, p.source));
 }
 
+function folded(title, sub, ids, rules, story) {
+  if (!ids || !ids.length) return "";
+  return `<details class="card more"><summary><h2>${esc(title)} <span class="sub">${ids.length} rules — ${esc(sub)}</span></h2></summary>`
+    + ruleGroup("", ids, rules, story) + `</details>`;
+}
+
 function rulesTab(st) {
   if (!S.rules) { loadRules(); return card("", "", `<p class="empty">Reading the rules…</p>`); }
   const v = S.rules, rules = Object.fromEntries((v.rules || []).map(r => [r.id, r]));
@@ -565,6 +569,9 @@ function rulesTab(st) {
     <select data-overlay aria-label="a story's gate runs"><option value="">no story</option>${stories.map(id => `<option${id === S.ruleStory ? " selected" : ""}>${esc(id)}</option>`).join("")}</select></div>`;
   return card(`${esc(kind)}`, `${(v.rules || []).length} rules`, picks + (flow.svg ? `<div class="flowsvg">${flow.svg}</div>` : ""))
     + picked(flow, rules, story)
+    + folded("At every gate", "the checks each gate of this flow runs as well", flow.every_gate, rules, story)
+    + folded("Anywhere in a run", "what stops a run or waits for a person at any step",
+             [...new Set(((flow.graph || {}).anywhere || []).flatMap(e => e.rules.map(r => r.rule)))], rules, story)
     + `<details class="card more"><summary><h2>Outside the stages <span class="sub">${(v.outside || []).length} rules — the whole run, the commit hook, every stage alike</span></h2></summary>`
     + ruleGroup("", v.outside || [], rules, story) + `</details>`
     + ((v.problems || []).length ? card("Problems", "the rulebook itself", `<ul>${v.problems.map(p => `<li>${esc(p)}</li>`).join("")}</ul>`) : "");
