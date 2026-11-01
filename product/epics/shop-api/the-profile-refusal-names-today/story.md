@@ -22,7 +22,21 @@ As a customer changing my profile I want the date-of-birth refusal to say that t
 #### todays-date-of-birth-is-refused-in-words-that-name-it (happy path)
 - Given a customer logged in on the profile page
 - When they save today's date as the date of birth
-- Then the page refuses it with words that say the date must lie in the past
+- Then the profile shows "Please enter a date of birth in the past."
+
+#### future-date-is-refused-in-the-profile
+- Given the customer "anna.schmidt@example.com" is logged in on `/account/profile`
+- When they save Date of Birth 2999-01-01
+- Then the profile shows "Please enter a date of birth in the past."
+
+## Changed expectations
+
+- A date of birth in the future is refused on the profile today with "Please enter a date of birth that is not in
+  the future."; after, with "Please enter a date of birth in the past." — the same words today's date gets.
+
+## Assumptions
+
+- answered: the profile refuses today and every later date with "Please enter a date of birth in the past." (the person, 2026-11-01)
 
 ## Notes
 

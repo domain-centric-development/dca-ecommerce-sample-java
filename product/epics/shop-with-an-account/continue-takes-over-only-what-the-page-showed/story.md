@@ -30,7 +30,8 @@ As a customer who logged in with a guest cart I want "Continue" to do what the p
 
 ## Assumptions
 
-- open: the account cart filled after the page was shown — the merge page shows the choice again, or the take-over is refused with a notice?
+- answered: the account cart filled after the page was shown — the merge page shows both carts again and asks anew;
+  nothing is merged without a choice (the person, 2026-11-01)
 
 ## Notes
 

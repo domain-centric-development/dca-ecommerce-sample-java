@@ -1,7 +1,7 @@
 ---
 id: a-price-that-rounds-to-zero-names-the-price
 epic: prices
-status: approved
+status: superseded
 created: 2026-10-24T06:35:02Z
 context: pricing
 title: A price that rounds to zero is refused naming the price
@@ -9,6 +9,11 @@ depends_on: [the-take-over-leads-only-to-pages-of-the-shop]
 ---
 
 # A price that rounds to zero is refused naming the price
+
+## Superseded
+
+- Folded into `price-refusals-name-the-field-in-the-shops-words`: its two refusals answer there with the code and
+  message every refused value carries since WP-170, so the answer is not built twice (the person, 2026-11-01).
 
 ## Story
 

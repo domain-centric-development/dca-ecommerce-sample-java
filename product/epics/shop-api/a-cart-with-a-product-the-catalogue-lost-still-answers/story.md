@@ -25,15 +25,18 @@ As a customer or a member of staff I want a cart to answer although one of its p
 - And the catalogue no longer knows "Domain-Driven Design"
 - When "Clean Architecture" is added once more through the API
 - Then the answer is 200 and the cart holds "Clean Architecture" with quantity 2
+- And the line of "Domain-Driven Design" holds `quantity` 1, `available` false and no `price`
+- And `total` is the price of the two units of "Clean Architecture" alone
 
 #### the-staff-list-answers-with-a-product-the-catalogue-lost
 - Given the cart above
 - When a member of staff reads the list of every cart
-- Then the answer is 200 and lists the cart
+- Then the answer is 200 and lists the cart, its line of "Domain-Driven Design" with `available` false and no `price`
 
 ## Assumptions
 
-- open: what a line shows whose product the catalogue no longer knows
+- answered: a line whose product the catalogue no longer knows stays, with its product id and quantity, `available`
+  false and no price; the total does not count it (the person, 2026-11-01)
 
 ## Notes
 
