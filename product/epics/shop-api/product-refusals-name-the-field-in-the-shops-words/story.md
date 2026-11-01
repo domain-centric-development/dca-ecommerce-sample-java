@@ -5,7 +5,7 @@ status: approved
 created: 2026-10-23T21:25:20Z
 context: product
 title: Product refusals name the field in the shop's words
-depends_on: [the-take-over-leads-only-to-pages-of-the-shop]
+depends_on: [the-take-over-leads-only-to-pages-of-the-shop, the-product-findings-are-closed]
 ---
 
 # Product refusals name the field in the shop's words

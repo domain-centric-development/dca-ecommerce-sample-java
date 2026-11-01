@@ -6,7 +6,7 @@ created: 2026-11-01T12:00:08Z
 context: cart
 feature: shopping
 title: Cart refusals name the field in the shop's words
-depends_on: [product-refusals-name-the-field-in-the-shops-words]
+depends_on: [product-refusals-name-the-field-in-the-shops-words, a-cart-with-a-product-the-catalogue-lost-still-answers, the-cart-code-findings-are-closed, the-cart-tests-findings-are-closed]
 ---
 
 # Cart refusals name the field in the shop's words

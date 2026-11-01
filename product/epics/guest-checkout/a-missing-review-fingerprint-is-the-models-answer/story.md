@@ -6,6 +6,7 @@ status: approved
 created: 2026-11-01T12:58:58Z
 context: checkout
 title: A missing review fingerprint is the model's answer, not the page's
+depends_on: [the-order-changed-since-the-review-has-the-shared-name, the-payment-differs-from-the-review-checks-the-provider, the-checkout-code-findings-are-closed]
 ---
 
 # A missing review fingerprint is the model's answer, not the page's

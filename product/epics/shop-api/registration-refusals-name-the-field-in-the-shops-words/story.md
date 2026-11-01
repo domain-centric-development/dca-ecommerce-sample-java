@@ -6,7 +6,7 @@ created: 2026-11-01T12:00:08Z
 context: account
 feature: registration
 title: Registration refusals through the API name the field in the shop's words
-depends_on: [product-refusals-name-the-field-in-the-shops-words]
+depends_on: [product-refusals-name-the-field-in-the-shops-words, the-notice-reaches-an-encoded-return-page, the-account-findings-are-closed, the-profile-refusal-names-today]
 ---
 
 # Registration refusals through the API name the field in the shop's words

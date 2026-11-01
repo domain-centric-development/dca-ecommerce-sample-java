@@ -6,7 +6,7 @@ created: 2026-11-01T12:17:53Z
 context: account
 feature: signin
 title: Every failed login through the API answers like a wrong password
-depends_on: [product-refusals-name-the-field-in-the-shops-words]
+depends_on: [product-refusals-name-the-field-in-the-shops-words, the-account-findings-are-closed, a-second-login-takes-over-no-account-as-guest]
 ---
 
 # Every failed login through the API answers like a wrong password
