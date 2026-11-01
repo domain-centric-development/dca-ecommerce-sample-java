@@ -1,7 +1,7 @@
 ---
 id: continue-takes-over-only-what-the-page-showed
 epic: shop-with-an-account
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: cart
 feature: cartrecovery

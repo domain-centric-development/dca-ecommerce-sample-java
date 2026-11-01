@@ -2,7 +2,7 @@
 id: the-product-findings-are-closed
 epic: shop-api
 kind: task
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: product
 title: The product catalogue's open findings are closed

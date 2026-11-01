@@ -2,7 +2,7 @@
 id: the-cart-tests-findings-are-closed
 epic: shop-api
 kind: task
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: cart
 title: The cart's open findings in its tests and test support are closed

@@ -1,7 +1,7 @@
 ---
 id: a-cart-with-a-product-the-catalogue-lost-still-answers
 epic: shop-api
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: cart
 feature: shopping

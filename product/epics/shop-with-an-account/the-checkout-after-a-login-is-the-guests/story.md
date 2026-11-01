@@ -1,7 +1,7 @@
 ---
 id: the-checkout-after-a-login-is-the-guests
 epic: shop-with-an-account
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: checkout
 feature: session

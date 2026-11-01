@@ -1,7 +1,7 @@
 ---
 id: the-profile-refusal-names-today
 epic: shop-api
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: account
 feature: profile

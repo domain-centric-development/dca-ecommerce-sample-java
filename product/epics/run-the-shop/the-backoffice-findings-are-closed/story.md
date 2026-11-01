@@ -2,7 +2,7 @@
 id: the-backoffice-findings-are-closed
 epic: run-the-shop
 kind: task
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: backoffice
 title: The back office's open findings are closed
