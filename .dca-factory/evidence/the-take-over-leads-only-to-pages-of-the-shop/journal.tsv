@@ -59,3 +59,5 @@
 2026-10-30T09:10:24Z	step-start	integrate	by=runner	seq=59
 2026-10-30T09:14:24Z	gate	integrate	exit=0	by=runner	seq=60
 2026-10-30T09:14:24Z	step-end	integrate	exit=0	seq=61
+2026-10-30T14:35:07Z	signal	judge	run=20261030T143507.096097Z	sha=9d015a25bab86cd8	findings=0	seq=62
+2026-10-30T14:35:07Z	record	1	seq=63
