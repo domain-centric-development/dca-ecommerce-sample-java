@@ -31,6 +31,13 @@ the shape the product refusals answer with.
 - And its `errors` names `email` with code `email-malformed` and the message "Please enter a valid email address."
 - And no account exists for "grace@example"
 
+#### a-weak-password-is-refused
+- Given no account exists for "grace@example.com"
+- When a client registers "grace@example.com" through the API with password "secret123"
+- Then the shop answers 400 with an `application/problem+json` body titled "Unacceptable value"
+- And its `errors` names `password` with code `password-without-capital-letter` and the message "A password needs a capital letter."
+- And no account exists for "grace@example.com"
+
 #### a-missing-address-is-refused
 - Given no account exists for "grace@example.com"
 - When a client registers through the API without an email, with password "Secret123", first name "Grace", last name "Hopper" and date of birth "1906-12-09"
@@ -82,6 +89,9 @@ the shape the product refusals answer with.
   its code and message.
 - A date of birth of today through the API is refused today with `errors` naming it and a reason the framework
   words; after, with the code and message of its rule.
+- A password without a capital letter through the API is refused today with 422 "Password too weak" and a detail;
+  after, with 400 "Unacceptable value" and `errors` naming the password, its code and message — like every other
+  refused value.
 - A registration through the API without an address, with a short password, a blank first name, an overlong last
   name or no date of birth is refused today with the framework's reason; after, with the code and message of its
   rule.
@@ -92,6 +102,7 @@ the shape the product refusals answer with.
   in the shop's words (the person, 2026-11-01, WP-170 decision 4)
 - answered: one named failure per rule of the value — missing (null or blank alike), too long, malformed, out of
   range — each carrying the figures it compared (the person, 2026-11-01, WP-170 decision 5)
+- answered: a weak password is refused like every other value, in the `errors` shape (the person, 2026-11-01)
 - answered: the rule is checked once, in the value object; the request carries no annotation repeating it and no
   default turning a missing value into one; the message is the adapter's, never the exception's (WP-170
   decisions 1 and 2)
@@ -100,12 +111,12 @@ the shape the product refusals answer with.
 
 - WP-170 (a rule is checked once, in the value object): `RegisterRequest` and `LoginRequest` check email, password,
   names and date of birth with request validation, and the account's values check them again.
-- Out of scope: a weak password keeps its answer (422 "Password too weak") — a rule of the password policy, not of
-  the value's shape; whether it joins the `errors` shape is an open question of WP-170. The registration page keeps
-  its one message for every refused value.
-- Logging in through the API with a missing or malformed address is answered like a wrong password today on the
-  page; through the API the request validation answers it — open, not part of this story.
-- Spec (`account/registration`): changes `a-malformed-address-is-refused` and
+- A weak password joins the `errors` shape (the person, 2026-11-01): each part of the password policy has its code
+  — `password-too-short`, `password-too-long`, `password-without-capital-letter`, `password-without-small-letter`,
+  `password-without-digit` — mapped from the one failure the policy raises and the part it names. The registration
+  page keeps its one message for every refused value.
+- Logging in through the API is the story `api-login-refusals-answer-like-a-wrong-password`.
+- Spec (`account/registration`): changes `a-malformed-address-is-refused`, `a-weak-password-is-refused` and
   `todays-date-of-birth-is-refused-through-the-api`; adds `a-missing-address-is-refused`,
   `a-short-password-is-refused-through-the-api`, `a-blank-first-name-is-refused-through-the-api`,
   `an-overlong-last-name-is-refused-through-the-api`, `a-missing-date-of-birth-is-refused-through-the-api`.
