@@ -1,7 +1,7 @@
 ---
 id: product-refusals-name-the-field-in-the-shops-words
 epic: shop-api
-status: draft
+status: approved
 created: 2026-10-23T21:25:20Z
 context: product
 title: Product refusals name the field in the shop's words

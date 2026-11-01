@@ -1,7 +1,7 @@
 ---
 id: api-login-refusals-answer-like-a-wrong-password
 epic: shop-api
-status: draft
+status: approved
 created: 2026-11-01T12:17:53Z
 context: account
 feature: signin

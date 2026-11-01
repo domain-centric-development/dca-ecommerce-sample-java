@@ -1,7 +1,7 @@
 ---
 id: registration-refusals-name-the-field-in-the-shops-words
 epic: shop-api
-status: draft
+status: approved
 created: 2026-11-01T12:00:08Z
 context: account
 feature: registration

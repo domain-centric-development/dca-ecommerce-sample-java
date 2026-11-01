@@ -2,7 +2,7 @@
 id: a-missing-review-fingerprint-is-the-models-answer
 epic: guest-checkout
 kind: task
-status: draft
+status: approved
 created: 2026-11-01T12:58:58Z
 context: checkout
 title: A missing review fingerprint is the model's answer, not the page's
