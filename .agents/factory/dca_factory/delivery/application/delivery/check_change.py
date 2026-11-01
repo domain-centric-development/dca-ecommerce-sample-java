@@ -14,6 +14,7 @@ from ...domain.service.change_checks import CHANGE_CHECKS, ChangeChecks
 from ..shared.change_index import ChangeIndex
 from ..shared.stage_runs import StageRuns
 from .check_stage import Verdict
+from .pipeline_rules import decides
 from .process_checks import judge_suite
 
 
@@ -44,6 +45,11 @@ class CheckChangeUseCase:
         self._index = index
         self._runs = runs
 
+    @decides(
+        "GATE-POLICY",
+        "GATE-SNAPSHOT",
+        "GATE-SCOPE",
+    )
     def execute(self, command: CheckChangeCommand) -> Verdict:
         result, profile = Verdict(), self._profile
         required = set(names(profile.get("required")))

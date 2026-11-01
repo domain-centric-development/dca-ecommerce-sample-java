@@ -28,7 +28,7 @@ import typing
 from .factory_process import scripts_dir
 from ..git.worktree_steps import integrate_finish, link_places, worktree_prepare, worktree_remove
 from ..git.worktrees import has_worktree, worktree_of
-from ..pipeline.stage_rows import SHARED_WINDOWS, STAGE, STAGE_FILES, STAGE_ORDER
+from ..pipeline.stage_rows import stage_windows, stage_named, stage_files, stage_order
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import GateError
 from .....sharedkernel.adapter.outgoing.profile.profile_files import (
     place, PROFILE_FILE, read_profile, resolve_profile, set_places)
@@ -51,7 +51,10 @@ from .gate_process import file_sha, GateProcess, hashing
 from ..tools.tool_choice import ToolChoice
 from ..tools.tool_processes import err, exit_field, flush, ToolProcesses, utc
 from ....application.shared.run_stop import Stopped
-from ....domain.model.stage import Window
+from ....domain.model.stage import StageText, Window
+from ....domain.model.stage_story import Place
+from ....domain.service.stage_brief import Brief, written
+from ..files.brief_files import brief_dir, EVERY_STAGE, write_brief, write_every_stage, write_told_everywhere
 from ..files.request_files import default_by, REQUEST_JOURNAL, requests_dir
 from ....application.requests.list_requests import target_text
 from ..files.run_readers import needs_human_lines, open_decision_files, verdict_of_story
@@ -59,6 +62,7 @@ from ....application.requests.request_queue import RequestQueue
 from ....application.requests.work_request import RequestWorked
 from ....application.shared.requests import Request
 from ....application.shared.story_integration import Lost
+from ....application.delivery.pipeline_rules import decides
 
 
 # --- the run: what `factory.sh run` starts once its checks before the first stage passed -------------------------
@@ -102,6 +106,12 @@ class RunCases(typing.Protocol):
 
     def book_request_cost(self, run: Run, request_id: str, tool: str, measured: str) -> None:
         """A request's usage booked on the stories it worked on (`BookRequestCostUseCase`)."""
+
+    def brief(self, run: Run, story: str, stage: str) -> Brief:
+        """What <stage> is told for <story> (`ShowBriefUseCase`)."""
+
+    def every_stage(self, run: Run) -> StageText:
+        """What every stage is told, for a session that works no stage (`ShowEveryStageUseCase`)."""
 
 
 class Run:
@@ -249,7 +259,7 @@ class Run:
         return f"{parent}/evidence"
 
     def stage_file(self, stage: str) -> str:
-        return STAGE_FILES.get(stage, "")
+        return stage_files().get(stage, "")
 
     def artefact(self, story: str, stage: str) -> str:
         return f"{self.runs}/{story}/{self.stage_file(stage)}"
@@ -412,7 +422,7 @@ class Run:
         """The stage a refusal sends the story back to: from the judge's file (`build` without one); with a stage,
         `test` where that stage found the defect in a test's own code, else nothing."""
         self.profile()
-        path = os.path.join(place("runs"), story, STAGE_FILES[stage] if stage else "judge.md")
+        path = os.path.join(place("runs"), story, stage_files()[stage] if stage else "judge.md")
         if stage:
             return "test" if os.path.isfile(path) and back_in(read_text(path)) == "test" else ""
         return back_in(read_text(path)) if os.path.isfile(path) else "build"
@@ -487,15 +497,10 @@ class Run:
         first = TOOL[tool].skills if tool in TOOL else ""
         return [d for d in (first, *TOOL_SKILL_DIRS, ".agents/skills") if d]
 
-    def where_things_are(self, tool: str, story: typing.Optional[str]) -> str:
+    def where_things_are(self, tool: str, story: typing.Optional[str], rules: bool = False) -> str:
         """What a stage otherwise searches for — the profile, the run folder, the gate's expectations, the
-        catalog — named in its prompt."""
-        common = next((f"{d}/factory-run/reference/stage-common.md" for d in self.skill_dirs(tool)
-                       if os.path.isfile(f"{d}/factory-run/reference/stage-common.md")), "")
-        own = os.path.abspath(os.path.join(self.scripts, "..", "reference", "stage-common.md"))
-        if not common and os.path.isfile(own):
-            common = own[len(self.pwd) + 1:] if own.startswith(self.pwd + "/") else own
-        common = f" The rules every stage holds to: {common}." if common else ""
+        catalog — named in its prompt; with <rules>, what every stage is told, for a session without a brief."""
+        common = f" What every stage is told: {self.told_everywhere()}." if rules else ""
         catalog = ""
         profile = self.profile()
         knowledge = first_word(profile.get("knowledge", ""))
@@ -515,6 +520,10 @@ class Run:
                 f"`{self.py} {cli_path} --contract <stage>`.{common}{catalog} The shell you have without asking: "
                 f"the gate, the cli, the profile's commands, and {STAGE_SHELL}.")
 
+    def told_everywhere(self) -> str:
+        """What every stage is told, written for a session that works no stage — the file, as its prompt names it."""
+        return write_told_everywhere(self.runs, self.cases.every_stage(self).value)
+
     def cli_rel(self) -> str:
         """The cli as a stage's prompt names it: the project's copy by the path its allow-list grants
         (`.agents/factory/factory-cli.py`, linked into a story's worktree), else relative to where the stage works.
@@ -526,7 +535,7 @@ class Run:
     def later_refusals(self, story: str, stage: str, where: str) -> str:
         """The reports of the gates after <stage> that refused the story and sent it back."""
         found, seen = "", False
-        for later in STAGE_ORDER:
+        for later in stage_order():
             if later == stage:
                 seen = True
                 continue
@@ -543,7 +552,32 @@ class Run:
         guard = first_word(self.profile().get("carrier.guard", ""))
         return f" The guard (the profile's carrier.guard): the {guard} skill." if guard else ""
 
-    def prompt_for(self, stage: str, story: str) -> str:
+    def briefs(self, story: str, stages: typing.Sequence[str],
+               dry: bool = False) -> typing.Tuple[str, typing.List[str]]:
+        """What <stages> are told for <story>, written into its evidence folder (named only, in a dry run): what every
+        stage is told once, each stage's own brief beside it — the files as the prompt names them."""
+        folder = brief_dir(self.runs, story)
+        every = f"{folder}/{EVERY_STAGE}"
+        own = [f"{folder}/{stage}.md" for stage in stages]
+        if dry:
+            return every, own
+        common = None
+        for stage in stages:
+            brief = self.cases.brief(self, story, stage)
+            if common is None:
+                common = brief.common
+                write_every_stage(self.runs, story, common.value)
+            told = brief.own if brief.common == common else brief.said
+            write_brief(self.runs, story, stage, written(brief, told, Place(every)).value)
+        return every, own
+
+    def opening(self, stage: str, story: str, dry: bool = False) -> str:
+        """The prompt's first sentence for one stage: the stage, the story and the brief it works by."""
+        every, (own,) = self.briefs(story, [stage], dry)
+        return (f"Carry out the {stage} stage of the delivery pipeline for backlog story {story}. Its brief: {own}; "
+                f"what every stage is told: {every} — read both whole, then work by them.")
+
+    def prompt_for(self, stage: str, story: str, dry: bool = False) -> str:
         repeat = ""
         if os.path.isfile(f"{self.runs}/{story}/.gate-{stage}.txt"):
             repeat = f" The gate refused this stage before: {self.runs}/{story}/.gate-{stage}.txt."
@@ -556,19 +590,19 @@ class Run:
             repeat += self.red_stale_sentence(story)
         if stage == "judge" and os.path.isfile(f"{self.runs}/{story}/.judge-previous.md"):
             repeat = f" This is a repeat round; the previous verdict: {self.runs}/{story}/.judge-previous.md."
-        guard = self.guard_sentence() if stage in STAGE and STAGE[stage].guarded else ""
-        return (f"Apply the stage-{stage} skill for backlog story {story}.{self.worktree_sentence()} "
+        guard = self.guard_sentence() if stage in stage_named() and stage_named()[stage].guarded else ""
+        return (f"{self.opening(stage, story, dry)}{self.worktree_sentence()} "
                 f"{self.where_things_are(self.tool_in_flight, story)}{guard}{repeat}")
 
     def integrate_prompt(self, story: str, conflicts: str, lost: typing.Optional[Lost] = None) -> str:
         if lost:
             target = integration_target(self.runs, story) or "the main line"
-            return (f"Apply the stage-integrate skill for backlog story {story}. The resolution of the merge changed a "
+            return (f"{self.opening('integrate', story)} The resolution of the merge changed a "
                     f"test the main line holds — {lost_text(lost)}. Put the main line's side back beside the story's "
                     f"(`git show {target}:<file>` shows it) and edit nothing else; the merge is committed, add a row "
                     f"for each file to integrate.md.{self.worktree_sentence()} "
                     f"{self.where_things_are(self.tool_in_flight, story)}")
-        return (f"Apply the stage-integrate skill for backlog story {story}. Merging the main line into this story's "
+        return (f"{self.opening('integrate', story)} Merging the main line into this story's "
                 f"branch stopped on conflicts in: {conflicts}. Their list: {self.evidence(story)}/conflicts."
                 f"{self.worktree_sentence()} {self.where_things_are(self.tool_in_flight, story)}")
 
@@ -646,6 +680,7 @@ class Run:
         return 0
 
     # --- the shared processes ----------------------------------------------------------------------------------
+    @decides("RUN-LIMIT-3")
     def budget_note(self, story: str, what: str) -> int:
         err(f"factory: story {story} has reached its --story-budget {self.story_budget} — {what} are not dispatched.")
         return 4
@@ -655,7 +690,7 @@ class Run:
         stage's gate itself. The tool's exit, 0 in a dry run."""
         tool = self.tools.tool_for("builder", tool)
         prompt = (f"Carry out these stages of the delivery pipeline for backlog story {story}, one after another, in "
-                  f"this one session: {', '.join(f'stage-{s}' for s in stages)}. The gate: "
+                  f"this one session: {', '.join(stages)}. {self.window_briefs(story, stages, dry)} The gate: "
                   f"`{self.py} {self.gate_rel} --story {story} --stage <stage> --brief`; the skeletons: "
                   f"`{self.py} {self.cli_rel()} --files-skeleton {story} <stage>`, "
                   f"`{self.py} {self.cli_rel()} --plan-skeleton {story}`. {self.where_things_are(tool, story)}")
@@ -684,6 +719,11 @@ class Run:
             return refused
         return self.window(story, tool, "builder", stages, prompt)
 
+    def window_briefs(self, story: str, stages: typing.Sequence[str], dry: bool) -> str:
+        every, own = self.briefs(story, stages, dry)
+        return (f"What every stage is told: {every} — read it whole first; each stage's brief, read whole before the "
+                f"stage: {', '.join(f'{stage} {path}' for stage, path in zip(stages, own))}.")
+
     def run_reviews(self, story: str, tool: str, dry: bool) -> int:
         """One tool process per perspective, started at once, each writing reviews/<perspective>.md; the judge then
         converges from the files."""
@@ -697,9 +737,10 @@ class Run:
         folder = f"{self.runs}/{story}/reviews"
         print(f"   reviews: {', '.join(names)} — one process each, at once; the judge converges from "
               "reviews/<perspective>.md")
+        every = self.briefs(story, ["judge"], dry)[0]
         prompts = [(f"Review the change of backlog story {story} from the {name} perspective: apply the `{carrier}` "
-                    f"skill to the diff {self.evidence(story)}/story.diff, as *A review the runner started* in the "
-                    f"rules every stage holds to says. Its input beside the diff: the story and its epic (epic.md "
+                    f"skill to the diff {self.evidence(story)}/story.diff, as *A review the runner started* in "
+                    f"{every} says. Its input beside the diff: the story and its epic (epic.md "
                     f"beside it), {self.runs}/{story}/plan.md, tests.md and build.md, and the product and technical "
                     f"description. Your report: {folder}/{name}.md. "
                     f"{self.where_things_are(self.tools.tool_for(f'review:{name}', tool), story)}")
@@ -752,7 +793,7 @@ class Run:
         document = (f" The skeleton: `{self.py} {self.cli_rel()} --document-skeleton {story}`; the document gate: "
                     f"`{self.py} {self.gate_rel} --story {story} --stage document --brief`.") if "document" in stages else ""
         prompt = (f"Carry out these stages of the delivery pipeline for backlog story {story}, one after another, in "
-                  f"this one session: {', '.join(f'stage-{s}' for s in stages)}.{document} "
+                  f"this one session: {', '.join(stages)}. {self.window_briefs(story, stages, dry)}{document} "
                   f"{self.where_things_are(tool, story)}")
         print(f"── stage {'+'.join(stages)}  (tool: {tool}, one shared context)")
         if dry:
@@ -922,7 +963,7 @@ class Run:
 
     def integrate_stage(self, story: str, tool: str, conflicts: str,
                         lost: typing.Optional[Lost] = None) -> typing.Optional[int]:
-        """One stage-integrate session — the conflicts, or a repair of a resolution that lost the main line's side of a
+        """One integrate stage session — the conflicts, or a repair of a resolution that lost the main line's side of a
         test — then the profile's formatter and the merge committed and squashed. None when it is, else an exit code."""
         what = f"the resolution lost the main line's side of {', '.join(rel for rel, _ in lost)}" if lost \
             else f"the merge stopped on: {conflicts}"
@@ -1121,7 +1162,7 @@ class Run:
                 + ("is" if len(missing) == 1 else "are") + " no known tool or not on the PATH (tool / tool.<unit> in "
                 "the profile) — nothing started")
             return 2
-        shared = {stage for stages in SHARED_WINDOWS.values() for stage in stages}
+        shared = {stage for stages in stage_windows().values() for stage in stages}
         for key in sorted(self.profile()):
             if key.startswith("tool.") and key[5:] in shared:
                 print(f"factory: note — `{key}` names a stage a shared process carries; the unit is the process "
@@ -1208,17 +1249,18 @@ class ChildProcess:
 # --- the run's start ---------------------------------------------------------------------------------------------
 STAMP = ".agents/factory/gate.installed"
 #: The files the install puts into .agents/factory/, in the stamp's order; a name ending in `/` is the package.
-PIPELINE_FILES = ("story-gate.py", "factory-cli.py", "observe.py", "factory.sh", "dca_factory/")
+PIPELINE_FILES = ("story-gate.py", "factory-cli.py", "observe.py", "factory.sh", "dca_factory/", "workflow/")
 
 
 def package_modules(folder: str) -> typing.List[str]:
-    """Every module of the package under <folder>, its subpackages' too, by its path below the folder with `/` —
-    in the order the install's hash lists them (the C locale's, as Python sorts)."""
+    """Every module of the package under <folder>, its subpackages' too — and every file of the workflow beside it —
+    by its path below the folder with `/`, in the order the install's hash lists them (the C locale's, as Python
+    sorts)."""
     found: typing.List[str] = []
     for top, dirs, files in os.walk(folder):
         dirs[:] = [d for d in dirs if d != "__pycache__"]
         below = os.path.relpath(top, folder).replace(os.sep, "/")
-        found += [name if below == "." else f"{below}/{name}" for name in files if name.endswith(".py")]
+        found += [name if below == "." else f"{below}/{name}" for name in files if name.endswith((".py", ".md"))]
     return sorted(found)
 
 

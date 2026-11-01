@@ -15,6 +15,7 @@ import typing
 
 from ....application.profile.profile_rules import command_heads, effort_for, first_word, model_for, tool_for
 from .agents import isolation_args, TOOL
+from ....application.delivery.pipeline_rules import decides
 
 Profile = typing.Mapping[str, typing.Any]
 
@@ -48,6 +49,10 @@ class ToolChoice:
         self._gate = gate
         self.allowed_override: typing.Optional[str] = None
 
+    @decides(
+        "RUN-LIMIT-1",
+        "RUN-LIMIT-2",
+    )
     def stage_timeout(self, gate_installed: bool) -> int:
         given = os.environ.get("FACTORY_STAGE_TIMEOUT")
         if given is None:

@@ -9,12 +9,17 @@ from ...domain.service.acceptance_rules import AcceptanceRules
 from ...domain.service.adopt_checks import AdoptChecks, Adoption
 from .check_stage import on_pass, Run
 
+DELIVERED_LEFT = "a delivered story is checked and its marks are left as they are"
+
 
 def delivered(run: Run) -> bool:
     return bool(run.story.status.value == "delivered")
 
 
-@on_pass("plan")
+@on_pass("plan", rule=(
+    "GATE-PASS-PLAN",
+    "GATE-PASS-ADOPT",
+))
 def _plan_passed(run: Run) -> None:
     if delivered(run):
         # Delivered is delivered: a plan gate run over a delivered story (a check, a re-verification) leaves the
@@ -29,13 +34,16 @@ def _plan_passed(run: Run) -> None:
                                [(row.key.value, row.test.value) for row in adoption.rows], outcome is Adoption.WHOLE)
 
 
-@on_pass("test")
+@on_pass("test", rule="GATE-PASS-RED-TREE")
 def _test_passed(run: Run) -> None:
     if run.kind == "story" and not delivered(run):
         run.delivery.red_tree(run.result, run.story_id)
 
 
-@on_pass("document")
+@on_pass("document", rule=(
+    "GATE-ACCEPTANCE",
+    "GATE-DELIVER",
+))
 def _document_passed(run: Run) -> None:
     result, story_id, story_path = run.result, run.story_id, run.story_path
     if delivered(run):
@@ -70,7 +78,7 @@ def _document_passed(run: Run) -> None:
     run.delivery.deliver(result, story_id, story_path, run.front)
 
 
-@on_pass("adopt")
+@on_pass("adopt", rule="GATE-PASS-ADOPTED")
 def _adopt_passed(run: Run) -> None:
     if delivered(run):
         return
@@ -81,6 +89,6 @@ def _adopt_passed(run: Run) -> None:
     run.delivery.deliver(run.result, run.story_id, run.story_path, run.front)
 
 
-@on_pass("integrate")
+@on_pass("integrate", rule="GATE-INTEGRATED")
 def _integrate_passed(run: Run) -> None:
     run.delivery.integrate(run.result, run.story_id, run.story_path, run.front, run.close)

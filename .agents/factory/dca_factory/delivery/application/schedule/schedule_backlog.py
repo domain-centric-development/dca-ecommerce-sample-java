@@ -16,10 +16,20 @@ from ..shared.backlog_facts import BacklogFacts
 from ..status.texts import parse_time
 from .stand_story import stand_story
 from ...domain.model.story_state import ENDED
+from ..delivery.pipeline_rules import decides
 
 Model = typing.Dict[str, typing.Any]
 
 
+@decides(
+    "RUN-SCHEDULE-1",
+    "RUN-SCHEDULE-2",
+    "RUN-SCHEDULE-3",
+    "RUN-SCHEDULE-4",
+    "RUN-SCHEDULE-5",
+    "RUN-SCHEDULE-6",
+    "RUN-SCHEDULE-7",
+)
 def schedule_backlog(backlog: BacklogFacts, now: datetime.datetime, slots: typing.Optional[int] = None,
                      busy: typing.Iterable[str] = (), skip: typing.Iterable[str] = ()) -> Model:
     """The read model: `stories` by key (state, start, detail and the story's fields), `order`, `next` (and `also`

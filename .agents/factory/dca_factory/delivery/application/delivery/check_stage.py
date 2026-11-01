@@ -5,8 +5,13 @@ from __future__ import annotations
 
 import typing
 
-from ...domain.model.stage import ALL_KINDS, PIPELINE, Stage, StoryKind, Trait
+from ...domain.model.jump import Jump
+from ...domain.model.stage import ALL_KINDS, Stage, StoryKind, Trait
 from ...domain.model.verdict import FindingState, Findings
+from ...domain.model.workflow import Workflow
+from ...domain.model.workflow_rule import OutcomeState, RulePart
+from .pipeline_rules import bind, Bound, DECIDED, restage, rule_of
+from .pipeline_workflow import loaded, on_load, workflow
 
 Entry = typing.Tuple[str, str, str]
 Run = typing.Any
@@ -67,15 +72,24 @@ class StageRun:
         self.__dict__.update(fields)
 
 
+#: Which stages a check holds: None — every gated stage, names of rows, or a predicate over a row.
+Stages = typing.Union[None, typing.Tuple[str, ...], typing.Callable[[Stage], bool]]
+
+
 class Check(typing.NamedTuple):
     name: str
     run: CheckRun
+    #: the stages it holds, placed once the workflow is loaded (`place`)
     stages: typing.Tuple[str, ...]
     needs_process: bool
     #: the check names a refusal before it leaves unproven
     unrun: typing.Callable[[Run], typing.List[str]]
     #: the story kinds it holds (a task has no criteria, so none of their checks)
     kinds: typing.FrozenSet[StoryKind]
+    #: the rules it holds the story to, by id — one per name it reports under
+    rules: typing.Tuple[Bound, ...]
+    #: what it said about its stages where it registered
+    select: Stages = None
 
 
 #: The checks a gate run holds a story to, in this order: every check that needs no process first, and a refusal among
@@ -86,51 +100,82 @@ CHECKS: typing.List[Check] = []
 #: The order the checks run in, whichever module registers them: the story and the profile first, then what the
 #: stage left, the tests last.
 ORDER = ("story", "contract", "status", "epic", "outcome", "rounds", "suites", "decisions", "plan", "plan-adopts", "document",
-         "pipeline", "owned", "adopt", "integrate", "tests-mapped", "files-listed", "test-design", "spec-delta",
+         "pipeline", "owned", "brief", "adopt", "integrate", "tests-mapped", "files-listed", "test-design", "spec-delta",
          "spec-tests", "tests-committed", "tests-real", "plan-files", "size", "red-proof", "tests", "invariant-breaks",
          "red-reproof", "commands")
 
 #: What a passing gate does, per stage — the writes a verdict makes.
 PASSED: typing.Dict[str, typing.List[CheckRun]] = {}
+#: The rules of what a passing gate does, per stage.
+PASS_RULES: typing.Dict[str, typing.List[Bound]] = {}
 
-GATED = tuple(s for s in PIPELINE if Trait.GATED in s.traits)
+#: One rule's id, or several.
+Rules = typing.Union[str, typing.Tuple[str, ...]]
 
 
-def check(name: str, stages: typing.Union[None, typing.Tuple[str, ...], typing.Callable[[Stage], bool]] = None,
-          needs_process: bool = False, unrun: typing.Optional[typing.Callable[[Run], typing.List[str]]] = None,
-          kinds: typing.FrozenSet[StoryKind] = ALL_KINDS) -> typing.Callable[[CheckRun], CheckRun]:
-    """Register a check against the stage table: `stages` names rows (None — every gated stage) or is a predicate
-    over a row; `kinds` the story kinds it holds."""
+
+def chosen_stages(name: str, stages: Stages, workflow: Workflow) -> typing.Tuple[str, ...]:
+    """The gated stages of <workflow> a check holds."""
+    gated = workflow.having(Trait.GATED)
     if stages is None:
-        chosen = tuple(s.name.value for s in GATED)
-    elif callable(stages):
-        chosen = tuple(s.name.value for s in GATED if stages(s))
-    else:
-        known = {s.name.value for s in GATED}
-        unknown = [stage for stage in stages if stage not in known]
-        if unknown:
-            raise ValueError(f"check {name}: no gated stage {', '.join(unknown)}")
-        chosen = tuple(stages)
+        return tuple(s.name.value for s in gated)
+    if callable(stages):
+        return tuple(s.name.value for s in gated if stages(s))
+    unknown = [stage for stage in stages if stage not in {s.name.value for s in gated}]
+    if unknown:
+        raise ValueError(f"check {name}: no gated stage {', '.join(unknown)}")
+    return tuple(stages)
 
+
+def place(workflow: Workflow) -> None:
+    """Place every check and every pass action against the stages of <workflow>."""
+    CHECKS[:] = [placed(c, workflow) for c in CHECKS]
+    unknown = sorted(set(PASSED) - {s.name.value for s in workflow.having(Trait.GATED)})
+    if unknown:
+        raise ValueError(f"on_pass: no gated stage {', '.join(unknown)}")
+
+
+def placed(entry: Check, workflow: Workflow) -> Check:
+    chosen = chosen_stages(entry.name, entry.select, workflow)
+    return entry._replace(stages=chosen, rules=restage(entry.rules, chosen))
+
+
+def check(name: str, stages: Stages = None, needs_process: bool = False,
+          unrun: typing.Optional[typing.Callable[[Run], typing.List[str]]] = None,
+          kinds: typing.FrozenSet[StoryKind] = ALL_KINDS, *, rule: Rules) -> typing.Callable[[CheckRun], CheckRun]:
+    """Register a check against the workflow's stages: `stages` names rows (None — every gated stage) or is a
+    predicate over a row, placed once the workflow is loaded; `kinds` the story kinds it holds; `rule` what it holds
+    the story to — one rule, or one per name it reports under, by id. A check without a rule is no check: the rulebook
+    could not show it."""
     if name not in ORDER:
         raise ValueError(f"check {name}: not in the checks' order")
 
+    rules = (rule,) if isinstance(rule, str) else rule
+    if not rules or not all(r.startswith("GATE-") for r in rules):
+        raise ValueError(f"check {name}: carries its rules, each a GATE- id")
+
     def register(function: CheckRun) -> CheckRun:
-        CHECKS.append(Check(name, function, chosen, needs_process, unrun or (lambda run: [name]), kinds))
+        entry = Check(name, function, (), needs_process, unrun or (lambda run: [name]), kinds,
+                      bind(rules, RulePart.CHECK, function, (), kinds), stages)
+        CHECKS.append(placed(entry, workflow()) if loaded() else entry)
         CHECKS.sort(key=lambda c: ORDER.index(c.name))
         return function
     return register
 
 
-def on_pass(stage: str) -> typing.Callable[[CheckRun], CheckRun]:
-    """Register what a passing gate of the stage does."""
-    if stage not in {s.name.value for s in GATED}:
-        raise ValueError(f"on_pass: no gated stage {stage}")
+def on_pass(stage: str, *, rule: Rules) -> typing.Callable[[CheckRun], CheckRun]:
+    """Register what a passing gate of the stage does, and the rules it does it by — a gated stage of the workflow,
+    held once it is loaded."""
+    rules = (rule,) if isinstance(rule, str) else rule
 
     def register(function: CheckRun) -> CheckRun:
         PASSED.setdefault(stage, []).append(function)
+        PASS_RULES.setdefault(stage, []).extend(bind(rules, RulePart.PASS, function, (stage,)))
         return function
     return register
+
+
+on_load(place)
 
 
 def run_checks(run: Run) -> None:
@@ -155,3 +200,26 @@ def run_passed(run: Run) -> None:
     """What a passing gate of the run's stage does."""
     for finish in PASSED.get(run.stage.name, ()):
         finish(run)
+
+
+def judging(stage: str, kind: StoryKind) -> typing.Tuple[str, ...]:
+    """The rules a gate of <stage> holds a story of <kind> to, in the order its checks run — each once."""
+    found: typing.List[str] = []
+    for entry in CHECKS:
+        if stage in entry.stages and kind in entry.kinds:
+            found += [b.rule for b in entry.rules if b.rule not in found]
+    return tuple(found)
+
+
+def refusing(stage: str, names: typing.Iterable[str]) -> typing.Tuple[Jump, ...]:
+    """The ways of the rules a gate of <stage> refused under <names> (the checks its report says failed): the rules of
+    the stage's checks, of what its passing gate does, and of the gate's own frame — each once, in the report's order."""
+    if not CHECKS:
+        raise RuntimeError("no gate check is registered — the composition root imports the modules of checks")
+    bound = [b for c in CHECKS if stage in c.stages for b in c.rules] + PASS_RULES.get(stage, []) \
+        + [b for b in DECIDED if b.rule.startswith("GATE-")]
+    found: typing.List[str] = []
+    for name in names:
+        found += [b.rule for b in bound if b.rule not in found
+                  and name in {r.value for r in rule_of(b.rule).reports}]
+    return tuple(rule_of(rule_id).jump(OutcomeState.FAIL) for rule_id in found)

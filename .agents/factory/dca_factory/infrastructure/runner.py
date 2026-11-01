@@ -13,11 +13,16 @@ from ..delivery.application.shared.requests import KIND, Request
 from ..delivery.adapter.incoming.runner.usage import book_request_usage
 from ..delivery.adapter.outgoing.process.console_lines import ConsoleLines
 from ..delivery.application.backlog.run_backlog import RunBacklogCommand, RunBacklogUseCase
+# the rules a refused gate routes by: the modules of checks register them, as in the gate's composition root
+from ..delivery.application.delivery import pass_actions, process_checks, stage_checks  # noqa: F401
 from ..delivery.application.delivery.integrate_story import IntegrateStoryCommand, IntegrateStoryUseCase
 from ..delivery.application.delivery.run_story import RunStoryCommand, RunStoryUseCase
 from ..delivery.application.requests.request_queue import RequestQueue
 from ..delivery.application.requests.work_request import WorkRequestCommand, WorkRequestUseCase
-from ..delivery.domain.model.stage import Window
+from ..delivery.application.delivery.show_brief import ShowBriefQuery, ShowEveryStageUseCase
+from ..delivery.domain.model.stage import StageName, StageText, Window
+from ..delivery.domain.model.story import StoryId
+from ..delivery.domain.service.stage_brief import Brief
 from ..delivery.adapter.outgoing.process.runner_ports import (
     RunnerBacklog, RunnerIntegration, RunnerRequestSkill, RunnerStages)
 from ..delivery.adapter.outgoing.process.runner_process import Run
@@ -29,6 +34,10 @@ from ..sharedkernel.adapter.outgoing.profile.profile_files import (
 )
 from . import delivery
 from . import requests
+from .workflow import load_workflow
+
+# the stages and the rules, from their repositories — once per process, held against every binding
+load_workflow()
 
 
 class RunnerCases:
@@ -59,6 +68,12 @@ class RunnerCases:
 
     def book_request_cost(self, run: Run, request_id: str, tool: str, measured: str) -> None:
         book_request_usage(delivery.book_request_cost(run.home, place("runs")), request_id, tool, measured)
+
+    def brief(self, run: Run, story: str, stage: str) -> Brief:
+        return delivery.show_brief(os.getcwd()).execute(ShowBriefQuery(StoryId(story), StageName(stage)))
+
+    def every_stage(self, run: Run) -> StageText:
+        return ShowEveryStageUseCase().execute()
 
     @staticmethod
     def _integration(run: Run, tool: str) -> IntegrateStoryUseCase:

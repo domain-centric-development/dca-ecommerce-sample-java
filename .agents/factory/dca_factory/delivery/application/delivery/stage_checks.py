@@ -1,12 +1,13 @@
-"""The checks a stage's gate runs over the story and its evidence alone — registered against the stage table, each
+"""The checks a stage's gate runs over the story and its evidence alone — registered against the workflow's stages, each
 a domain service's findings taken into the run's verdict."""
 
 from __future__ import annotations
 
 import typing
 
-from ...domain.model.stage import Stage, StageName, TESTED_KINDS, Trait
+from ...domain.model.stage import Stage, StageName, StoryKind, TESTED_KINDS, Trait
 from ...domain.model.stage_story import ContractNumber, Count, HandOverName, MappedTest, Place, ScenarioKey, Selector, TestTable
+from ...domain.model.story import StoryId
 from ...domain.model.verdict import CheckName, Said
 from ...domain.service.adopt_checks import AdoptChecks
 from ...domain.service.kept_checks import KeptChecks
@@ -22,6 +23,7 @@ from ...domain.service.spec_checks import SpecChecks
 from ...domain.service.story_checks import StoryChecks
 from ...domain.service.test_checks import TestChecks
 from .check_stage import check, Run
+from .pipeline_workflow import workflow
 
 #: The contract that holds a build to the plan's files, and the one that holds a criterion's test to the real use case.
 PLAN_FILES_CONTRACT = ContractNumber(22)
@@ -64,68 +66,79 @@ def mapped(run: Run) -> typing.Tuple[MappedTest, ...]:
     return typing.cast(typing.Tuple[MappedTest, ...], cached[2])
 
 
-@check("story")
+@check("story", rule="GATE-STORY")
 def _story(run: Run) -> None:
     run.result.take(StoryChecks.context(run.story))
 
 
-@check("contract")
+@check("contract", rule=(
+    "GATE-CONTRACT",
+    "GATE-PROFILE",
+))
 def _contract(run: Run) -> None:
     run.result.take(ProfileChecks.contract(run.evidence))
 
 
-@check("status")
+@check("status", rule="GATE-APPROVED")
 def _status(run: Run) -> None:
     run.result.take(StoryChecks.status(run.story))
 
 
-@check("epic")
+@check("epic", rule="GATE-EPIC")
 def _epic(run: Run) -> None:
     run.result.take(BacklogChecks.epic(run.story, run.evidence))
 
 
-@check("outcome", stages=("plan",), kinds=TESTED_KINDS)
+@check("outcome", stages=("plan",), kinds=TESTED_KINDS, rule="GATE-OUTCOME")
 def _outcome_named(run: Run) -> None:
     run.result.take(BacklogChecks.outcome(run.story, run.contract, run.evidence))
 
 
-@check("rounds")
+@check("rounds", rule="GATE-ROUNDS")
 def _rounds(run: Run) -> None:
     run.result.take(StoryChecks.rounds(run.story, run.evidence))
 
 
-@check("pipeline", stages=after_plan)
+@check("pipeline", stages=after_plan, rule="GATE-PIPELINE")
 def _pipeline(run: Run) -> None:
     run.result.take(DeliveryChecks.pipeline_untouched(run.story, run.evidence))
 
 
-@check("owned")
+@check("owned", rule="GATE-OWNED")
 def _owned(run: Run) -> None:
     run.result.take(StoryChecks.owned(run.story, run.evidence))
 
 
-@check("spec-delta", stages=("test",))
+@check("brief", stages=lambda stage: Trait.POST_GATED in stage.traits, rule="GATE-BRIEF")
+def _brief(run: Run) -> None:
+    for stage in workflow().briefed_at(StageName(run.stage.name), StoryKind(run.kind)):
+        if stage.hand_over is not None:
+            run.result.take(StoryChecks.briefed(run.evidence.brief(StoryId(run.story_id), stage.name,
+                                                                   HandOverName(stage.hand_over.value))))
+
+
+@check("spec-delta", stages=("test",), rule="GATE-SPEC-DELTA")
 def _spec_delta(run: Run) -> None:
     run.result.take(SpecChecks.delta(run.story, run.evidence))
 
 
-@check("spec-tests", stages=("document", "adopt", "integrate"), kinds=TESTED_KINDS)
+@check("spec-tests", stages=("document", "adopt", "integrate"), kinds=TESTED_KINDS, rule="GATE-SPEC-TESTS")
 def _spec_tests(run: Run) -> None:
     run.result.take(SpecChecks.tests(run.story, table_tests(run.mapping), run.evidence))
 
 
-@check("tests-committed", stages=("integrate",), kinds=TESTED_KINDS)
+@check("tests-committed", stages=("integrate",), kinds=TESTED_KINDS, rule="GATE-TESTS-COMMITTED")
 def _tests_committed(run: Run) -> None:
     run.result.take(SpecChecks.committed(run.story, table_tests(run.mapping), run.evidence))
 
 
-@check("plan-files", stages=("build",))
+@check("plan-files", stages=("build",), rule="GATE-PLAN-FILES")
 def _plan_files(run: Run) -> None:
     if run.contract.value >= PLAN_FILES_CONTRACT.value:
         run.result.take(DesignChecks.plan_files(run.story, run.evidence))
 
 
-@check("size", stages=weighed)
+@check("size", stages=weighed, rule="GATE-SIZE")
 def _size(run: Run) -> None:
     run.result.take(TestChecks.size(run.story, tuple(HandOverName(name) for name in run.stage.sizes), run.evidence))
 
@@ -147,7 +160,10 @@ def read_table(run: Run) -> typing.Tuple[typing.Dict[str, typing.List[str]], typ
     return mapping, located
 
 
-@check("tests-mapped", stages=tested, kinds=TESTED_KINDS)
+@check("tests-mapped", stages=tested, kinds=TESTED_KINDS, rule=(
+    "GATE-TESTS-MAPPED",
+    "GATE-TESTS-EXIST",
+))
 def _mapping(run: Run) -> None:
     mapping, located = read_table(run)
     run.mapping, run.located = mapping, (located if mapping else None)
@@ -155,13 +171,22 @@ def _mapping(run: Run) -> None:
 
 # Integrated, the story's diff carries the main line's changes beside its own: the file list, the tests that existed
 # before and the red proof were the stages' to hold, and they held.
-@check("files-listed", stages=listing)
+@check("files-listed", stages=listing, rule=(
+    "GATE-FILES-LISTED",
+    "GATE-TESTS-KEPT",
+))
 def _files_listed(run: Run) -> None:
-    run.result.take(KeptChecks.files_listed(run.story, StageName(run.stage.name), mapped(run), run.evidence))
-    run.result.take(KeptChecks.tests_kept(run.story, run.evidence))
+    run.result.take(KeptChecks(workflow()).files_listed(run.story, StageName(run.stage.name), mapped(run), run.evidence))
+    run.result.take(KeptChecks(workflow()).tests_kept(run.story, run.evidence))
 
 
-@check("test-design", stages=red)
+@check("test-design", stages=red, rule=(
+    "GATE-PLAN-LEVELS",
+    "GATE-INVARIANTS",
+    "GATE-LEVELS",
+    "GATE-CLAUSES",
+    "GATE-TEST-TITLES",
+))
 def _test_design(run: Run) -> None:
     run.result.take(TestChecks.plan_levels(run.story, run.evidence))
     tests = mapped(run)
@@ -171,30 +196,31 @@ def _test_design(run: Run) -> None:
     run.result.take(TestChecks.titles(run.story, run.contract, tests, run.evidence))
 
 
-@check("tests-real", stages=("test", "adopt"))
+@check("tests-real", stages=("test", "adopt"), rule="GATE-TESTS-REAL")
 def _tests_real(run: Run) -> None:
     if run.contract.value >= TESTS_REAL_CONTRACT.value:
         run.result.take(DesignChecks.tests_real(run.story, mapped(run), run.evidence))
 
 
-@check("red-proof", stages=listing, kinds=TESTED_KINDS)
+@check("red-proof", stages=listing, kinds=TESTED_KINDS, rule="GATE-RED-PROOF")
 def _red_proof(run: Run) -> None:
     # the red proof compares digests, so it belongs here, before any process
     if run.expected == "green":
         run.result.take(KeptChecks.red_proof(run.story, StageName(run.stage.name), mapped(run), run.evidence))
 
 
-@check("suites")
+@check("suites", rule="GATE-SUITES")
 def _suites(run: Run) -> None:
     if run.args.record_suites and not run.marks.record_suites(run.story_id):
         run.result.note("suites", "--record-suites without FACTORY_SUITES_KEY in the environment — nothing is "
                                   "recorded or reused")
 
 
-@check("decisions")
+@check("decisions", rule="GATE-DECISIONS")
 def _decisions(run: Run) -> None:
     """An answer applied is stamped in its record and becomes an `answered:` line of the story before it is said."""
-    checked = DecisionChecks.check(run.story, StageName(run.stage.name), run.evidence)
+    checked = DecisionChecks.check(run.story, StageName(run.stage.name), run.evidence,
+                                   workflow().order(StoryKind.STORY))
     for item in checked.items:
         if isinstance(item, Applying):
             run.result.take((DecisionChecks.applied(item, run.stamps.apply(run.story, item)),))
@@ -202,12 +228,20 @@ def _decisions(run: Run) -> None:
             run.result.take((item,))
 
 
-@check("plan-adopts", stages=("plan",))
+@check("plan-adopts", stages=("plan",), rule="GATE-PLAN-ADOPTS")
 def _plan_adopts(run: Run) -> None:
     run.result.take(AdoptChecks.found(run.story, run.evidence))
 
 
-@check("plan", stages=("plan",))
+@check("plan", stages=("plan",), rule=(
+    "GATE-HAPPY-PATH",
+    "GATE-JOURNEY",
+    "GATE-TASK",
+    "GATE-CONTEXT-MAP",
+    "GATE-INSTRUCTION-SIZE",
+    "GATE-DESCRIPTION",
+    "GATE-MODELS",
+))
 def _plan(run: Run) -> None:
     run.result.take(StoryChecks.happy_path(run.story, run.contract, run.evidence))
     run.result.take(BacklogChecks.context_map(run.story, run.evidence))
@@ -216,12 +250,18 @@ def _plan(run: Run) -> None:
     # its checks
     for verdict in run.describe.execute(CheckDescriptionCommand()).verdicts:
         getattr(run.result, verdict.state)(verdict.part, verdict.said)
-    run.result.take(ProfileChecks.models(run.evidence))
+    run.result.take(ProfileChecks.models(run.evidence, workflow().order(StoryKind.STORY)))
 
 
-@check("document", stages=("document",))
+@check("document", stages=("document",), rule=(
+    "GATE-STORY-PASS",
+    "GATE-OUTCOME-RAISED",
+    "GATE-DOCUMENTED",
+    "GATE-GLOSSARY",
+    "GATE-REVIEWS",
+))
 def _document(run: Run) -> None:
-    passed = DeliveryChecks.story_pass(run.story, run.evidence)
+    passed = DeliveryChecks.story_pass(run.story, run.evidence, workflow().hand_over(StageName("judge")))
     run.result.take(passed.findings)
     if passed.judge_passed is Presence.PRESENT:
         run.marks.judge_passed(run.story_id)
@@ -231,7 +271,12 @@ def _document(run: Run) -> None:
     run.result.take(DeliveryChecks.reviews(run.story, run.evidence))
 
 
-@check("integrate", stages=("integrate",))
+@check("integrate", stages=("integrate",), rule=(
+    "GATE-INTEGRATE",
+    "GATE-CONFLICTS",
+    "GATE-MOVED",
+    "GATE-MAIN-TESTS",
+))
 def _integrated(run: Run) -> None:
     run.result.take(IntegrationChecks.integrated(run.story, run.evidence))
     run.result.take(IntegrationChecks.main_tests(run.story, run.evidence))

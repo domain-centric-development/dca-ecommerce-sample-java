@@ -12,6 +12,7 @@ from ..shared.backlog_schedule import BacklogSchedule, ScheduleRead
 from ..shared.backlog_worker import BacklogCheckout, BacklogWorker, Child
 from ..shared.requests import Request, stories_of
 from ..shared.run_lines import RunLines
+from ..delivery.pipeline_rules import decides
 
 
 @dataclasses.dataclass(frozen=True)
@@ -51,6 +52,12 @@ class RunBacklogUseCase:
             return self._side_by_side(command)
         return self._one_at_a_time(command)
 
+    @decides(
+        "RUN-BACKLOG-1",
+        "RUN-BACKLOG-2",
+        "RUN-BACKLOG-3",
+        "RUN-BACKLOG-4",
+    )
     def _one_at_a_time(self, command: RunBacklogCommand) -> int:
         previous, last, claims = "", None, ""
         while True:
@@ -222,6 +229,7 @@ class RunBacklogUseCase:
             self._worker.fresh(asked.request["story"], asked.start)
         return asked
 
+    @decides("RUN-BACKLOG-5")
     def _skip(self, command: RunBacklogCommand, story: str, code: int) -> bool:
         """--keep-going: a story that stopped is set aside for the rest of this run — the schedule skips it and what
         depends on it — unless the stop concerns the whole run: the checkout taken over (5), the run's --max-stages

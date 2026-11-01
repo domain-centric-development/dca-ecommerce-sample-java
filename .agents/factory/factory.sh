@@ -35,6 +35,10 @@
 #   factory.sh status [--all] [--story <id>] [--epic <id>] [--usage] [--refusals] [--brief]   what runs, what waits, what comes next; --all: every story and the cost; --refusals: form against substance
 #   factory.sh decisions [--story <id>]      the decision inbox
 #   factory.sh spec-delta <story> [--format json]  what holds before and after the story
+#   factory.sh rules [--stage <s>] [--kind <k>] [--story <id>] [--format md|json] [--check]   every rule the gate,
+#                                            the runner and the stage skills hold a story to, in each kind's flow
+#   factory.sh brief <story> <stage> [--format json]   what the stage is told for the story: its brief, from the
+#                                                     workflow's stages and rules and the profile
 #   factory.sh release <story> [--force]     give up a story's claim on the remote (`claim_remote:`); --force: another's
 #   factory.sh integrate <story>             a published story whose merge request lost the race: delivered again
 #   factory.sh follow [--story <id>] [--process <name>] [--once [--lines <n>]] [--all] [--format text|json]
@@ -219,16 +223,17 @@ STAMP=".agents/factory/gate.installed"
 # what was installed, so a runner can tell the pipeline it is about to trust from one a stage, a hand or a merge
 # changed since. The package's runner (the same digest) takes it at its start and compares before every
 # gate it runs; a stage that rewrote the gate through a link is stopped at the next gate, whatever tool it ran in.
-# A name ending in `/` is the package: every module in it and in its subpackages, by its path below the folder in
+# A name ending in `/` is a folder — the package, the workflow's files: every module (`.py`), stage and rule (`.md`) in
+# it and below, by its path below the folder in
 # the C locale's order, as Python sorts them — so a module added, moved or removed changes the hash too.
-PIPELINE_FILES="story-gate.py factory-cli.py observe.py factory.sh dca_factory/"
+PIPELINE_FILES="story-gate.py factory-cli.py observe.py factory.sh dca_factory/ workflow/"
 pipeline_hash() {                           # pipeline_hash [<folder>] — one SHA-256 over PIPELINE_FILES
   local dir=${1:-$HOME_DIR/.agents/factory} hash file module LC_ALL=C
   hash=$(hasher); [ "$hash" = none ] && return 1
   for file in $PIPELINE_FILES; do
     case $file in
       */) if [ -d "$dir/$file" ]; then
-            ( cd "$dir" && find "$file" -name '*.py' -type f ) | LC_ALL=C sort | while IFS= read -r module; do
+            ( cd "$dir" && find "$file" -type f \( -name '*.py' -o -name '*.md' \) ) | LC_ALL=C sort | while IFS= read -r module; do
               printf '%s  %s\n' "$($hash "$dir/$module" | cut -d" " -f1)" "$module"
             done
           else printf 'missing  %s\n' "$file"; fi ;;
@@ -280,7 +285,7 @@ plugin_skills() {
 # (names only) is read as a copy install.
 MANIFEST_NAME=".dca-factory-skills"
 # The pipeline's own skill names, for the one guess that remains: an install from before the list.
-PIPELINE_SKILLS="factory-backlog factory-decisions factory-help factory-run factory-setup factory-status factory-update factory-verify stage-build stage-document stage-integrate stage-judge stage-plan stage-test stage-tidy"
+PIPELINE_SKILLS="factory-backlog factory-decisions factory-help factory-run factory-setup factory-status factory-update factory-verify"
 manifest_field() {                          # manifest_field <target> <mode|source>
   sed -n "s/^$2:[[:space:]]*//p" "$1/$MANIFEST_NAME" 2>/dev/null | head -1
 }
@@ -1026,6 +1031,13 @@ install_project() {                         # install_project <tool> <skill fold
     .agents/factory/.dca_factory.new
   rm -rf .agents/factory/dca_factory
   must "put the package in place" mv .agents/factory/.dca_factory.new .agents/factory/dca_factory
+  # The workflow's elements beside it — the stages and the rules the gate and the runner load at start —, swapped in
+  # the same way.
+  rm -rf .agents/factory/.workflow.new
+  must "copy the workflow to .agents/factory/workflow" copy_tree "$from/factory-run/scripts/workflow/." \
+    .agents/factory/.workflow.new
+  rm -rf .agents/factory/workflow
+  must "put the workflow in place" mv .agents/factory/.workflow.new .agents/factory/workflow
   must "copy the gate to $GATE" cp "$from/factory-run/scripts/story-gate.py" "$GATE"
   # What shows and coordinates, beside the gate that decides — the same release, checked before a run.
   must "copy the cli to .agents/factory/factory-cli.py" \
@@ -1812,6 +1824,16 @@ case "$command" in
       *) read_command --status --part backlog "$@" ;;
     esac ;;
   decisions) read_command --list-decisions "$@" ;;
+  rules)
+    # The rulebook (WP-166): generated from where each rule is written — the gate's and the runner's registrations,
+    # the rule files and the frames that place what a stage is told.
+    read_command --rules "$@" ;;
+  brief)
+    # What a stage is told for a story (WP-169): the workflow's stage, its told rules for the story's kind, the gate
+    # rules it is measured by, the skills the profile names.
+    [ $# -ge 2 ] || usage
+    story_id="$1" stage_name="$2"; shift 2
+    read_command --stage-brief "$story_id" "$stage_name" "$@" ;;
   spec-delta)
     # What holds before and after a story (WP-105): what a person accepting it looks at.
     [ $# -ge 1 ] || usage

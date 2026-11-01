@@ -9,13 +9,6 @@ factory-setup
 factory-status
 factory-update
 factory-verify
-stage-build
-stage-document
-stage-integrate
-stage-judge
-stage-plan
-stage-test
-stage-tidy
 context-map
 dca-discipline
 dca-knowledge

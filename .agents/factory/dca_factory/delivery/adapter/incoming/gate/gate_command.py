@@ -82,10 +82,12 @@ from ....application.backlog.check_backlog import CheckBacklogCommand
 from ....application.delivery.check_change import CheckChangeCommand
 from ....application.delivery.check_parity import CheckParityCommand
 from ....application.delivery.check_stage import Verdict
+from ....application.delivery.pipeline_rules import decides
 from ....application.description.check_description import CheckDescriptionCommand
-from ....domain.model.stage import PIPELINE, Trait
+from ....domain.model.stage import Trait
 from ....domain.model.story import StoryId
 from ....domain.model.verdict import FindingState
+from ....application.delivery.pipeline_workflow import workflow
 
 
 def check_contract(result: Verdict, profile: wiring.Profile) -> None:
@@ -209,6 +211,12 @@ def hand_over_to_cli(argv: typing.Sequence[str]) -> int:
     return completed.returncode
 
 
+@decides(
+    "GATE-LAYOUT",
+    "GATE-ENVIRONMENT",
+    "GATE-READABLE",
+    "GATE-DISCOVERY",
+)
 def main(argv: typing.Sequence[str]) -> int:
     # `--brief` is the gate's own beside `--stage` (a stage's compact report); alone it is the status's, moved.
     moved = MOVED_TO_CLI - ({"--brief"} if "--stage" in argv else set())
@@ -222,7 +230,7 @@ def main(argv: typing.Sequence[str]) -> int:
     parser.add_argument("--story")
     parser.add_argument(
         "--stage",
-        choices=tuple(s.name.value for s in PIPELINE if Trait.GATED in s.traits),
+        choices=tuple(s.name.value for s in workflow().having(Trait.GATED)),
     )
     parser.add_argument("--change", action="store_true",
                         help="run the profile's checks outside a story and exit")

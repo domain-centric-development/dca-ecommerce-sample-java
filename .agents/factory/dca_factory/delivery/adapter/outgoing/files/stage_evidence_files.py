@@ -11,7 +11,7 @@ import typing
 from .....contract import CONTRACT, VERSION
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import GateError
 from .hand_over_patterns import HAPPY_MARK, SELECTOR
-from ..pipeline.stage_rows import order_for, SHARED_WINDOWS, STAGE_FILES, STAGES
+from ..pipeline.stage_rows import order_for, stage_windows, stage_files, all_stages
 from .....sharedkernel.adapter.outgoing.markdown.sections import section_of
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import read_front_matter, read_text
 from .....sharedkernel.adapter.outgoing.profile.profile_files import (
@@ -24,7 +24,7 @@ from ....domain.model.epic import EpicId
 from ....domain.model.schedule import ContextName
 from ....domain.model.stage import StageName, StoryKind
 from ....domain.model.stage_story import (
-    AssertionAt, AdoptRow, ChangedTest, PlanAdoption, Rename, RenamedTest, SymbolName, DocumentFacts, Integration, MainTestLines, MainTests, MappedTest, OutcomeEvent, OutcomeFacts, PassGap,
+    AssertionAt, AdoptRow, BriefFacts, ChangedTest, PlanAdoption, Rename, RenamedTest, SymbolName, DocumentFacts, Integration, MainTestLines, MainTests, MappedTest, OutcomeEvent, OutcomeFacts, PassGap,
     PipelineFacts, PlannedDigest, ProposalFacts, ReviewFacts, StoryPass, SpecDelta, SpecTests, StoryCommit, DecidedRecord, KeptTests, PlannedTestChange, RedProof, StageChanges,
     TestChange, TestEdit, Unobserved, AssertionFact, ByteSize, Clause, ClauseRow, CommandKey, Count,
     ElementName, ElementRules, FileChange, InvariantFacts, InvariantRow, PlannedFile, PortName, Presence, Rule,
@@ -35,6 +35,7 @@ from ....domain.model.story import DeliveredOn, StoryId
 from ....domain.model.story_state import Detail, HandOverText, Rounds, StatusWord
 from ....domain.service.backlog_checks import EPIC_FIELDS, normal_name
 from ....domain.service.decision_checks import Applying
+from .brief_files import given_digest, named_digest
 from .decision_record_files import (
     ANSWER_FIELDS, answer_sentence, decisions_store, needs_human_ids, read_decisions, record_path, resume_stage,
     stamp_applied)
@@ -261,6 +262,11 @@ class StageEvidenceFiles:
         changed = owned_changes(self._runs, story.story.value, story.place.value)
         return OwnedFacts((), tuple(OwnedPart(p) for p in changed) if changed is not None else None)
 
+    def brief(self, story: StoryId, stage: StageName, hand_over: HandOverName) -> BriefFacts:
+        place = os.path.join(self._runs, story.value, hand_over.value)
+        given, named = given_digest(self._runs, story.value, stage.value), named_digest(place)
+        return BriefFacts(Place(place), Detail(given) if given else None, Detail(named) if named else None)
+
     def context_map(self) -> ContextMapFacts:
         """The designed map (`domain:`) is read first, so a story for a context that is designed but not built yet
         passes; then the one generated from the code (`contextMap:`), then the conventional places."""
@@ -325,7 +331,7 @@ class StageEvidenceFiles:
                 Detail(str(answer.get("answer"))), Detail(str(answer.get("by"))),
                 tuple(AnswerField(f) for f in ANSWER_FIELDS if not answer.get(f))))
         hand_overs = []
-        for stage_name, name in STAGE_FILES.items():
+        for stage_name, name in stage_files().items():
             path = os.path.join(self._runs, story_id, name)
             if os.path.isfile(path):
                 text = read_text(path)
@@ -427,15 +433,15 @@ class StageEvidenceFiles:
                       tests: typing.Tuple[MappedTest, ...]) -> StageChanges:
         runs, story_id, name = self._runs, story.value, stage.value
         record: typing.Optional[str] = os.path.join(evidence_dir(runs, story_id), f"changed-{name}.txt")
-        handovers = [STAGE_FILES[name]]
-        listing = [s.file for s in STAGES if s.lists if os.path.isfile(os.path.join(runs, story_id, s.file))]
+        handovers = [stage_files()[name]]
+        listing = [s.file for s in all_stages() if s.lists if os.path.isfile(os.path.join(runs, story_id, s.file))]
         if last_ended(runs, story_id, (name, "builder")) == "builder":
             # A shared builder ran plan to tidy in one window: its record is the one that holds, and a file it
             # changed is listed by whichever of its hand-overs belongs to the stage that changed it.
             record, handovers = os.path.join(evidence_dir(runs, story_id), "changed-builder.txt"), listing
         changed_now: typing.List[str] = []
         base_file = os.path.join(evidence_dir(runs, story_id), "base-tree")
-        if window_open(runs, story_id, "builder") and name in SHARED_WINDOWS["builder"] and os.path.isfile(base_file):
+        if window_open(runs, story_id, "builder") and name in stage_windows()["builder"] and os.path.isfile(base_file):
             # A shared builder runs its own gates inside its window, before any changed-files record exists. What the
             # story changed so far is the tree against its base: checked now, the builder can still list a file it
             # forgot — found only by the runner afterwards, it costs a round.
@@ -490,8 +496,8 @@ class StageEvidenceFiles:
         arranged: typing.List[Place] = []
         renamed: typing.List[RenamedTest] = []
         base_file = os.path.join(evidence_dir(runs, story_id), "base-tree")
-        base = read_text(base_file).strip() if os.path.isfile(base_file) else ""
-        base = base if base and base != "none" else None
+        recorded = read_text(base_file).strip() if os.path.isfile(base_file) else ""
+        base = recorded if recorded and recorded != "none" else None
         for line in read_text(path).splitlines():
             if "  " not in line:
                 continue
@@ -667,8 +673,8 @@ class StageEvidenceFiles:
         order = order_for(story.kind.value)
         folder = os.path.join(runs, story_id)
         texts = current_stage_files(runs, story_id, order)
-        gaps = tuple(PassGap(HandOverName(STAGE_FILES[s]),
-                             Presence.PRESENT if os.path.isfile(os.path.join(folder, STAGE_FILES[s])) else Presence.ABSENT)
+        gaps = tuple(PassGap(HandOverName(stage_files()[s]),
+                             Presence.PRESENT if os.path.isfile(os.path.join(folder, stage_files()[s])) else Presence.ABSENT)
                      for s in order if s not in texts)
         planned = os.path.join(evidence_dir(runs, story_id), STORY_DIGEST)
         digest = PlannedDigest.MISSING if not os.path.isfile(planned) else \

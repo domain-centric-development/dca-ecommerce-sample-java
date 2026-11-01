@@ -10,6 +10,7 @@ from ....building_blocks import UseCase
 from ...domain.service.story_route import Refusal, StoryRoute
 from ..shared.run_lines import RunLines
 from ..shared.story_integration import Lost, StoryIntegration
+from .pipeline_rules import decides
 
 
 @dataclasses.dataclass(frozen=True)
@@ -32,6 +33,9 @@ class IntegrateStoryUseCase:
         self._integration = integration
         self._lines = lines
 
+    @decides(
+        "RUN-INTEGRATE-1",
+    )
     def execute(self, command: IntegrateStoryCommand) -> typing.Optional[int]:
         story = command.story
         self._lines.out("── integrate")

@@ -310,13 +310,22 @@ def commanded(stage: Stage) -> bool:
     return bool(stage.commands)
 
 
-@check("adopt", stages=("adopt",))
+@check("adopt", stages=("adopt",), rule=(
+    "GATE-ADOPT",
+    "GATE-ADOPT-JUDGED",
+    "GATE-BREAK-PROOF",
+))
 def _adopt(run: Run) -> None:
     adopt(run.result, run)
 
 
 @check("tests", stages=tested, needs_process=True,
-       unrun=lambda run: ["compiles", f"tests-{run.expected}"] + (["suite"] if run.stage.suite else []))
+       unrun=lambda run: ["compiles", f"tests-{run.expected}"] + (["suite"] if run.stage.suite else []), rule=(
+    "GATE-COMPILES",
+    "GATE-TESTS-RED",
+    "GATE-TESTS-GREEN",
+    "GATE-SUITE",
+))
 def _tests(run: Run) -> None:
     runs: StageRuns = run.runs_port
     compiles(run.result, runs, run.profile)
@@ -329,19 +338,19 @@ def _tests(run: Run) -> None:
         required_suites(run.result, runs, run.profile, run.story_id, run.mapping, run.whole_runs)
 
 
-@check("invariant-breaks", stages=("test",), needs_process=True, kinds=frozenset((StoryKind.STORY,)))
+@check("invariant-breaks", stages=("test",), needs_process=True, kinds=frozenset((StoryKind.STORY,)), rule="GATE-INVARIANT-BREAKS")
 def _invariant_breaks(run: Run) -> None:
     if run.contract.value >= INVARIANT_BREAKS_CONTRACT.value:
         invariant_breaks(run.result, run.runs_port, run.profile, run.story_id, run.mapping)
 
 
-@check("red-reproof", stages=("tidy",), needs_process=True, kinds=frozenset((StoryKind.STORY,)))
+@check("red-reproof", stages=("tidy",), needs_process=True, kinds=frozenset((StoryKind.STORY,)), rule="GATE-RED-REPROOF")
 def _red_reproof(run: Run) -> None:
     reproof(run.result, run.runs_port, run.profile, run.story_id, run.mapping, run.located)
 
 
 @check("commands", stages=commanded, needs_process=True,
-       unrun=lambda run: [key for key in run.stage.commands if run.profile.get(key)])
+       unrun=lambda run: [key for key in run.stage.commands if run.profile.get(key)], rule="GATE-COMMANDS")
 def _commands(run: Run) -> None:
     """The gate must not *know* its checks, it looks them up: adding a capability is one line in the profile."""
     for key in run.stage.commands:

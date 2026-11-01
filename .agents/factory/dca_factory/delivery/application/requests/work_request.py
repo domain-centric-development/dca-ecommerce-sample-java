@@ -14,6 +14,7 @@ from ..shared.request_skill import RequestSkill
 from ..shared.requests import Kind, KIND, Request, RequestRefused, RequestStore, written_keys
 from .list_requests import target_text
 from ...domain.model.decision_record import WAITING_WORDS
+from ..delivery.pipeline_rules import decides
 
 #: (stream, line): what the factory says on its way — `out` for the person, `err` for a refusal or a failure
 Said = typing.List[typing.Tuple[str, str]]
@@ -57,6 +58,9 @@ class WorkRequestUseCase:
         self._settlement = settlement
         self._now = now
 
+    @decides(
+        "RUN-REQUEST-4",
+    )
     def execute(self, command: WorkRequestCommand) -> RequestWorked:
         said: Said = []
         try:

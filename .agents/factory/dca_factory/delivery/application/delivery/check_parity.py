@@ -9,6 +9,7 @@ from ....building_blocks import UseCase
 from ...domain.model.verdict import Findings
 from ...domain.service.change_checks import ChangeChecks
 from ..shared.parity_reports import ParityReports
+from .pipeline_rules import decides
 
 
 @dataclasses.dataclass(frozen=True)
@@ -28,5 +29,6 @@ class CheckParityUseCase:
     def __init__(self, reports: ParityReports) -> None:
         self._reports = reports
 
+    @decides("GATE-IMPLEMENTATIONS")
     def execute(self, command: CheckParityCommand) -> Findings:
         return ChangeChecks.parity(self._reports.facts(command.config))
