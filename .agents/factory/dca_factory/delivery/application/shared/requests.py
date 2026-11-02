@@ -21,7 +21,7 @@ import enum
 import re
 import typing
 
-from ....building_blocks import Store, UseCaseException
+from ....building_blocks import OutputPort, Store, UseCaseException
 
 #: A request as the store keeps it: its front keys, `id`, `path`, `words` (the body) and `state` — strings all.
 Request = typing.Dict[str, typing.Any]
@@ -34,24 +34,26 @@ class Kind:
 
     name: str
     keys: typing.Tuple[str, ...] = ()   #: the keys it must name — `story`, `epic`, `record`, `topic`, `proposal`
+    may: typing.Tuple[str, ...] = ()    #: the keys it may name — a discovery the topic it continues
     words: str = "none"                 #: the person's words: "required", "optional" or "none"
     option: bool = False                #: it takes `option:` — an answer's option key, a correction's reason code
     skill: str = ""                     #: the skill a session would run; "" — the runner works it itself
     about: str = ""
+    creates: bool = False               #: whether an agent writes something new for it — a draft, an epic, a report
 
 
 KINDS = (
-    Kind("wish", words="required", skill="factory-backlog",
+    Kind("wish", words="required", skill="factory-backlog", creates=True,
          about="the person's words become a backlog item — a story, a task, a finding settled — kept as a draft"),
     Kind("release", keys=("story|epic",), skill="factory-backlog",
          about="release drafts — stories by id, or every draft of an epic — where the question pass leaves nothing open"),
-    Kind("stories", keys=("epic",), skill="factory-backlog", about="cut the next stories of an epic, as drafts"),
-    Kind("journey", keys=("epic",), skill="factory-backlog", about="propose the journey of a delivered epic"),
-    Kind("describe", words="required", skill="description",
+    Kind("stories", keys=("epic",), skill="factory-backlog", creates=True, about="cut the next stories of an epic, as drafts"),
+    Kind("journey", keys=("epic",), skill="factory-backlog", creates=True, about="propose the journey of a delivered epic"),
+    Kind("describe", words="required", skill="description", creates=True,
          about="a change to the project description, in the person's words (`<part>: <change>`)"),
-    Kind("discover", words="required", skill="factory-discover",
+    Kind("discover", words="required", may=("topic",), skill="factory-discover", creates=True,
          about="a problem or a wished deliverable — the discovery report and the epics it proposes"),
-    Kind("epic-from", keys=("topic", "proposal"), skill="factory-backlog",
+    Kind("epic-from", keys=("topic", "proposal"), skill="factory-backlog", creates=True,
          about="a discovery's proposed epic, released as an epic"),
     Kind("answer", keys=("record",), words="optional", option=True, skill="factory-decisions",
          about="the answer to an open question — an option key or the person's words"),
@@ -96,9 +98,20 @@ def operations_of(state: str) -> typing.List[str]:
     return RequestState(state).operations() if state in STATES else ["drop"]
 
 
+#: Where a question a request's skill asks back is answered: beside what the request was about — a discovery's on the
+#: discover tab, the description's on describe —; every other on decide, beside the stories.
+PLACE_OF_KIND = {"discover": "discover", "describe": "describe"}
+
+
+def place_of(request_id: str) -> str:
+    """The tab a record of the request <request_id> is answered on — `decide` for a stage's record or another kind."""
+    kind = request_id.split("Z-", 1)[1] if "Z-" in request_id else ""
+    return PLACE_OF_KIND.get(kind, "decide")
+
+
 def written_keys(kind: Kind) -> typing.Set[str]:
     """The keys a person gives a request of this kind — what the check takes; the rest it adds from the files."""
-    return {key for spec in kind.keys for key in spec.split("|")} | ({"option"} if kind.option else set()) \
+    return {key for spec in kind.keys for key in spec.split("|")} | set(kind.may) | ({"option"} if kind.option else set()) \
         | ({"from"} if kind.name == "run" else set())
 
 
@@ -150,4 +163,25 @@ class RequestStore(Store, typing.Protocol):
 
     def journal(self, *fields: str) -> None:
         """One line of the request journal: what happened to a request, when."""
+        ...
+
+    def keep_done(self, request: Request, wrote: str, commit: str, at: str) -> None:
+        """A note of a worked request that wrote something new — its words, who asked, what it wrote and its commit —,
+        kept beside the queue until a person releases what it made or hides it."""
+        ...
+
+    def done(self) -> typing.List[Request]:
+        """The notes of worked requests, newest first, `state: done`."""
+        ...
+
+    def hide_done(self, request_id: str) -> bool:
+        """The note of a worked request gone; False where there is none."""
+        ...
+
+
+class MadeItems(OutputPort, typing.Protocol):
+    """What a request wrote, read back as the backlog's: the stories, tasks, epics and findings at those paths."""
+
+    def at(self, paths: typing.Sequence[str]) -> typing.List[typing.Dict[str, str]]:
+        """Per item it finds: kind (story, task, epic, finding), id, title, status — in the order of the paths."""
         ...

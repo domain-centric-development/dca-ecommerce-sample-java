@@ -25,6 +25,7 @@ from ..delivery.adapter.outgoing.files.epic_files import EpicFiles
 from ..delivery.adapter.outgoing.files.journal_files import StoryJournalFiles
 from ..delivery.adapter.outgoing.files.owned_files import OwnedChangeFiles
 from ..delivery.adapter.outgoing.files.project_files import ProjectFiles
+from ..delivery.adapter.outgoing.files.made_items import MadeItemFiles
 from ..delivery.adapter.outgoing.files.request_files import RequestFiles
 from ..delivery.adapter.outgoing.files.status_facts import StatusFactFiles
 from .schedule import schedule_data
@@ -39,6 +40,7 @@ from ..delivery.application.status.show_discovery import ShowDiscoveryUseCase
 from ..delivery.application.lifecycle.show_running_page import ShowRunningPageUseCase
 from ..delivery.application.lifecycle.show_worker import ShowWorkerUseCase
 from ..delivery.application.lifecycle.start_factory import StartFactoryUseCase
+from ..delivery.application.lifecycle.end_page import EndPageUseCase
 from ..delivery.application.lifecycle.start_page import StartPageUseCase
 from ..delivery.application.lifecycle.stop_factory import StopFactoryUseCase
 from ..delivery.application.upkeep.let_journals_into_git import LetJournalsIntoGitUseCase
@@ -118,7 +120,7 @@ def retry_request(cwd: str) -> RetryRequestUseCase:
 
 
 def list_requests(cwd: str) -> ListRequestsUseCase:
-    return ListRequestsUseCase(RequestFiles(cwd))
+    return ListRequestsUseCase(RequestFiles(cwd), MadeItemFiles(cwd))
 
 
 def pending_requests(cwd: str) -> PendingRequestsUseCase:
@@ -322,6 +324,10 @@ def stop_factory() -> StopFactoryUseCase:
 
 def start_page() -> StartPageUseCase:
     return StartPageUseCase(FactoryProcessFiles())
+
+
+def end_page() -> EndPageUseCase:
+    return EndPageUseCase(FactoryProcessFiles())
 
 
 def show_worker() -> ShowWorkerUseCase:

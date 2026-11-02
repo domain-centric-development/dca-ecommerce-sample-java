@@ -79,12 +79,57 @@ code { background: var(--code); padding: 1px 5px; border-radius: 4px; overflow-w
 .brand { display: flex; align-items: center; gap: 1ex; font: 700 19px var(--display); letter-spacing: -.3px; color: var(--mist); }
 .brand svg { width: 2.13ex; height: 2.4ex; overflow: visible; transform: translateY(.1ex); }
 .brand .tld { color: var(--teal); }
+a.brand { text-decoration: none; border-radius: 6px; padding: 2px 6px; margin: -2px -6px; }
+a.brand:hover > span:first-of-type { color: var(--teal); } a.brand:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 .brand .project { font: 400 13px var(--mono); color: rgba(232, 234, 240, .62); letter-spacing: .3px; margin-left: 4px; }
 .tabs { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; scrollbar-width: none; }
 .tabs button { font: 400 13px var(--mono); letter-spacing: .4px; color: rgba(232, 234, 240, .72); background: none; border: 0;
   padding: 8px 10px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
 .tabs button:hover { color: var(--teal); }
 .tabs button[aria-selected="true"] { color: var(--mist); border-bottom-color: var(--teal); }
+.tabs button:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
+/* the parts side by side, a hairline between them; the cycle's views joined by arrows */
+.tabs { align-items: center; } .tgroup { display: flex; align-items: center; }
+.tsep { flex: none; width: 1px; height: 16px; margin: 0 8px; background: rgba(232, 234, 240, .2); }
+.tabs .arrow { color: rgba(232, 234, 240, .35); font: 400 12px var(--mono); }
+/* the keys show while the bar is worked by keyboard, never for a mouse */
+/* now: the cycle as four columns, the actions at their foot on one line */
+.board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 26px; align-items: stretch; }
+.colw { display: flex; align-items: stretch; } .colw + .colw::before { content: "→"; align-self: center; padding: 0 6px; color: var(--muted); font: 400 18px var(--mono); }
+.col { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.col.hot { border-color: #c9922e; box-shadow: inset 0 3px 0 #c9922e; }
+.col h3 { font: 700 17px var(--display); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.col h3 .link { font: inherit; color: inherit; text-decoration: none; } .col h3 .link:hover { color: var(--accent); }
+.col .one .title { font: inherit; color: var(--text); text-decoration: none; } .col .one .title:hover { color: var(--accent); } .col h3 .c { font: 700 26px var(--display); } .col .of { font: 500 14px var(--mono); color: var(--muted); }
+.col .sub2 { font: 400 12px/16px var(--mono); color: var(--muted); height: 16px; margin-top: 2px; }
+.col .prog { display: flex; align-items: center; gap: 8px; } .col .prog .thin { flex: 1; height: 4px; border-radius: 2px; background: var(--soft); overflow: hidden; }
+.col .prog .thin i { display: block; height: 100%; background: var(--done); }
+.col .one { margin-top: 12px; font-size: 15px; } .col .one + .one { margin-top: 8px; } .col .one .id { display: block; font: 400 12px var(--mono); color: var(--muted); }
+.col .acts { margin-top: auto; padding-top: 14px; flex-wrap: nowrap; align-items: center; } .col .acts .to { margin-left: auto; }
+.btn.primary.nogo::after { content: none; }
+.inflow { display: flex; gap: 14px; align-items: center; margin-top: 22px; }
+.inflow .lab { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--accent); white-space: nowrap; }
+.list { list-style: none; margin-top: 12px; } .list li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; } .list .what { flex: 1; min-width: 0; } .list .id { font: 400 12.5px var(--mono); color: var(--muted); display: block; }
+.list .r { font: 400 13px var(--mono); color: var(--muted); white-space: nowrap; text-align: right; }
+button.link.to { display: inline-block; margin-top: 12px; font: 500 13px var(--mono); color: var(--accent); text-decoration: none; }
+.col button.link.to { margin-top: 0; } .quietline button.link { text-decoration: none; }
+.quietline { margin-top: 14px; font: 400 13px var(--mono); color: var(--muted); } .quietline .link { font: inherit; color: var(--accent); }
+/* the wish's trail: each wish in its state, what became of it */
+.trail { list-style: none; margin-top: 14px; border-top: 1px solid var(--line); }
+.trail li { display: grid; grid-template-columns: 1.4em minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.trail li:last-child { border-bottom: 0; } .trail .g { color: var(--accent); } .trail .w { min-width: 0; } .trail q { font-style: italic; }
+.trail .s { display: block; font: 400 12.5px var(--mono); color: var(--muted); margin-top: 2px; } .trail .s.ok { color: var(--done); }
+.trail .s.ask { color: #b07a1e; } .trail .s.bad { color: var(--stop); } .trail .a { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.spin { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c9922e; margin-right: 6px; animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+@media (max-width: 860px) {
+  .board { grid-template-columns: 1fr; } .colw { flex-direction: column; }
+  .colw + .colw::before { content: "↓"; padding: 4px 0; }
+}
+.tabs .key { display: none; margin-right: 6px; color: var(--teal); font-size: 11px; }
+.tabs:has(:focus-visible) .key { display: inline; }
 .tabs .n { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 5px; border-radius: 9px; background: var(--fill);
   color: #fff; font-size: 11px; text-align: center; }
 .status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font: 400 13px var(--mono); color: rgba(232, 234, 240, .8); }
@@ -117,6 +162,7 @@ h1 { font: 700 clamp(28px, 4vw, 38px)/1.1 var(--display); letter-spacing: -1px; 
 .card > .about { color: var(--muted); margin-top: 6px; font-size: 16px; max-width: 48em; }
 h3 { font: 600 15px var(--display); margin: 18px 0 6px; }
 .drawer h2 { font: 600 16px var(--display); margin: 20px 0 6px; }
+.drawer > .acts { margin: 16px 0 22px; }
 .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .prose { font-size: 16px; }
 .prose p, .prose ul, .prose ol { margin: 0 0 8px; }
@@ -155,6 +201,7 @@ tr:last-child td { border-bottom: 0; }
 .btn.primary:hover { background: var(--fill-hover); border-color: var(--fill-hover); color: var(--on-accent); }
 .btn.danger:hover { border-color: var(--stop); color: var(--stop); }
 .btn:disabled { opacity: .5; cursor: default; }
+.btn.claude::before { content: "✦"; color: var(--accent); margin-right: 6px; font-weight: 400; } .btn.primary.claude::before { color: var(--on-accent); }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--panel); }
 .seg button { font: 500 13px var(--display); color: var(--ink); background: none; border: 0; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
 .seg button + button { border-left: 1px solid var(--line); } .seg button:hover { color: var(--accent); }
@@ -203,11 +250,11 @@ pre.out:empty { display: none; }
 
 /* the domain: the open context's row as an ink head, a teal course with numbered nodes, the model as a profile, features as cards */
 .dm { margin: 4px 0 8px; }
-table.epics tr.ctx-row.open td, table.epics tr.ctx-row.open:hover td { background: var(--ink); color: var(--bg); border-bottom: 0;
+table.epics tr.epic-row.ink-open td, table.epics tr.epic-row.ink-open:hover td { background: var(--ink); color: var(--bg); border-bottom: 0;
   box-shadow: inset 0 4px 0 var(--teal); }
-table.epics tr.ctx-row.open td:first-child { border-radius: 4px 0 0 0; } table.epics tr.ctx-row.open td:last-child { border-radius: 0 4px 0 0; }
-table.epics tr.ctx-row.open .id, table.epics tr.ctx-row.open .hint, table.epics tr.ctx-row.open .caret { color: color-mix(in srgb, var(--bg) 70%, transparent); }
-table.epics tr.ctx-row.open .title { font-weight: 700; }
+table.epics tr.ink-open td:first-child { border-radius: 4px 0 0 0; } table.epics tr.ink-open td:last-child { border-radius: 0 4px 0 0; }
+table.epics tr.ink-open .id, table.epics tr.ink-open .hint, table.epics tr.ink-open .caret { color: color-mix(in srgb, var(--bg) 70%, transparent); }
+table.epics tr.ink-open .title { font-weight: 700; }
 .pill { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .pill.core { background: color-mix(in srgb, var(--teal) 28%, transparent); box-shadow: inset 0 0 0 1.5px var(--teal); color: var(--teal); }
 .pill.sup { box-shadow: inset 0 0 0 1.5px var(--teal); color: var(--teal); }
@@ -261,8 +308,14 @@ details.dm-group > summary { justify-content: flex-start; }
 .ehead .name b { font: 600 15.5px var(--display); } .ehead .caret { color: var(--muted); font: 400 12px var(--mono); }
 .ehead .meta { display: flex; gap: 8px; align-items: center; font: 400 12.5px var(--mono); color: var(--muted); white-space: nowrap; }
 .strip { display: flex; gap: 2px; grid-column: 1 / -1; } .strip i { flex: 1; height: 5px; border-radius: 1px; background: var(--line); }
-.strip i.l-delivered { background: var(--teal); } .strip i.l-running { background: var(--wait); } .strip i.l-stopped { background: var(--stop); }
-.strip i.l-approved { background: color-mix(in srgb, var(--teal) 40%, var(--line)); }
+.strip i.l-delivered, .legend i.l-delivered { background: var(--teal); } .strip i.l-running, .legend i.l-running { background: var(--wait); } .strip i.l-stopped, .legend i.l-stopped { background: var(--stop); }
+.strip i.l-approved, .legend i.l-approved { background: color-mix(in srgb, var(--teal) 40%, var(--line)); }
+.strip i.l-draft, .legend i.l-draft { background: transparent; box-shadow: inset 0 0 0 1px var(--muted); }
+.strip i.l-superseded, .legend i.l-superseded { background: var(--line); }
+/* the strip's key, said once above the epics */
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font: 400 12px var(--mono); color: var(--muted); margin-top: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 18px; height: 6px; border-radius: 1px; }
 .ebody { padding: 0 12px 12px; } .ebody > .about { margin: 0 0 8px; }
 .lanes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 @media (max-width: 760px) { .lanes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
@@ -270,7 +323,10 @@ details.dm-group > summary { justify-content: flex-start; }
 .lane h4 { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; margin-bottom: 6px; }
 .scard { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; font-size: 14px; line-height: 1.35; }
 .scard .link.title { font: 500 14px var(--display); } .scard .id { margin-top: 3px; }
-.scard.hot { box-shadow: inset 3px 0 0 var(--wait); } .scard.ok { box-shadow: inset 3px 0 0 var(--teal); } .scard.bad { box-shadow: inset 3px 0 0 var(--stop); }
+/* a card's edge is its segment's colour in the strip above */
+.scard.l-delivered { box-shadow: inset 3px 0 0 var(--teal); } .scard.l-running { box-shadow: inset 3px 0 0 var(--wait); }
+.scard.l-stopped { box-shadow: inset 3px 0 0 var(--stop); } .scard.l-approved { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--teal) 40%, var(--line)); }
+.scard.l-superseded { box-shadow: inset 3px 0 0 var(--line); } .scard.l-draft { border-left: 2px dashed var(--muted); }
 .scard .acts { margin-top: 6px; } .scard .btn { font-size: 12.5px; padding: 4px 9px; }
 .lane details > summary { cursor: pointer; font: 500 12px var(--mono); color: var(--accent); }
 
@@ -296,8 +352,11 @@ details.dm-group > summary { justify-content: flex-start; }
 .decision.accept .q { background: color-mix(in srgb, var(--teal) 10%, var(--panel)); }
 .decision .q b { font: 600 17px/1.3 var(--display); display: block; margin-top: 2px; }
 .decision .dbody { padding: 10px 18px 16px; }
-.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-top: 10px; }
-.opt { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font-size: 15px; display: grid; gap: 8px; align-content: start; }
+/* the options as rows, each its button first and what it means beside it — long words read across, not down */
+.opts { display: grid; gap: 6px; margin-top: 10px; }
+.opt { border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 15px; display: grid;
+  grid-template-columns: 64px minmax(0, 1fr); gap: 4px 12px; align-items: start; }
+.opt > .pick-it { grid-row: 1 / span 2; } .opt .rec-word { grid-column: 2; }
 .opt.advised { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); }
 .decision details.more > summary::before { content: "▸ "; color: var(--muted); } .decision details.more[open] > summary::before { content: "▾ "; }
 .decision .id .link.title { font: inherit; }
@@ -340,11 +399,18 @@ details.dm-group > summary { justify-content: flex-start; }
 .curve .tip b { display: block; font: 600 13.5px var(--display); margin-bottom: 4px; }
 .curve .tip .row { display: flex; justify-content: space-between; gap: 14px; color: var(--muted); } .curve .tip .row span:last-child { color: var(--ink); }
 
+/* quality: what the stages asked, what the judge found, what a person corrected — counted, never rated */
+.tiles.five { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.tile.bad b { color: var(--stop); } .tile small { display: block; font: 400 11.5px var(--mono); color: var(--muted); margin-top: 2px; }
+.qbars { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 6px 12px; align-items: center; margin-top: 8px; }
+.qbars .lbl { font: 500 12.5px var(--mono); color: var(--ink); } .qbars .n { font: 500 12.5px var(--mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.qbars .track { height: 8px; } .qbars .track i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--teal); min-width: 2px; }
+.qrules { margin-top: 12px; font-size: 15px; } .qrules .hint { display: block; }
+.qline { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 400 12.5px var(--mono); color: var(--muted); margin: 0 0 10px; }
+.qline b { color: var(--ink); font-weight: 600; } .qline .bad { color: var(--stop); }
+
 /* discover: the problem with an amber edge, the proposed epics as cards */
-.report { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; margin-top: 10px; }
-@media (max-width: 860px) { .report { grid-template-columns: minmax(0, 1fr); } }
-.problem { border-left: 4px solid var(--wait); padding: 2px 0 2px 12px; align-self: start; }
-.problem b { font: 600 17px var(--display); display: block; } .problem p { margin: 4px 0 0; font-size: 15px; }
+.proposals { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
 .proposal { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; margin-bottom: 8px; display: grid; gap: 5px; }
 .proposal > b { font: 600 15px var(--display); } .proposal .ev { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 .proposal .acts { margin-top: 2px; }
@@ -430,12 +496,12 @@ details.more > summary h2::before { content: "▸ "; color: var(--muted); } deta
 <body>
 <header class="topbar" id="topbar">
   <div class="wrap nav">
-    <div class="brand">__MARK__<span>factory<span class="tld">.</span></span><span class="project" id="project"></span></div>
-    <nav class="tabs" id="tabs" role="tablist" aria-label="the cycle"></nav>
+    <a class="brand" id="home" href="#now" data-tab="now" aria-label="now — where the factory stands" title="now — where the factory stands">__MARK__<span>factory<span class="tld">.</span></span><span class="project" id="project"></span></a>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="the factory's views"></nav>
     <div class="status">
       <span id="worker"><span class="dot"></span>…</span>
-      <button class="bar-btn primary" data-call="up" id="up" hidden>up</button>
-      <button class="bar-btn" data-call="down" id="down" hidden>down</button>
+      <button class="bar-btn primary" data-call="up" id="up" title="work the released stories off, one after the other — factory.sh up" hidden>▶ start the backlog</button>
+      <button class="bar-btn" data-call="down" id="down" title="no next story from the backlog; what runs ends its stage — factory.sh down" hidden>■ stop the backlog</button>
       <label>as <input class="by" id="by" type="text" autocomplete="name" aria-label="your name"></label>
       <span class="theme" role="group" aria-label="theme">
         <button data-pick="light" aria-pressed="false">light</button><button data-pick="auto" aria-pressed="false">auto</button><button data-pick="dark" aria-pressed="false">dark</button>
@@ -444,28 +510,32 @@ details.more > summary h2::before { content: "▸ "; color: var(--muted); } deta
   </div>
 </header>
 <div class="banner" id="banner" role="alert"><div class="wrap" id="banner-text"></div></div>
-<main class="wrap" id="main"></main>
+<main class="wrap" id="main" role="tabpanel"></main>
 <div id="toasts" aria-live="polite"></div>
 <aside class="drawer" id="drawer" aria-label="story" tabindex="-1" hidden></aside>
 <script>
 "use strict";
 const TOKEN = new URLSearchParams(location.search).get("t") || "";
+// the views in the order of their keys (0 … 6, the cockpit's); which part each sits in — once, inflow, the cycle, to look
+// up — comes from the factory (`help`'s parts)
 const TABS = [
-  ["describe", "0 describe", "Once", "The project description", "What is built, how, and in which domain — and in each context what holds today. You write the description; what holds changes by a story the gate delivers."],
-  ["discover", "1 discover", "Cycle", "Discovery", "Which problem is worth solving — a report with its sources and the epics it proposes."],
-  ["backlog", "2 backlog", "Cycle", "Backlog", "Epics and their stories, newest first. A story runs once released."],
-  ["run", "3 run", "Cycle", "The factory at work", "Your requests first, then the stories — one stage after the other, a gate between them."],
-  ["decide", "4 decide", "Cycle", "Waiting for you", "A question a stage may not decide alone, or a result to look at."],
-  ["delivered", "5 delivered", "Cycle", "Delivered", "What the factory delivered, the newest first."],
-  ["rules", "rules", "Always", "The rules", "What the gate checks, what the runner decides and what each stage is told — per stage of a story, the gates between them. Pick a rule to read it; pick a story to see which fired."]];
+  ["describe", "The project description", "What is built, how, and in which domain — and in each context what holds today. You write the description; what holds changes by a story the gate delivers."],
+  ["discover", "Discovery", "Which problem is worth solving — a report with its sources and the epics it proposes."],
+  ["backlog", "Backlog", "Epics and their stories, newest first — from a discovery, a wish, a judge's finding or a delivered epic's journey. A story runs once released."],
+  ["run", "The factory at work", "Your requests at once, while this page is open; the backlog's stories while it is started — one stage after the other, a gate between them."],
+  ["decide", "Waiting for you", "A question a stage may not decide alone, or a result to look at."],
+  ["delivered", "Delivered", "What the factory delivered, the newest first."],
+  ["rules", "The rules", "What the gate checks, what the runner decides and what each stage is told — per stage of a story, the gates between them. Pick a rule to read it; pick a story to see which fired."]];
+const NOW = ["now", "Where it stands", "The cycle a story turns through — how many stand where, and the one that matters most in each."];
 const MARKS = {look: "!", question: "?", stopped: "✗", running: "▶", done: "✓", none: "·", next: "→"};
-const S = {tab: "backlog", status: null, decisions: null, discover: null, requests: null, follow: null, followSource: null,
+const S = {tab: "now", help: null, status: null, decisions: null, discover: null, requests: null, follow: null, followSource: null,
            followLines: [], drawer: null, opener: null, drafts: {}, folded: {},
            rules: null, rulesFor: null, ruleKind: "story", rule: null, ruleStory: "", flowPick: null};
 const stored = key => { try { return localStorage.getItem(key) || ""; } catch (e) { return ""; } };
 const store = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
-S.tab = stored("factory.tab") || S.tab;
-if (TABS.some(([id]) => id === location.hash.slice(1))) S.tab = location.hash.slice(1);
+// the page opens where it stands; a link to a view opens that view
+const known = id => id === "now" || TABS.some(([t]) => t === id);
+if (known(location.hash.slice(1))) S.tab = location.hash.slice(1);
 if (location.hash === "#spec" || S.tab === "spec") S.tab = "describe";                // what holds is part of the description
 // `#rules:<story>[:<rule>]` opens the rules with that story's gate runs marked, and the rule read
 if (location.hash.startsWith("#rules:")) {
@@ -478,7 +548,10 @@ const $ = id => document.getElementById(id);
 const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const mark = m => `<span class="mark m-${esc(m)}" aria-hidden="true">${esc(MARKS[m] || "·")}</span>`;
 // a section's markdown as the website sets it: paragraphs, lists, `code` and **strong** — escaped first
-const inline = text => esc(text).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+// code first, as markdown reads it — `x`, and ``x`` that may hold a backtick —, bold only outside it
+const inline = text => String(text == null ? "" : text).split(/(``.+?``|`[^`]+`)/).map((part, i) => i % 2
+  ? `<code>${esc(part.startsWith("``") ? part.slice(2, -2).trim() : part.slice(1, -1))}</code>`
+  : esc(part).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")).join("");
 function prose(text) {
   // the markdown a person writes in a description, a record or a story: paragraphs, lists, tables, code, headings
   const out = [];
@@ -558,16 +631,18 @@ function act(action, scope) {
   if (action.queued) return `<span class="state st-queued" title="request ${esc(action.queued)}">${esc(action.label)} — ${esc(action.queued_text || "queued")}</span>`;
   const id = `${scope || "m"}${++actionCount}`;
   ACTIONS[id] = action;
-  const r = action.request, cls = `btn${action.primary ? " primary" : ""}`;
+  // a press that has an agent write something new says so before it is pressed: ✦ on the button, words in its title
+  const r = action.request, cls = `btn${action.primary ? " primary" : ""}${action.creates ? " claude" : ""}`;
+  const said = [action.creates ? "an agent writes this, in the factory's queue" : "", action.text].filter(Boolean).join(" — ");
   if (r.open === "words") {
     const choices = (r.choices || []).length ? `<select aria-label="why"><option value="">why? (optional)</option>${r.choices.map(c => `<option>${esc(c)}</option>`).join("")}</select>` : "";
     // what the person typed outlives a redraw: kept by the action's command, until its request is written
     const draft = r.draft || action.skill;
     return `<div class="ask" data-ask="${id}"><textarea data-draft="${esc(draft)}" placeholder="${esc(action.text)}" aria-label="${esc(action.label)}">${esc(S.drafts[draft] || "")}</textarea>${choices}
-      <button class="${cls}" data-press="${id}">${esc(action.label)}</button></div>`;
+      <button class="${cls}" data-press="${id}" title="${esc(said)}">${esc(action.label)}</button></div>`;
   }
   if (r.open === "record") return `<button class="${cls}" data-tab="decide">${esc(action.label)}</button>`;
-  return `<button class="${cls}" data-press="${id}" title="${esc(action.text)}">${esc(action.label)}</button>`;
+  return `<button class="${cls}" data-press="${id}" title="${esc(said)}">${esc(action.label)}</button>`;
 }
 const acts = (list, scope) => (list || []).map(a => act(a, scope)).join("");
 function forget(scope) { for (const key of Object.keys(ACTIONS)) if (key[0] === scope) delete ACTIONS[key]; }
@@ -586,7 +661,8 @@ async function press(button) {
   }
   try {
     const data = await api("/api/request", Object.assign({kind: r.kind, words, by: by()}, fields));
-    toast(data.duplicate ? `queued already: ${data.id}` : `request written: ${data.id}`);
+    toast(data.duplicate ? `queued already: ${data.id}`
+      : r.kind === "wish" ? "✦ your wish is being written as a draft — it shows below the field" : `request written: ${data.id}`);
     if (box) { box.querySelector("textarea").value = ""; delete S.drafts[r.draft || action.skill]; }
     refresh();
     if (S.drawer) openStory(S.drawer);
@@ -602,7 +678,7 @@ document.addEventListener("change", event => {
   loadRules();
 });
 
-// what the page itself calls: the factory up and down, a request taken back or queued again, an output followed
+// what the page itself calls: the backlog started and stopped, a request taken back or queued again, an output followed
 const CALLS = {
   async up() { const d = await api("/api/up", {by: by()}); toast(d.output || "up"); },
   async down(node) {
@@ -615,6 +691,7 @@ const CALLS = {
     await api("/api/requests/drop", {id: node.dataset.id}); toast("taken back");
   },
   async retry(node) { await api("/api/requests/retry", {id: node.dataset.id}); toast("queued again"); },
+  async hide(node) { await api("/api/requests/drop", {id: node.dataset.id}); toast("hidden — the draft stays in the backlog"); },
   async follow(node) { follow(node.dataset.kind, node.dataset.id); },
   async unfollow() { follow(null); },
   async close() { S.drawer = null; $("drawer").hidden = true; forget("d"); if (S.opener && document.contains(S.opener)) S.opener.focus(); S.opener = null; },
@@ -661,7 +738,7 @@ async function refresh() {
   if (refreshing) return;
   refreshing = true;
   try {
-    const slow = Date.now() - lastSlow > 15000 || ["decide", "discover"].includes(S.tab);
+    const slow = Date.now() - lastSlow > 15000 || ["decide", "discover", "describe"].includes(S.tab);
     const jobs = [load("status", "/api/view/status"), load("requests", "/api/view/requests")];
     if (slow || !S.decisions) jobs.push(load("decisions", "/api/view/decisions"));
     if (slow || !S.discover) jobs.push(load("discover", "/api/view/discover"));
@@ -685,16 +762,68 @@ function renderFrame() {
   const st = S.status || {}, w = st.worker, counts = (S.requests || {}).counts || {};
   $("project").textContent = st.project || "";
   document.title = (st.project ? st.project + " — " : "") + "factory";
-  const dot = !w || !w.alive ? "down" : w.stopping ? "stopping" : "up";
+  // the dot is the backlog's, the one thing a person switches here: a person's requests are worked while this page is
+  // open, and that goes without saying (WP-177)
+  const backlog = backlogOn(st);
+  const dot = !backlog ? "down" : w.stopping ? "stopping" : "up";
   const queued = (S.requests || {}).counts_text;
   $("worker").innerHTML = `<span class="dot ${dot}"></span>${esc(st.worker_text || "…")}${queued ? ` · ${esc(queued)}` : ""}`;
   $("worker").title = w ? `${w.owner} since ${w.since_text}` : "nobody holds the checkout";
-  $("up").hidden = !!(w && w.alive);
-  $("down").hidden = !(w && w.alive) || w.stopping;
-  $("tabs").innerHTML = TABS.map(([id, label]) => {
-    const n = id === "decide" ? (st.waiting || []).length : id === "run" ? (counts.failed || 0) : 0;
-    return `<button role="tab" data-tab="${id}" aria-selected="${S.tab === id}">${esc(label)}${n ? `<span class="n">${n}</span>` : ""}</button>`;
-  }).join("");
+  $("up").hidden = backlog;
+  $("down").hidden = !backlog || w.stopping;
+  // a record waits where it is answered: a discovery's on discover, the description's on describe, the rest decide
+  const asking = place => (st.waiting || []).filter(w => (w.place || "decide") === place).length;
+  const tab = id => {
+    const n = ["decide", "discover", "describe"].includes(id) ? asking(id) : id === "run" ? (counts.failed || 0) : 0;
+    const key = TABS.findIndex(([t]) => t === id), on = S.tab === id, first = S.tab === "now" && key === 0;
+    return `<button role="tab" id="tab-${id}" data-tab="${id}" aria-selected="${on}" tabindex="${on || first ? 0 : -1}" aria-controls="main" aria-keyshortcuts="${key}"><span class="key" aria-hidden="true">${key}</span>${esc(id)}${n ? `<span class="n">${n}</span>` : ""}</button>`;
+  };
+  // the parts side by side, the cycle's views with an arrow between them: the order a story turns through
+  const parts = (S.help || {}).parts || [{tabs: TABS.map(([id]) => id)}];
+  morph($("tabs"), parts.map(p => `<span class="tgroup" role="presentation">${p.tabs.map((id, i) =>
+    (i && p.ordered ? `<span class="arrow" aria-hidden="true">→</span>` : "") + tab(id)).join("")}</span>`)
+    .join(`<span class="tsep" aria-hidden="true"></span>`));
+  $("main").setAttribute("aria-labelledby", S.tab === "now" ? "home" : "tab-" + S.tab);
+}
+const partOf = id => ((S.help || {}).parts || []).find(p => p.tabs.includes(id));
+
+// --- drawing: the new page is matched against the one on screen, never put in its place -------------------------------
+// An element that stays the same element keeps what the browser holds for the person — where a box is scrolled, what
+// has the focus, a caret, a selection —, so nothing of it has to be remembered and put back. An element with a key
+// (`id`, `data-fold`, `data-epic`, `data-context`, `data-story`) is found again by it, wherever it moved; a fold's
+// `open` and a text field's words are the person's, and the match leaves them alone.
+const keyOf = node => node.nodeType === 1 ? node.id || node.dataset.fold || node.dataset.epic || node.dataset.context
+  || node.dataset.topic
+  || (node.tagName === "BUTTON" ? "" : node.dataset.story) || "" : "";
+const PERSONS = {DETAILS: ["open"], TEXTAREA: ["value"], INPUT: ["value"], SELECT: ["value"]};
+function morphNode(old, want) {
+  if (old.nodeType !== 1) { if (old.nodeValue !== want.nodeValue) old.nodeValue = want.nodeValue; return; }
+  const keep = PERSONS[old.tagName] || [];
+  for (const {name} of [...old.attributes]) if (!want.hasAttribute(name) && !keep.includes(name)) old.removeAttribute(name);
+  for (const {name, value} of [...want.attributes]) if (!keep.includes(name) && old.getAttribute(name) !== value) old.setAttribute(name, value);
+  // a text field's words are the person's, and what the page fills in itself (`data-own`) is the page's
+  if (old.tagName !== "TEXTAREA" && !old.hasAttribute("data-own")) morphChildren(old, want);
+}
+function morphChildren(from, to) {
+  const keyed = new Map([...from.childNodes].filter(keyOf).map(n => [keyOf(n), n]));
+  let cur = from.firstChild;
+  for (const want of [...to.childNodes]) {
+    const key = keyOf(want);
+    const match = key ? keyed.get(key)
+      : cur && !keyOf(cur) && cur.nodeType === want.nodeType && cur.nodeName === want.nodeName ? cur : null;
+    if (!match) { from.insertBefore(want, cur); continue; }
+    if (key) keyed.delete(key);
+    if (match === cur) cur = cur.nextSibling; else from.insertBefore(match, cur);
+    morphNode(match, want);
+  }
+  while (cur) { const next = cur.nextSibling; cur.remove(); cur = next; }
+}
+function morph(target, html) {
+  if (target.dataset.drawn === html) return;            // nothing changed: nothing is touched
+  const fresh = document.createElement("template");
+  fresh.innerHTML = html;
+  morphChildren(target, fresh.content);
+  target.dataset.drawn = html;
 }
 
 function render() {
@@ -703,10 +832,11 @@ function render() {
     && $("main").contains(document.activeElement);
   if (editing) return;                                   // a person typing is not redrawn under their hands
   forget("m"); forget("s");
-  const [, , eyebrow, title, lede] = TABS.find(([id]) => id === S.tab) || TABS[2];
-  const view = {describe, discover, backlog, run, decide, delivered, rules: rulesTab}[S.tab] || backlog;
-  $("main").innerHTML = `<div class="eyebrow">${esc(eyebrow)}</div><h1>${esc(title)}</h1><p class="lede">${esc(lede)}</p>`
-    + (S.status ? endedLine(S.status) + view(S.status) : `<section class="card"><p class="empty">Reading the factory…</p></section>`);
+  const [, title, lede] = S.tab === "now" ? NOW : TABS.find(([id]) => id === S.tab) || NOW;
+  const eyebrow = S.tab === "now" ? "Now" : (partOf(S.tab) || {}).eyebrow || "";
+  const view = {now, describe, discover, backlog, run, decide, delivered, rules: rulesTab}[S.tab] || now;
+  morph($("main"), `<div class="eyebrow">${esc(eyebrow)}</div><h1>${esc(title)}</h1><p class="lede">${esc(lede)}</p>`
+    + (S.status ? endedLine(S.status) + view(S.status) : `<section class="card"><p class="empty">Reading the factory…</p></section>`));
   if (S.tab === "run") paintFollow();
   if (S.tab === "rules") paintFlow();
 }
@@ -1039,7 +1169,7 @@ function domainCard() {
   const open = S.openContexts || (S.openContexts = new Set());
   const rows = (S.spec.contexts || []).map(c => {
     const isOpen = open.has(c.context), pending = c.features.reduce((n, f) => n + f.rules.reduce((m, r) => m + r.criteria.filter(x => x.changed_by.length).length, 0), 0) + c.coming.length;
-    return `<tr class="epic-row ctx-row${isOpen ? " open" : ""}" data-context="${esc(c.context)}" tabindex="0" aria-expanded="${isOpen}">
+    return `<tr class="epic-row ctx-row${isOpen ? " open ink-open" : ""}" data-context="${esc(c.context)}" tabindex="0" aria-expanded="${isOpen}">
       <td><span class="caret" aria-hidden="true">${isOpen ? "▾" : "▸"}</span> <span class="title">${esc(c.context)}</span>${c.subdomain ? `<div class="sd"><span class="pill ${subdomainClass(c.subdomain)}">${esc(c.subdomain)}</span></div>` : ""}</td>
       <td class="hide-s">${esc(c.purpose)}</td><td class="num">${c.features.length}</td><td class="num">${c.criteria}</td>
       <td class="num">${pending ? `<span class="pend p-changes">${pending}</span>` : "—"}</td>
@@ -1071,18 +1201,63 @@ document.addEventListener("click", event => {
 function endedLine(st) {
   const gone = st.ended;
   return gone ? `<div class="next ended"><div class="text"><span class="arrow">!</span>${esc(gone.text)}${gone.log ? ` <span class="hint">${esc(gone.log)}</span>` : ""}</div>
-    <button class="btn primary" data-call="up">up</button></div>` : "";
+    <button class="btn primary nogo" data-call="up">▶ start the backlog</button></div>` : "";
 }
 
-function nextLine(st) {
-  const nx = st.next;
-  if (!nx) return "";
-  return `<div class="next"><div class="text"><span class="arrow">→</span>${esc(nx.text)}</div>${act(nx.action)}</div>`;
-}
+// whether the backlog runs: a runner from a terminal or a session's, or the factory's worker with the backlog on
+const backlogOn = st => { const w = st.worker; return !!(w && w.alive && (w.how !== "up" || w.backlog)); };
 
 function card(title, sub, body) {
   const head = title ? `<h2>${title}${sub ? ` <span class="sub">${sub}</span>` : ""}</h2>` : "";
   return `<section class="card">${head}${body}</section>`;
+}
+
+// --- now: where it stands --------------------------------------------------------------------------------------------
+// The cycle as four columns, each as the factory says it: its count, one line, the one item that matters most there and
+// the one action at its foot. Then the inflow — the wish part —, the last deliveries and what may wait.
+const when = text => {
+  const day = String(text || "").slice(0, 10), today = new Date().toISOString().slice(0, 10);
+  return !day ? "" : day === today ? `today ${String(text).slice(11)}` : day;
+};
+function column(c) {
+  const count = c.column === "delivered" ? `${c.count}<small class="of"> / ${c.total}</small>` : `${c.count}`;
+  const line = c.column === "delivered"
+    ? `<div class="sub2 prog" role="img" aria-label="${c.count} of ${c.total} stories delivered, ${c.percent} percent"><span class="thin"><i style="width:${c.percent}%"></i></span>${esc(c.line)}</div>`
+    : `<div class="sub2">${esc(c.line)}</div>`;
+  const item = c.title ? `<div class="one">${c.story ? story(c.story, c.title) : esc(c.title)}${c.sub ? `<span class="id">${esc(c.sub)}</span>` : ""}</div>` : "";
+  const last = c.last_text ? `<div class="one">last ${esc(when(c.last_text))}</div>` : "";
+  const press = !c.action ? "" : c.action.call ? `<button class="btn primary nogo" data-call="${esc(c.action.call)}">${esc(c.action.label)}</button>` : act(c.action);
+  const all = c.column === "delivered" ? `<button class="link to" data-tab="delivered">all →</button>` : "";
+  return `<div class="colw"><div class="col${c.hot ? " hot" : ""}"><h3><button class="link" data-tab="${esc(c.column)}">${esc(c.column)}</button><span class="c">${count}</span></h3>
+    ${line}${last}${item}<div class="acts">${press}${all}</div></div></div>`;
+}
+function now(st) {
+  const rows = Object.fromEntries((st.rows || []).map(r => [r.story, r]));
+  const recent = (st.delivered_order || []).slice(0, 3).map(id => rows[id]).filter(Boolean).map(r => `<li><span class="mark m-done" aria-hidden="true">✓</span>
+    <span class="what">${story(r.story, r.title)}<span class="id">${esc(r.epic)}</span></span><span class="r">${esc(when(r.delivered_text))}<br>${esc(r.cost_text || "")}</span></li>`).join("");
+  const sums = [st.cost_text, st.seconds_text].filter(Boolean).join(" · ");
+  const findings = (st.findings || []).length;
+  return `<div class="board">${(st.now || []).map(column).join("")}</div>`
+    + `<div class="inflow"><span class="lab">Inflow →</span><span class="hint">a wish, a discovery, a finding, an epic's journey fill the backlog</span></div>`
+    + wishCard(st, true)
+    + (recent ? card("Last delivered", sums ? `${esc(sums)} in all` : "", `<ul class="list">${recent}</ul><button class="link to" data-tab="delivered">delivered →</button>`) : "")
+    + (findings ? `<p class="quietline">Beside that: <button class="link" data-tab="backlog">${findings} open finding${findings > 1 ? "s" : ""} beside their stories →</button></p>` : "");
+}
+
+// --- the wish: one part wherever it stands, the field and the trail of what became of each wish ------------------------
+function wishCard(st, tight) {
+  const trail = ((S.requests || {}).wishes || []).map(w => {
+    const since = w.state === "running" && w.started ? ` — ${Math.max(0, Math.round((Date.now() - Date.parse(w.started)) / 1000))} s` : "";
+    const ops = (w.operations || []).map(op => `<button class="btn small${op.name === "drop" ? " danger" : ""}" data-call="${esc(op.name)}" data-kind="request" data-id="${esc(w.id)}"${op.name === "hide" ? ` title="hide it here; the draft stays in the backlog" aria-label="hide"` : ""}>${esc(op.label)}</button>`).join("");
+    const answer = w.state === "waiting" ? `<button class="btn small primary" data-tab="${esc(w.place)}">answer</button>` : "";
+    const open = (w.made || []).slice(0, 1).map(m => `<button class="btn small" data-story="${esc(m.id)}">open</button>`).join("");
+    const glyph = {ok: "✓ ", ask: "? ", bad: "✗ "}[w.tone] || "";
+    return `<li><span class="g" aria-hidden="true">✦</span><span class="w"><q>${esc(w.words)}</q>
+      <span class="s ${esc(w.tone)}">${w.tone === "wait" ? `<span class="spin" aria-hidden="true"></span>` : ""}${esc(glyph + w.text + since)}${w.by ? ` · ${esc(w.by)}` : ""}</span></span>
+      <span class="a">${answer}${acts(w.actions, "s")}${open}${ops}</span></li>`;
+  }).join("");
+  return `<section class="card wish"${tight ? ` style="margin-top:12px"` : ""}><h2>A wish <span class="sub">your words become a story, a task or a finding settled — a draft until you release it</span></h2>`
+    + act((st.entries || {}).wish) + (trail ? `<ul class="trail" aria-label="the wishes">${trail}</ul>` : "") + `</section>`;
 }
 
 // --- 0 describe ----------------------------------------------------------------------------------------------------
@@ -1117,7 +1292,8 @@ function describe(st) {
   }).join("");
   return card("The parts", "written by you, through the description — what is built, how, and in which domain; open one to read it", `<table class="epics"><tr><th><span class="sr">state</span></th><th>part</th><th>sections</th></tr>${parts}</table>`)
     + domainCard()
-    + card("Change the description", "", `<p class="about">In your words — <code>&lt;part&gt;: &lt;change&gt;</code> where it is one part. Where it needs a decision of yours, it asks under Decide.</p>${act((st.entries || {}).describe)}`);
+    + card("Change the description", "", `<p class="about">In your words — <code>&lt;part&gt;: &lt;change&gt;</code> where it is one part. Where it needs a decision of yours, it asks here.</p>${act((st.entries || {}).describe)}`)
+    + ((S.decisions || {}).records || []).filter(r => (r.actions || []).length && r.place === "describe").map(recordCard).join("");
 }
 document.addEventListener("click", event => {
   const row = event.target.closest && event.target.closest("tr.part-row");
@@ -1128,24 +1304,58 @@ document.addEventListener("click", event => {
 });
 
 // --- 1 discover ----------------------------------------------------------------------------------------------------
-function discover(st) {
-  const topics = (S.discover || {}).topics || [];
-  const cards = topics.map(t => {
-    const proposals = t.proposals.map(p => `<div class="proposal"><b>${esc(p.goal || p.intent || p.id)}</b>
+// a discovery opens in place like a context: its report, what it proposes, and words that continue it
+function discoveryBody(t) {
+  const proposals = t.proposals.map(p => `<div class="proposal"><b>${esc(p.goal || p.intent || p.id)}</b>
       ${p.goal && p.intent ? `<span>${esc(p.intent)}</span>` : ""}
       <div class="ev">${p.metric ? `<span class="event">${esc(p.metric)}</span>` : ""}${p.domain_contact ? `<span>asks ${esc(p.domain_contact)}</span>` : ""}<span class="id">${esc(p.id)}</span></div>
       ${p.epic ? `<div><span class="tone ok">epic ${esc(p.epic)}</span></div>` : `<div class="acts">${acts(p.actions)}</div>`}</div>`).join("");
-    const changes = t.description_changes.map(c => `<tr><td><div class="title">${esc(c.target)}</div></td>
+  const changes = t.description_changes.map(c => `<tr><td><div class="title">${esc(c.target)}</div></td>
       <td>${esc(c.change)}<div class="id">${esc(c.why)}</div></td><td class="act"><div class="acts">${acts(c.actions)}</div></td></tr>`).join("");
-    const problem = `<div class="problem"><span class="hint">topic · ${esc(t.topic)}</span><b>${esc(t.title)}</b>
-      <p class="hint">${t.proposals.length} proposed · ${t.description_changes.length} description change${t.description_changes.length === 1 ? "" : "s"}</p>
-      <p class="id">${esc(t.report)}</p></div>`;
-    return card("", "", `<div class="report">${problem}<div>${proposals || `<p class="empty">No proposed work.</p>`}</div></div>`
-      + (changes ? `<h3>Changes to the description</h3><table>${changes}</table>` : ""));
-  }).join("");
-  return card("A new discovery", "", act((st.entries || {}).discover))
-    + (cards || card("", "", `<p class="empty">No discovery yet — it goes to ${esc((S.discover || {}).store || "")}.</p>`));
+  const report = (t.sections || []).filter(sec => !/^proposed /i.test(sec.heading))
+    .map(sec => `<h3>${esc(sec.heading)}</h3>${prose(sec.text)}`).join("");
+  return `<div class="dm"><div class="dm-track">
+    <div class="dm-node"><span class="n">1</span>The report<span class="hint">${esc(t.report)}</span></div>
+    ${report || `<p class="empty">The report says nothing beyond what it proposes.</p>`}
+    <div class="dm-node"><span class="n">2</span>Proposed epics<span class="hint">${t.proposals.length}, each an epic once you make it one</span></div>
+    ${proposals ? `<div class="proposals">${proposals}</div>` : `<p class="empty">No proposed work.</p>`}
+    ${changes ? `<div class="dm-node"><span class="n">3</span>Changes to the description<span class="hint">applied one by one, through the description</span></div><table>${changes}</table>` : ""}
+    <div class="dm-node"><span class="n">${changes ? 4 : 3}</span>Continue this discovery<span class="hint">a question, a document, a wish — the report grows</span></div>
+    ${acts(t.actions, "s")}
+  </div></div>`;
 }
+
+function discover(st) {
+  const topics = (S.discover || {}).topics || [], open = S.openTopics || (S.openTopics = new Set());
+  const rows = topics.map(t => {
+    const isOpen = open.has(t.topic), made = t.proposals.filter(p => p.epic).length;
+    return `<tr class="epic-row topic-row${isOpen ? " open ink-open" : ""}" data-topic="${esc(t.topic)}" tabindex="0" aria-expanded="${isOpen}">
+      <td><span class="caret" aria-hidden="true">${isOpen ? "▾" : "▸"}</span> <span class="title">${esc(t.title)}</span><div class="id">${esc(t.topic)}</div></td>
+      <td class="num">${t.proposals.length}</td><td class="num">${made}</td><td class="num hide-s">${t.description_changes.length}</td></tr>`
+      + (isOpen ? `<tr class="epic-body"><td colspan="4">${discoveryBody(t)}</td></tr>` : "");
+  }).join("");
+  // a discovery on its way: where it stands and its output, until its report stands below
+  const tone = {queued: "mute", running: "wait", waiting: "wait"};
+  const working = ((S.discover || {}).working || []).map(r => `<div class="ticket"><div class="what"><b>${esc(r.topic || "new")}</b>
+      <span class="tone ${tone[r.state] || "mute"}">${esc(r.state === "waiting" ? "asks you" : r.state)}</span><span>${esc(r.words)}</span></div>
+      <div class="acts"><button class="btn small" data-call="follow" data-kind="request" data-id="${esc(r.id)}">follow</button></div></div>`).join("");
+  // what a discovery asks back is answered where the discovery stands — the same record Decide lists
+  const records = ((S.decisions || {}).records || []).filter(rec => (rec.actions || []).length);
+  const asking = ((S.discover || {}).working || []).map(r => records.find(rec => r.record && rec.path === r.record))
+    .filter(Boolean).map(recordCard).join("");
+  return card("A new discovery", "a problem worth solving, or what should exist — the report and the epics it proposes", act((st.entries || {}).discover)
+      + (working ? `<h3>In progress</h3><div class="queue">${working}</div>` : "") + asking)
+    + card("Discoveries", "each topic with its report — open one to read it, act on what it proposes, or continue it",
+      rows ? `<table class="epics"><tr><th>topic</th><th class="num">proposed</th><th class="num">epics made</th><th class="num hide-s">description changes</th></tr>${rows}</table>`
+        : `<p class="empty">No discovery yet — it goes to ${esc((S.discover || {}).store || "")}.</p>`);
+}
+document.addEventListener("click", event => {
+  const row = event.target.closest && event.target.closest("tr.topic-row");
+  if (!row || event.target.closest("button, a")) return;
+  const open = S.openTopics || (S.openTopics = new Set()), topic = row.dataset.topic;
+  if (open.has(topic)) open.delete(topic); else open.add(topic);
+  render();
+});
 
 // --- 2 backlog -----------------------------------------------------------------------------------------------------
 function storyRow(r) {
@@ -1154,27 +1364,35 @@ function storyRow(r) {
     <td class="num hide-s">${esc(r.tokens_text)}</td><td class="act"><div class="acts">${acts(r.actions)}</div></td></tr>`;
 }
 
-// where a story stands, as a lane of its epic: its state and its mark, as the factory gives them
+// where a story stands, as a lane of its epic — the factory's `lane`
 const LANES = ["draft", "approved", "running", "delivered"];
-const laneOf = r => r.state === "draft" ? "draft" : ["delivered", "superseded"].includes(r.state) ? "delivered"
-  : ["running", "stopped", "look", "question"].includes(r.mark) || r.state === "can continue" ? "running" : "approved";
-const heat = r => r.mark === "stopped" ? "bad" : ["running", "look", "question"].includes(r.mark) ? "hot" : r.state === "ready" ? "ok" : "";
+const laneOf = r => r.lane || "approved";
 function storyCard(r) {
   const stage = r.stage && r.stage !== "—" ? ` · ${r.stage}` : "";
-  return `<div class="scard ${heat(r)}">${story(r.story, r.title)}<div class="id">${esc(r.state)}${esc(stage)}${r.delivered_text ? ` · ${esc(r.delivered_text)}` : ""}</div>
+  return `<div class="scard l-${segment(r)}">${story(r.story, r.title)}<div class="id">${esc(r.state)}${esc(stage)}${r.delivered_text ? ` · ${esc(r.delivered_text)}` : ""}</div>
     ${(r.actions || []).length ? `<div class="acts">${acts(r.actions)}</div>` : ""}</div>`;
 }
-function lane(name, rows, order) {
+function lane(name, rows, order, epic) {
   if (name === "delivered") rows = rows.slice().sort((a, b) => order.indexOf(a.story) - order.indexOf(b.story));
   const shown = name === "delivered" ? rows.slice(0, 3) : rows, rest = rows.slice(shown.length);
   return `<div class="lane"><h4>${name} <span>${rows.length}</span></h4>${shown.map(storyCard).join("")}
-    ${rest.length ? `<details><summary>${rest.length} more</summary>${rest.map(storyCard).join("")}</details>` : ""}</div>`;
+    ${rest.length ? `<details data-fold="lane:${esc(epic)}:${name}"${foldOpen(`lane:${epic}:${name}`)}><summary>${rest.length} more</summary>${rest.map(storyCard).join("")}</details>` : ""}</div>`;
 }
+// a segment a story, in the lanes' order from left to right — draft, released, on its way, delivered —, the superseded
+// last: the strip reads as the lanes beneath it
+const STRIP = ["draft", "approved", "running", "stopped", "delivered", "superseded"];
+const segment = r => r.mark === "stopped" ? "stopped" : laneOf(r);
+const stripOf = rows => rows.map(segment).sort((a, b) => STRIP.indexOf(a) - STRIP.indexOf(b)).map(l => `<i class="l-${l}"></i>`).join("");
+const STRIP_KEY = `<div class="legend"><span><i class="strip-key l-draft"></i>draft</span><span><i class="strip-key l-approved"></i>released</span>
+  <span><i class="strip-key l-running"></i>on its way</span><span><i class="strip-key l-stopped"></i>stopped</span><span><i class="strip-key l-delivered"></i>delivered</span><span><i class="strip-key l-superseded"></i>superseded</span></div>`;
+// what an epic needs first, in one word: stopped, waiting for a person, running, a draft to release, ready, done
 function epicTone(e) {
-  const n = m => e.rows.filter(r => r.mark === m).length, ready = e.rows.filter(r => r.state === "ready").length;
+  const n = m => e.rows.filter(r => r.mark === m && laneOf(r) !== "draft").length;
+  const drafts = e.rows.filter(r => laneOf(r) === "draft").length, ready = e.rows.filter(r => r.state === "ready").length;
   if (n("stopped")) return `<span class="tone bad">${n("stopped")} stopped</span>`;
-  if (n("look") + n("question")) return `<span class="tone wait">${n("look") + n("question")} to look at</span>`;
+  if (n("look") + n("question")) return `<span class="tone wait">${n("look") + n("question")} waits for you</span>`;
   if (n("running")) return `<span class="tone wait">running</span>`;
+  if (drafts) return `<span class="tone mute">${drafts} draft${drafts === 1 ? "" : "s"}</span>`;
   if (e.total && e.delivered === e.total) return `<span class="tone ok">delivered</span>`;
   return ready ? `<span class="tone mute">${ready} ready</span>` : "";
 }
@@ -1182,31 +1400,32 @@ function epicTone(e) {
 function backlog(st) {
   // the epics as one list, as the cockpit shows them; an epic opens its stories in place, and stays open on a redraw
   const open = S.openEpics || (S.openEpics = new Set()), filter = S.backlogFilter || "all", order = st.delivered_order || [];
-  const keep = r => filter === "all" || (filter === "drafts" ? r.state === "draft" : !["delivered", "superseded"].includes(r.state));
+  const keep = r => filter === "all" || (filter === "drafts" ? r.lane === "draft" : !["delivered", "superseded"].includes(r.lane));
   const shown = (st.epics || []).map(e => Object.assign({}, e, {rows: e.rows.filter(keep)}))
     .filter(e => filter === "all" || e.rows.length);
   const counts = {all: (st.epics || []).length,
-    open: (st.epics || []).filter(e => e.rows.some(r => !["delivered", "superseded"].includes(r.state))).length,
-    drafts: (st.epics || []).filter(e => e.rows.some(r => r.state === "draft")).length};
+    open: (st.epics || []).filter(e => e.rows.some(r => !["delivered", "superseded"].includes(r.lane))).length,
+    drafts: (st.epics || []).filter(e => e.rows.some(r => r.lane === "draft")).length};
   const filters = `<div class="pick"><span class="seg">${["all", "open", "drafts"].map(f => `<button aria-pressed="${f === filter}" data-filter="${f}">${f}<span class="n">${counts[f]}</span></button>`).join("")}</span></div>`;
   const epics = shown.map(e => {
     const isOpen = open.has(e.epic) !== (filter !== "all"), full = (st.epics || []).find(x => x.epic === e.epic) || e;
     const head = `<div class="ehead" data-epic="${esc(e.epic)}" tabindex="0" role="button" aria-expanded="${isOpen}">
       <div class="name"><span class="caret" aria-hidden="true">${isOpen ? "▾" : "▸"}</span><b>${esc(e.title || e.epic)}</b><span class="id">${esc(e.epic)}</span>${e.metric ? `<span class="event">${esc(e.metric)}</span>` : ""}</div>
       <div class="meta">${epicTone(full)}<span>${full.delivered}/${full.total}</span></div>
-      <div class="strip" title="${full.delivered} of ${full.total} delivered">${full.rows.map(r => `<i class="l-${r.mark === "stopped" ? "stopped" : laneOf(r)}"></i>`).join("")}</div></div>`;
+      <div class="strip" title="${full.delivered} of ${full.total} delivered">${stripOf(full.rows)}</div></div>`;
     const body = !isOpen ? "" : `<div class="ebody">`
       + (e.goal ? `<p class="about">${esc(e.goal)}</p>` : "")
-      + ((st.journeys || []).filter(j => j.epic === e.epic).map(j => `<p class="rec">${esc(j.text)}</p>`).join(""))
-      + (e.rows.length ? `<div class="lanes">${LANES.map(name => lane(name, e.rows.filter(r => laneOf(r) === name), order)).join("")}</div>` : `<p class="empty">No story yet.</p>`)
-      + `<div class="acts">${acts(e.actions)}</div></div>`;
+      + qualityLine(full.signals)
+      + (e.rows.length ? `<div class="lanes">${LANES.map(name => lane(name, e.rows.filter(r => laneOf(r) === name || (name === "delivered" && laneOf(r) === "superseded")), order, e.epic)).join("")}</div>` : `<p class="empty">No story yet.</p>`)
+      // the epic's own buttons, and beside them why one is offered — a delivered epic without its journey
+      + `<div class="acts">${acts(e.actions)}${(st.journeys || []).filter(j => j.epic === e.epic).map(j => `<span class="hint">${esc(j.text)}</span>`).join("")}</div></div>`;
     return `<div class="erow">${head}${body}</div>`;
   }).join("");
   const findings = (st.findings || []).map(f => `<tr><td><span class="state">${esc(f.severity)}</span></td>
     <td>${esc(f.plain || f.defect)}<div class="id">${esc(f.row)} · ${esc(f.where)}</div></td><td class="act"><div class="acts">${act(f.action)}</div></td></tr>`).join("");
-  return nextLine(st) + card("A wish", "your words become a story, kept as a draft until you release it", act((st.entries || {}).wish))
+  return wishCard(st)
     + (epics || filter !== "all" ? card("Epics", filter === "all" ? "newest first — open one to see its stories by where they stand" : filter === "drafts" ? "the drafts, waiting for your release" : "what is not delivered yet",
-        filters + (epics ? `<div class="erows">${epics}</div>` : `<p class="empty">Nothing here.</p>`))
+        filters + STRIP_KEY + (epics ? `<div class="erows">${epics}</div>` : `<p class="empty">Nothing here.</p>`))
       : card("", "", `<p class="empty">The backlog is empty.</p>`))
     + (findings ? `<details class="card more" data-fold="findings"${foldOpen("findings")}><summary><h2>Findings <span class="sub">${(st.findings || []).length} the judge kept open — each to the backlog or done</span></h2></summary><table>${findings}</table></details>` : "");
 }
@@ -1230,11 +1449,13 @@ document.addEventListener("keydown", event => {
 // --- 3 run ---------------------------------------------------------------------------------------------------------
 function run(st) {
   const w = st.worker, reqs = (S.requests || {}).requests || [];
-  const factory = w ? `<dl class="kv"><dt>worker</dt><dd>${esc(w.owner)}</dd><dt>state</dt><dd>${esc(st.worker_text)}</dd>
-      <dt>since</dt><dd>${esc(w.since_text)}</dd>${w.log ? `<dt>log</dt><dd><code>${esc(w.log)}</code></dd>` : ""}</dl>
-      ${w.alive && !w.stopping ? `<div class="acts"><button class="btn" data-call="down">down — after the running stage</button>
-      <button class="btn danger" data-call="down" data-now="1">down now</button></div>` : ""}`
-    : `<p class="about">The factory is down. Requests wait in the queue until it is up.</p><div class="acts"><button class="btn primary" data-call="up">up</button></div>`;
+  // the backlog is the one thing switched here: a person's requests are worked while this page is open (WP-177)
+  const factory = (backlogOn(st) ? (w.stopping ? `<p class="about">Stopping after the running stage.</p>`
+      : `<div class="acts"><button class="btn" data-call="down">■ stop the backlog — after the running stage</button>
+      <button class="btn danger" data-call="down" data-now="1">■ stop now</button></div>`)
+    : `<div class="acts"><button class="btn primary nogo" data-call="up">▶ start the backlog</button></div>`)
+    + (w ? `<details class="more" data-fold="worker"${foldOpen("worker")}><summary class="hint">the worker</summary><dl class="kv"><dt>worker</dt><dd>${esc(w.owner)}</dd>
+      <dt>since</dt><dd>${esc(w.since_text)}</dd>${w.log ? `<dt>log</dt><dd><code>${esc(w.log)}</code></dd>` : ""}</dl></details>` : "");
   const ops = r => (r.operations || []).map(op => `<button class="btn small${op.name === "drop" ? " danger" : ""}" data-call="${esc(op.name)}"
     data-kind="request" data-id="${esc(r.id)}">${esc(op.label)}</button>`).join("");
   const tone = {queued: "mute", running: "wait", waiting: "wait", failed: "bad"};
@@ -1257,12 +1478,13 @@ function run(st) {
       .map(w => course(w.story, "bad", "stopped", {course: w.course, doing: (w.action && w.action.text) || w.what},
         `${act(w.action)}${follows(w.story)}`)).join("");
   const ready = (st.rows || []).filter(r => st.queue && st.queue.ready.includes(r.story)).map(storyRow).join("");
-  return nextLine(st)
+  return card("The backlog", backlogOn(st) ? "on — the released stories one after the other"
+        : `off — ${(st.queue || {ready: []}).ready.length} released stories would run`, factory)
+    + wishCard(st)
     + card("Running", "a story's course through its stages — running, or stopped where it goes on", live || `<p class="empty">No stage runs.</p>`)
-    + card("Output", `<span id="follow-title"></span>`, `<div class="acts" id="follow-acts"></div><pre class="out" id="follow-out"></pre>`)
-    + card("Requests", "worked before the next story, oldest first", tickets ? `<div class="queue">${tickets}</div>` : `<p class="empty">No request waits.</p>`)
-    + (ready ? card("Next in line", "ready, in the order the factory takes them", `<table>${ready}</table>`) : "")
-    + card("The factory", "", factory);
+    + card("Output", `<span id="follow-title" data-own></span>`, `<div class="acts" id="follow-acts" data-own></div><pre class="out" id="follow-out" data-own></pre>`)
+    + card("Requests", "everything asked of the factory, oldest first", tickets ? `<div class="queue">${tickets}</div>` : `<p class="empty">No request waits.</p>`)
+    + (ready ? card("Next in line", "ready, in the order the factory takes them", `<table>${ready}</table>`) : "");
 }
 
 function follow(kind, id) {
@@ -1290,8 +1512,9 @@ function paintFollow() {
   if (!out) return;
   $("follow-title").textContent = S.follow ? `${S.follow.kind} ${S.follow.id}` : "follow a running stage or request";
   $("follow-acts").innerHTML = S.follow ? `<button class="btn" data-call="unfollow">stop following</button>` : "";
-  const atEnd = out.scrollTop + out.clientHeight >= out.scrollHeight - 20;
-  out.textContent = S.followLines.join("\n") || (S.follow ? "waiting for output…" : "");
+  const atEnd = out.scrollTop + out.clientHeight >= out.scrollHeight - 20;   // at the end it follows the newest line
+  const text = S.followLines.join("\n") || (S.follow ? "waiting for output…" : "");
+  if (out.textContent !== text) out.textContent = text;
   if (atEnd) out.scrollTop = out.scrollHeight;
 }
 
@@ -1307,8 +1530,8 @@ function recordCard(r) {
   const body = (accept ? full : "")
     + (accept
       ? `<div class="acts">${acts(offered.filter(a => a.request.open !== "words"))}</div>`
-      : options.length ? `<div class="opts">${options.map(a => `<div class="opt${a.primary ? " advised" : ""}">${a.primary ? `<span class="rec-word">recommended</span>` : ""}
-          <span>${inline(a.text)}${a.note ? ` <span class="hint">— ${esc(a.note)}</span>` : ""}</span><div>${act(a)}</div></div>`).join("")}</div>` : "")
+      : options.length ? `<div class="opts">${options.map(a => `<div class="opt${a.primary ? " advised" : ""}"><div class="pick-it">${act(a)}</div>${a.primary ? `<span class="rec-word">recommended</span>` : ""}
+          <span>${inline(a.text)}${a.note ? ` <span class="hint">— ${esc(a.note)}</span>` : ""}</span></div>`).join("")}</div>` : "")
     + words.map(a => `<h3>${accept ? "or correct it" : options.length ? "or in your words" : "your answer"}</h3>${act(a)}`).join("")
     + (accept ? "" : full)
     + `<p class="id" style="margin-top:10px">${r.story ? `${story(r.story, r.story)} · ` : ""}${esc(r.path)}</p>`;
@@ -1316,7 +1539,7 @@ function recordCard(r) {
 }
 
 function decide(st) {
-  const records = ((S.decisions || {}).records || []).filter(r => (r.actions || []).length);
+  const records = ((S.decisions || {}).records || []).filter(r => (r.actions || []).length && (r.place || "decide") === "decide");
   // a waiting story whose record is open stands above as that record; the others — a draft, a stopped story — here
   const others = (st.waiting || []).filter(w => !w.record).map(w => `<tr><td>${mark(w.mark)}</td>
     <td>${story(w.story)}</td><td>${esc(w.what)}</td>
@@ -1390,6 +1613,40 @@ document.addEventListener("mousemove", event => {
   tip.style.left = `${Math.min(left, room)}px`; tip.style.top = `${(event.clientY - box.top) - tip.offsetHeight - 12}px`;
 });
 
+// --- quality: the signals the factory counts per story, summed — shown as counted, never rated -------------------
+const sum = o => Object.values(o || {}).reduce((n, v) => n + v, 0);
+const domainWords = o => Object.entries(o || {}).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${n} ${c.replace(/^domain-/, "")}`).join(" · ");
+function qualityCard(q) {
+  if (!q || !q.stories) return "";
+  const domain = sum(q.domain), corrected = sum(q.corrections);
+  const tiles = [
+    [`${q.answered}/${q.asked}`, "questions answered", "a stage asked, a person answered", ""],
+    [`${q.assumptions_answered}`, "assumptions answered", `${q.assumptions_open} still open`, q.assumptions_open ? "bad" : ""],
+    [`${q.plan_open}`, "left open by plans", "what a plan named and did not decide", ""],
+    [`${domain}`, "domain findings", domain ? domainWords(q.domain) : "none confirmed", domain ? "bad" : ""],
+    [`${corrected}`, "corrections at acceptance", corrected ? domainWords(q.corrections) : "none", corrected ? "bad" : ""],
+  ].map(([n, label, said, cls]) => `<div class="tile ${cls}"><b>${esc(n)}</b><span>${esc(label)}</span><small>${esc(said)}</small></div>`).join("");
+  const found = Object.entries(q.findings || {}).sort((a, b) => b[1] - a[1]), most = found.length ? found[0][1] : 1;
+  const bars = found.map(([name, n]) => `<span class="lbl">${esc(name)}</span><span class="track"><i style="width:${Math.round(100 * n / most)}%"></i></span><span class="n">${n}</span>`).join("");
+  const rules = (q.named
+    ? `<b>${q.named}</b> rules named in ${q.measured} measured ${q.measured === 1 ? "story" : "stories"} — killed ${q.killed} · red ${q.red} · survived ${q.survived} · no-break ${q["no-break"]} — kill rate <b>${q.kill_rate.toFixed(2)}</b>, guarded <b>${q.guarded_rate.toFixed(2)}</b>`
+    : q.measured ? `${q.measured} measured ${q.measured === 1 ? "story names" : "stories name"} no rule` : `No rule measured yet`);
+  return card("Quality", "what the stages asked, what the judge confirmed, what a person corrected — counted over every story, never rated",
+    `<div class="tiles five">${tiles}</div>`
+    + (bars ? `<h3>Findings the judge confirmed, by perspective</h3><div class="qbars">${bars}</div>` : "")
+    + `<p class="qrules">${rules}<span class="hint">of ${q.stories} stories: ${q.measured} measured · ${q.not_measured} tested before rules were recorded, counted as not measured, never as zero · ${q.without_test || 0} delivered without a test stage (a task, an adopted story) — nothing to measure · ${q.open || 0} not delivered</span></p>`);
+}
+// the same figures in one line, for an epic
+function qualityLine(q) {
+  if (!q || !q.stories) return "";
+  const domain = sum(q.domain), found = Object.entries(q.findings || {}).sort((a, b) => b[1] - a[1]);
+  return `<div class="qline"><span>questions <b>${q.answered}/${q.asked}</b></span><span>assumptions <b>${q.assumptions_answered}</b>${q.assumptions_open ? ` <span class="bad">${q.assumptions_open} open</span>` : ""}</span>`
+    + `<span>left open by plans <b>${q.plan_open}</b></span>`
+    + (found.length ? `<span>findings ${found.map(([n, c]) => `${esc(n)} <b>${c}</b>`).join(" · ")}</span>` : "")
+    + `<span>domain <b class="${domain ? "bad" : ""}">${domain ? esc(domainWords(q.domain)) : "0"}</b></span>`
+    + (q.named ? `<span>kill rate <b>${q.kill_rate.toFixed(2)}</b> (${q.named} rules)</span>` : "") + `</div>`;
+}
+
 function delivered(st) {
   const rows = Object.fromEntries((st.rows || []).map(r => [r.story, r])), events = Object.fromEntries((st.epics || []).map(e => [e.epic, e.metric]));
   const tiles = [[`${st.delivered}`, `of ${st.total} stories delivered`, "lead"], [st.seconds_text, "worked"], [st.tokens_text, "tokens"], [st.cost_text, "cost"]]
@@ -1404,8 +1661,10 @@ function delivered(st) {
     <div class="epic cut" title="${esc(r.epic)}">${esc(r.epic)}</div>
     <div class="ev cut">${events[r.epic] ? `<span class="event" title="${esc(events[r.epic])}">${esc(events[r.epic])}</span>` : ""}</div>
     <div class="fig">${esc(r.seconds_text || "")}</div><div class="fig">${esc(r.cost_text || "")}</div></div>`;
-  return card("Delivered", "what is delivered, by day, with the outcome event its epic is measured by",
-    `<div class="tiles">${tiles}</div>` + curveCard(st) + (days.length ? `<div class="days">${days.map(d => `<div class="day"><h4>${esc(d.day)}</h4>${d.rows.map(line).join("")}</div>`).join("")}</div>` : `<p class="empty">Nothing delivered yet.</p>`));
+  return card("Delivered", "what is delivered, and what it cost as it summed up",
+    `<div class="tiles">${tiles}</div>` + curveCard(st))
+    + qualityCard(st.signals)
+    + card("By day", "each delivery with the outcome event its epic is measured by", (days.length ? `<div class="days">${days.map(d => `<div class="day"><h4>${esc(d.day)}</h4>${d.rows.map(line).join("")}</div>`).join("")}</div>` : `<p class="empty">Nothing delivered yet.</p>`));
 }
 
 // --- one story -----------------------------------------------------------------------------------------------------
@@ -1436,7 +1695,7 @@ async function openStory(id) {
     <dl class="kv"><dt>story</dt><dd class="mono">${esc(id)}</dd><dt>state</dt><dd>${esc(row.state || v.situation || "")}</dd>
       ${v.context ? `<dt>context</dt><dd>${esc(v.context)}</dd>` : ""}<dt>file</dt><dd><code>${esc(v.path)}</code></dd>
       ${row.tokens_text ? `<dt>tokens</dt><dd>${esc(row.tokens_text)}${row.cost_text ? " · " + esc(row.cost_text) : ""}</dd>` : ""}</dl>
-    <div class="acts">${acts((v.actions || []).filter(a => a.request.open !== "words"), "d")}<button class="btn" data-call="follow" data-kind="story" data-id="${esc(id)}">output</button></div>
+    <div class="acts">${acts((v.actions || []).filter(a => a.request.open !== "words"), "d")}${Object.keys(v.stages || {}).length || row.mark === "running" ? `<button class="btn" data-call="follow" data-kind="story" data-id="${esc(id)}">output</button>` : ""}</div>
     ${(v.actions || []).filter(a => a.request.open === "words" && !a.waits_on).map(a => `<h2>${esc(a.label)}</h2>${act(a, "d")}`).join("")}
     ${sections}
     ${stages ? `<h2>Processes</h2><table><tr><th>process</th><th class="num">runs</th><th class="num">time</th><th class="num">tokens</th><th class="num hide-s">cost</th><th>why</th></tr>${stages}</table>` : ""}`;
@@ -1449,21 +1708,33 @@ document.addEventListener("toggle", event => {
   if (more) S.folded[more.dataset.more] = !more.open;
 }, true);
 
+// The tab bar by keyboard (WAI-ARIA tabs): while a tab has the focus, the arrows, Home and End move between the views
+// and a digit jumps to its view — the cockpit's keys, shown as hints then. Outside the bar a digit is a digit
+// (WCAG 2.1.4: a one-key shortcut acts only where its element has the focus).
 document.addEventListener("keydown", event => {
   if (event.target.closest("textarea, input, select")) return;
-  const tab = TABS.find(([, label]) => label[0] === event.key);
-  if (tab) show(tab[0]);
-  if (event.key === "Escape") CALLS.close();
+  if (event.key === "Escape") return CALLS.close();
+  const at = event.target.closest('[role="tab"]');
+  if (!at) return;
+  const ids = [...$("tabs").querySelectorAll('[role="tab"]')].map(b => b.dataset.tab), i = ids.indexOf(at.dataset.tab);
+  const to = /^[0-9]$/.test(event.key) ? (TABS[+event.key] || [])[0]
+    : {ArrowRight: ids[(i + 1) % ids.length], ArrowLeft: ids[(i - 1 + ids.length) % ids.length],
+       Home: ids[0], End: ids[ids.length - 1]}[event.key];
+  if (!to) return;
+  event.preventDefault();
+  if (to !== S.tab) show(to);
+  $("tab-" + to).focus();
 });
 window.addEventListener("hashchange", () => {
   const tab = location.hash.slice(1);
-  if (tab !== S.tab && TABS.some(([id]) => id === tab)) show(tab);
+  if (tab !== S.tab && known(tab)) show(tab);
 });
 theme(stored("factory.theme") || "auto");
 (async () => {
   if (!TOKEN) { banner("This page needs the token `factory.sh serve` printed — open that URL."); return; }
   try { $("by").value = stored("factory.by") || (await api("/api/meta")).by || ""; } catch (e) { banner(e.message); }
   $("by").addEventListener("change", () => store("factory.by", by()));
+  load("help", "/api/view/help").then(ok => ok && render());   // the parts: once, inflow, the cycle, to look up
   await refresh();
   setInterval(() => { if (!document.hidden) refresh(); }, 5000);
 })();
