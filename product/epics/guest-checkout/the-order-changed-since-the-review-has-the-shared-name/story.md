@@ -2,7 +2,9 @@
 id: the-order-changed-since-the-review-has-the-shared-name
 epic: guest-checkout
 kind: task
-status: approved
+status: delivered
+delivered: 2026-11-02T10:18:22Z
+delivered_by: gate
 created: 2026-10-29T15:12:47Z
 context: checkout
 title: The order changed since the review has the shared name
@@ -20,3 +22,7 @@ do not change.
 
 A change no actor sees: no acceptance criterion, no test stage. It runs plan, build, tidy, judge and document, and
 the existing suite, run whole, is its evidence; a test that existed before it stays as it is.
+
+## Assumptions
+
+- answered: The four tests follow the type's name inside `assertThrows`; what each asserts stays as it is (changes a test's (the-order-changed-since-the-review-has-the-shared-name-01)
