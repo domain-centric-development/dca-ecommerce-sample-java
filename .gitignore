@@ -107,7 +107,6 @@ Thumbs.db
 .codex/skills/ubiquitous-language
 .opencode/skills/factory-backlog
 .opencode/skills/factory-decisions
-.opencode/skills/factory-discover
 .opencode/skills/factory-help
 .opencode/skills/factory-run
 .opencode/skills/factory-setup
@@ -139,3 +138,4 @@ Thumbs.db
 .opencode/skills/review-hexagonal
 .opencode/skills/tdd
 .opencode/skills/ubiquitous-language
+.opencode/skills/factory-discover
