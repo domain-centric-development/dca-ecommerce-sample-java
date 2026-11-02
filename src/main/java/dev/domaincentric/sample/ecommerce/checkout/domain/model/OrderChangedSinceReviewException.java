@@ -12,14 +12,14 @@ import org.jspecify.annotations.Nullable;
  * <p>Nothing is ordered then; the review shows the order as it is today and the customer places it
  * again.
  */
-public final class CheckoutChangedSinceReviewException extends DomainException {
+public final class OrderChangedSinceReviewException extends DomainException {
 
   @Serial private static final long serialVersionUID = 1L;
 
   private final CheckoutSessionId sessionId;
   private final @Nullable String productWithChangedPrice;
 
-  private CheckoutChangedSinceReviewException(
+  private OrderChangedSinceReviewException(
       final CheckoutSessionId sessionId, final @Nullable String productWithChangedPrice) {
     super(
         productWithChangedPrice == null
@@ -40,9 +40,9 @@ public final class CheckoutChangedSinceReviewException extends DomainException {
    * @param productName the name of the line's product, as the line shows it
    * @return the refusal
    */
-  public static CheckoutChangedSinceReviewException priceChanged(
+  public static OrderChangedSinceReviewException priceChanged(
       final CheckoutSessionId sessionId, final String productName) {
-    return new CheckoutChangedSinceReviewException(sessionId, productName);
+    return new OrderChangedSinceReviewException(sessionId, productName);
   }
 
   /**
@@ -51,9 +51,8 @@ public final class CheckoutChangedSinceReviewException extends DomainException {
    * @param sessionId the checkout
    * @return the refusal
    */
-  public static CheckoutChangedSinceReviewException orderChanged(
-      final CheckoutSessionId sessionId) {
-    return new CheckoutChangedSinceReviewException(sessionId, null);
+  public static OrderChangedSinceReviewException orderChanged(final CheckoutSessionId sessionId) {
+    return new OrderChangedSinceReviewException(sessionId, null);
   }
 
   public CheckoutSessionId sessionId() {

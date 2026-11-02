@@ -9,7 +9,6 @@ import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentIni
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.ShippingOptionNotOfferedException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutChangedSinceReviewException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
@@ -17,6 +16,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutO
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.NothingToPayException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.OrderChangedSinceReviewException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -108,7 +108,7 @@ final class CheckoutStepPage {
       }
     }
     if (step == CheckoutStep.REVIEW
-        && refusal instanceof CheckoutChangedSinceReviewException changed) {
+        && refusal instanceof OrderChangedSinceReviewException changed) {
       // The review the redirect leads to shows the order as it stands today
       return changed
           .productWithChangedPrice()

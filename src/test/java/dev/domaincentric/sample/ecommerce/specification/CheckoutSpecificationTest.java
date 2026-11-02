@@ -104,8 +104,7 @@ class CheckoutSpecificationTest {
         var shown = f.reviewOf(session);
         f.price = Money.of(new java.math.BigDecimal(vector.path("newUnitPrice").asText()), EUR);
         var failure =
-            assertThrows(
-                CheckoutChangedSinceReviewException.class, () -> f.confirm(session, shown));
+            assertThrows(OrderChangedSinceReviewException.class, () -> f.confirm(session, shown));
         assertFalse(vector.path("accept").asBoolean());
         assertEquals(
             vector.path("errors").asInt(), failure.productWithChangedPrice().stream().count());

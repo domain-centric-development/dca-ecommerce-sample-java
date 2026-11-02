@@ -33,7 +33,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getchecko
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutChangedSinceReviewException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.OrderChangedSinceReviewException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.LineItemSnapshot;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
@@ -106,7 +106,7 @@ class OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest {
                 confirmCheckout.execute(
                     new ConfirmCheckoutCommand(sessionId, guest, shown.fingerprint())))
         .as("Place Order on the review shown before the change")
-        .isInstanceOf(CheckoutChangedSinceReviewException.class);
+        .isInstanceOf(OrderChangedSinceReviewException.class);
     final GetCheckoutReviewResult now =
         getCheckoutReview.execute(new GetCheckoutReviewQuery(sessionId, guest));
     assertThat(itemsOf(now.review()))
@@ -153,7 +153,7 @@ class OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest {
 
     assertThat(refusal)
         .isInstanceOfSatisfying(
-            CheckoutChangedSinceReviewException.class,
+            OrderChangedSinceReviewException.class,
             changed ->
                 assertThat(changed.productWithChangedPrice()).as("no price named").isEmpty());
     final CheckoutCartSnapshot open =

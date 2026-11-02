@@ -92,7 +92,7 @@ class CheckoutSessionReviewTest {
     final CheckoutTotals totals = session.totals();
 
     assertThrows(
-        CheckoutChangedSinceReviewException.class,
+        OrderChangedSinceReviewException.class,
         () ->
             session.confirm(
                 CheckoutValidationResult.valid(), Map.of(DDD, Money.euro(49.99)), shown));

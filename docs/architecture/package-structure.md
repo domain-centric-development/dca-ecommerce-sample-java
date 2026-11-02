@@ -209,7 +209,7 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── CheckoutSessionId, CheckoutLineItemId (Value Objects)
 │   │   │   ├── CheckoutStep, CheckoutSessionStatus
 │   │   │   ├── CheckoutTotals, CheckoutValidationResult
-│   │   │   ├── CheckoutReview, ReviewFingerprint, CheckoutChangedSinceReviewException
+│   │   │   ├── CheckoutReview, ReviewFingerprint, OrderChangedSinceReviewException
 │   │   │   ├── BuyerInfo, DeliveryAddress, ShippingOption
 │   │   │   ├── PaymentSelection, PaymentProviderId
 │   │   │   ├── CustomerId, CartId

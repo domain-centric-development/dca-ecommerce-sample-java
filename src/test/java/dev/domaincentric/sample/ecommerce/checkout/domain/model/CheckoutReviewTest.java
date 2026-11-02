@@ -105,9 +105,8 @@ class CheckoutReviewTest {
         review(Money.euro(54.99), JANE, BERLIN, STANDARD, MOCK).fingerprint();
     final CheckoutReview today = review(Money.euro(49.99), JANE, BERLIN, STANDARD, MOCK);
 
-    final CheckoutChangedSinceReviewException refusal =
-        assertThrows(
-            CheckoutChangedSinceReviewException.class, () -> today.refuseUnlessShown(shown));
+    final OrderChangedSinceReviewException refusal =
+        assertThrows(OrderChangedSinceReviewException.class, () -> today.refuseUnlessShown(shown));
 
     assertEquals(Optional.of("Domain-Driven Design"), refusal.productWithChangedPrice());
   }
@@ -143,9 +142,9 @@ class CheckoutReviewTest {
                         null))));
 
     for (final CheckoutReview today : changed) {
-      final CheckoutChangedSinceReviewException refusal =
+      final OrderChangedSinceReviewException refusal =
           assertThrows(
-              CheckoutChangedSinceReviewException.class,
+              OrderChangedSinceReviewException.class,
               () -> today.refuseUnlessShown(shown),
               today.toString());
 

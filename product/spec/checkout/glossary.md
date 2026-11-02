@@ -72,7 +72,7 @@ claim of durable distributed transactions or universal rollback of unenlisted re
 - work out the review (`reviewAt`, through `GetCheckoutReview`) — the session's lines at today's prices, quantities
   kept, a line without today's price at its own; totals follow, shipping kept; changes nothing and raises no event
 - `assertReviewed` — a question: is the review at today's prices the one the customer was shown (its review
-  fingerprint)? Answers with that review, refuses with `CheckoutChangedSinceReviewException`
+  fingerprint)? Answers with that review, refuses with `OrderChangedSinceReviewException`
 - `assertReadyForConfirmation` — a question: the preconditions of `confirm`, the pricing verdict included, checked without changing anything — asked before the order's stock is reserved
 - `confirm` — status confirmed, ordering the reviewed lines at the reviewed total; refused on a shortage, when the
   review is no longer the one shown, or when the payment was authorized for an amount other than the reviewed total
@@ -230,7 +230,7 @@ nowhere.
 
 **Type:** Value Object
 
-**Related terms:** `CheckoutSession`, `ReviewFingerprint`, `CheckoutChangedSinceReviewException`,
+**Related terms:** `CheckoutSession`, `ReviewFingerprint`, `OrderChangedSinceReviewException`,
 `CheckoutCartSnapshot`.
 
 **Operations:** `fingerprint`; `refuseUnlessShown` — refuses unless the given fingerprint is its own, naming the
@@ -244,7 +244,7 @@ blank or malformed value matches no review.
 
 **Type:** Value Object
 
-**Related terms:** `CheckoutReview`, `CheckoutChangedSinceReviewException`.
+**Related terms:** `CheckoutReview`, `OrderChangedSinceReviewException`.
 
 **Operations:** `of`; `firstChangedLine` — the line whose price alone differs from the one shown, if any.
 
@@ -567,7 +567,7 @@ the per-item result.
 
 ---
 
-### refuse an order changed since the review (CheckoutChangedSinceReviewException)
+### OrderChangedSinceReview (OrderChangedSinceReviewException)
 
 **Definition:** "Place Order" works the review out again; when its review fingerprint is not the one the customer
 was shown, nothing is ordered or paid and the review shows the order as it is today. A price change names the

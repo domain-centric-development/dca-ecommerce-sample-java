@@ -66,7 +66,7 @@ public record CheckoutReview(
    * Refuses unless this review is the one the customer was shown.
    *
    * @param shown the fingerprint of the review the customer was shown
-   * @throws CheckoutChangedSinceReviewException naming the product of the first line whose price
+   * @throws OrderChangedSinceReviewException naming the product of the first line whose price
    *     changed, or naming none for any other change
    */
   public void refuseUnlessShown(final ReviewFingerprint shown) {
@@ -76,9 +76,9 @@ public record CheckoutReview(
     }
     final OptionalInt changedLine = today.firstChangedLine(shown);
     throw changedLine.isPresent()
-        ? CheckoutChangedSinceReviewException.priceChanged(
+        ? OrderChangedSinceReviewException.priceChanged(
             sessionId, lineItems.get(changedLine.getAsInt()).productName())
-        : CheckoutChangedSinceReviewException.orderChanged(sessionId);
+        : OrderChangedSinceReviewException.orderChanged(sessionId);
   }
 
   /** What is ordered on a line — its product and quantity — apart from its unit price. */

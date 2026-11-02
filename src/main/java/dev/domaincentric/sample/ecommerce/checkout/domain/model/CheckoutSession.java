@@ -236,7 +236,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * @param todaysPrices today's unit price per product
    * @param shown the fingerprint of the review the customer was shown
    * @return the review, as the customer was shown it
-   * @throws CheckoutChangedSinceReviewException if the review has changed since
+   * @throws OrderChangedSinceReviewException if the review has changed since
    */
   public CheckoutReview assertReviewed(
       final Map<ProductId, Money> todaysPrices, final ReviewFingerprint shown) {
@@ -414,7 +414,7 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
    * @throws CheckoutStepNotCompletedException if a step is still missing its data
    * @throws CheckoutStepOutOfOrderException if the session does not stand at the review step
    * @throws CheckoutValidationException if a line item no longer passes validation
-   * @throws CheckoutChangedSinceReviewException if the review has changed since
+   * @throws OrderChangedSinceReviewException if the review has changed since
    * @throws AuthorizedAmountDiffersFromReviewException if the payment was authorized for an amount
    *     other than the review's total
    */
