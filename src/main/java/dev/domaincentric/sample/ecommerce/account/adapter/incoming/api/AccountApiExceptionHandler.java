@@ -103,8 +103,9 @@ public class AccountApiExceptionHandler {
   }
 
   /**
-   * The body names a value the request refuses — a date of birth that is not in the past; {@code
-   * errors} names each field as the request spells it, and why.
+   * A request body of this package fails its own validation — a date of birth that does not lie
+   * before today, for one; {@code errors} names each refused field as the request spells it, and
+   * why.
    */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ProblemDetail handleRefusedField(final MethodArgumentNotValidException exception) {

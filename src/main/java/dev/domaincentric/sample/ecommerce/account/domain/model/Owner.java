@@ -32,10 +32,10 @@ public record Owner(String firstName, String lastName, LocalDate dateOfBirth) im
    *
    * @param firstName the first name as the person writes it
    * @param lastName the last name as the person writes it
-   * @param dateOfBirth the date of birth, not in the future
+   * @param dateOfBirth the date of birth, before today
    * @return the owner
-   * @throws IllegalArgumentException if a name is blank or too long, or the date is missing or lies
-   *     in the future
+   * @throws IllegalArgumentException if a name is blank or too long, or the date is missing or does
+   *     not lie before today
    */
   public static Owner of(
       final String firstName, final String lastName, final LocalDate dateOfBirth) {
@@ -45,9 +45,9 @@ public record Owner(String firstName, String lastName, LocalDate dateOfBirth) im
   /**
    * Returns a copy with a corrected date of birth and both names carried over unchanged.
    *
-   * @param newDateOfBirth the corrected date of birth, not in the future
+   * @param newDateOfBirth the corrected date of birth, before today
    * @return the corrected owner
-   * @throws IllegalArgumentException if the date is missing or lies in the future
+   * @throws IllegalArgumentException if the date is missing or does not lie before today
    */
   public Owner withDateOfBirth(final LocalDate newDateOfBirth) {
     return new Owner(firstName, lastName, newDateOfBirth);

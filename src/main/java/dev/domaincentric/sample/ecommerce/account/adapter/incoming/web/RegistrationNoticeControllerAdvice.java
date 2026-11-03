@@ -15,9 +15,18 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class RegistrationNoticeControllerAdvice {
 
-  /** Puts the sentence of the registration notice a redirect handed the page on its model. */
+  /** The model attribute the layout shows as a success. */
+  private static final String SUCCESS_MESSAGE = "successMessage";
+
+  /**
+   * Puts the sentence of the registration notice a redirect handed the page on its model, as {@code
+   * successMessage}. An absent or unknown code puts nothing.
+   *
+   * @param model the page's model
+   */
   @ModelAttribute
   public void showRegistrationNotice(final Model model) {
-    RegistrationNotice.show(model);
+    RegistrationNotice.in(model)
+        .ifPresent(notice -> model.addAttribute(SUCCESS_MESSAGE, notice.sentence()));
   }
 }

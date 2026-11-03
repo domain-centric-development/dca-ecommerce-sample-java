@@ -73,7 +73,7 @@ class RegistrationApiIntegrationTest {
   }
 
   @Test
-  @DisplayName("Todays date of birth is refused through the api")
+  @DisplayName("Today's date of birth is refused through the api")
   void aDateOfBirthOfTodayIsAnUnacceptableValueNamingTheField() throws Exception {
     final String today = LocalDate.now().toString();
 

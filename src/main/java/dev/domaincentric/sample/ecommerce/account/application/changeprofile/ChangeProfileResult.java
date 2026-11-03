@@ -38,7 +38,7 @@ public record ChangeProfileResult(Outcome outcome, Optional<Profile> profile) {
     EMAIL_ALREADY_IN_USE,
     /** The submitted email address is not a valid address. */
     EMAIL_INVALID,
-    /** The submitted date of birth is missing or lies in the future. */
+    /** The submitted date of birth is missing or does not lie before today. */
     DATE_OF_BIRTH_INVALID
   }
 

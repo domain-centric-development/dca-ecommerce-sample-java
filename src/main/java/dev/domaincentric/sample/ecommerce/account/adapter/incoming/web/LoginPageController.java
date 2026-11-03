@@ -12,6 +12,7 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.Identi
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -143,7 +144,7 @@ public class LoginPageController {
    * Puts the return page on the login page: the form hands it to the login as it came, and the
    * "Register here" link carries it on only when it is a page of the shop.
    */
-  private static void addReturnPage(final Model model, final String returnUrl) {
+  private static void addReturnPage(final Model model, final @Nullable String returnUrl) {
     model.addAttribute("returnUrl", returnUrl);
     model.addAttribute("registerUrl", ReturnPage.carriedOnTo("/register", returnUrl));
   }

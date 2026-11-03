@@ -54,7 +54,8 @@ public class RegisterPageController {
    * Displays the registration page.
    *
    * @param model Spring MVC model
-   * @param returnUrl optional URL to redirect to after registration
+   * @param returnUrl optional page to redirect to after registration, followed — and carried on to
+   *     the login link — only when it is a page of the shop
    * @return view name "account/register"
    */
   @GetMapping

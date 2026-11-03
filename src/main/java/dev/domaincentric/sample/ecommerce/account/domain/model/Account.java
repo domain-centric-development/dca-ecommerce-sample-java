@@ -295,7 +295,7 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
    *
    * @param newDateOfBirth the corrected date of birth
    * @throws AccountClosedException if the account is closed
-   * @throws IllegalArgumentException if the date lies in the future
+   * @throws IllegalArgumentException if the date is missing or does not lie before today
    */
   public void changeOwnerDateOfBirth(final LocalDate newDateOfBirth) {
     if (status.isTerminal()) {
