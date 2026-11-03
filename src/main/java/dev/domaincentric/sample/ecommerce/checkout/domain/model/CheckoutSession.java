@@ -298,36 +298,19 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
-   * Asserts that this session may be paid for right now.
-   *
-   * <p>The same preconditions {@link #submitPayment(PaymentSelection)} enforces, without changing
-   * anything, plus a positive total: a way to pay is chosen only for a session that has something
-   * to pay.
-   *
-   * @throws CheckoutNotModifiableException if the session no longer takes changes
-   * @throws CheckoutStepNotCompletedException if the buyer or delivery step is missing
-   * @throws CheckoutStepOutOfOrderException if the session is past the payment step
-   * @throws NothingToPayException if the total is not positive
-   */
-  public void assertReadyForPayment() {
-    ensurePaymentStepOpen();
-
-    if (!totals.total().isPositive()) {
-      throw new NothingToPayException(this.id, totals.total());
-    }
-  }
-
-  /**
    * Submits payment method selection for the checkout: it records how the customer pays, nothing is
-   * requested from the provider yet.
+   * requested from the provider yet. A way to pay is chosen only for a session that has something
+   * to pay.
    *
    * @param payment the payment method selection
    * @throws CheckoutNotModifiableException if the session no longer takes changes
    * @throws CheckoutStepNotCompletedException if the buyer or delivery step is missing
    * @throws CheckoutStepOutOfOrderException if the session is past the payment step
+   * @throws NothingToPayException if the total is not positive
    */
   public void submitPayment(final PaymentSelection payment) {
     ensurePaymentStepOpen();
+    ensureSomethingToPay();
 
     this.paymentSelection = payment;
 
@@ -343,6 +326,13 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     ensureStepCompleted(CheckoutStep.BUYER_INFO);
     ensureStepCompleted(CheckoutStep.DELIVERY);
     ensureAtOrBeforeStep(CheckoutStep.PAYMENT);
+  }
+
+  /** A way to pay is chosen only for a session that has something to pay. */
+  private void ensureSomethingToPay() {
+    if (!totals.total().isPositive()) {
+      throw new NothingToPayException(this.id, totals.total());
+    }
   }
 
   /**

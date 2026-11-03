@@ -45,8 +45,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/checkout")
 public class ConfirmationPageController {
 
-  /** The value of {@code sentFrom} the review's own form carries. */
-  private static final String REVIEW_PAGE = "review";
+  /**
+   * The value of {@code sentFrom} the review's own form carries: the review page renders it from
+   * here, so the form and this check name it once.
+   */
+  static final String REVIEW_PAGE = "review";
 
   private final ConfirmCheckoutInputPort confirmCheckoutInputPort;
   private final GetCheckoutSessionInputPort getCheckoutSessionInputPort;
@@ -100,7 +103,8 @@ public class ConfirmationPageController {
     }
 
     if (!REVIEW_PAGE.equals(sentFrom)) {
-      return redirectToTheReview(activeSession.sessionId(), customerId, attributes);
+      return CheckoutStepPage.askForTheReview(
+          stepAccess(activeSession.sessionId(), customerId, CheckoutStep.REVIEW), attributes);
     }
 
     return CheckoutStepPage.submitting(
@@ -113,19 +117,6 @@ public class ConfirmationPageController {
 
           return "redirect:/checkout/confirmation";
         });
-  }
-
-  /**
-   * A "Place Order" not sent from the review: the review, asking for it — or, while an earlier step
-   * is still missing, that step.
-   */
-  private String redirectToTheReview(
-      final String sessionId, final String customerId, final RedirectAttributes attributes) {
-    final StepAccess review = stepAccess(sessionId, customerId, CheckoutStep.REVIEW);
-    return review.granted()
-        ? CheckoutRoutes.redirectTo(
-            CheckoutStep.REVIEW, CheckoutStepNotice.REVIEW_FIRST, attributes)
-        : CheckoutRoutes.redirectFor(review, CheckoutStepNotice.EARLIER_STEPS_FIRST, attributes);
   }
 
   /**

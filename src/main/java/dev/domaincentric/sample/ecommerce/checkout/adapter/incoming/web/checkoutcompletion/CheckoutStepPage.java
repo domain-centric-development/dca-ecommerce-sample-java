@@ -29,7 +29,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  *
  * <p>A refusal is translated here, once: the step controllers call {@link #submitting} with their
  * use-case call and never catch a refusal themselves. What a refusal looks like to the customer is
- * decided in {@link #noticeFor}.
+ * decided in {@link #noticeFor}, and for a "Place Order" not sent from the review in {@link
+ * #askForTheReview}.
  */
 final class CheckoutStepPage {
 
@@ -48,7 +49,7 @@ final class CheckoutStepPage {
 
   /**
    * The redirect for a step the domain did not grant, or nothing for a granted one — which then
-   * shows the notice a redirect handed it: a refusal as its error, any other as its notice.
+   * shows the notice a redirect handed it, as its error.
    *
    * <p>A denied step passes no notice on: a notice belongs to the page it was addressed to, and the
    * step shown instead says nothing it was not sent.
@@ -88,6 +89,21 @@ final class CheckoutStepPage {
       // field moved into request validation is one reason less to catch it.
       return redirectFor(step, refusal, access, attributes);
     }
+  }
+
+  /**
+   * The redirect for a "Place Order" not sent from the review: to the review, asking for it — or,
+   * while an earlier step is still missing, to that step, saying so.
+   *
+   * @param review the domain's decision for the review step
+   * @param attributes the redirect's attributes, which take the notice
+   * @return the redirect to the review or to the step still open
+   */
+  static String askForTheReview(final StepAccess review, final RedirectAttributes attributes) {
+    return review.granted()
+        ? CheckoutRoutes.redirectTo(
+            CheckoutStep.REVIEW, CheckoutStepNotice.REVIEW_FIRST, attributes)
+        : CheckoutRoutes.redirectFor(review, CheckoutStepNotice.EARLIER_STEPS_FIRST, attributes);
   }
 
   /**

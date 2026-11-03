@@ -26,6 +26,9 @@ public interface StockReservationPort extends OutputPort {
       if (productId == null) {
         throw new IllegalArgumentException("ProductId cannot be null");
       }
+      if (quantity <= 0) {
+        throw new IllegalArgumentException("Quantity must be positive");
+      }
     }
   }
 

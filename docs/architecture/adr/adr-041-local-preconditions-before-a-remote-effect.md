@@ -78,6 +78,21 @@ in the meantime (`CheckoutSession.authorizePayment`, `CheckoutSession.confirm`).
 provider without an order. Nothing in the shop cancels it; as with the intent above, only a reconciliation would
 find it.
 
+## 2026-11-03 amendment: one guard for the payment step, and the lock Place Order holds
+
+`assertReadyForPayment()` is gone. The payment step reaches no provider any more, so nothing remote stands between the
+check and `submitPayment` — they ran back to back in one transaction. `submitPayment` itself now refuses a session
+with nothing to pay (`NothingToPayException`), after the step guards it already had. The .NET sample still has
+`AssertReadyForPayment()`, and it does the same thing. That divergence is known and has no effect on behaviour.
+
+Place Order runs inside `CheckoutSessionRepository.inCartSession`. Its only implementation is the port's default:
+one monitor for the whole repository, whatever the cart. So the stock reservation in Inventory and the call to the
+payment provider both run while that monitor is held. Every other Place Order and Start Checkout in the shop waits for
+them, not only those of the same cart. The lock order is checkout's monitor first, then Inventory's. Nothing in
+Inventory calls back into checkout, so the order cannot invert. This is accepted for a shop that runs in one process
+and makes no scaling promise. A per-cart lock, or reserving before the monitor and checking again inside it, is the
+step to take once the shop has to scale.
+
 ## Harness questions
 
 - **Catalog:** yes — the pitfall "remote effect before local preconditions" belongs beside the existing

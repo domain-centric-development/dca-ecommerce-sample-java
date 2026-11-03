@@ -62,12 +62,12 @@ claim of durable distributed transactions or universal rollback of unenlisted re
   that no longer takes changes. The buyer step's page resumes it when it finds no session of the customer (ADR-046)
 - `supersede` — kept with status superseded when a new checkout action replaces it; no event; only an active session can be superseded
 - `submitBuyerInfo`, `submitDelivery`, `submitPayment` — record the step's data and move on to the next step when
-  standing on it; `submitPayment` records the chosen provider only, requests nothing from it and raises no event
-- `assertReadyForPayment` — a question: the preconditions of `submitPayment` plus a positive total, checked without
-  changing anything
+  standing on it; `submitPayment` records the chosen provider only, requests nothing from it and raises no event;
+  it is refused on a session whose total is not positive (`NothingToPayException`)
 - authorize the payment (`authorizePayment`) — at Place Order, records on a session at the review that its chosen
   provider authorized the total the review showed under a payment reference, and records that amount; publishes
-  `PaymentSubmitted`; refused on a session not at the review or one that no longer takes changes, and when a
+  `PaymentSubmitted`; refused on a session not at the review, one with a step still missing its data, or one that no
+  longer takes changes, and when a
   provider other than the chosen one authorized it (`PaymentDiffersFromReviewException`)
 - `goBackTo` — moves the current step back; data already submitted stays
 - work out the review (`reviewAt`, through `GetCheckoutReview`) — the session's lines at today's prices, quantities

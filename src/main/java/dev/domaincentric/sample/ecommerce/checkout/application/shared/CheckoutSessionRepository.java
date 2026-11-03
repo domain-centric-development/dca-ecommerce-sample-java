@@ -24,7 +24,14 @@ import java.util.Optional;
  */
 public interface CheckoutSessionRepository extends Repository<CheckoutSession, CheckoutSessionId> {
 
-  /** Serializes confirmation versus replacement, including the caller's transaction completion. */
+  /**
+   * Serializes confirmation versus replacement, including the caller's transaction completion.
+   *
+   * <p>This default holds one monitor for the whole repository, whatever the cart: every placing
+   * and every start of a checkout in the shop waits for the one running — its stock reservation in
+   * Inventory and its call to the payment provider included. The lock order is this monitor first,
+   * then Inventory's. ADR-041 records why that is accepted here.
+   */
   default <T> T inCartSession(CartId cartId, java.util.function.Supplier<T> operation) {
     synchronized (this) {
       return operation.get();

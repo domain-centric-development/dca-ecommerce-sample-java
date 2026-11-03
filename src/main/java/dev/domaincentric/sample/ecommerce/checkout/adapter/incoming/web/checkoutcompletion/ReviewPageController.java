@@ -106,6 +106,7 @@ public class ReviewPageController {
         ReviewPageViewModel.fromReview(review.review(), review.fingerprint());
 
     model.addAttribute("orderReview", viewModel);
+    model.addAttribute("sentFrom", ConfirmationPageController.REVIEW_PAGE);
     model.addAttribute("title", "Review Order - Checkout");
 
     return "checkout/review";

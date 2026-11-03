@@ -7,7 +7,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * A sentence a checkout step page shows after a redirect led the customer there.
+ * A sentence a checkout step page shows after a redirect led the customer there: why something was
+ * refused, shown as the page's error.
  *
  * <p>The notice travels with the redirect as a flash attribute, which the shop keeps in a sealed
  * cookie addressed to the page the redirect leads to: only its code ({@value #KEY}), never the
@@ -16,77 +17,41 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * needs and does not get, shows nothing.
  */
 public enum CheckoutStepNotice {
-  EARLIER_STEPS_FIRST(
-      Kind.REFUSAL, "earlier-steps-first", "Please complete the previous checkout steps first."),
-  SESSION_NOT_FOUND(Kind.REFUSAL, "session-not-found", "Checkout session not found"),
-  CHECKOUT_NOT_MODIFIABLE(
-      Kind.REFUSAL, "checkout-not-modifiable", "This checkout can no longer be changed."),
-  INVALID_BUYER_DETAILS(
-      Kind.REFUSAL, "invalid-buyer-details", "Please check the details you entered."),
+  EARLIER_STEPS_FIRST("earlier-steps-first", "Please complete the previous checkout steps first."),
+  SESSION_NOT_FOUND("session-not-found", "Checkout session not found"),
+  CHECKOUT_NOT_MODIFIABLE("checkout-not-modifiable", "This checkout can no longer be changed."),
+  INVALID_BUYER_DETAILS("invalid-buyer-details", "Please check the details you entered."),
   BUYER_DETAILS_NOT_SAVED(
-      Kind.REFUSAL,
-      "buyer-details-not-saved",
-      "Your details could not be saved. Please try again."),
+      "buyer-details-not-saved", "Your details could not be saved. Please try again."),
   INVALID_DELIVERY_ADDRESS(
-      Kind.REFUSAL, "invalid-delivery-address", "Please check the delivery address you entered."),
+      "invalid-delivery-address", "Please check the delivery address you entered."),
   SHIPPING_METHOD_NOT_OFFERED(
-      Kind.REFUSAL,
       "shipping-method-not-offered",
       "This shipping method is not offered. Please choose another one."),
   DELIVERY_NOT_SAVED(
-      Kind.REFUSAL,
-      "delivery-not-saved",
-      "Your delivery details could not be saved. Please try again."),
-  PAYMENT_REFUSED(
-      Kind.REFUSAL,
-      "payment-refused",
-      "The payment was refused. Please choose another way to pay."),
+      "delivery-not-saved", "Your delivery details could not be saved. Please try again."),
+  PAYMENT_REFUSED("payment-refused", "The payment was refused. Please choose another way to pay."),
   PAYMENT_PROVIDER_UNAVAILABLE(
-      Kind.REFUSAL,
       "payment-provider-unavailable",
       "The payment provider is not available right now. Please try again later."),
   PAYMENT_METHOD_NOT_OFFERED(
-      Kind.REFUSAL,
-      "payment-method-not-offered",
-      "This way to pay is not offered. Please choose another one."),
-  NOTHING_TO_PAY(Kind.REFUSAL, "nothing-to-pay", "There is nothing to pay for this order."),
-  PAYMENT_METHOD_MISSING(Kind.REFUSAL, "payment-method-missing", "Please choose a way to pay."),
+      "payment-method-not-offered", "This way to pay is not offered. Please choose another one."),
+  NOTHING_TO_PAY("nothing-to-pay", "There is nothing to pay for this order."),
+  PAYMENT_METHOD_MISSING("payment-method-missing", "Please choose a way to pay."),
   PAYMENT_NOT_SAVED(
-      Kind.REFUSAL,
-      "payment-not-saved",
-      "Your payment selection could not be saved. Please try again."),
+      "payment-not-saved", "Your payment selection could not be saved. Please try again."),
   ITEMS_UNAVAILABLE(
-      Kind.REFUSAL,
-      "items-unavailable",
-      "Cannot place the order, %d item(s) unavailable or out of stock."),
-  STOCK_RAN_SHORT(
-      Kind.REFUSAL, "stock-ran-short", "Not enough stock left for '%s'. Please adjust your order."),
+      "items-unavailable", "Cannot place the order, %d item(s) unavailable or out of stock."),
+  STOCK_RAN_SHORT("stock-ran-short", "Not enough stock left for '%s'. Please adjust your order."),
   PRICE_CHANGED_SINCE_REVIEW(
-      Kind.REFUSAL,
       "price-changed",
       "The price of '%s' has changed. Please check your order and place it again."),
   ORDER_CHANGED_SINCE_REVIEW(
-      Kind.REFUSAL,
       "order-changed",
       "Your order has changed since you reviewed it. Please check it and place it again."),
-  REVIEW_FIRST(Kind.REFUSAL, "review-first", "Please review your order before placing it."),
-  ORDER_NOT_PLACED(
-      Kind.REFUSAL, "order-not-placed", "Your order could not be placed. Please try again."),
-  ORDER_NOT_CONFIRMED(Kind.REFUSAL, "order-not-confirmed", "Order has not been confirmed yet");
-
-  /** What a notice tells the customer, and so the page attribute it is shown under. */
-  public enum Kind {
-    /** Why something was refused, shown as the page's error. */
-    REFUSAL("error"),
-    /** What happened, shown as the page's notice. */
-    INFORMATION("notice");
-
-    private final String pageAttribute;
-
-    Kind(final String pageAttribute) {
-      this.pageAttribute = pageAttribute;
-    }
-  }
+  REVIEW_FIRST("review-first", "Please review your order before placing it."),
+  ORDER_NOT_PLACED("order-not-placed", "Your order could not be placed. Please try again."),
+  ORDER_NOT_CONFIRMED("order-not-confirmed", "Order has not been confirmed yet");
 
   /** The flash attribute that carries a checkout step notice's code. */
   public static final String KEY = "notice.checkout-step";
@@ -97,12 +62,13 @@ public enum CheckoutStepNotice {
   /** The flash attribute that carries the product name a notice names. */
   public static final String NAME_KEY = "notice.name";
 
-  private final Kind kind;
+  /** The page attribute a notice's sentence is shown under: the page's error. */
+  private static final String PAGE_ATTRIBUTE = "error";
+
   private final String code;
   private final String sentence;
 
-  CheckoutStepNotice(final Kind kind, final String code, final String sentence) {
-    this.kind = kind;
+  CheckoutStepNotice(final String code, final String sentence) {
     this.code = code;
     this.sentence = sentence;
   }
@@ -119,21 +85,19 @@ public enum CheckoutStepNotice {
 
   /**
    * Shows the notice a redirect brought to this page: reads it from the page's model, where Spring
-   * puts the flash attributes addressed to the page, and puts its sentence there under the
-   * attribute its kind names — a refusal as the page's error, any other as its notice. Nothing is
-   * shown when no notice came, its code is unknown or its number or name missing.
+   * puts the flash attributes addressed to the page, and puts its sentence there as the page's
+   * error. Nothing is shown when no notice came, its code is unknown or its number or name missing.
    *
    * @param model the page's model
    */
   public static void showIn(final Model model) {
     fromCode(model.getAttribute(KEY) instanceof String code ? code : null)
-        .ifPresent(
+        .flatMap(
             notice ->
-                notice
-                    .sentence(
-                        model.getAttribute(COUNT_KEY) instanceof Integer count ? count : null,
-                        model.getAttribute(NAME_KEY) instanceof String name ? name : null)
-                    .ifPresent(text -> model.addAttribute(notice.kind.pageAttribute, text)));
+                notice.sentence(
+                    model.getAttribute(COUNT_KEY) instanceof Integer count ? count : null,
+                    model.getAttribute(NAME_KEY) instanceof String name ? name : null))
+        .ifPresent(text -> model.addAttribute(PAGE_ATTRIBUTE, text));
   }
 
   /**

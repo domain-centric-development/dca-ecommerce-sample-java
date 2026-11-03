@@ -61,14 +61,13 @@ public class SubmitPaymentUseCase implements SubmitPaymentInputPort {
       throw new PaymentProviderNotFoundException(providerId);
     }
 
-    // Short transaction: load, submit, save, publish
+    // Short transaction: load, record the choice, save, publish
     return transactionBoundary.inTransaction(
         () -> {
           final CheckoutSession session =
               checkoutSessionRepository
                   .findByIdForCustomer(sessionId, customerId)
                   .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
-          session.assertReadyForPayment();
           session.submitPayment(PaymentSelection.of(providerId));
           checkoutSessionRepository.save(session);
           eventPublisher.publishAndClearEvents(session);
