@@ -242,7 +242,7 @@ line's product when only that line's price differs.
 
 **Definition:** What the review showed — lines with product, quantity and unit price, buyer, delivery address,
 shipping option and price, payment method, total — sent with "Place Order" (the form field `reviewFingerprint`). A
-blank or malformed value matches no review.
+missing, blank or malformed value matches no review.
 
 **Type:** Value Object
 

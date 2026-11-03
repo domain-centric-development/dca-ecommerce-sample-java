@@ -87,7 +87,8 @@ public class ConfirmationPageController {
   @PostMapping("/confirm")
   public String confirmOrder(
       @RequestParam(name = "sentFrom", required = false) final @Nullable String sentFrom,
-      @RequestParam(name = "reviewFingerprint", defaultValue = "") final String reviewFingerprint,
+      @RequestParam(name = "reviewFingerprint", required = false)
+          final @Nullable String reviewFingerprint,
       final RedirectAttributes attributes) {
 
     // Get customer ID from JWT identity

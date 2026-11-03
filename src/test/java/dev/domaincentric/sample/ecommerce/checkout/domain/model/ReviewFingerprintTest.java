@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.checkout.domain.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
@@ -15,9 +14,14 @@ import org.junit.jupiter.api.Test;
 class ReviewFingerprintTest {
 
   @Test
-  @DisplayName("refuses a missing value")
-  void refusesAMissingValue() {
-    assertThrows(IllegalArgumentException.class, () -> ReviewFingerprint.of(null));
+  @DisplayName("a missing value matches no review and names no line")
+  void aMissingValueMatchesNoReviewAndNamesNoLine() {
+    final ReviewFingerprint today = aReview().fingerprint();
+    final ReviewFingerprint shown = ReviewFingerprint.of(null);
+
+    assertNotEquals(today, shown);
+    assertEquals(OptionalInt.empty(), today.firstChangedLine(shown));
+    assertEquals(OptionalInt.empty(), shown.firstChangedLine(today));
   }
 
   @Test

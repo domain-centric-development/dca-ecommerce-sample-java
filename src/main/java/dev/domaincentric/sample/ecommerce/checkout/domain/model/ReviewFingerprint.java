@@ -10,6 +10,7 @@ import java.util.OptionalInt;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The fingerprint of a checkout review: per line one digest of what is ordered — its product and
@@ -19,11 +20,11 @@ import java.util.stream.IntStream;
  *
  * <p>Written as the lines joined by {@value #LINE_SEPARATOR}, each its item digest, {@value
  * #PRICE_SEPARATOR} and its price digest, then {@value #REST_SEPARATOR} and the digest of the rest.
- * A value not in that form is a fingerprint of no review.
+ * A value not in that form, and a missing one, is a fingerprint of no review.
  *
- * @param value the fingerprint as the review page carries it
+ * @param value the fingerprint as the review page carries it, {@code null} when none was sent
  */
-public record ReviewFingerprint(String value) implements Value {
+public record ReviewFingerprint(@Nullable String value) implements Value {
 
   private static final String LINE_SEPARATOR = ".";
   private static final String PRICE_SEPARATOR = ":";
@@ -50,13 +51,7 @@ public record ReviewFingerprint(String value) implements Value {
    */
   record Line(String item, String price) implements Value {}
 
-  public ReviewFingerprint {
-    if (value == null) {
-      throw new IllegalArgumentException("Review fingerprint cannot be null");
-    }
-  }
-
-  public static ReviewFingerprint of(final String value) {
+  public static ReviewFingerprint of(final @Nullable String value) {
     return new ReviewFingerprint(value);
   }
 
@@ -103,9 +98,10 @@ public record ReviewFingerprint(String value) implements Value {
   }
 
   private boolean isWellFormed() {
-    return FORM.matcher(value).matches();
+    return value != null && FORM.matcher(value).matches();
   }
 
+  /** The lines of a well-formed fingerprint, which has a value. */
   private List<String> lines() {
     return List.of(
         value.substring(0, value.indexOf(REST_SEPARATOR)).split(Pattern.quote(LINE_SEPARATOR)));
