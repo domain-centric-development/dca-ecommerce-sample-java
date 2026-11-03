@@ -432,3 +432,20 @@ Test: dev.domaincentric.sample.ecommerce.cart.RemoveItemFromCartPriceIntegration
   "Price decreased by 5.00 EUR"
 - And the page shows "Some items have price changes since they were added to your cart."
 Test: dev.domaincentric.sample.ecommerce.e2e.CartPriceChangeE2ETest#theCartShowsTodaysPriceAndThatItChangedAfterAPriceChange
+
+### Rule: One product the catalogue lost does not fail the cart's answer
+
+#### a-cart-answers-with-a-product-the-catalogue-lost
+- Given a cart holding "Clean Architecture" once and "Domain-Driven Design" once
+- And the catalogue no longer knows "Domain-Driven Design"
+- When "Clean Architecture" is added once more through the API
+- Then the answer is 200 and the cart holds "Clean Architecture" with quantity 2
+- And the line of "Domain-Driven Design" holds `quantity` 1, `available` false and no `price`
+- And `total` is the price of the two units of "Clean Architecture" alone
+Test: dev.domaincentric.sample.ecommerce.e2e.CartWithALostProductApiE2ETest#addingToACartWithAProductTheCatalogueLostAnswersWithTheLineUnavailableAndUnpriced
+
+#### the-staff-list-answers-with-a-product-the-catalogue-lost
+- Given the cart above
+- When a member of staff reads the list of every cart
+- Then the answer is 200 and lists the cart, its line of "Domain-Driven Design" with `available` false and no `price`
+Test: dev.domaincentric.sample.ecommerce.cart.CartWithALostProductIntegrationTest#theStaffListShowsALineWhoseProductTheCatalogueLostAsUnavailableWithoutPrice
