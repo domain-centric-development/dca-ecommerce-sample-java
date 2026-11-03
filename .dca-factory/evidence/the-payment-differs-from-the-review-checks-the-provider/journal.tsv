@@ -26,3 +26,14 @@
 2026-10-30T09:00:32.926Z	window-end	decisions	seq=26
 2026-10-30T09:00:32.926Z	usage	decisions	tool=claude-session	window=2026-10-30T08:59:46.771Z/2026-10-30T09:00:32.926Z	session=claude:73b79340-1015-4639-b169-2c46eb4b0050	seq=27
 2026-10-30T09:00:32.926Z	usage	decisions	tool=claude-session	model=claude-fable-5-1	input=34	cache_read=211761	cache_write=2216	output=1181	window=2026-10-30T08:59:46.771Z/2026-10-30T09:00:32.926Z	seq=28
+2026-11-03T09:27:44Z	step-start	merge	by=runner	seq=29
+2026-11-03T09:27:45Z	step-end	merge	exit=0	seq=30
+2026-11-03T09:27:45Z	pipeline-changed	plan	seq=31
+2026-11-03T09:54:32Z	step-start	merge	by=runner	seq=32
+2026-11-03T09:54:32Z	step-end	merge	exit=0	seq=33
+2026-11-03T09:54:33Z	signal	plan	run=20261103T095433.454180Z	open=3	seq=34
+2026-11-03T09:54:33Z	gate	plan	exit=0	by=runner	seq=35
+2026-11-03T09:54:34Z	stage-start	builder	tool=claude	stages=plan,build,tidy	seq=36
+2026-11-03T09:55:55Z	wrote	plan.md	sha=334576623cd48f950caa9c5554d6dd2df868ba3eaf6b050bc2f7144948972631	seq=37
+2026-11-03T09:55:55Z	signal	plan	run=20261103T095555.303511Z	open=3	seq=38
+2026-11-03T09:55:55Z	gate	plan	exit=0	by=builder	seq=39

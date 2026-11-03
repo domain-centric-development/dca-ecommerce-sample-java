@@ -22,3 +22,7 @@ payment is requested from the selected provider. The checkout glossary's entry i
 A change no actor sees: no acceptance criterion, no test stage. It runs plan, build, tidy, judge and document, and
 the existing suite, run whole, is its evidence; a test that existed before it stays as it is.
 The new refusal of another provider is proven by a unit test of the use case.
+
+## Assumptions
+
+- answered: The test follows the type's name inside `assertThrows`; what it asserts stays as it is (changes a test's line, (the-payment-differs-from-the-review-checks-the-provider-01)
