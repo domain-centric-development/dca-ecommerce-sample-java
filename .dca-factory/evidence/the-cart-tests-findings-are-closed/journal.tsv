@@ -1,0 +1,15 @@
+2026-11-03T13:00:52Z	signal	plan	run=20261103T130052.684935Z	open=0	seq=1
+2026-11-03T13:00:52Z	gate	plan	exit=0	by=runner	seq=2
+2026-11-03T13:00:53Z	stage-start	builder	tool=claude	stages=plan,build,tidy	seq=3
+2026-11-03T13:04:23Z	wrote	plan.md	sha=0a39beda7bd2612509fd28d76f7a072eb7686b9d5e289b9aafca6f31d2e31efb	seq=4
+2026-11-03T13:04:23Z	wrote	build.md	sha=f9de373e31eef5c2e6db3692761d47f66ef805a7581e0dea09c363dfb2513f00	seq=5
+2026-11-03T13:04:29Z	gate	build	exit=1	fail=tests-kept	by=builder	seq=6
+2026-11-03T13:04:59Z	wrote	plan.md	sha=ef966e03893e3d443797ac0a3f990ef06e5ee52dfa86a927eb509934b9e329ea	seq=7
+2026-11-03T13:04:59Z	wrote	build.md	sha=cf46de7f9f5ffe7cd820db3b5735b55bec209296825c7b6b8a3133d1e7d37696	seq=8
+2026-11-03T13:05:06Z	gate	build	exit=1	fail=tests-kept	by=builder	seq=9
+2026-11-03T13:05:48Z	usage	builder	tool=claude	model=claude-opus-5-5	input=76	cache_read=3106848	cache_write=115081	output=28289	cost=2.1081	seconds=294	seq=10
+2026-11-03T13:05:48Z	part	plan	process=builder	stream=builder.130052.out	seconds=152.752	input=56	cache_read=1958682	cache_write=103078	output=21451	cost=1.573536	seq=11
+2026-11-03T13:05:48Z	part	build	process=builder	stream=builder.130052.out	seconds=100.497	input=20	cache_read=1148166	cache_write=12003	output=6838	cost=0.534566	seq=12
+2026-11-03T13:05:48Z	stream	builder.130052.out	process=builder	parts=2	denied=0	version=2	seq=13
+2026-11-03T13:05:48Z	stage-end	builder	exit=0	seq=14
+2026-11-03T13:05:49Z	wrote	plan.md	sha=61cb60b7acbf75e29fe5119a2a5efacf4c44c2e24e178d6383c4fc20e71313eb	seq=15

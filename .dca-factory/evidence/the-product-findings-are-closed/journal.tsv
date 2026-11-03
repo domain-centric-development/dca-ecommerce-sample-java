@@ -1,0 +1,99 @@
+2026-11-03T13:05:54Z	signal	plan	run=20261103T130554.881807Z	open=0	seq=1
+2026-11-03T13:05:54Z	gate	plan	exit=0	by=runner	seq=2
+2026-11-03T13:05:55Z	stage-start	builder	tool=claude	stages=plan,build,tidy	seq=3
+2026-11-03T13:07:34Z	wrote	plan.md	sha=832a9ee246ab22b6a89537d9fa7f6bac523af311eb465d65e411e1e96959df56	seq=4
+2026-11-03T13:07:34Z	wrote	build.md	sha=b7f2676aba85ffc84f6a001e8b7e8cdc38c88dbd0ca3476d6fc4ef3ca331b708	seq=5
+2026-11-03T13:13:20Z	gate	build	exit=0	by=builder	seq=6
+2026-11-03T13:13:32Z	wrote	tidy.md	sha=ea49c38e50e377f658f3ddc5f00d98a848af85d2ffe5b0155b4c75102ee1ed43	seq=7
+2026-11-03T13:18:53Z	gate	tidy	exit=0	by=builder	seq=8
+2026-11-03T13:19:01Z	usage	builder	tool=claude	model=claude-opus-5-5	input=54	cache_read=1541315	cache_write=80943	output=11865	cost=1.1933	seconds=785	seq=9
+2026-11-03T13:19:01Z	part	plan	process=builder	stream=builder.130555.out	seconds=52.455	input=40	cache_read=966130	cache_write=72305	output=8468	cost=0.901527	seq=10
+2026-11-03T13:19:01Z	part	build	process=builder	stream=builder.130555.out	seconds=361.569	input=10	cache_read=402537	cache_write=7027	output=1657	cost=0.199004	seq=11
+2026-11-03T13:19:01Z	part	tidy	process=builder	stream=builder.130555.out	seconds=333.851	input=4	cache_read=172648	cache_write=1611	output=1740	cost=0.092793	seq=12
+2026-11-03T13:19:01Z	stream	builder.130555.out	process=builder	parts=3	denied=0	version=2	seq=13
+2026-11-03T13:19:01Z	stage-end	builder	exit=0	seq=14
+2026-11-03T13:24:19Z	gate	build	exit=1	fail=suite	by=runner	seq=15
+2026-11-03T13:24:20Z	stage-start	builder	tool=claude	stages=build,tidy	seq=16
+2026-11-03T13:30:52Z	gate	build	exit=0	by=builder	seq=17
+2026-11-03T13:36:23Z	gate	tidy	exit=1	fail=suite	by=builder	seq=18
+2026-11-03T13:42:29Z	gate	tidy	exit=0	by=builder	seq=19
+2026-11-03T13:42:37Z	usage	builder	tool=claude	model=claude-opus-5-5	input=48	cache_read=1362276	cache_write=70209	output=7111	cost=0.9765	seconds=1096	seq=20
+2026-11-03T13:42:37Z	part	build	process=builder	stream=builder.132420.out	seconds=327.594	input=40	cache_read=1063250	cache_write=66559	output=4982	cost=0.826874	seq=21
+2026-11-03T13:42:37Z	part	tidy	process=builder	stream=builder.132420.out	seconds=695.357	input=8	cache_read=299026	cache_write=3650	output=2129	cost=0.149666	seq=22
+2026-11-03T13:42:37Z	stream	builder.132420.out	process=builder	parts=2	denied=0	version=2	seq=23
+2026-11-03T13:42:37Z	stage-end	builder	exit=0	seq=24
+2026-11-03T13:42:37Z	wrote	build.md	sha=b7f2676aba85ffc84f6a001e8b7e8cdc38c88dbd0ca3476d6fc4ef3ca331b708	same=1	seq=25
+2026-11-03T13:42:37Z	wrote	tidy.md	sha=ea49c38e50e377f658f3ddc5f00d98a848af85d2ffe5b0155b4c75102ee1ed43	same=1	seq=26
+2026-11-03T13:46:14Z	gate	build	exit=0	by=runner	seq=27
+2026-11-03T13:46:20Z	gate	tidy	exit=0	by=runner	seq=28
+2026-11-03T13:46:20Z	stage-start	review:ddd	tool=claude	seq=29
+2026-11-03T13:46:20Z	stage-start	review:hexagonal	tool=claude	seq=30
+2026-11-03T13:46:20Z	stage-start	review:clean-code	tool=claude	seq=31
+2026-11-03T13:46:59Z	usage	review:ddd	tool=claude	model=claude-opus-5-5	input=16	cache_read=239937	cache_write=39113	output=2681	cost=0.4146	seconds=38	seq=32
+2026-11-03T13:46:59Z	stream	review-ddd.134620.out	process=review-ddd	parts=0	denied=0	version=2	seq=33
+2026-11-03T13:46:59Z	stage-end	review:ddd	exit=0	seq=34
+2026-11-03T13:46:59Z	usage	review:hexagonal	tool=claude	model=claude-opus-5-5	input=12	cache_read=161850	cache_write=41097	output=2659	cost=0.4144	seconds=38	seq=35
+2026-11-03T13:46:59Z	stream	review-hexagonal.134620.out	process=review-hexagonal	parts=0	denied=0	version=2	seq=36
+2026-11-03T13:46:59Z	stage-end	review:hexagonal	exit=0	seq=37
+2026-11-03T13:46:59Z	usage	review:clean-code	tool=claude	model=claude-opus-5-5	input=14	cache_read=197436	cache_write=41807	output=3263	cost=0.4393	seconds=38	seq=38
+2026-11-03T13:46:59Z	stream	review-clean-code.134620.out	process=review-clean-code	parts=0	denied=0	version=2	seq=39
+2026-11-03T13:46:59Z	stage-end	review:clean-code	exit=0	seq=40
+2026-11-03T13:46:59Z	stage-start	verifier	tool=claude	stages=judge,document	seq=41
+2026-11-03T13:48:05Z	wrote	judge.md	sha=df422bc58d3d2a6b440584060b8637130ca332a8eaccf807f3b830d34427f184	seq=42
+2026-11-03T13:48:05Z	wrote	document.md	sha=82e519ad043fcdf76b67da5f973c3e2da719fe9ba135dd67b8a1de057b281a1f	seq=43
+2026-11-03T13:48:05Z	signal	judge	run=20261103T134805.315941Z	sha=df422bc58d3d2a6b	findings=2	seq=44
+2026-11-03T13:48:05Z	finding	clean-code	run=20261103T134805.315941Z	severity=minor	file=src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java:216	code=	seq=45
+2026-11-03T13:48:05Z	finding	plan	run=20261103T134805.315941Z	severity=minor	file=docs/integrations/pug4j-integration.md:111	code=	seq=46
+2026-11-03T13:48:05Z	gate	document	exit=0	by=verifier	seq=47
+2026-11-03T13:48:14Z	usage	verifier	tool=claude	model=claude-opus-5-5	input=32	cache_read=780514	cache_write=57937	output=6787	cost=0.7555	seconds=75	seq=48
+2026-11-03T13:48:14Z	part	document	process=verifier	stream=verifier.134659.out	seconds=9.014	input=32	cache_read=780514	cache_write=57937	output=6787	cost=0.755467	seq=49
+2026-11-03T13:48:14Z	stream	verifier.134659.out	process=verifier	parts=1	denied=0	version=2	seq=50
+2026-11-03T13:48:14Z	stage-end	verifier	exit=0	seq=51
+2026-11-03T13:48:15Z	gate	document	exit=0	by=runner	seq=52
+2026-11-03T13:48:15Z	step-start	integrate	by=runner	seq=53
+2026-11-03T13:53:10Z	gate	integrate	exit=1	fail=suite	by=runner	seq=54
+2026-11-03T13:53:10Z	step-end	integrate	exit=0	seq=55
+2026-11-03T13:53:10Z	outdated	document.md	by=integrate	seq=56
+2026-11-03T13:53:11Z	stage-start	builder	tool=claude	stages=build,tidy	seq=57
+2026-11-03T13:54:17Z	wrote	build.md	sha=7bb0d0f428eef6d65350dc2303ac83cfa0ab718f2bdb5000ae92045c0327fcc0	seq=58
+2026-11-03T13:59:27Z	gate	build	exit=0	by=builder	seq=59
+2026-11-03T13:59:36Z	wrote	tidy.md	sha=b2c5cf1bf9a6fa0d896a0e9008323eba6657f1e5d28f0c458797a9fccd705f0a	seq=60
+2026-11-03T14:04:50Z	gate	tidy	exit=0	by=builder	seq=61
+2026-11-03T14:04:58Z	usage	builder	tool=claude	model=claude-opus-5-5	input=36	cache_read=976949	cache_write=75090	output=8049	cost=0.9572	seconds=707	seq=62
+2026-11-03T14:04:58Z	part	build	process=builder	stream=builder.135310.out	seconds=323.382	input=32	cache_read=815263	cache_write=73648	output=6403	cost=0.866590	seq=63
+2026-11-03T14:04:58Z	part	tidy	process=builder	stream=builder.135310.out	seconds=323.14	input=4	cache_read=161686	cache_write=1442	output=1646	cost=0.090644	seq=64
+2026-11-03T14:04:58Z	stream	builder.135310.out	process=builder	parts=2	denied=0	version=2	seq=65
+2026-11-03T14:04:58Z	stage-end	builder	exit=0	seq=66
+2026-11-03T14:06:28Z	gate	build	exit=0	by=runner	seq=67
+2026-11-03T14:06:34Z	gate	tidy	exit=0	by=runner	seq=68
+2026-11-03T14:06:34Z	stage-start	review:ddd	tool=claude	seq=69
+2026-11-03T14:06:34Z	stage-start	review:hexagonal	tool=claude	seq=70
+2026-11-03T14:06:34Z	stage-start	review:clean-code	tool=claude	seq=71
+2026-11-03T14:07:14Z	usage	review:ddd	tool=claude	model=claude-opus-5-5	input=20	cache_read=279718	cache_write=32334	output=2641	cost=0.3675	seconds=40	seq=72
+2026-11-03T14:07:14Z	denied	-	process=review-ddd	stream=review-ddd.140634.out	tool=Bash	call=cd /Users/christoph/Privat/domain-centric-architecture/dca-ecommerce-sample-java/.dca-factory; cat evidence/the-product-findings-are-closed/brief/every-stage.m…	seq=73
+2026-11-03T14:07:14Z	denied	-	process=review-ddd	stream=review-ddd.140634.out	tool=Bash	call=cd /Users/christoph/Privat/domain-centric-architecture/dca-ecommerce-sample-java; cat product/epics/*/the-product-findings-are-closed/story.md; cat .dca-factor…	seq=74
+2026-11-03T14:07:14Z	stream	review-ddd.140634.out	process=review-ddd	parts=0	denied=2	version=2	seq=75
+2026-11-03T14:07:14Z	stage-end	review:ddd	exit=0	seq=76
+2026-11-03T14:07:14Z	usage	review:hexagonal	tool=claude	model=claude-opus-5-5	input=14	cache_read=201454	cache_write=40691	output=2888	cost=0.4236	seconds=40	seq=77
+2026-11-03T14:07:14Z	stream	review-hexagonal.140634.out	process=review-hexagonal	parts=0	denied=0	version=2	seq=78
+2026-11-03T14:07:14Z	stage-end	review:hexagonal	exit=0	seq=79
+2026-11-03T14:07:14Z	usage	review:clean-code	tool=claude	model=claude-opus-5-5	input=16	cache_read=214947	cache_write=36413	output=3351	cost=0.4014	seconds=40	seq=80
+2026-11-03T14:07:14Z	stream	review-clean-code.140634.out	process=review-clean-code	parts=0	denied=0	version=2	seq=81
+2026-11-03T14:07:14Z	stage-end	review:clean-code	exit=0	seq=82
+2026-11-03T14:07:15Z	wrote	judge.md	sha=gone	seq=83
+2026-11-03T14:07:15Z	stage-start	verifier	tool=claude	stages=judge,document	seq=84
+2026-11-03T14:08:00Z	wrote	judge.md	sha=77590650138d9701429a261e957636ded6f13d7df476ed41b7702f981ea1953f	seq=85
+2026-11-03T14:08:00Z	gate	document	exit=1	fail=story-pass	by=verifier	seq=86
+2026-11-03T14:08:11Z	wrote	document.md	sha=4adbd91f13eb1f95af5af8e091047fa9ad96d1f5b47a508e1c3c5015ee9de664	seq=87
+2026-11-03T14:08:11Z	signal	judge	run=20261103T140811.015903Z	sha=77590650138d9701	findings=2	seq=88
+2026-11-03T14:08:11Z	finding	clean-code	run=20261103T140811.015903Z	severity=minor	file=src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ShopUnderTest.java:216	code=	seq=89
+2026-11-03T14:08:11Z	finding	plan	run=20261103T140811.015903Z	severity=minor	file=docs/integrations/pug4j-integration.md:111	code=	seq=90
+2026-11-03T14:08:11Z	gate	document	exit=0	by=verifier	seq=91
+2026-11-03T14:08:19Z	usage	verifier	tool=claude	model=claude-opus-5-5	input=28	cache_read=667460	cache_write=58360	output=6044	cost=0.7214	seconds=64	seq=92
+2026-11-03T14:08:19Z	part	document	process=verifier	stream=verifier.140714.out	seconds=17.414	input=28	cache_read=667460	cache_write=58360	output=6044	cost=0.721364	seq=93
+2026-11-03T14:08:19Z	stream	verifier.140714.out	process=verifier	parts=1	denied=0	version=2	seq=94
+2026-11-03T14:08:19Z	stage-end	verifier	exit=0	seq=95
+2026-11-03T14:08:20Z	gate	document	exit=0	by=runner	seq=96
+2026-11-03T14:08:21Z	step-start	integrate	by=runner	seq=97
+2026-11-03T14:13:21Z	gate	integrate	exit=0	by=runner	seq=98
+2026-11-03T14:13:21Z	step-end	integrate	exit=0	seq=99
