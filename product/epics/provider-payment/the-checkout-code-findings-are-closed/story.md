@@ -2,7 +2,9 @@
 id: the-checkout-code-findings-are-closed
 epic: provider-payment
 kind: task
-status: approved
+status: delivered
+delivered: 2026-11-03T12:13:29Z
+delivered_by: gate
 created: 2026-10-23T21:25:20Z
 context: checkout
 title: The checkout's open findings in its production code and documents are closed
