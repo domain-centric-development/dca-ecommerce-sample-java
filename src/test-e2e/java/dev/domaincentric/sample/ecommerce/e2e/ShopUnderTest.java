@@ -213,7 +213,8 @@ public final class ShopUnderTest {
    * @return the token
    * @throws Exception when the registration cannot be sent or read
    */
-  public static String staffTokenOf(final ConfigurableApplicationContext started) throws Exception {
+  public static String registeredStaffTokenOn(final ConfigurableApplicationContext started)
+      throws Exception {
     final HttpResponse<String> registered =
         HttpClient.newHttpClient()
             .send(

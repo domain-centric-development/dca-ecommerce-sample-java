@@ -56,7 +56,7 @@ class OrderAtTheReviewedPriceE2ETest extends BaseE2ETest {
           204,
           ShopUnderTest.changePrice(
               shopUrl,
-              ShopUnderTest.staffTokenOf(shop),
+              ShopUnderTest.registeredStaffTokenOn(shop),
               ShopUnderTest.productIdOf(shopUrl, "Domain-Driven Design"),
               "49.99"),
           "the staff API's answer to the new price");

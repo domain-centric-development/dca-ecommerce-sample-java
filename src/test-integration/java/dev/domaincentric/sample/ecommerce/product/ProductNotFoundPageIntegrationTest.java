@@ -58,7 +58,7 @@ class ProductNotFoundPageIntegrationTest {
         .isEqualTo("Welcome to domaincentric.commerce");
   }
 
-  // No status is asserted: the scenarios name none, only what the page shows.
+  // No status is asserted here; ProductPageNotFoundStatusIntegrationTest holds the 404.
   private String notFoundPage() throws Exception {
     return mockMvc.perform(get(UNKNOWN_PRODUCT)).andReturn().getResponse().getContentAsString();
   }

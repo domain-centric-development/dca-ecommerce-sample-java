@@ -30,7 +30,7 @@ class RefusedProductValueApiE2ETest {
   void aBlankNameIsAnUnacceptableValueNamingTheNameAndNothingIsCreated() throws Exception {
     try (ConfigurableApplicationContext shop =
         ShopUnderTest.startedWith("refused_product_value_api_e2e")) {
-      final String staffToken = ShopUnderTest.staffTokenOf(shop);
+      final String staffToken = ShopUnderTest.registeredStaffTokenOn(shop);
 
       final HttpResponse<String> response =
           HttpClient.newHttpClient()

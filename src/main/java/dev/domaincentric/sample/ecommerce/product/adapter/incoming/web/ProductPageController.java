@@ -6,13 +6,14 @@ import dev.domaincentric.sample.ecommerce.product.application.getallproducts.Get
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdQuery;
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdResult;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.ModelAndView;
 
 /**
  * MVC Controller for rendering product pages using Pug templates.
@@ -81,27 +82,23 @@ public class ProductPageController {
    * the Inventory context. The use case result is converted to a page-specific ViewModel.
    *
    * @param id the product ID
-   * @param model Spring MVC model to pass data to the view
-   * @param response the response, answered with status 404 when no product has the ID
-   * @return view name "product/detail", or "error/404" with status 404 if product not found
+   * @return the view "product/detail" with its model, or "error/404" with status 404 when no
+   *     product has the ID
    */
   @GetMapping("/{id}")
-  public String showProductDetail(
-      @PathVariable final String id, final Model model, final HttpServletResponse response) {
+  public ModelAndView showProductDetail(@PathVariable final String id) {
     final GetProductByIdResult result = getProductByIdUseCase.execute(new GetProductByIdQuery(id));
 
     if (!result.found()) {
-      response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-      return "error/404";
+      return new ModelAndView("error/404", HttpStatus.NOT_FOUND);
     }
 
     // Convert Result → page-specific ViewModel
     final ProductDetailPageViewModel viewModel = ProductDetailPageViewModel.fromResult(result);
 
-    model.addAttribute("productDetail", viewModel);
-    model.addAttribute("title", viewModel.pageTitle());
-
-    return "product/detail";
+    return new ModelAndView("product/detail")
+        .addObject("productDetail", viewModel)
+        .addObject("title", viewModel.pageTitle());
   }
 
   /**

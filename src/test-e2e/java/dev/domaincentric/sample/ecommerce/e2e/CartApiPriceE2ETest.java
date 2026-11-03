@@ -47,7 +47,8 @@ class CartApiPriceE2ETest {
       final HttpResponse<String> priced =
           send(
               authorized(
-                      ShopUnderTest.staffTokenOf(shop), shopUrl + "/api/products/" + ddd + "/price")
+                      ShopUnderTest.registeredStaffTokenOn(shop),
+                      shopUrl + "/api/products/" + ddd + "/price")
                   .header("Content-Type", "application/json")
                   .PUT(HttpRequest.BodyPublishers.ofString("{\"price\":49.99}")));
       assertEquals(204, priced.statusCode(), priced.body());
