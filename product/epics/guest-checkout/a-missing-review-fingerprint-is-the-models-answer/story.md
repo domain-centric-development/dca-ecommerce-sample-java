@@ -2,7 +2,9 @@
 id: a-missing-review-fingerprint-is-the-models-answer
 epic: guest-checkout
 kind: task
-status: approved
+status: delivered
+delivered: 2026-11-03T14:38:07Z
+delivered_by: gate
 created: 2026-11-01T12:58:58Z
 context: checkout
 title: A missing review fingerprint is the model's answer, not the page's
@@ -25,3 +27,7 @@ what it is — no acceptance criterion, no test stage. The unit test of the revi
 - WP-170 decision 2 (the person, 2026-11-01): a value from input refuses or reads its absence itself; the adapter
   passes absence on, no default that turns it into a value. Today the Java page sets a default of an empty text,
   the .NET page takes an optional text and hands it on.
+
+## Assumptions
+
+- answered: The test changes as described; the plan cites this record in its `## Changed tests` row. (a-missing-review-fingerprint-is-the-models-answer-01)
