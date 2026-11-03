@@ -2,7 +2,9 @@
 id: the-account-findings-are-closed
 epic: account
 kind: task
-status: approved
+status: delivered
+delivered: 2026-11-03T11:18:51Z
+delivered_by: gate
 created: 2026-10-23T21:25:20Z
 context: account
 title: The account's open findings are closed
