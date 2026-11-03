@@ -65,11 +65,6 @@ public record EnrichedCart(
   }
 
   /**
-   * Calculates the subtotal using current article prices.
-   *
-   * @return the sum of all current line totals
-   */
-  /**
    * The tax contained in the cart's current subtotal, at the cart's rate.
    *
    * <p>Prices are gross, so the tax is <em>contained</em> in the amount rather than added to it.
@@ -92,8 +87,15 @@ public record EnrichedCart(
         gross.amount().subtract(net).setScale(2, RoundingMode.HALF_UP), gross.currency());
   }
 
+  /**
+   * Calculates the subtotal using current article prices.
+   *
+   * @return the sum of the current line totals of every line whose article is known; a line whose
+   *     product the catalogue no longer knows has no current price and does not count
+   */
   public Money calculateCurrentSubtotal() {
     return items.stream()
+        .filter(item -> item.article().isPresent())
         .map(EnrichedCartItem::currentLineTotal)
         .reduce(Money.zero(DEFAULT_CURRENCY), Money::add);
   }

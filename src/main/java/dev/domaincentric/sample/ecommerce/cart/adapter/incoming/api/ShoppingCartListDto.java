@@ -19,6 +19,7 @@ public record ShoppingCartListDto(List<CartSummaryDto> carts) {
    * @param itemCount the number of items in the cart
    * @param total the total amount
    * @param currency the total currency
+   * @param items the cart's lines
    */
   public record CartSummaryDto(
       String cartId,
@@ -26,5 +27,6 @@ public record ShoppingCartListDto(List<CartSummaryDto> carts) {
       String status,
       int itemCount,
       BigDecimal total,
-      String currency) {}
+      String currency,
+      List<CartItemDto> items) {}
 }

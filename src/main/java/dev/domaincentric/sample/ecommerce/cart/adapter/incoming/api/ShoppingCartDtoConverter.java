@@ -10,6 +10,7 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -89,7 +90,8 @@ public final class ShoppingCartDtoConverter {
                         spell(cart.status()),
                         cart.itemCount(),
                         cart.total().amount(),
-                        cart.total().currency().getCurrencyCode()))
+                        cart.total().currency().getCurrencyCode(),
+                        cart.items().stream().map(this::toItemDto).toList()))
             .toList();
 
     return new ShoppingCartListDto(summaries);
@@ -97,22 +99,19 @@ public final class ShoppingCartDtoConverter {
 
   private CartItemDto toItemDto(final EnrichedCartItem item) {
     // Every answer about a cart carries today's price, from the article data
-    final Money currentPrice = item.currentArticle().currentPrice();
-    return new CartItemDto(
-        item.cartItemId().value(),
-        item.productId().value(),
-        item.quantity().value(),
-        currentPrice.amount(),
-        currentPrice.currency().getCurrencyCode());
+    return toItemDto(CartItemSummary.from(item));
   }
 
+  /** A line without a unit price — its product the catalogue no longer knows — has no price. */
   private CartItemDto toItemDto(final CartItemSummary item) {
+    final @Nullable Money price = item.unitPrice();
     return new CartItemDto(
         item.itemId(),
         item.productId(),
         item.quantity(),
-        item.unitPrice().amount(),
-        item.unitPrice().currency().getCurrencyCode());
+        price == null ? null : price.amount(),
+        price == null ? null : price.currency().getCurrencyCode(),
+        item.available());
   }
 
   /**

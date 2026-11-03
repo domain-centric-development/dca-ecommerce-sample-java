@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -79,16 +80,16 @@ class EnrichedCartItemTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> new EnrichedCartItem(null, productId, one, price, article, "snapshot"));
+        () -> new EnrichedCartItem(null, productId, one, price, Optional.of(article), "snapshot"));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new EnrichedCartItem(id, null, one, price, article, "snapshot"));
+        () -> new EnrichedCartItem(id, null, one, price, Optional.of(article), "snapshot"));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new EnrichedCartItem(id, productId, null, price, article, "snapshot"));
+        () -> new EnrichedCartItem(id, productId, null, price, Optional.of(article), "snapshot"));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new EnrichedCartItem(id, productId, one, null, article, "snapshot"));
+        () -> new EnrichedCartItem(id, productId, one, null, Optional.of(article), "snapshot"));
     assertThrows(
         IllegalArgumentException.class,
         () -> new EnrichedCartItem(id, productId, one, price, null, "snapshot"));
@@ -108,7 +109,41 @@ class EnrichedCartItemTest {
                 ProductId.generate(),
                 Quantity.of(1),
                 Price.of(Money.euro(10.0)),
-                another,
+                Optional.of(another),
                 "snapshot"));
+  }
+
+  private static EnrichedCartItem lineWithoutArticle() {
+    return new EnrichedCartItem(
+        CartItemId.generate(),
+        ProductId.generate(),
+        Quantity.of(1),
+        Price.of(Money.euro(10.0)),
+        Optional.empty(),
+        "snapshot");
+  }
+
+  @Test
+  @DisplayName("a line whose product the catalogue lost is not available")
+  void aLineWithoutAnArticleIsNotAvailable() {
+    assertFalse(lineWithoutArticle().isAvailable());
+  }
+
+  @Test
+  @DisplayName("a line whose product the catalogue lost has no current price")
+  void aLineWithoutAnArticleHasNoCurrentPrice() {
+    assertTrue(lineWithoutArticle().currentPrice().isEmpty());
+  }
+
+  @Test
+  @DisplayName("a line whose product the catalogue lost is not valid for checkout")
+  void aLineWithoutAnArticleIsNotValidForCheckout() {
+    assertFalse(lineWithoutArticle().isValidForCheckout());
+  }
+
+  @Test
+  @DisplayName("a line whose product the catalogue lost has no price change")
+  void aLineWithoutAnArticleHasNoPriceChange() {
+    assertFalse(lineWithoutArticle().hasPriceChanged());
   }
 }

@@ -160,9 +160,14 @@ eligibility, and subtotal calculation using current vs. original prices.
 
 **Definition:** Enriched item from `EnrichedCart`, combining `CartItem` data
 (quantity, original price) with current `CartArticle` data — enables price
-comparison, stock checks, and line-total calculation.
+comparison, stock checks, and line-total calculation. For a product the
+catalogue no longer knows the line keeps its id, product and quantity without
+an article: it is not available, has no current price, no price change, and is
+not valid for checkout.
 
 **Type:** Value Object
+
+**Related terms:** `Available (available)`
 
 ## Domain Events
 
@@ -286,8 +291,9 @@ Account/Customer?
 ### EnrichedCartFactory
 
 **Definition:** Builds an `EnrichedCart` from a `ShoppingCart` aggregate and a
-map of current article data (`CartArticle` per `ProductId`). Validates
-completeness of the article data.
+map of current article data (`CartArticle` per `ProductId`). A cart item whose
+product is missing from the map is kept as an `EnrichedCartItem` without an
+article.
 
 **Type:** Factory
 
@@ -316,8 +322,23 @@ settlement at checkout time (that one is read fresh when the checkout is priced)
 
 **Notes:** It stays inside the shop. Every answer of the cart API about a cart (reading, adding, removing) prices
 each item at today's price, in the field `price` (`CartItemDto`), and totals it at today's prices
-(`EnrichedCart.calculateCurrentSubtotal`). Open question: which price is binding for the customer — the one
+(`EnrichedCart.calculateCurrentSubtotal`). A line whose product the catalogue no longer knows carries no
+`price` and no `currency`, `available` false, and does not count toward the total. Open question: which price is binding for the customer — the one
 at the time of adding or the current one? Clarify the business policy.
+
+### Available (available)
+
+**Definition:** Whether a cart line can be sold today: the catalogue knows its
+product and lists it as available. Stock is a separate check
+(`hasSufficientStock`). A line whose product the catalogue no longer knows is
+not available and carries no price.
+
+**Type:** Concept
+
+**Notes:** `EnrichedCartItem.isAvailable()`; the cart API writes it on every
+line as `available` (`CartItemDto`).
+
+**Related terms:** `CartArticle` (availability status), `EnrichedCartItem`
 
 ### Guest before login (guestBeforeLogin)
 

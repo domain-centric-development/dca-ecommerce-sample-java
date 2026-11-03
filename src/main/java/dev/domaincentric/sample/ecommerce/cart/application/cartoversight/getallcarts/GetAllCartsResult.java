@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartoversight.getallcarts;
 
+import dev.domaincentric.sample.ecommerce.cart.application.shared.CartItemSummary;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -25,9 +26,15 @@ public record GetAllCartsResult(List<CartSummary> carts) {
    * @param status the cart status
    * @param itemCount the number of items in the cart
    * @param total the total amount at today's prices
+   * @param items the cart's lines at today's prices
    */
   public record CartSummary(
-      String cartId, String customerId, CartStatus status, int itemCount, Money total) {
+      String cartId,
+      String customerId,
+      CartStatus status,
+      int itemCount,
+      Money total,
+      List<CartItemSummary> items) {
 
     static CartSummary from(final EnrichedCart cart) {
       return new CartSummary(
@@ -35,7 +42,8 @@ public record GetAllCartsResult(List<CartSummary> carts) {
           cart.customerId().value(),
           cart.status(),
           cart.items().size(),
-          cart.calculateCurrentSubtotal());
+          cart.calculateCurrentSubtotal(),
+          cart.items().stream().map(CartItemSummary::from).toList());
     }
   }
 }
