@@ -39,7 +39,7 @@ class CheckoutSessionConfirmAuthorizedAmountTest {
     final CheckoutTotals totals = session.totals();
 
     assertThrows(
-        AuthorizedAmountDiffersFromReviewException.class,
+        PaymentDiffersFromReviewException.class,
         () -> session.confirm(CheckoutValidationResult.valid(), TODAY, shown));
 
     assertEquals(CheckoutSessionStatus.ACTIVE, session.status());

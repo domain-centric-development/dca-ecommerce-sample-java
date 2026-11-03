@@ -21,6 +21,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidati
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentSelection;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ReviewFingerprint;
 import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -123,13 +124,13 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
           try {
             // The provider is asked only once the order's checks and its stock hold, for the total
             // the review showed — outside the transaction, the provider being remote
-            final String paymentReference = authorizePaymentOf(ready, reviewedTotal);
+            final PaymentSelection payment = authorizePaymentOf(ready, reviewedTotal);
 
             // Short transaction: reload, record the payment, confirm, save, publish
             return transactionBoundary.inTransaction(
                 () -> {
                   final CheckoutSession session = loadSession(sessionId, command);
-                  session.authorizePayment(paymentReference, reviewedTotal);
+                  session.authorizePayment(payment);
                   session.confirm(
                       checkoutPricing.validateItems(session, facts),
                       checkoutPricing.todaysPrices(session, facts),
@@ -152,12 +153,12 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
    * Has the provider the customer chose authorize the total the review showed.
    *
    * @param total the reviewed total — the one the order is confirmed at
-   * @return the payment reference the provider answered with
+   * @return the authorized payment: the provider that answered, its payment reference and the total
    * @throws PaymentProviderNotFoundException if the chosen provider is no longer offered
    * @throws PaymentProviderUnavailableException if the provider is not available or did not answer
    * @throws PaymentInitiationFailedException if the provider refused the payment
    */
-  private String authorizePaymentOf(final CheckoutSession session, final Money total) {
+  private PaymentSelection authorizePaymentOf(final CheckoutSession session, final Money total) {
     final PaymentProviderId providerId = session.paymentSelection().providerId();
     final PaymentProvider provider =
         paymentProviderRegistry
@@ -174,7 +175,8 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
     if (!authorization.success()) {
       throw new PaymentInitiationFailedException(providerId, authorization.errorMessage());
     }
-    return authorization.providerReference();
+    return PaymentSelection.authorized(
+        provider.providerId(), authorization.providerReference(), total);
   }
 
   /**

@@ -67,7 +67,8 @@ claim of durable distributed transactions or universal rollback of unenlisted re
   changing anything
 - authorize the payment (`authorizePayment`) — at Place Order, records on a session at the review that its chosen
   provider authorized the total the review showed under a payment reference, and records that amount; publishes
-  `PaymentSubmitted`; refused on a session not at the review or one that no longer takes changes
+  `PaymentSubmitted`; refused on a session not at the review or one that no longer takes changes, and when a
+  provider other than the chosen one authorized it (`PaymentDiffersFromReviewException`)
 - `goBackTo` — moves the current step back; data already submitted stays
 - work out the review (`reviewAt`, through `GetCheckoutReview`) — the session's lines at today's prices, quantities
   kept, a line without today's price at its own; totals follow, shipping kept; changes nothing and raises no event
@@ -76,7 +77,7 @@ claim of durable distributed transactions or universal rollback of unenlisted re
 - `assertReadyForConfirmation` — a question: the preconditions of `confirm`, the pricing verdict included, checked without changing anything — asked before the order's stock is reserved
 - `confirm` — status confirmed, ordering the reviewed lines at the reviewed total; refused on a shortage, when the
   review is no longer the one shown, or when the payment was authorized for an amount other than the reviewed total
-  (`AuthorizedAmountDiffersFromReviewException`)
+  (`PaymentDiffersFromReviewException`)
 - `complete` — after payment: status completed, with the order reference
 - `isOrderPlaced` — a question: was an order placed with this session? True once it is confirmed, and after it was
   completed
@@ -141,7 +142,8 @@ provider alone.
 ### Authorized amount (AuthorizedAmount)
 
 **Definition:** The total the review showed, authorized by the payment provider at Place Order. The order is
-confirmed only when it equals the total the review showed (`AuthorizedAmountDiffersFromReviewException` otherwise).
+confirmed only when the provider the review showed authorized it and it equals the total the review showed
+(PaymentDiffersFromReview, `PaymentDiffersFromReviewException`, otherwise).
 
 **Type:** Value Object (`Money`, part of `PaymentSelection`)
 
@@ -578,11 +580,12 @@ names none (`orderChanged`, "Your order has changed since you reviewed it.").
 
 ---
 
-### refuse an order whose payment differs from the review (AuthorizedAmountDiffersFromReviewException)
+### PaymentDiffersFromReview (PaymentDiffersFromReviewException)
 
-**Definition:** A checkout would be confirmed at a total other than the amount its payment was authorized for. The
-order is placed at the total the review showed and the payment covers exactly that, so an order and a payment that
-disagree are never confirmed; the page answers "Your order could not be placed. Please try again."
+**Definition:** A checkout's payment is not the one its review showed: it was authorized by a provider other than
+the chosen one, or for an amount other than the review's total. The order is placed with the provider and at the
+total the review showed and the payment covers exactly that, so an order and a payment that disagree are never
+confirmed; the page answers "Your order could not be placed. Please try again."
 
 **Type:** Domain failure (`DomainException`) · **Related terms:** `CheckoutSession`, `PaymentSelection`, `CheckoutReview`
 
