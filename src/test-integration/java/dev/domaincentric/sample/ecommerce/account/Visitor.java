@@ -8,9 +8,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.servlet.http.Cookie;
 import java.net.URI;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jsoup.Jsoup;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -164,6 +166,34 @@ final class Visitor {
         mockMvc.perform(request).andExpect(status().isOk()).andReturn().getResponse();
     keep(refused);
     return refused.getContentAsString();
+  }
+
+  /** Presses "Add to Cart" on the product page of the product with that name. */
+  void addToCart(final String productName) throws Exception {
+    final org.jsoup.nodes.Element card =
+        Jsoup.parse(page("/products")).select("[data-test=product-card]").stream()
+            .filter(c -> productName.equals(c.selectFirst("[data-test=product-card-title]").text()))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("no card titled " + productName));
+    final org.jsoup.nodes.Element form =
+        Jsoup.parse(page(card.selectFirst("a[data-test=view-product]").attr("href")))
+            .selectFirst("[data-test=product-add-to-cart-form]");
+    final var request = withCookies(post(URI.create(form.attr("action"))));
+    for (final org.jsoup.nodes.Element field : form.select("input[name]")) {
+      request.param(field.attr("name"), field.val());
+    }
+    keep(mockMvc.perform(request).andExpect(status().is3xxRedirection()).andReturn().getResponse());
+  }
+
+  /** The cart page's lines, each as "name xQuantity". */
+  List<String> cartLines() throws Exception {
+    return Jsoup.parse(page("/cart")).select("[data-test=cart-item]").stream()
+        .map(
+            item ->
+                item.selectFirst("[data-test=cart-item-name]").text()
+                    + " x"
+                    + item.selectFirst("[data-test=cart-item-quantity]").text())
+        .toList();
   }
 
   /** Opens a path that answers with a redirect; returns where it leads. */

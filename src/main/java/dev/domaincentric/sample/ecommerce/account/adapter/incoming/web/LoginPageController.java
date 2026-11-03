@@ -65,6 +65,9 @@ public class LoginPageController {
       @RequestParam(required = false) final String returnUrl,
       @RequestParam(required = false) final String logout) {
 
+    if (isLoggedIn()) {
+      return askToLogOutFirst(model);
+    }
     model.addAttribute("title", "Login");
     addReturnPage(model, returnUrl);
     if (logout != null) {
@@ -80,6 +83,9 @@ public class LoginPageController {
    * guest the browser was before. The cart context will determine if a merge is actually required
    * and redirect appropriately if not.
    *
+   * <p>A browser that is logged in already is not logged in again: it gets the page asking it to
+   * log out first, no account is authenticated and the session stays as it was.
+   *
    * @param email the user's email
    * @param password the user's password
    * @param returnUrl optional URL to redirect to after login
@@ -92,6 +98,10 @@ public class LoginPageController {
       @RequestParam final String password,
       @RequestParam(required = false) final String returnUrl,
       final Model model) {
+
+    if (isLoggedIn()) {
+      return askToLogOutFirst(model);
+    }
 
     // Capture anonymous user ID before authentication changes the identity
     final String anonymousUserId = identityProvider.getCurrentIdentity().userId().value();
@@ -138,6 +148,22 @@ public class LoginPageController {
       addReturnPage(model, returnUrl);
       return "account/login";
     }
+  }
+
+  /** Whether this browser is logged in to an account already. */
+  private boolean isLoggedIn() {
+    return !identityProvider.getCurrentIdentity().isAnonymous();
+  }
+
+  /**
+   * The login page for a browser that is logged in already: the account it is logged in as and the
+   * request to log out first, instead of the form.
+   */
+  private String askToLogOutFirst(final Model model) {
+    model.addAttribute("title", "Login");
+    model.addAttribute(
+        "loggedInAs", identityProvider.getCurrentIdentity().email().orElse("your account"));
+    return "account/login";
   }
 
   /**

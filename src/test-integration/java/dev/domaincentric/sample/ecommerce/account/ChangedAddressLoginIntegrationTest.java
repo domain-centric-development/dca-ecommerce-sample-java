@@ -65,8 +65,8 @@ class ChangedAddressLoginIntegrationTest {
       return;
     }
     final Visitor customer = new Visitor(mockMvc);
+    // Registering signs the visitor in.
     customer.register(OLD_EMAIL, PASSWORD);
-    customer.logIn("/login", OLD_EMAIL, PASSWORD);
     customer.saveProfile(NEW_EMAIL, "1990-05-17");
     addressChanged = true;
   }

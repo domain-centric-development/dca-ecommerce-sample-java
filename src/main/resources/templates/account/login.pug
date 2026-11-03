@@ -5,29 +5,38 @@ block content
     .auth__card
       h2.auth__title Login
 
-      if logoutSuccess
-        .alert.alert--success(data-test="logout-success-message") You have been successfully logged out.
+      if loggedInAs
+        .alert.alert--info(data-test="login-logged-in-message") You are logged in as #{loggedInAs}. Please log out first.
 
-      if error
-        .alert.alert--error(data-test="login-error-message")= error
+        form.auth__form(method="POST" action="/logout" data-test="login-logout-form")
+          if _csrf
+            input(type="hidden" name=_csrf.parameterName value=_csrf.token)
+          .form__actions
+            button.btn.btn--primary.btn--full-width(type="submit" data-test="login-logout-button") Logout
+      else
+        if logoutSuccess
+          .alert.alert--success(data-test="logout-success-message") You have been successfully logged out.
 
-      form.auth__form(method="POST" action="/login" data-test="login-form")
-        if _csrf
-          input(type="hidden" name=_csrf.parameterName value=_csrf.token)
-        if returnUrl
-          input(type="hidden" name="returnUrl" value=returnUrl)
+        if error
+          .alert.alert--error(data-test="login-error-message")= error
 
-        .form__group
-          label.form__label(for="email") Email
-          input.form__input#email(type="email" name="email" value=(email || "") required autofocus placeholder="you@example.com" data-test="login-email-input")
+        form.auth__form(method="POST" action="/login" data-test="login-form")
+          if _csrf
+            input(type="hidden" name=_csrf.parameterName value=_csrf.token)
+          if returnUrl
+            input(type="hidden" name="returnUrl" value=returnUrl)
 
-        .form__group
-          label.form__label(for="password") Password
-          input.form__input#password(type="password" name="password" required placeholder="Enter your password" data-test="login-password-input")
+          .form__group
+            label.form__label(for="email") Email
+            input.form__input#email(type="email" name="email" value=(email || "") required autofocus placeholder="you@example.com" data-test="login-email-input")
 
-        .form__actions
-          button.btn.btn--primary.btn--full-width(type="submit" data-test="login-submit-button") Login
+          .form__group
+            label.form__label(for="password") Password
+            input.form__input#password(type="password" name="password" required placeholder="Enter your password" data-test="login-password-input")
 
-      .auth__footer
-        | Don't have an account?
-        a.auth__link(href=registerUrl data-test="login-register-link") Register here
+          .form__actions
+            button.btn.btn--primary.btn--full-width(type="submit" data-test="login-submit-button") Login
+
+        .auth__footer
+          | Don't have an account?
+          a.auth__link(href=registerUrl data-test="login-register-link") Register here

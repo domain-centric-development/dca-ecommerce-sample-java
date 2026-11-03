@@ -353,7 +353,7 @@ contract: the string is well formed and refused for what it is made of.
 
 ### EmailAlreadyRegistered / AccountAlreadyExists
 
-**Definition:** The address is held by another account, or the signed-in user already has one. Both are statements
+**Definition:** The address is held by another account, or the logged-in user already has one. Both are statements
 about all accounts, which only the store can make.
 
 **Type:** Use-case failure (`UseCaseException`) · **Related terms:** `AccountRepository`
@@ -370,7 +370,8 @@ The parts of the context's behaviour its people name; each groups what holds in 
 
 ### Sign-in (signin)
 
-**Definition:** Logging in and out, a failed login that gives nothing away, the token the API trusts.
+**Definition:** Logging in and out, a failed login that gives nothing away, a logged-in browser asked to log out
+before it logs in again, the token the API trusts.
 
 **Type:** Feature
 

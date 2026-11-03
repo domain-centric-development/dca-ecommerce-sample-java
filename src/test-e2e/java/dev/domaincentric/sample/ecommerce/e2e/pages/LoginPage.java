@@ -15,6 +15,9 @@ public class LoginPage extends BasePage {
   private static final String ERROR_MESSAGE = "login-error-message";
   private static final String EMAIL_INPUT = "login-email-input";
   private static final String PASSWORD_INPUT = "login-password-input";
+  private static final String LOGIN_FORM = "login-form";
+  private static final String LOGGED_IN_MESSAGE = "login-logged-in-message";
+  private static final String LOGOUT_BUTTON = "login-logout-button";
 
   /**
    * Creates a new LoginPage and waits for it to load.
@@ -145,6 +148,35 @@ public class LoginPage extends BasePage {
   public void login(String email, String password) {
     fillCredentials(email, password);
     submit();
+  }
+
+  /**
+   * The notice the login page shows a browser that is logged in already; waits for it.
+   *
+   * @return the notice text, trimmed
+   */
+  public String loggedInMessage() {
+    waitFor(LOGGED_IN_MESSAGE);
+    return page.locator("[data-test='" + LOGGED_IN_MESSAGE + "']").textContent().strip();
+  }
+
+  /**
+   * The text of the logout button the login page itself offers a logged-in browser.
+   *
+   * @return the button text, trimmed
+   */
+  public String logoutButton() {
+    waitFor(LOGOUT_BUTTON);
+    return page.locator("[data-test='" + LOGOUT_BUTTON + "']").textContent().strip();
+  }
+
+  /**
+   * Whether the page shows the login form.
+   *
+   * @return true when the form is on the page
+   */
+  public boolean showsLoginForm() {
+    return exists(LOGIN_FORM);
   }
 
   /**
