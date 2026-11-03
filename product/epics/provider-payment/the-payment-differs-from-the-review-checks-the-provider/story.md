@@ -2,7 +2,9 @@
 id: the-payment-differs-from-the-review-checks-the-provider
 epic: provider-payment
 kind: task
-status: approved
+status: delivered
+delivered: 2026-11-03T10:44:04Z
+delivered_by: gate
 created: 2026-10-29T15:12:47Z
 context: checkout
 title: The payment differs from the review and checks the provider
