@@ -1,7 +1,9 @@
 ---
 id: a-second-login-takes-over-no-account-as-guest
 epic: shop-with-an-account
-status: approved
+status: delivered
+delivered: 2026-11-03T16:21:00Z
+delivered_by: gate
 created: 2026-10-23T21:25:20Z
 context: account
 feature: signin

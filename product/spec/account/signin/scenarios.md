@@ -185,3 +185,21 @@ Test: dev.domaincentric.sample.ecommerce.account.LoginPageIntegrationTest#aLogin
 - When they open `/login?returnUrl=https://elsewhere.example/`
 - Then the "Register here" link leads to `/register`
 Test: dev.domaincentric.sample.ecommerce.e2e.LoginE2ETest#theRegisterLinkLeadsToTheRegistrationWithoutAReturnPageOfAnotherSite
+
+### Rule: A logged-in browser cannot log in again; it logs out first
+
+#### the-login-page-asks-a-logged-in-customer-to-log-out
+- Given the customer "anna.schmidt@example.com" is logged in
+- When they open `/login`
+- Then the page shows "You are logged in as anna.schmidt@example.com. Please log out first."
+- And it shows a "Logout" button and no login form
+Test: dev.domaincentric.sample.ecommerce.e2e.LoginWhileLoggedInE2ETest#theLoginPageAsksALoggedInCustomerToLogOutFirst
+
+#### a-login-sent-while-logged-in-changes-nothing
+- Given the customer "anna.schmidt@example.com" is logged in and their cart holds "Clean Architecture" once
+- And the account "ben.weber@example.com" with password "Secret123" and an empty cart
+- When the browser sends the login form for "ben.weber@example.com" with "Secret123"
+- Then the page shows "You are logged in as anna.schmidt@example.com. Please log out first."
+- And the header still shows "Welcome, anna.schmidt@example.com"
+- And Anna's cart still holds "Clean Architecture" with quantity 1, and Ben's cart is empty
+Test: dev.domaincentric.sample.ecommerce.account.LoginWhileLoggedInIntegrationTest#aLoginSentWhileLoggedInShowsTheNoticeAndMovesNoCart

@@ -1,0 +1,8 @@
+2026-11-03T15:33:03Z	signal	plan	run=20261103T153303.594056Z	open=0	seq=1
+2026-11-03T15:33:03Z	gate	plan	exit=0	by=runner	seq=2
+2026-11-03T15:33:04Z	stage-start	builder	tool=claude	stages=plan,test,build,tidy	seq=3
+2026-11-03T15:35:01Z	usage	builder	tool=claude	model=claude-opus-5-5	input=36	cache_read=1204962	cache_write=88196	output=10721	cost=1.1611	seconds=117	seq=4
+2026-11-03T15:35:01Z	part	plan	process=builder	stream=builder.153303.out	seconds=105.224	input=36	cache_read=1204962	cache_write=88196	output=10721	cost=1.161124	seq=5
+2026-11-03T15:35:01Z	stream	builder.153303.out	process=builder	parts=1	denied=0	version=2	seq=6
+2026-11-03T15:35:01Z	stage-end	builder	exit=0	seq=7
+2026-11-03T15:35:02Z	wrote	plan.md	sha=6f701fc9f8e5ba9ff6c3090931008cf51eba92d492cd6720d207576d188fdab4	seq=8

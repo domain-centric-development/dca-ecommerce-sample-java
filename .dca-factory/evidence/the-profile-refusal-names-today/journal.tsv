@@ -1,0 +1,54 @@
+2026-11-03T14:53:58Z	signal	plan	run=20261103T145358.552079Z	open=0	seq=1
+2026-11-03T14:53:58Z	gate	plan	exit=0	by=runner	seq=2
+2026-11-03T14:53:59Z	stage-start	builder	tool=claude	stages=plan,test,build,tidy	seq=3
+2026-11-03T14:55:10Z	wrote	plan.md	sha=2b0bfc9ef8912f9e451591fcdf5369f36a6f4344d0ddd57601656e222b0a6144	seq=4
+2026-11-03T14:55:10Z	signal	plan	run=20261103T145510.530600Z	open=3	seq=5
+2026-11-03T14:55:10Z	gate	plan	exit=0	by=builder	seq=6
+2026-11-03T14:55:45Z	wrote	tests.md	sha=cdb195aaebc85c3ed5fd04965fb967c8dfe1e2bcc4aa025251cfd9ef29db443a	seq=7
+2026-11-03T14:55:51Z	gate	test	exit=1	fail=invariants	by=builder	seq=8
+2026-11-03T14:56:01Z	wrote	plan.md	sha=0b43805b2b01a5e9e73be9bc0344b51993d2faca0cc080c3be2e2d3758c72b6b	seq=9
+2026-11-03T14:56:48Z	signal	rules	run=20261103T145648.367363Z	named=0	seq=10
+2026-11-03T14:56:48Z	gate	test	exit=0	by=builder	seq=11
+2026-11-03T14:57:08Z	wrote	build.md	sha=7d09601dd2e615751c110343cdd7d80f42012801cf06f3395fb8e23396b83d39	seq=12
+2026-11-03T15:01:20Z	gate	build	exit=0	by=builder	seq=13
+2026-11-03T15:01:33Z	wrote	tidy.md	sha=5e5d4ffbaf799734c9093c4e73ef438d24012d99cac890cae15bf2cda1a9b961	seq=14
+2026-11-03T15:05:19Z	gate	tidy	exit=0	by=builder	seq=15
+2026-11-03T15:05:28Z	usage	builder	tool=claude	model=claude-opus-5-5	input=54	cache_read=1885387	cache_write=90477	output=13705	cost=1.3752	seconds=688	seq=16
+2026-11-03T15:05:28Z	part	plan	process=builder	stream=builder.145358.out	seconds=71.397	input=28	cache_read=745901	cache_write=72944	output=7266	cost=0.806269	seq=17
+2026-11-03T15:05:28Z	part	test	process=builder	stream=builder.145358.out	seconds=94.615	input=14	cache_read=581401	cache_write=11032	output=3279	cost=0.303291	seq=18
+2026-11-03T15:05:28Z	part	build	process=builder	stream=builder.145358.out	seconds=267.025	input=8	cache_read=365491	cache_write=5382	output=1195	cost=0.167309	seq=19
+2026-11-03T15:05:28Z	part	tidy	process=builder	stream=builder.145358.out	seconds=240.007	input=4	cache_read=192594	cache_write=1119	output=1965	cost=0.098341	seq=20
+2026-11-03T15:05:28Z	stream	builder.145358.out	process=builder	parts=4	denied=0	version=2	seq=21
+2026-11-03T15:05:28Z	stage-end	builder	exit=0	seq=22
+2026-11-03T15:05:28Z	part	plan	process=builder	stream=builder.145358.out	seconds=71.397	input=28	cache_read=745901	cache_write=72944	output=7266	cost=0.806269	seq=23
+2026-11-03T15:05:28Z	part	test	process=builder	stream=builder.145358.out	seconds=94.615	input=14	cache_read=581401	cache_write=11032	output=3279	cost=0.303291	seq=24
+2026-11-03T15:05:28Z	part	build	process=builder	stream=builder.145358.out	seconds=267.025	input=8	cache_read=365491	cache_write=5382	output=1195	cost=0.167309	seq=25
+2026-11-03T15:05:28Z	part	tidy	process=builder	stream=builder.145358.out	seconds=240.007	input=4	cache_read=192594	cache_write=1119	output=1965	cost=0.098341	seq=26
+2026-11-03T15:05:28Z	stream	builder.145358.out	process=builder	parts=4	denied=0	version=2	seq=27
+2026-11-03T15:09:11Z	gate	build	exit=0	by=runner	seq=28
+2026-11-03T15:09:17Z	gate	tidy	exit=0	by=runner	seq=29
+2026-11-03T15:09:17Z	stage-start	review:ddd	tool=claude	seq=30
+2026-11-03T15:09:17Z	stage-start	review:hexagonal	tool=claude	seq=31
+2026-11-03T15:09:17Z	stage-start	review:clean-code	tool=claude	seq=32
+2026-11-03T15:09:55Z	usage	review:ddd	tool=claude	model=claude-opus-5-5	input=18	cache_read=248765	cache_write=37402	output=3621	cost=0.4215	seconds=38	seq=33
+2026-11-03T15:09:55Z	denied	-	process=review-ddd	stream=review-ddd.150917.out	tool=Bash	call=cd /Users/christoph/Privat/domain-centric-architecture/dca-ecommerce-sample-java/.dca-factory; cat evidence/the-profile-refusal-names-today/brief/every-stage.m…	seq=34
+2026-11-03T15:09:55Z	stream	review-ddd.150917.out	process=review-ddd	parts=0	denied=1	version=2	seq=35
+2026-11-03T15:09:55Z	stage-end	review:ddd	exit=0	seq=36
+2026-11-03T15:09:55Z	usage	review:hexagonal	tool=claude	model=claude-opus-5-5	input=16	cache_read=241232	cache_write=37731	output=2363	cost=0.3974	seconds=38	seq=37
+2026-11-03T15:09:55Z	stream	review-hexagonal.150917.out	process=review-hexagonal	parts=0	denied=0	version=2	seq=38
+2026-11-03T15:09:55Z	stage-end	review:hexagonal	exit=0	seq=39
+2026-11-03T15:09:55Z	usage	review:clean-code	tool=claude	model=claude-opus-5-5	input=16	cache_read=237398	cache_write=41668	output=3723	cost=0.4553	seconds=38	seq=40
+2026-11-03T15:09:55Z	denied	-	process=review-clean-code	stream=review-clean-code.150917.out	tool=Bash	call=cd /Users/christoph/Privat/domain-centric-architecture/dca-ecommerce-sample-java/.dca-factory; cat evidence/the-profile-refusal-names-today/brief/every-stage.m…	seq=41
+2026-11-03T15:09:55Z	stream	review-clean-code.150917.out	process=review-clean-code	parts=0	denied=1	version=2	seq=42
+2026-11-03T15:09:55Z	stage-end	review:clean-code	exit=0	seq=43
+2026-11-03T15:09:56Z	stage-start	verifier	tool=claude	stages=judge,document	seq=44
+2026-11-03T15:10:48Z	wrote	judge.md	sha=819c51f578ba18f242ac1d75b34f1dfb485928744b87eea8478883e4a92c4067	seq=45
+2026-11-03T15:10:48Z	wrote	document.md	sha=353e135be95731e8a5d86ea313f01d2d4fd2b3c43479c6ef7725b74ac0dad6b4	seq=46
+2026-11-03T15:10:48Z	signal	judge	run=20261103T151048.728834Z	sha=819c51f578ba18f2	findings=1	seq=47
+2026-11-03T15:10:48Z	finding	clean-code	run=20261103T151048.728834Z	severity=minor	file=src/test-e2e/java/dev/domaincentric/sample/ecommerce/e2e/ProfileE2ETest.java:68	code=	seq=48
+2026-11-03T15:10:49Z	gate	document	exit=3	by=verifier	seq=49
+2026-11-03T15:10:56Z	usage	verifier	tool=claude	model=claude-opus-5-5	input=26	cache_read=620534	cache_write=61313	output=6135	cost=0.7374	seconds=59	seq=50
+2026-11-03T15:10:56Z	part	document	process=verifier	stream=verifier.150955.out	seconds=7.05	input=26	cache_read=620534	cache_write=61313	output=6135	cost=0.737415	seq=51
+2026-11-03T15:10:56Z	stream	verifier.150955.out	process=verifier	parts=1	denied=0	version=2	seq=52
+2026-11-03T15:10:56Z	stage-end	verifier	exit=0	seq=53
+2026-11-03T15:10:57Z	gate	document	exit=3	by=runner	seq=54
