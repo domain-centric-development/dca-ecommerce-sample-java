@@ -12,6 +12,21 @@ Server-rendered pages from Pug templates, with a little progressive enhancement 
 transitions) and no client framework. The REST API and the MCP server are separate surfaces over the
 same use cases, not a backend for a single-page application.
 
+Browsers: a broad public, older phones and browsers included.
+
+Styling: BEM names with cascade layers — `@scope` drops a whole component in a browser without it, and a shop
+serves older ones.
+
+Gallery: none yet — Storybook's server renderer when the shop gets one.
+
+Measured against the frontend craft that follows these three lines, the shop keeps: BEM blocks with modifiers
+in one stylesheet shared by both samples; semantic tokens as custom properties on `:root` with brand themes
+chosen by `data-theme`; `data-test` attributes as the browser tests' only selectors; `prefers-reduced-motion`.
+It does not keep yet: cascade layers, container queries and named widths (the stylesheet has several viewport
+breakpoints), three token tiers (hex values also stand outside the token block), state in attributes only (a
+few `is-`/`active` classes remain), a light/dark scheme, and structural checks over the stylesheet. Closing a
+gap is a story through the factory, not a side change.
+
 ## Persistence
 
 In-process only: in-memory repositories, with the cart on JPA and the account on JDBC against an
