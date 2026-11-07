@@ -1,9 +1,8 @@
 package dev.domaincentric.sample.ecommerce.account.application.getprofile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult.Profile;
 import dev.domaincentric.sample.ecommerce.account.application.shared.AccountRepository;
@@ -75,8 +74,7 @@ class GetProfileUseCaseTest {
 
     final GetProfileResult result = getProfile.execute(new GetProfileQuery(USER_ID));
 
-    assertTrue(result.found());
-    final Profile profile = result.profile().orElseThrow();
+    final Profile profile = assertInstanceOf(GetProfileResult.Found.class, result).profile();
     assertEquals(EMAIL, profile.email());
     assertEquals(FIRST_NAME, profile.firstName());
     assertEquals(LAST_NAME, profile.lastName());
@@ -94,14 +92,15 @@ class GetProfileUseCaseTest {
 
     final GetProfileResult result = getProfile.execute(new GetProfileQuery(USER_ID));
 
-    assertFalse(result.found());
-    assertTrue(result.profile().isEmpty());
+    assertInstanceOf(GetProfileResult.AccountNotAccessible.class, result);
   }
 
   @Test
   @DisplayName("a userId without an account is reported as absent")
   void unknownUserIdIsAbsent() {
-    assertFalse(getProfile.execute(new GetProfileQuery("user-unknown")).found());
+    assertInstanceOf(
+        GetProfileResult.AccountNotAccessible.class,
+        getProfile.execute(new GetProfileQuery("user-unknown")));
   }
 
   @Test

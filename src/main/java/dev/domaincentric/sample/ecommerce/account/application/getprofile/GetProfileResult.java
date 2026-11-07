@@ -1,29 +1,24 @@
 package dev.domaincentric.sample.ecommerce.account.application.getprofile;
 
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
 import java.time.LocalDate;
-import java.util.Optional;
 
 /**
- * Output model of the Get Profile use case.
- *
- * <p>An identity without an accessible account is a normal return value, not an exception
- * (ADR-023).
- *
- * @param profile the profile projection, empty if no accessible account exists
+ * What reading the profile came to: the profile, or no accessible account for the identity — a case
+ * of the result, not an exception.
  */
-public record GetProfileResult(Optional<Profile> profile) {
+public sealed interface GetProfileResult
+    permits GetProfileResult.Found, GetProfileResult.AccountNotAccessible {
 
-  public boolean found() {
-    return profile.isPresent();
-  }
+  /**
+   * The profile projection.
+   *
+   * @param profile the profile fields the page renders
+   */
+  record Found(Profile profile) implements GetProfileResult {}
 
-  public static GetProfileResult found(final Profile profile) {
-    return new GetProfileResult(Optional.of(profile));
-  }
-
-  public static GetProfileResult notFound() {
-    return new GetProfileResult(Optional.empty());
-  }
+  /** No account for the given UserId, or the account cannot log in. */
+  record AccountNotAccessible() implements GetProfileResult, Refusal {}
 
   /**
    * Projection of the profile fields the page renders.
@@ -36,6 +31,6 @@ public record GetProfileResult(Optional<Profile> profile) {
    * @param fullName the owner's full name, first and last name joined by one space
    * @param dateOfBirth the owner's date of birth
    */
-  public record Profile(
+  record Profile(
       String email, String firstName, String lastName, String fullName, LocalDate dateOfBirth) {}
 }

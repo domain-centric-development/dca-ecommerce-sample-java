@@ -6,7 +6,6 @@ import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletio
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.OrderChangedSinceReviewException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ShippingOption;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -103,7 +102,7 @@ class OrderChangedSinceTheReviewIntegrationTest {
     @Override
     public ConfirmCheckoutResult execute(final ConfirmCheckoutCommand command) {
       commands.add(command);
-      throw OrderChangedSinceReviewException.orderChanged(
+      return new ConfirmCheckoutResult.OrderChangedSinceReview(
           CheckoutSessionId.of(command.sessionId()));
     }
 

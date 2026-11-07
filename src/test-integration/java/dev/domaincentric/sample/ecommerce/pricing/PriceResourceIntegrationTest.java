@@ -9,7 +9,6 @@ import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplicat
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceCommand;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceInputPort;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceResult;
-import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ProductPriceNotFoundException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -153,9 +152,9 @@ class PriceResourceIntegrationTest {
     public ChangePriceResult execute(final ChangePriceCommand command) {
       commands.add(command);
       if (UNKNOWN_PRODUCT.equals(command.productId())) {
-        throw new ProductPriceNotFoundException(ProductId.of(command.productId()));
+        return new ChangePriceResult.ProductPriceNotFound(ProductId.of(command.productId()));
       }
-      return new ChangePriceResult(
+      return new ChangePriceResult.Changed(
           command.productId(), command.priceAmount(), "EUR", Instant.now());
     }
 

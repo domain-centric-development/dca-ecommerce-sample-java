@@ -18,10 +18,11 @@ public interface GetCheckoutSessionInputPort
   /**
    * Retrieves a checkout session by ID.
    *
-   * <p>Returns the session data if found, or a response with found=false otherwise.
+   * <p>Returns the session data if found, or {@link
+   * GetCheckoutSessionResult.CheckoutSessionNotFound} otherwise.
    *
    * @param query the query containing the session ID
-   * @return response containing the session data or found=false
+   * @return the session data, or the case saying the caller has no such checkout
    */
   @Override
   GetCheckoutSessionResult execute(GetCheckoutSessionQuery query);

@@ -76,7 +76,8 @@ class ChangePasswordPageControllerTest {
 
   private void givenRegisteredIdentityWithAccessibleAccount() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
-    getAccountOverview.setResult(GetAccountOverviewResult.found(new AccountOverview(EMAIL, null)));
+    getAccountOverview.setResult(
+        new GetAccountOverviewResult.Found(new AccountOverview(EMAIL, null)));
   }
 
   // ---------------------------------------------------------------- GET
@@ -111,7 +112,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("GET without an accessible account redirects instead of throwing")
   void getWithoutAccessibleAccountRedirects() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
-    getAccountOverview.setResult(GetAccountOverviewResult.notFound());
+    getAccountOverview.setResult(new GetAccountOverviewResult.AccountNotAccessible());
 
     assertEquals(LOGIN_REDIRECT, controller.showChangePasswordPage(model));
   }
@@ -233,7 +234,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("the mismatch message wins over a wrong current password")
   void mismatchWinsOverWrongCurrentPassword() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
+    changePassword.setResult(new ChangePasswordResult.CurrentPasswordInvalid());
 
     controller.handleChangePassword("WrongPassw0rd", NEW, "Different1", model, attributes);
 
@@ -247,7 +248,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("a rejected new password re-renders with the page's sentence for the broken rule")
   void rejectedNewPasswordReRendersWithMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(ChangePasswordResult.newPasswordRejected(PasswordRule.NO_DIGIT));
+    changePassword.setResult(new ChangePasswordResult.NewPasswordRejected(PasswordRule.NO_DIGIT));
 
     final String viewName =
         controller.handleChangePassword(CURRENT, "Weakpassword", "Weakpassword", model, attributes);
@@ -260,7 +261,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("a wrong current password re-renders with the page's sentence")
   void wrongCurrentPasswordReRendersWithMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
+    changePassword.setResult(new ChangePasswordResult.CurrentPasswordInvalid());
 
     final String viewName =
         controller.handleChangePassword("WrongPassw0rd", NEW, NEW, model, attributes);
@@ -273,7 +274,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("an error re-render puts no submitted password into the model")
   void errorReRenderLeaksNoPassword() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(ChangePasswordResult.currentPasswordInvalid());
+    changePassword.setResult(new ChangePasswordResult.CurrentPasswordInvalid());
 
     controller.handleChangePassword("WrongPassw0rd", NEW, NEW, model, attributes);
 
@@ -289,7 +290,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("a successful change redirects with the notice")
   void successRedirectsWithFlashMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changePassword.setResult(ChangePasswordResult.changed());
+    changePassword.setResult(new ChangePasswordResult.Changed());
 
     final String viewName = controller.handleChangePassword(CURRENT, NEW, NEW, model, attributes);
 
@@ -308,7 +309,7 @@ class ChangePasswordPageControllerTest {
   @DisplayName("an inaccessible account redirects to login")
   void inaccessibleAccountRedirectsToLogin() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
-    changePassword.setResult(ChangePasswordResult.accountNotAccessible());
+    changePassword.setResult(new ChangePasswordResult.AccountNotAccessible());
 
     final String viewName = controller.handleChangePassword(CURRENT, NEW, NEW, model, attributes);
 
@@ -358,7 +359,7 @@ class ChangePasswordPageControllerTest {
   private static final class TestChangePassword implements ChangePasswordInputPort {
 
     private final List<ChangePasswordCommand> receivedCommands = new ArrayList<>();
-    private ChangePasswordResult result = ChangePasswordResult.changed();
+    private ChangePasswordResult result = new ChangePasswordResult.Changed();
 
     @Override
     public ChangePasswordResult execute(final ChangePasswordCommand command) {

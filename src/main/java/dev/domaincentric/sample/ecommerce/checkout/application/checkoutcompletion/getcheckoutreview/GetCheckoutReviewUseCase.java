@@ -1,7 +1,6 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview;
 
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutArticleDataPort;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticlePriceResolver;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem;
@@ -13,6 +12,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCart
 import dev.domaincentric.sample.ecommerce.checkout.domain.service.CheckoutPricing;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /**
@@ -36,18 +36,15 @@ public class GetCheckoutReviewUseCase implements GetCheckoutReviewInputPort {
     this.checkoutPricing = checkoutPricing;
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @throws CheckoutSessionNotFoundException if the caller has no such checkout
-   */
   @Override
   public GetCheckoutReviewResult execute(final GetCheckoutReviewQuery query) {
     final CheckoutSessionId sessionId = CheckoutSessionId.of(query.sessionId());
-    final CheckoutSession session =
-        checkoutSessionRepository
-            .findByIdForCustomer(sessionId, CustomerId.of(query.customerId()))
-            .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
+    final Optional<CheckoutSession> found =
+        checkoutSessionRepository.findByIdForCustomer(sessionId, CustomerId.of(query.customerId()));
+    if (found.isEmpty()) {
+      return new GetCheckoutReviewResult.CheckoutSessionNotFound(sessionId);
+    }
+    final CheckoutSession session = found.get();
 
     // Article data comes from the Product Catalog (remote-capable); nothing here is stored
     final Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts =
@@ -56,7 +53,7 @@ public class GetCheckoutReviewUseCase implements GetCheckoutReviewInputPort {
                 session.lineItems().stream().map(CheckoutLineItem::productId).toList()));
 
     final CheckoutReview review = session.reviewAt(checkoutPricing.todaysPrices(session, facts));
-    return new GetCheckoutReviewResult(
+    return new GetCheckoutReviewResult.Found(
         CheckoutCartSnapshot.from(session, review), review.fingerprint().value());
   }
 }

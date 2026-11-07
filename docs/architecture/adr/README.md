@@ -29,7 +29,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-020](adr-020-use-case-result-naming.md) | Use Case Output Naming Convention (*Result instead of *Response) | ✅ Accepted |
 | [ADR-021](adr-021-enriched-domain-model-pattern.md) | Enriched Domain Model Pattern | ✅ Accepted |
 | [ADR-022](adr-022-viewmodel-pattern.md) | ViewModel Pattern for Web Adapters | ✅ Accepted |
-| [ADR-023](adr-023-optional-results-not-found.md) | Optional Results for Not-Found Cases | ✅ Accepted |
+| [ADR-023](adr-023-optional-results-not-found.md) | Optional Results for Not-Found Cases | ⛔ Superseded by ADR-047 (2026-11-07) |
 | [ADR-024](adr-024-interface-inversion-spring-modulith.md) | Interface Inversion Pattern for Spring Modulith Event Listeners | ✅ Accepted |
 | [ADR-025](adr-025-pattern-selection-per-subdomain.md) | Pattern Selection per Subdomain Type | ✅ Accepted |
 | [ADR-026](adr-026-transactional-outbox-integration-events.md) | Transactional Outbox for Integration Events | ✅ Accepted |
@@ -40,7 +40,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-031](adr-031-persistence-adapters-as-the-default.md) | A Repository Hands Out Copies — Real Persistence Is the Default | ✅ Accepted (account and cart converted) |
 | [ADR-032](adr-032-executable-context-map.md) | The Context Map Is Declared in Code and Enforced | ✅ Accepted |
 | [ADR-033](adr-033-adopt-dca-java-libraries.md) | Adopt the dca-java Libraries for Markers and Architecture Rules | ✅ Accepted |
-| [ADR-034](adr-034-transaction-boundary-and-remote-ports.md) | Transaction boundary — `@Transactional` for local use cases, `TransactionBoundary` when remote ports are involved | ✅ Accepted |
+| [ADR-034](adr-034-transaction-boundary-and-remote-ports.md) | Transaction boundary — `@Transactional` for local use cases, `TransactionBoundary` when remote ports are involved | ✅ Accepted (amended 2026-11-07: a returned refusal rolls back) |
 | [ADR-035](adr-035-csrf-protection-and-bearer-only-api.md) | CSRF Protection for Web Forms, Bearer-Only Authentication for the API | ✅ Accepted |
 | [ADR-036](adr-036-api-authorization-at-the-adapter.md) | A guard goes where its inputs are — and `authenticated()` is not one | ✅ Accepted |
 | [ADR-037](adr-037-adopt-dca-spring-and-dca-archunit-spring-modulith.md) | Adopt dca-spring and dca-archunit-spring-modulith | ✅ Accepted |
@@ -53,9 +53,10 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-041](adr-041-local-preconditions-before-a-remote-effect.md) | Local preconditions come before a remote effect, and an unusable effect is released | Accepted |
 | [ADR-042](adr-042-uniqueness-is-claimed-in-the-store.md) | Uniqueness that spans aggregates is claimed in the store, not checked before it | Accepted |
 | [ADR-043](adr-043-development-defaults-fail-closed.md) | A committed default must not start a real deployment | Accepted |
-| [ADR-044](adr-044-exception-layers-and-problem-details.md) | A failure carries its own type, and only the adapter turns it into an answer | Accepted |
+| [ADR-044](adr-044-exception-layers-and-problem-details.md) | A failure carries its own type, and only the adapter turns it into an answer | Accepted (amended 2026-11-07 by ADR-047) |
 | [ADR-045](adr-045-the-active-cart-claim-reaches-the-relational-store.md) | The active-cart claim reaches the relational store | Accepted |
 | [ADR-046](adr-046-a-step-page-takes-the-checkout-over.md) | A step page takes the checkout over | Accepted |
+| [ADR-047](adr-047-expected-refusals-are-sealed-use-case-results.md) | Expected refusals are cases of a closed use-case result | Accepted |
 
 ### Proposed 🟡
 

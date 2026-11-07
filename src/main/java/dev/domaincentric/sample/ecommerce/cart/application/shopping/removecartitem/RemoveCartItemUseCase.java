@@ -1,12 +1,18 @@
 package dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
-import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemResult.CartItemNotFound;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemResult.CartNotFound;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemResult.CartNotModifiable;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemResult.Removed;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItemId;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItemNotFoundException;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartNotModifiableException;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Loads the caller's cart — another customer's cart is not found — and lets the aggregate remove
  * the line, which refuses a line the cart does not hold; then persists the cart and publishes its
- * domain events.
+ * domain events. Every refusal is returned as a case of {@link RemoveCartItemResult}, the
+ * aggregate's caught once here; each is decided before anything is written.
  */
 @Service
 @Transactional
@@ -36,16 +43,24 @@ public class RemoveCartItemUseCase implements RemoveCartItemInputPort {
     final CartId cartId = CartId.of(input.cartId());
     final CartItemId cartItemId = CartItemId.of(input.cartItemId());
 
-    final ShoppingCart cart =
-        shoppingCartRepository
-            .findByIdForCustomer(cartId, CustomerId.of(input.customerId()))
-            .orElseThrow(() -> new CartNotFoundException(cartId));
+    final Optional<ShoppingCart> found =
+        shoppingCartRepository.findByIdForCustomer(cartId, CustomerId.of(input.customerId()));
+    if (found.isEmpty()) {
+      return new CartNotFound(cartId);
+    }
+    final ShoppingCart cart = found.get();
 
-    cart.removeItem(cartItemId);
+    try {
+      cart.removeItem(cartItemId);
+    } catch (final CartNotModifiableException notModifiable) {
+      return new CartNotModifiable(notModifiable.cartId(), notModifiable.status());
+    } catch (final CartItemNotFoundException notHeld) {
+      return new CartItemNotFound(cartItemId);
+    }
 
     shoppingCartRepository.save(cart);
     eventPublisher.publishAndClearEvents(cart);
 
-    return RemoveCartItemResult.from(cart);
+    return Removed.from(cart);
   }
 }

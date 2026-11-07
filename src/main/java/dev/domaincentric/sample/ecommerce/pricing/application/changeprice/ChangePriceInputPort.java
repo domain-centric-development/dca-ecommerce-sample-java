@@ -14,8 +14,8 @@ public interface ChangePriceInputPort extends UseCase<ChangePriceCommand, Change
    * Changes a product's price.
    *
    * @param command the product and its new amount
-   * @return the price as it is now
-   * @throws ProductPriceNotFoundException if Pricing holds no price for the product
+   * @return {@link ChangePriceResult.Changed} with the price as it is now, or {@link
+   *     ChangePriceResult.ProductPriceNotFound} if Pricing holds no price for the product
    */
   @Override
   ChangePriceResult execute(ChangePriceCommand command);

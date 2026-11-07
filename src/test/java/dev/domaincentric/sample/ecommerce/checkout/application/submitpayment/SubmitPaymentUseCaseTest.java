@@ -1,7 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.submitpayment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
@@ -21,7 +21,6 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.DeliveryAddress;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
@@ -58,9 +57,9 @@ class SubmitPaymentUseCaseTest {
   void anIncompleteSessionNeverReachesTheProvider() {
     final CheckoutSession session = sessionWithBuyerInfoOnly();
 
-    assertThrows(
-        CheckoutStepNotCompletedException.class,
-        () -> useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock")));
+    assertInstanceOf(
+        SubmitPaymentResult.CheckoutStepNotCompleted.class,
+        useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock")));
 
     assertTrue(
         provider.initiations.isEmpty(),
@@ -72,8 +71,10 @@ class SubmitPaymentUseCaseTest {
   void aReadySessionMovesToTheReviewWithoutAPaymentRequest() {
     final CheckoutSession session = readySession();
 
-    final SubmitPaymentResult result =
-        useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock"));
+    final SubmitPaymentResult.Submitted result =
+        assertInstanceOf(
+            SubmitPaymentResult.Submitted.class,
+            useCase.execute(new SubmitPaymentCommand(session.id().value(), CUSTOMER, "mock")));
 
     assertEquals(CheckoutStep.REVIEW.name(), result.currentStep());
     assertTrue(provider.initiations.isEmpty(), "the payment step only chooses how to pay");
@@ -118,10 +119,10 @@ class SubmitPaymentUseCaseTest {
     }
 
     @Override
-    public PaymentResult initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
+    public String initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
       final String reference = "intent-" + initiations.size();
       initiations.add(reference);
-      return PaymentResult.success(reference);
+      return reference;
     }
 
     @Override

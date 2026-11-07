@@ -1,43 +1,31 @@
 package dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid;
 
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
-import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 
-/**
- * Output model for cart retrieval by ID.
- *
- * <p>Wraps the {@link EnrichedCart} read model in an Optional and adds the one figure the cart page
- * shows that the read model does not carry itself: the tax contained in the current subtotal. The
- * use case computes it with the domain's calculator; the adapter only formats it.
- *
- * @param cart the enriched cart read model wrapped in Optional
- * @param totals the cart's amounts as assembled by the use case (null if not found)
- */
-public record GetCartByIdResult(Optional<EnrichedCart> cart, @Nullable CartTotals totals) {
-
-  public GetCartByIdResult {
-    if (cart == null) {
-      throw new IllegalArgumentException("Cart optional cannot be null, use Optional.empty()");
-    }
-  }
+/** What reading one customer's cart came to: the cart, or no cart of theirs under that identity. */
+public sealed interface GetCartByIdResult
+    permits GetCartByIdResult.Found, GetCartByIdResult.CartNotFound {
 
   /**
-   * Checks if the cart was found.
+   * The cart was found.
    *
-   * @return true if the cart exists
+   * <p>Carries the {@link EnrichedCart} read model and the one figure set the cart page shows that
+   * the read model does not carry itself: the totals, with the tax contained in the current
+   * subtotal. The use case computes them with the domain's calculator; the adapter only formats
+   * them.
+   *
+   * @param cart the enriched cart read model
+   * @param totals the cart's amounts as assembled by the use case
    */
-  public boolean found() {
-    return cart.isPresent();
-  }
+  record Found(EnrichedCart cart, CartTotals totals) implements GetCartByIdResult {}
 
-  /** Creates a result for a cart that was not found. */
-  public static GetCartByIdResult notFound() {
-    return new GetCartByIdResult(Optional.empty(), null);
-  }
-
-  /** Creates a result for a cart that was found. */
-  public static GetCartByIdResult found(final EnrichedCart cart, final CartTotals totals) {
-    return new GetCartByIdResult(Optional.of(cart), totals);
-  }
+  /**
+   * No cart of this customer under that identity — it does not exist or is somebody else's, told
+   * apart on purpose by nothing (ADR-036).
+   *
+   * @param cartId the cart the caller named
+   */
+  record CartNotFound(CartId cartId) implements GetCartByIdResult, Refusal {}
 }

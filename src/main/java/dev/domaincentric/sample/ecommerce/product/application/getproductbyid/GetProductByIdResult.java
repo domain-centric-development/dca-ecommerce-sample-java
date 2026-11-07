@@ -1,43 +1,31 @@
 package dev.domaincentric.sample.ecommerce.product.application.getproductbyid;
 
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
 import dev.domaincentric.sample.ecommerce.product.domain.model.EnrichedProduct;
-import org.jspecify.annotations.Nullable;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 
 /**
- * Output model for product retrieval by ID.
- *
- * <p>This result wraps an {@link EnrichedProduct} domain read model that combines product state
- * from the Product aggregate with external data from the Pricing and Inventory bounded contexts.
- *
- * <p>Check {@link #found()} to determine if the product exists before accessing the enriched
- * product.
+ * What reading one product came to: the product, or no product under that identity.
  *
  * <p><b>Pattern:</b> Use Case → Result(EnrichedProduct) → Controller → ViewModel → Template
- *
- * @param found whether the product was found
- * @param product the enriched product (null if not found)
  */
-public record GetProductByIdResult(boolean found, @Nullable EnrichedProduct product) {
+public sealed interface GetProductByIdResult
+    permits GetProductByIdResult.Found, GetProductByIdResult.ProductNotFound {
 
   /**
-   * Creates a result for a product that was not found.
+   * The product was found.
    *
-   * @return a result indicating the product was not found
-   */
-  public static GetProductByIdResult notFound() {
-    return new GetProductByIdResult(false, null);
-  }
-
-  /**
-   * Creates a result for a product that was found.
+   * <p>Wraps an {@link EnrichedProduct} domain read model that combines product state from the
+   * Product aggregate with external data from the Pricing and Inventory bounded contexts.
    *
    * @param product the enriched product
-   * @return a result containing the enriched product
    */
-  public static GetProductByIdResult found(final EnrichedProduct product) {
-    if (product == null) {
-      throw new IllegalArgumentException("Product cannot be null when found");
-    }
-    return new GetProductByIdResult(true, product);
-  }
+  record Found(EnrichedProduct product) implements GetProductByIdResult {}
+
+  /**
+   * The catalog carries no product under that identity.
+   *
+   * @param productId the product the caller named
+   */
+  record ProductNotFound(ProductId productId) implements GetProductByIdResult, Refusal {}
 }

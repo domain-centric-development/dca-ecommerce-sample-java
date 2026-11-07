@@ -49,7 +49,7 @@ public class GetProductByIdUseCase implements GetProductByIdInputPort {
     final Optional<Product> productOpt = productRepository.findById(productId);
 
     if (productOpt.isEmpty()) {
-      return GetProductByIdResult.notFound();
+      return new GetProductByIdResult.ProductNotFound(productId);
     }
 
     final Product product = productOpt.get();
@@ -60,7 +60,7 @@ public class GetProductByIdUseCase implements GetProductByIdInputPort {
     // Create enriched product using factory method
     final EnrichedProduct enrichedProduct = EnrichedProduct.from(product, articleData);
 
-    return GetProductByIdResult.found(enrichedProduct);
+    return new GetProductByIdResult.Found(enrichedProduct);
   }
 
   private ProductArticle buildArticleData(final ProductId productId) {

@@ -19,8 +19,10 @@ public interface AddItemToCartInputPort extends UseCase<AddItemToCartCommand, Ad
    * Adds an item to a shopping cart.
    *
    * @param command the command containing cart ID, product ID, and quantity
-   * @return response containing updated cart details
-   * @throws IllegalArgumentException if cart not found, product not found, or insufficient stock
+   * @return {@link AddItemToCartResult.Added} with the updated cart, or the refusal: {@link
+   *     AddItemToCartResult.ArticleNotAvailable}, {@link AddItemToCartResult.CartNotFound}, {@link
+   *     AddItemToCartResult.InsufficientArticleStock} or {@link
+   *     AddItemToCartResult.CartNotModifiable}
    */
   @Override
   AddItemToCartResult execute(AddItemToCartCommand command);

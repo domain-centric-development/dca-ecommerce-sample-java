@@ -9,12 +9,13 @@ import static dev.domaincentric.sample.ecommerce.account.application.changeprofi
 import static dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.USER_ID;
 import static dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.accountWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileResult.Outcome;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestAccountRepository;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestDomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestPasswordHasher;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileQuery;
+import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileResult.Profile;
 import dev.domaincentric.sample.ecommerce.account.application.getprofile.GetProfileUseCase;
 import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
@@ -41,12 +42,14 @@ class ChangeProfileThenGetProfileTest {
   private Profile changeThenRead(final String email, final LocalDate dateOfBirth) {
     accountRepository.store(accountWith(AccountStatus.ACTIVE, passwordHasher));
 
-    assertEquals(
-        Outcome.CHANGED,
-        changeProfile.execute(new ChangeProfileCommand(USER_ID, email, dateOfBirth)).outcome(),
+    assertInstanceOf(
+        ChangeProfileResult.Changed.class,
+        changeProfile.execute(new ChangeProfileCommand(USER_ID, email, dateOfBirth)),
         "precondition: the profile change must succeed");
 
-    return getProfile.execute(new GetProfileQuery(USER_ID)).profile().orElseThrow();
+    return assertInstanceOf(
+            GetProfileResult.Found.class, getProfile.execute(new GetProfileQuery(USER_ID)))
+        .profile();
   }
 
   @Test

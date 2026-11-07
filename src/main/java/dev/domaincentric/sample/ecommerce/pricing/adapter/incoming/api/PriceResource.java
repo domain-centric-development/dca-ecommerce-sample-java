@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.pricing.adapter.incoming.api;
 
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceCommand;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceInputPort;
+import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceResult;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
  * 403} to a customer without the role (ADR-036).
  *
  * <p>The product is addressed in the path; the answer to a change is {@code 204} without a body.
+ *
+ * <p><b>Refusals:</b> the route switches over the use case's result — no {@code default}, so the
+ * compiler holds that every refusal has an answer — and takes the answer from {@link
+ * PricingProblems}. What is still thrown is {@link PricingApiExceptionHandler}'s.
  */
 @RestController
 @RequestMapping("/api/products/{id}/price")
@@ -33,10 +38,14 @@ public class PriceResource {
 
   @PutMapping
   @PreAuthorize("hasRole('STAFF')")
-  public ResponseEntity<Void> changePrice(
+  public ResponseEntity<?> changePrice(
       @PathVariable final String id, @Valid @RequestBody final ChangePriceRequest request) {
-    changePrice.execute(new ChangePriceCommand(parsedProductId(id), request.price()));
-    return ResponseEntity.noContent().build();
+    return switch (changePrice.execute(
+        new ChangePriceCommand(parsedProductId(id), request.price()))) {
+      case ChangePriceResult.Changed changed -> ResponseEntity.noContent().build();
+      case ChangePriceResult.ProductPriceNotFound refusal ->
+          PricingProblems.productNotFound(refusal.productId());
+    };
   }
 
   /**

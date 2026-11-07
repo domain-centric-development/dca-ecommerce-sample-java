@@ -1,7 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.recovercart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
-import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
@@ -25,8 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
  * </ol>
  *
  * <p>Only the cart of the guest the caller was before the login is taken over: a command that names
- * another guest is refused with {@link GuestCartNotOwnedException} before any cart is read (ADR-036
- * — ownership is the use case's).
+ * another guest is refused with {@link RecoverCartResult.GuestCartNotOwned} before any cart is read
+ * (ADR-036 — ownership is the use case's).
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link RecoverCartInputPort}
  * interface, which is a primary/driving port in the application layer.
@@ -51,12 +50,12 @@ public class RecoverCartUseCase implements RecoverCartInputPort {
     final CustomerId registeredCustomerId = CustomerId.of(input.registeredUserId());
 
     if (!input.anonymousUserId().equals(input.guestBeforeLogin())) {
-      throw new GuestCartNotOwnedException(anonymousCustomerId);
+      return new RecoverCartResult.GuestCartNotOwned(anonymousCustomerId);
     }
 
     // If same user ID, no merge needed
     if (anonymousCustomerId.equals(registeredCustomerId)) {
-      return RecoverCartResult.noRecoveryNeeded(registeredCustomerId.value());
+      return RecoverCartResult.Recovered.noRecoveryNeeded(registeredCustomerId.value());
     }
 
     // Find anonymous user's active cart
@@ -65,7 +64,7 @@ public class RecoverCartUseCase implements RecoverCartInputPort {
 
     // If no anonymous cart exists, no recovery needed
     if (anonymousCart.isEmpty() || anonymousCart.get().isEmpty()) {
-      return RecoverCartResult.noRecoveryNeeded(registeredCustomerId.value());
+      return RecoverCartResult.Recovered.noRecoveryNeeded(registeredCustomerId.value());
     }
 
     final ShoppingCart anonCart = anonymousCart.get();
@@ -77,7 +76,7 @@ public class RecoverCartUseCase implements RecoverCartInputPort {
       accountCart.ifPresent(emptyCart -> shoppingCartRepository.deleteById(emptyCart.id()));
       anonCart.takeOverBy(registeredCustomerId);
       shoppingCartRepository.save(anonCart);
-      return RecoverCartResult.takenOver(anonCart);
+      return RecoverCartResult.Recovered.takenOver(anonCart);
     }
 
     // Merge items from anonymous cart into the account's cart
@@ -98,6 +97,6 @@ public class RecoverCartUseCase implements RecoverCartInputPort {
     // Delete the anonymous cart
     shoppingCartRepository.deleteById(anonCart.id());
 
-    return RecoverCartResult.recovered(registeredCart, itemsMerged);
+    return RecoverCartResult.Recovered.recovered(registeredCart, itemsMerged);
   }
 }

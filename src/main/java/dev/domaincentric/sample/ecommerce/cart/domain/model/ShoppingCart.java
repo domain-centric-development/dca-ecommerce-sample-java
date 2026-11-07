@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.cart.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.Owned;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartAbandoned;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCleared;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCompleted;
@@ -41,7 +42,8 @@ import java.util.Optional;
  *   <li>{@link CartCompleted} - when the cart is completed after checkout confirmation
  * </ul>
  */
-public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId> {
+public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId>
+    implements Owned<CustomerId> {
 
   private final CartId id;
   private CustomerId customerId;

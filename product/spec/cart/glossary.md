@@ -395,7 +395,7 @@ use case or by the store that sees every cart of a customer.
 **Definition:** The addressed cart is not available to the asking customer. Deliberately one failure for "does not
 exist" and "belongs to somebody else" (ADR-036).
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ShoppingCartRepository.findByIdForCustomer`
+**Type:** Refusal case of a use-case result (`Refusal`) — `GetCartById`, `AddItemToCart`, `RemoveItemFromCart`, `RemoveCartItem`, `CompleteCart` · **Related terms:** `ShoppingCartRepository.findByIdForCustomer`
 
 ---
 
@@ -406,7 +406,7 @@ guest before login (`guestBeforeLogin`), which the identity carries for the sess
 into the account; the use case refuses before any cart is read, so a refused request changes no cart, and the merge
 page answers it with the cart page, without a notice. Carries the `CustomerId` the request named.
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `MergeCarts`, `RecoverCart`, Guest before login,
+**Type:** Refusal case of a use-case result (`Refusal`) · **Related terms:** `MergeCarts`, `RecoverCart`, Guest before login,
 ADR-036
 
 ---
@@ -416,7 +416,7 @@ ADR-036
 **Definition:** A second active cart would be stored for a customer who already has one. Part of the repository's
 contract: only the store sees every cart at once.
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ShoppingCartRepository.save` (ADR-042)
+**Type:** Failure the repository port declares (`ActiveCartAlreadyExistsException`, an `OutputPortException`); `CreateCart` returns it as a refusal case · **Related terms:** `ShoppingCartRepository.save` (ADR-042)
 
 ---
 
@@ -427,7 +427,7 @@ the position would hold: the quantity added beside the quantity the position hol
 through the cart's own port. `InsufficientArticleStock` carries the quantity asked for (`requested`), the quantity
 held (`held`) and the stock the facts name (`inStock`, the customer's "in stock" for `CartArticle`'s available stock).
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ArticleDataPort`, `CartArticle`
+**Type:** Refusal cases of `AddItemToCart`'s result (`Refusal`) · **Related terms:** `ArticleDataPort`, `CartArticle`
 
 ## Features
 

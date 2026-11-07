@@ -28,9 +28,9 @@ public interface SubmitBuyerInfoInputPort
    * </ul>
    *
    * @param command the command containing session ID and buyer info
-   * @return response containing the updated session state
-   * @throws IllegalArgumentException if session is not found
-   * @throws IllegalStateException if session is not modifiable or step validation fails
+   * @return the updated session state, or the refusal as a case: no such checkout, a session that
+   *     takes no changes, a step out of order
+   * @throws IllegalArgumentException if a value of the command is malformed
    */
   @Override
   SubmitBuyerInfoResult execute(SubmitBuyerInfoCommand command);

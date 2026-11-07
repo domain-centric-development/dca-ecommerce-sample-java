@@ -5,14 +5,11 @@ import static dev.domaincentric.sample.ecommerce.account.application.changepassw
 import static dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.NEW_PASSWORD;
 import static dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.USER_ID;
 import static dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.accountWith;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountResult;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountUseCase;
-import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordResult.Outcome;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestAccountRepository;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestDomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestPasswordHasher;
@@ -59,19 +56,23 @@ class ChangePasswordThenAuthenticateTest {
   @Test
   @DisplayName("the new password authenticates, the old one no longer does")
   void newPasswordAuthenticatesAfterChange() {
-    assertEquals(
-        Outcome.CHANGED,
-        changePassword
-            .execute(new ChangePasswordCommand(USER_ID, CURRENT_PASSWORD, NEW_PASSWORD))
-            .outcome(),
+    assertInstanceOf(
+        ChangePasswordResult.Changed.class,
+        changePassword.execute(new ChangePasswordCommand(USER_ID, CURRENT_PASSWORD, NEW_PASSWORD)),
         "precondition: the password change must succeed");
 
     final AuthenticateAccountResult withNewPassword =
         authenticate.execute(new AuthenticateAccountCommand(EMAIL, NEW_PASSWORD));
-    assertTrue(withNewPassword.success(), "the new password must authenticate");
+    assertInstanceOf(
+        AuthenticateAccountResult.Authenticated.class,
+        withNewPassword,
+        "the new password must authenticate");
 
     final AuthenticateAccountResult withOldPassword =
         authenticate.execute(new AuthenticateAccountCommand(EMAIL, CURRENT_PASSWORD));
-    assertFalse(withOldPassword.success(), "the old password must no longer authenticate");
+    assertInstanceOf(
+        AuthenticateAccountResult.CredentialsRefused.class,
+        withOldPassword,
+        "the old password must no longer authenticate");
   }
 }

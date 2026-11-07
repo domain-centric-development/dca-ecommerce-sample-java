@@ -23,8 +23,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 @DisplayName("Failed login")
 class FailedLoginIntegrationTest {
 
-  private static final String GENERIC_REFUSAL = "Invalid email or password";
-
   @Autowired private AuthenticateAccountInputPort authenticateAccount;
 
   @Test
@@ -34,8 +32,7 @@ class FailedLoginIntegrationTest {
         authenticateAccount.execute(
             new AuthenticateAccountCommand("nobody@example.com", "Secret123"));
 
-    assertThat(result.success()).isFalse();
-    assertThat(result.errorMessage()).isEqualTo(GENERIC_REFUSAL);
+    assertThat(result).isInstanceOf(AuthenticateAccountResult.CredentialsRefused.class);
   }
 
   @Test
@@ -45,7 +42,6 @@ class FailedLoginIntegrationTest {
         authenticateAccount.execute(
             new AuthenticateAccountCommand("anna.schmidt@example", "Secret123"));
 
-    assertThat(result.success()).isFalse();
-    assertThat(result.errorMessage()).isEqualTo(GENERIC_REFUSAL);
+    assertThat(result).isInstanceOf(AuthenticateAccountResult.CredentialsRefused.class);
   }
 }

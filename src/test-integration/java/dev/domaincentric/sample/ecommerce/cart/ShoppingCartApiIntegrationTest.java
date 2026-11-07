@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import java.util.Base64;
 import java.util.List;
@@ -311,14 +312,10 @@ class ShoppingCartApiIntegrationTest {
 
   /** The cart's lines as its owner reads them through the input port: "productId x quantity". */
   private List<String> linesOf(final String cartId, final String customerId) {
-    return getCartById
-        .execute(new GetCartByIdQuery(cartId, customerId))
-        .cart()
-        .orElseThrow()
-        .items()
-        .stream()
-        .map(item -> item.productId().value() + " x " + item.quantity().value())
-        .toList();
+    return ((GetCartByIdResult.Found) getCartById.execute(new GetCartByIdQuery(cartId, customerId)))
+        .cart().items().stream()
+            .map(item -> item.productId().value() + " x " + item.quantity().value())
+            .toList();
   }
 
   private ResultActions add(

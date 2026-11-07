@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletio
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.resumecheckout.ResumeCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -88,12 +89,13 @@ public class BuyerInfoPageController {
     }
 
     // Full session details, plus the domain's decision whether this step may be opened
-    final GetCheckoutSessionResult result =
-        getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(sessionId.get(), customerId, CheckoutStep.BUYER_INFO));
-
-    if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+    final GetCheckoutSessionResult.Found result;
+    switch (getCheckoutSessionInputPort.execute(
+        GetCheckoutSessionQuery.forStep(sessionId.get(), customerId, CheckoutStep.BUYER_INFO))) {
+      case GetCheckoutSessionResult.Found found -> result = found;
+      case GetCheckoutSessionResult.CheckoutSessionNotFound notFound -> {
+        return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+      }
     }
     final Optional<String> denied = CheckoutStepPage.redirectIfDenied(result.stepAccess(), model);
     if (denied.isPresent()) {
@@ -137,22 +139,28 @@ public class BuyerInfoPageController {
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
-
     if (!activeSession.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
+    final String sessionId = activeSession.sessionId();
 
+    final CheckoutStep step = CheckoutStep.BUYER_INFO;
     return CheckoutStepPage.submitting(
-        CheckoutStep.BUYER_INFO,
-        () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.BUYER_INFO),
+        step,
         attributes,
-        () -> {
-          submitBuyerInfoInputPort.execute(
-              new SubmitBuyerInfoCommand(
-                  activeSession.sessionId(), customerId, email, firstName, lastName, phone));
-
-          return "redirect:/checkout/delivery";
-        });
+        () ->
+            switch (submitBuyerInfoInputPort.execute(
+                new SubmitBuyerInfoCommand(
+                    sessionId, customerId, email, firstName, lastName, phone))) {
+              case SubmitBuyerInfoResult.Submitted submitted -> "redirect:/checkout/delivery";
+              case SubmitBuyerInfoResult.CheckoutSessionNotFound refusal ->
+                  CheckoutStepPage.sessionNotFound(step, attributes);
+              case SubmitBuyerInfoResult.CheckoutNotModifiable refusal ->
+                  CheckoutStepPage.notModifiable(step, attributes);
+              case SubmitBuyerInfoResult.CheckoutStepOutOfOrder refusal ->
+                  CheckoutStepPage.stepOutOfOrder(
+                      step, () -> stepAccess(sessionId, customerId, step), attributes);
+            });
   }
 
   /**
@@ -173,8 +181,8 @@ public class BuyerInfoPageController {
   /** The domain's decision whether the step may be opened, for a submission sent too early. */
   private StepAccess stepAccess(
       final String sessionId, final String customerId, final CheckoutStep step) {
-    return getCheckoutSessionInputPort
-        .execute(GetCheckoutSessionQuery.forStep(sessionId, customerId, step))
-        .stepAccess();
+    return CheckoutStepPage.stepAccessOf(
+        getCheckoutSessionInputPort.execute(
+            GetCheckoutSessionQuery.forStep(sessionId, customerId, step)));
   }
 }

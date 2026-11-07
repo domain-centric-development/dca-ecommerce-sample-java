@@ -14,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
-import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileResult.Outcome;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestAccountRepository;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestDomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestPasswordHasher;
@@ -89,7 +88,7 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit(NEW_EMAIL, NEW_DATE_OF_BIRTH);
 
-    assertEquals(Outcome.ACCOUNT_NOT_ACCESSIBLE, result.outcome());
+    assertInstanceOf(ChangeProfileResult.AccountNotAccessible.class, result);
     assertEquals(Email.of(EMAIL), storedAccount().email(), "nothing may be changed");
     assertEquals(0, accountRepository.saveCount());
     assertTrue(eventPublisher.publishedEvents().isEmpty());
@@ -98,7 +97,8 @@ class ChangeProfileUseCaseTest {
   @Test
   @DisplayName("a userId without an account is not accessible")
   void unknownUserIdIsNotAccessible() {
-    assertEquals(Outcome.ACCOUNT_NOT_ACCESSIBLE, submit(NEW_EMAIL, NEW_DATE_OF_BIRTH).outcome());
+    assertInstanceOf(
+        ChangeProfileResult.AccountNotAccessible.class, submit(NEW_EMAIL, NEW_DATE_OF_BIRTH));
   }
 
   // ---------------------------------------------------------------- email
@@ -110,8 +110,9 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit(NEW_EMAIL, DATE_OF_BIRTH);
 
-    assertEquals(Outcome.CHANGED, result.outcome());
-    assertEquals(NEW_EMAIL, result.profile().orElseThrow().email());
+    assertInstanceOf(ChangeProfileResult.Changed.class, result);
+    assertEquals(
+        NEW_EMAIL, assertInstanceOf(ChangeProfileResult.Changed.class, result).profile().email());
     assertEquals(Email.of(NEW_EMAIL), storedAccount().email());
     assertEquals(1, accountRepository.saveCount(), "the changed account is saved exactly once");
   }
@@ -139,9 +140,9 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit(EMAIL.toUpperCase(Locale.ROOT), DATE_OF_BIRTH);
 
-    assertEquals(
-        Outcome.CHANGED,
-        result.outcome(),
+    assertInstanceOf(
+        ChangeProfileResult.Changed.class,
+        result,
         "the caller's own address must not collide with itself, whatever its spelling");
     assertTrue(emailChangedEvents().isEmpty(), "an unchanged email publishes no event");
   }
@@ -154,7 +155,7 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit("taken@example.com", DATE_OF_BIRTH);
 
-    assertEquals(Outcome.EMAIL_ALREADY_IN_USE, result.outcome());
+    assertInstanceOf(ChangeProfileResult.EmailAlreadyInUse.class, result);
     assertEquals(Email.of(EMAIL), storedAccount().email(), "the rejected change stores nothing");
     assertEquals(0, accountRepository.saveCount());
     assertTrue(eventPublisher.publishedEvents().isEmpty());
@@ -167,7 +168,7 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit("not-an-email", DATE_OF_BIRTH);
 
-    assertEquals(Outcome.EMAIL_INVALID, result.outcome());
+    assertInstanceOf(ChangeProfileResult.EmailInvalid.class, result);
     assertEquals(Email.of(EMAIL), storedAccount().email());
     assertEquals(0, accountRepository.saveCount());
   }
@@ -181,8 +182,10 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit(EMAIL, NEW_DATE_OF_BIRTH);
 
-    assertEquals(Outcome.CHANGED, result.outcome());
-    assertEquals(NEW_DATE_OF_BIRTH, result.profile().orElseThrow().dateOfBirth());
+    assertInstanceOf(ChangeProfileResult.Changed.class, result);
+    assertEquals(
+        NEW_DATE_OF_BIRTH,
+        assertInstanceOf(ChangeProfileResult.Changed.class, result).profile().dateOfBirth());
     assertEquals(NEW_DATE_OF_BIRTH, storedAccount().owner().dateOfBirth());
     assertEquals(1, dateOfBirthChangedEvents().size());
   }
@@ -192,7 +195,7 @@ class ChangeProfileUseCaseTest {
   void unchangedDateOfBirthPublishesNoEvent() {
     givenActiveAccount();
 
-    assertEquals(Outcome.CHANGED, submit(EMAIL, DATE_OF_BIRTH).outcome());
+    assertInstanceOf(ChangeProfileResult.Changed.class, submit(EMAIL, DATE_OF_BIRTH));
     assertTrue(dateOfBirthChangedEvents().isEmpty(), "an unchanged date of birth is not a change");
   }
 
@@ -203,7 +206,7 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit(NEW_EMAIL, null);
 
-    assertEquals(Outcome.DATE_OF_BIRTH_INVALID, result.outcome());
+    assertInstanceOf(ChangeProfileResult.DateOfBirthInvalid.class, result);
     assertEquals(Email.of(EMAIL), storedAccount().email());
     assertEquals(0, accountRepository.saveCount());
   }
@@ -215,7 +218,7 @@ class ChangeProfileUseCaseTest {
 
     final ChangeProfileResult result = submit(NEW_EMAIL, LocalDate.now().plusDays(1));
 
-    assertEquals(Outcome.DATE_OF_BIRTH_INVALID, result.outcome());
+    assertInstanceOf(ChangeProfileResult.DateOfBirthInvalid.class, result);
     assertEquals(
         Email.of(EMAIL),
         storedAccount().email(),
@@ -243,7 +246,7 @@ class ChangeProfileUseCaseTest {
   void changingEverythingKeepsTheName() {
     givenActiveAccount();
 
-    assertEquals(Outcome.CHANGED, submit(NEW_EMAIL, NEW_DATE_OF_BIRTH).outcome());
+    assertInstanceOf(ChangeProfileResult.Changed.class, submit(NEW_EMAIL, NEW_DATE_OF_BIRTH));
 
     assertEquals(FIRST_NAME, storedAccount().owner().firstName());
     assertEquals(LAST_NAME, storedAccount().owner().lastName());

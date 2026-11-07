@@ -66,8 +66,9 @@ class FormTokenIntegrationTest {
 
     final AuthenticateAccountResult login =
         authenticateAccount.execute(new AuthenticateAccountCommand("grace@example.com", PASSWORD));
-    assertThat(login.success()).as("grace@example.com can log in").isFalse();
-    assertThat(login.errorMessage()).isEqualTo("Invalid email or password");
+    assertThat(login)
+        .as("grace@example.com can log in")
+        .isInstanceOf(AuthenticateAccountResult.CredentialsRefused.class);
   }
 
   @Test

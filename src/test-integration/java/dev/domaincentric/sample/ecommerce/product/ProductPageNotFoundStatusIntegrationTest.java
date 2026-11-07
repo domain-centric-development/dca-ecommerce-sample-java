@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdResult;
+import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
@@ -56,7 +57,7 @@ class ProductPageNotFoundStatusIntegrationTest {
     @Bean
     @Primary
     GetProductByIdInputPort findsNoProduct() {
-      return query -> GetProductByIdResult.notFound();
+      return query -> new GetProductByIdResult.ProductNotFound(ProductId.of(query.productId()));
     }
   }
 }

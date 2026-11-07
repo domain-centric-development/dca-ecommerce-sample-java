@@ -356,7 +356,7 @@ contract: the string is well formed and refused for what it is made of.
 **Definition:** The address is held by another account, or the logged-in user already has one. Both are statements
 about all accounts, which only the store can make.
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `AccountRepository`
+**Type:** Refusal cases of `RegisterAccount`'s result (`Refusal`) · **Related terms:** `AccountRepository`
 
 ## Features
 

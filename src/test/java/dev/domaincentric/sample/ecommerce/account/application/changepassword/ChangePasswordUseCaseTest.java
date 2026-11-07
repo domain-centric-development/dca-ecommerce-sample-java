@@ -6,6 +6,7 @@ import static dev.domaincentric.sample.ecommerce.account.application.changepassw
 import static dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.accountWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,7 +14,6 @@ import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
-import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordResult.Outcome;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestAccountRepository;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestDomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestPasswordHasher;
@@ -28,7 +28,6 @@ import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -84,8 +83,8 @@ class ChangePasswordUseCaseTest {
 
     final ChangePasswordResult result = execute(CURRENT_PASSWORD, NEW_PASSWORD);
 
-    assertEquals(Outcome.CHANGED, result.outcome());
-    assertTrue(result.brokenRule().isEmpty(), "a successful change names no broken rule");
+    assertInstanceOf(
+        ChangePasswordResult.Changed.class, result, "a successful change names no broken rule");
   }
 
   @Test
@@ -135,7 +134,8 @@ class ChangePasswordUseCaseTest {
   void allowsUnchangedPassword() {
     givenStoredAccount(AccountStatus.ACTIVE);
 
-    assertEquals(Outcome.CHANGED, execute(CURRENT_PASSWORD, CURRENT_PASSWORD).outcome());
+    assertInstanceOf(
+        ChangePasswordResult.Changed.class, execute(CURRENT_PASSWORD, CURRENT_PASSWORD));
   }
 
   // ---------------------------------------------------------------- current password
@@ -147,7 +147,7 @@ class ChangePasswordUseCaseTest {
 
     final ChangePasswordResult result = execute("WrongPassw0rd", NEW_PASSWORD);
 
-    assertEquals(Outcome.CURRENT_PASSWORD_INVALID, result.outcome());
+    assertInstanceOf(ChangePasswordResult.CurrentPasswordInvalid.class, result);
   }
 
   @Test
@@ -175,10 +175,9 @@ class ChangePasswordUseCaseTest {
 
     final ChangePasswordResult result = execute(CURRENT_PASSWORD, weakPassword);
 
-    assertEquals(Outcome.NEW_PASSWORD_REJECTED, result.outcome());
     assertEquals(
-        Optional.of(domainBrokenRule(weakPassword)),
-        result.brokenRule(),
+        domainBrokenRule(weakPassword),
+        assertInstanceOf(ChangePasswordResult.NewPasswordRejected.class, result).brokenRule(),
         "the rule the domain names must be reported as it is");
   }
 
@@ -204,7 +203,7 @@ class ChangePasswordUseCaseTest {
 
     final ChangePasswordResult result = execute("WrongPassw0rd", "weak");
 
-    assertEquals(Outcome.CURRENT_PASSWORD_INVALID, result.outcome());
+    assertInstanceOf(ChangePasswordResult.CurrentPasswordInvalid.class, result);
   }
 
   // ---------------------------------------------------------------- accessibility
@@ -214,7 +213,7 @@ class ChangePasswordUseCaseTest {
   void unknownUserIdIsNotAccessible() {
     final ChangePasswordResult result = execute(CURRENT_PASSWORD, NEW_PASSWORD);
 
-    assertEquals(Outcome.ACCOUNT_NOT_ACCESSIBLE, result.outcome());
+    assertInstanceOf(ChangePasswordResult.AccountNotAccessible.class, result);
     assertEquals(0, accountRepository.saveCount());
     assertTrue(eventPublisher.publishedEvents().isEmpty());
   }
@@ -227,7 +226,7 @@ class ChangePasswordUseCaseTest {
 
     final ChangePasswordResult result = execute(CURRENT_PASSWORD, NEW_PASSWORD);
 
-    assertEquals(Outcome.ACCOUNT_NOT_ACCESSIBLE, result.outcome());
+    assertInstanceOf(ChangePasswordResult.AccountNotAccessible.class, result);
     assertTrue(
         account.checkPassword(CURRENT_PASSWORD, passwordHasher),
         "the stored password must be unchanged");

@@ -1,25 +1,40 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout;
 
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.CheckoutNotModifiable;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.CheckoutSessionNotFound;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.CheckoutStepNotCompleted;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.CheckoutStepOutOfOrder;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.CheckoutValidation;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.Confirmed;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.OrderChangedSinceReview;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.PaymentInitiationFailed;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.PaymentProviderNotFound;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.PaymentProviderUnavailable;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult.PriceChangedSinceReview;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutArticleDataPort;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProvider;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderRegistry;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.StockReservationPort;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticlePriceResolver;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ErrorType;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.OrderChangedSinceReviewException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentSelection;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ReviewFingerprint;
@@ -28,6 +43,7 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -53,9 +69,12 @@ import org.springframework.stereotype.Service;
  *       transactions via Interface Inversion pattern; the reduction consumes the reservation
  * </ul>
  *
- * <p>A confirmation that fails after the reservation — the payment refused or unanswered included —
+ * <p>Every expected refusal is returned as a case of {@link ConfirmCheckoutResult}; the domain's
+ * refusals are caught once, here. A confirmation that ends after the reservation without the order
+ * placed — a refusal returned, the payment refused or unanswered included, or a failure thrown —
  * gives the reservation back (ADR-041). A process that dies between the two leaves the reservation
- * behind; only a reconciliation would find it.
+ * behind; only a reconciliation would find it. A payment the provider authorized is not voided when
+ * the local confirmation refuses afterwards.
  *
  * <p><b>One Aggregate Per Transaction:</b> This use case only modifies the {@code CheckoutSession}
  * aggregate. The reservation happens before, in Inventory's own transaction; cart completion and
@@ -99,105 +118,173 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
 
     // Article data comes from the Product Catalog (remote-capable) - fetched outside the
     // transaction, keyed by the line items of the session as it is now
-    final CheckoutSession current = loadSession(sessionId, command);
+    final Optional<CheckoutSession> current = findSession(sessionId, command);
+    if (current.isEmpty()) {
+      return new CheckoutSessionNotFound(sessionId);
+    }
     final List<ProductId> productIds =
-        current.lineItems().stream().map(item -> item.productId()).toList();
+        current.get().lineItems().stream().map(item -> item.productId()).toList();
     final Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts =
         CheckoutArticlePriceResolver.ArticlePrice.allOf(
             checkoutArticleDataPort.getArticleData(productIds));
 
     // Serialized against a replacement of the cart's checkout, as the confirmation itself is
     return checkoutSessionRepository.inCartSession(
-        current.cartId(),
+        current.get().cartId(), () -> placeOrder(sessionId, command, shown, facts));
+  }
+
+  /**
+   * Checks, reserves, has the payment authorized and confirms — every refusal decided before the
+   * session is saved, the reservation given back when the order is not placed after it.
+   */
+  private ConfirmCheckoutResult placeOrder(
+      final CheckoutSessionId sessionId,
+      final ConfirmCheckoutCommand command,
+      final ReviewFingerprint shown,
+      final Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+    // Everything the session itself can refuse is refused here, before Inventory is asked to hold
+    // stock: a reservation must not exist for a checkout that cannot be confirmed
+    final Optional<CheckoutSession> found = findSession(sessionId, command);
+    if (found.isEmpty()) {
+      return new CheckoutSessionNotFound(sessionId);
+    }
+    final CheckoutSession ready = found.get();
+    final Money reviewedTotal;
+    try {
+      ready.assertReadyForConfirmation(checkoutPricing.validateItems(ready, facts));
+      reviewedTotal =
+          ready.assertReviewed(checkoutPricing.todaysPrices(ready, facts), shown).totals().total();
+    } catch (final CheckoutNotModifiableException
+        | CheckoutStepNotCompletedException
+        | CheckoutStepOutOfOrderException
+        | CheckoutValidationException
+        | OrderChangedSinceReviewException refused) {
+      return refusalOf(refused);
+    }
+
+    final List<StockReservationPort.Line> lines = linesOf(ready);
+    final Optional<ProductId> notReserved = stockReservationPort.reserve(lines);
+    if (notReserved.isPresent()) {
+      return new CheckoutValidation(
+          CheckoutValidationResult.withError(stockNotReserved(ready, notReserved.get())));
+    }
+
+    final ConfirmCheckoutResult result;
+    try {
+      result = authorizeAndConfirm(ready, reviewedTotal, sessionId, command, shown, facts);
+    } catch (final Throwable t) {
+      // A failure thrown after the reservation, an Error included: the release swallows its own
+      // failures, and stock held for an order never placed is worse than the attempt
+      releaseQuietly(lines);
+      throw t;
+    }
+    if (result instanceof Refusal) {
+      // A refusal returned after the reservation - a refused or unanswered payment, or the session
+      // refusing inside the transaction: the order is not placed, the stock goes back
+      releaseQuietly(lines);
+    }
+    return result;
+  }
+
+  /**
+   * Has the payment authorized and, once it is, confirms the session in a short transaction:
+   * reload, record the payment, confirm, save, publish.
+   */
+  private ConfirmCheckoutResult authorizeAndConfirm(
+      final CheckoutSession ready,
+      final Money reviewedTotal,
+      final CheckoutSessionId sessionId,
+      final ConfirmCheckoutCommand command,
+      final ReviewFingerprint shown,
+      final Map<ProductId, CheckoutArticlePriceResolver.ArticlePrice> facts) {
+    // The provider is asked only once the order's checks and its stock hold, for the total the
+    // review showed — outside the transaction, the provider being remote
+    final PaymentSelection payment;
+    switch (authorizePaymentOf(ready, reviewedTotal)) {
+      case Authorized authorized -> payment = authorized.payment();
+      case NotAuthorized notAuthorized -> {
+        return notAuthorized.refusal();
+      }
+    }
+
+    return transactionBoundary.inTransaction(
         () -> {
-          // Everything the session itself can refuse is refused here, before Inventory is asked to
-          // hold stock: a reservation must not exist for a checkout that cannot be confirmed
-          final CheckoutSession ready = loadSession(sessionId, command);
-          ready.assertReadyForConfirmation(checkoutPricing.validateItems(ready, facts));
-          final Money reviewedTotal =
-              ready
-                  .assertReviewed(checkoutPricing.todaysPrices(ready, facts), shown)
-                  .totals()
-                  .total();
-          final List<StockReservationPort.Line> lines = reserveStockOf(ready);
-
-          try {
-            // The provider is asked only once the order's checks and its stock hold, for the total
-            // the review showed — outside the transaction, the provider being remote
-            final PaymentSelection payment = authorizePaymentOf(ready, reviewedTotal);
-
-            // Short transaction: reload, record the payment, confirm, save, publish
-            return transactionBoundary.inTransaction(
-                () -> {
-                  final CheckoutSession session = loadSession(sessionId, command);
-                  session.authorizePayment(payment);
-                  session.confirm(
-                      checkoutPricing.validateItems(session, facts),
-                      checkoutPricing.todaysPrices(session, facts),
-                      shown);
-                  checkoutSessionRepository.save(session);
-                  domainEventPublisher.publishAndClearEvents(session);
-                  return ConfirmCheckoutResult.from(session);
-                });
-          } catch (final Throwable t) {
-            // Every way out releases the reservation — a refused or unanswered payment, an Error
-            // included: the release swallows its own failures, and stock held for an order never
-            // placed is worse than the attempt
-            releaseQuietly(lines);
-            throw t;
+          final Optional<CheckoutSession> reloaded = findSession(sessionId, command);
+          if (reloaded.isEmpty()) {
+            return new CheckoutSessionNotFound(sessionId);
           }
+          final CheckoutSession session = reloaded.get();
+          try {
+            session.authorizePayment(payment);
+            session.confirm(
+                checkoutPricing.validateItems(session, facts),
+                checkoutPricing.todaysPrices(session, facts),
+                shown);
+          } catch (final CheckoutNotModifiableException
+              | CheckoutStepNotCompletedException
+              | CheckoutStepOutOfOrderException
+              | CheckoutValidationException
+              | OrderChangedSinceReviewException refused) {
+            return refusalOf(refused);
+          }
+          checkoutSessionRepository.save(session);
+          domainEventPublisher.publishAndClearEvents(session);
+          return Confirmed.from(session);
         });
+  }
+
+  /** The case for a refusal of the session's own rules. */
+  private static ConfirmCheckoutResult refusalOf(final DomainException refused) {
+    return switch (refused) {
+      case CheckoutNotModifiableException e -> new CheckoutNotModifiable(e.sessionId(), e.status());
+      case CheckoutStepNotCompletedException e ->
+          new CheckoutStepNotCompleted(e.sessionId(), e.step());
+      case CheckoutStepOutOfOrderException e ->
+          new CheckoutStepOutOfOrder(e.sessionId(), e.requested(), e.current());
+      case CheckoutValidationException e -> new CheckoutValidation(e.validation());
+      case OrderChangedSinceReviewException e ->
+          e.productWithChangedPrice()
+              .<ConfirmCheckoutResult>map(
+                  product -> new PriceChangedSinceReview(e.sessionId(), product))
+              .orElseGet(() -> new OrderChangedSinceReview(e.sessionId()));
+      default -> throw refused;
+    };
   }
 
   /**
    * Has the provider the customer chose authorize the total the review showed.
    *
    * @param total the reviewed total — the one the order is confirmed at
-   * @return the authorized payment: the provider that answered, its payment reference and the total
-   * @throws PaymentProviderNotFoundException if the chosen provider is no longer offered
-   * @throws PaymentProviderUnavailableException if the provider is not available or did not answer
-   * @throws PaymentInitiationFailedException if the provider refused the payment
+   * @return the authorized payment — the provider that answered, its payment reference and the
+   *     total — or the refusal: the provider no longer offered, not available, or refusing
    */
-  private PaymentSelection authorizePaymentOf(final CheckoutSession session, final Money total) {
+  private Authorization authorizePaymentOf(final CheckoutSession session, final Money total) {
     final PaymentProviderId providerId = session.paymentSelection().providerId();
-    final PaymentProvider provider =
-        paymentProviderRegistry
-            .findById(providerId)
-            .orElseThrow(() -> new PaymentProviderNotFoundException(providerId));
+    final Optional<PaymentProvider> offered = paymentProviderRegistry.findById(providerId);
+    if (offered.isEmpty()) {
+      return new NotAuthorized(new PaymentProviderNotFound(providerId));
+    }
+    final PaymentProvider provider = offered.get();
     if (!provider.isAvailable()) {
-      throw new PaymentProviderUnavailableException(providerId);
+      return new NotAuthorized(new PaymentProviderUnavailable(providerId));
     }
-    final PaymentProvider.PaymentResult authorization =
-        provider.initiatePayment(session.id(), total);
-    if (authorization.outcome() == PaymentProvider.PaymentResult.Outcome.UNAVAILABLE) {
-      throw new PaymentProviderUnavailableException(providerId);
+    final String reference;
+    try {
+      reference = provider.initiatePayment(session.id(), total);
+    } catch (final PaymentProviderUnavailableException unavailable) {
+      LOG.warn("Payment provider {} is unavailable: {}", providerId, unavailable.getMessage());
+      return new NotAuthorized(new PaymentProviderUnavailable(providerId));
+    } catch (final PaymentInitiationFailedException refused) {
+      return new NotAuthorized(new PaymentInitiationFailed(providerId, refused.getMessage()));
     }
-    if (!authorization.success()) {
-      throw new PaymentInitiationFailedException(providerId, authorization.errorMessage());
-    }
-    return PaymentSelection.authorized(
-        provider.providerId(), authorization.providerReference(), total);
+    return new Authorized(PaymentSelection.authorized(provider.providerId(), reference, total));
   }
 
-  /**
-   * Reserves the stock of every line of the session, or refuses the order with the line whose stock
-   * another order took since the check — nothing is reserved then.
-   *
-   * @return the reserved lines
-   */
-  private List<StockReservationPort.Line> reserveStockOf(final CheckoutSession session) {
-    final List<StockReservationPort.Line> lines =
-        session.lineItems().stream()
-            .map(item -> new StockReservationPort.Line(item.productId(), item.quantity()))
-            .toList();
-    stockReservationPort
-        .reserve(lines)
-        .ifPresent(
-            refused -> {
-              throw new CheckoutValidationException(
-                  CheckoutValidationResult.withError(stockNotReserved(session, refused)));
-            });
-    return lines;
+  /** The order's lines as Inventory reserves them. */
+  private static List<StockReservationPort.Line> linesOf(final CheckoutSession session) {
+    return session.lineItems().stream()
+        .map(item -> new StockReservationPort.Line(item.productId(), item.quantity()))
+        .toList();
   }
 
   /**
@@ -230,11 +317,19 @@ public class ConfirmCheckoutUseCase implements ConfirmCheckoutInputPort {
     }
   }
 
-  /** Loads the session as the caller's own: a session that is not theirs is not found. */
-  private CheckoutSession loadSession(
+  /** Finds the session as the caller's own: a session that is not theirs is not found. */
+  private Optional<CheckoutSession> findSession(
       final CheckoutSessionId sessionId, final ConfirmCheckoutCommand command) {
-    return checkoutSessionRepository
-        .findByIdForCustomer(sessionId, CustomerId.of(command.customerId()))
-        .orElseThrow(() -> new CheckoutSessionNotFoundException(sessionId));
+    return checkoutSessionRepository.findByIdForCustomer(
+        sessionId, CustomerId.of(command.customerId()));
   }
+
+  /** What the payment provider made of the order's total. */
+  private sealed interface Authorization permits Authorized, NotAuthorized {}
+
+  /** The provider authorized the total. */
+  private record Authorized(PaymentSelection payment) implements Authorization {}
+
+  /** The provider was not asked or did not authorize; the refusal says which. */
+  private record NotAuthorized(ConfirmCheckoutResult refusal) implements Authorization {}
 }

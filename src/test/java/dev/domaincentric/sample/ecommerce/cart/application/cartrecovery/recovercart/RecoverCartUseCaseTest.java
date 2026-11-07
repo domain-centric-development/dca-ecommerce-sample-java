@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
-import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
@@ -54,7 +53,7 @@ class RecoverCartUseCaseTest {
     final ProductId product = ProductId.generate();
     final ShoppingCart guestCart = cartFor(ANONYMOUS_USER_ID, product, 2);
 
-    final RecoverCartResult result = recover();
+    final RecoverCartResult.Recovered result = recover();
 
     assertEquals(1, result.itemsMerged());
     assertEquals(guestCart.id().value(), result.cartId());
@@ -73,7 +72,7 @@ class RecoverCartUseCaseTest {
         repository.save(ShoppingCart.create(CartId.generate(), CustomerId.of(REGISTERED_USER_ID)));
     final ShoppingCart guestCart = cartFor(ANONYMOUS_USER_ID, ProductId.generate(), 1);
 
-    final RecoverCartResult result = recover();
+    final RecoverCartResult.Recovered result = recover();
 
     assertEquals(guestCart.id().value(), result.cartId());
     assertEquals(guestCart.id(), activeCartOf(REGISTERED_USER_ID).orElseThrow().id());
@@ -96,9 +95,12 @@ class RecoverCartUseCaseTest {
   void doesNothingWhenTheIdentityDidNotChange() {
     cartFor(REGISTERED_USER_ID, ProductId.generate(), 1);
 
-    final RecoverCartResult result =
-        useCase.execute(
-            new RecoverCartCommand(REGISTERED_USER_ID, REGISTERED_USER_ID, REGISTERED_USER_ID));
+    final RecoverCartResult.Recovered result =
+        assertInstanceOf(
+            RecoverCartResult.Recovered.class,
+            useCase.execute(
+                new RecoverCartCommand(
+                    REGISTERED_USER_ID, REGISTERED_USER_ID, REGISTERED_USER_ID)));
 
     assertEquals(0, result.itemsMerged());
     assertFalse(result.anonymousCartDeleted());
@@ -108,7 +110,7 @@ class RecoverCartUseCaseTest {
   @Test
   @DisplayName("does nothing when there is no anonymous cart")
   void doesNothingWhenThereIsNoAnonymousCart() {
-    final RecoverCartResult result = recover();
+    final RecoverCartResult.Recovered result = recover();
 
     assertEquals(0, result.itemsMerged());
     assertFalse(result.anonymousCartDeleted());
@@ -120,7 +122,7 @@ class RecoverCartUseCaseTest {
   void doesNothingWhenTheAnonymousCartIsEmpty() {
     repository.save(ShoppingCart.create(CartId.generate(), CustomerId.of(ANONYMOUS_USER_ID)));
 
-    final RecoverCartResult result = recover();
+    final RecoverCartResult.Recovered result = recover();
 
     assertEquals(0, result.itemsMerged());
     assertTrue(activeCartOf(REGISTERED_USER_ID).isEmpty());
@@ -131,13 +133,12 @@ class RecoverCartUseCaseTest {
   void refusesAGuestOtherThanTheOneBeforeTheLogin() {
     cartFor(ANONYMOUS_USER_ID, ProductId.generate(), 2);
 
-    final GuestCartNotOwnedException refusal =
-        assertThrows(
-            GuestCartNotOwnedException.class,
-            () ->
-                useCase.execute(
-                    new RecoverCartCommand(
-                        ANONYMOUS_USER_ID, REGISTERED_USER_ID, "another-guest-789")));
+    final RecoverCartResult.GuestCartNotOwned refusal =
+        assertInstanceOf(
+            RecoverCartResult.GuestCartNotOwned.class,
+            useCase.execute(
+                new RecoverCartCommand(
+                    ANONYMOUS_USER_ID, REGISTERED_USER_ID, "another-guest-789")));
 
     assertEquals(CustomerId.of(ANONYMOUS_USER_ID), refusal.guest());
     assertEquals(1, activeCartOf(ANONYMOUS_USER_ID).orElseThrow().itemCount());
@@ -150,16 +151,18 @@ class RecoverCartUseCaseTest {
   void refusesTheTakeOverWhenNoGuestBeforeTheLoginIsKnown() {
     cartFor(ANONYMOUS_USER_ID, ProductId.generate(), 1);
 
-    assertThrows(
-        GuestCartNotOwnedException.class,
-        () -> useCase.execute(new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID, null)));
+    assertInstanceOf(
+        RecoverCartResult.GuestCartNotOwned.class,
+        useCase.execute(new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID, null)));
 
     assertEquals(1, activeCartOf(ANONYMOUS_USER_ID).orElseThrow().itemCount());
   }
 
-  private RecoverCartResult recover() {
-    return useCase.execute(
-        new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID, ANONYMOUS_USER_ID));
+  private RecoverCartResult.Recovered recover() {
+    return assertInstanceOf(
+        RecoverCartResult.Recovered.class,
+        useCase.execute(
+            new RecoverCartCommand(ANONYMOUS_USER_ID, REGISTERED_USER_ID, ANONYMOUS_USER_ID)));
   }
 
   private ShoppingCart cartFor(final String userId, final ProductId productId, final int quantity) {

@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.event.cartcheck
 
 import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartResult;
 import dev.domaincentric.sample.ecommerce.cart.events.CartCompletionTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,9 @@ import org.springframework.stereotype.Component;
  *
  * <p>Delivery is at least once: the consumer hands the event's {@code eventId()} on in the command,
  * and the use case skips an effect it has already produced for that id, inside its own transaction.
+ *
+ * <p>An event has nobody to answer: a cart the use case does not find fails the listener, so the
+ * event publication stays incomplete and visible for a resubmission, as any failed listener does.
  */
 @Component
 public class CartCompletionEventConsumer {
@@ -41,8 +45,16 @@ public class CartCompletionEventConsumer {
   @ApplicationModuleListener
   void on(final CartCompletionTrigger event) {
     log.info("Completing cart {} after checkout confirmation", event.cartId());
-    completeCartInputPort.execute(
+    switch (completeCartInputPort.execute(
         new CompleteCartCommand(
-            event.cartId(), event.sessionId(), event.purchasedPositions(), event.eventId()));
+            event.cartId(),
+            event.customerId(),
+            event.sessionId(),
+            event.purchasedPositions(),
+            event.eventId()))) {
+      case CompleteCartResult.Completed completed -> {}
+      case CompleteCartResult.CartNotFound refusal ->
+          throw new IllegalStateException("No cart to complete: " + refusal.cartId().value());
+    }
   }
 }

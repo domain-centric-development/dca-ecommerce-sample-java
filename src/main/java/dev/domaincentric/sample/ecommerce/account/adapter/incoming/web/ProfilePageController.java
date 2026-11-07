@@ -88,13 +88,11 @@ public class ProfilePageController {
       return LOGIN_REDIRECT;
     }
 
-    final GetProfileResult result =
-        getProfileUseCase.execute(new GetProfileQuery(identity.userId().value()));
-
-    return result
-        .profile()
-        .map(profile -> renderProfile(model, profile, AccountPageNotice.in(model)))
-        .orElse(LOGIN_REDIRECT);
+    return switch (getProfileUseCase.execute(new GetProfileQuery(identity.userId().value()))) {
+      case GetProfileResult.Found found ->
+          renderProfile(model, found.profile(), AccountPageNotice.in(model));
+      case GetProfileResult.AccountNotAccessible refusal -> LOGIN_REDIRECT;
+    };
   }
 
   private static String renderProfile(
@@ -137,20 +135,18 @@ public class ProfilePageController {
       return renderRejection(model, identity, email, dateOfBirth, SubmittedDate.NOT_A_DATE);
     }
 
-    final ChangeProfileResult result =
-        changeProfileUseCase.execute(
-            new ChangeProfileCommand(identity.userId().value(), email, submittedDate.get()));
-
-    return switch (result.outcome()) {
-      case CHANGED -> {
-        reIssueToken(identity, result.profile().orElseThrow().email());
+    return switch (changeProfileUseCase.execute(
+        new ChangeProfileCommand(identity.userId().value(), email, submittedDate.get()))) {
+      case ChangeProfileResult.Changed changed -> {
+        reIssueToken(identity, changed.profile().email());
         yield AccountPageNotice.PROFILE_UPDATED.redirectTo(PROFILE_PATH, attributes);
       }
-      case ACCOUNT_NOT_ACCESSIBLE -> LOGIN_REDIRECT;
-      case EMAIL_ALREADY_IN_USE ->
+      case ChangeProfileResult.AccountNotAccessible refusal -> LOGIN_REDIRECT;
+      case ChangeProfileResult.EmailAlreadyInUse refusal ->
           renderRejection(model, identity, email, dateOfBirth, EMAIL_ALREADY_IN_USE);
-      case EMAIL_INVALID -> renderRejection(model, identity, email, dateOfBirth, EMAIL_INVALID);
-      case DATE_OF_BIRTH_INVALID ->
+      case ChangeProfileResult.EmailInvalid refusal ->
+          renderRejection(model, identity, email, dateOfBirth, EMAIL_INVALID);
+      case ChangeProfileResult.DateOfBirthInvalid refusal ->
           renderRejection(model, identity, email, dateOfBirth, DATE_OF_BIRTH_INVALID);
     };
   }
@@ -167,16 +163,14 @@ public class ProfilePageController {
       final String submittedEmail,
       final String submittedDateOfBirth,
       final String message) {
-    return getProfileUseCase
-        .execute(new GetProfileQuery(identity.userId().value()))
-        .profile()
-        .map(
-            stored ->
-                render(
-                    model,
-                    ProfilePageViewModel.withError(
-                        stored.fullName(), submittedEmail, submittedDateOfBirth, message)))
-        .orElse(LOGIN_REDIRECT);
+    return switch (getProfileUseCase.execute(new GetProfileQuery(identity.userId().value()))) {
+      case GetProfileResult.Found stored ->
+          render(
+              model,
+              ProfilePageViewModel.withError(
+                  stored.profile().fullName(), submittedEmail, submittedDateOfBirth, message));
+      case GetProfileResult.AccountNotAccessible refusal -> LOGIN_REDIRECT;
+    };
   }
 
   /**

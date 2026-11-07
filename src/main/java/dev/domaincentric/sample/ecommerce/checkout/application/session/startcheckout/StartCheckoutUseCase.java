@@ -2,15 +2,16 @@ package dev.domaincentric.sample.ecommerce.checkout.application.session.startche
 
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.ArticleNotAvailableException;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult.ArticleNotAvailable;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult.CartNotActive;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult.CartNotAvailable;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult.CheckoutItemsUnavailable;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult.EmptyCart;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult.Started;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartData;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartDataPort;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotActiveException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotAvailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutArticleDataPort;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutItemsUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionRepository;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.EmptyCartException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutArticle;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutCart;
@@ -19,11 +20,13 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItemId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.EmptyCheckoutException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /**
@@ -39,6 +42,10 @@ import org.springframework.stereotype.Service;
  *       start when an article is unavailable or out of stock
  *   <li>Creating and persisting the checkout session
  * </ul>
+ *
+ * <p>Every refusal is decided before a session exists and returned as a case of {@link
+ * StartCheckoutResult}. The new session is made before the one it replaces is superseded, so the
+ * session's own refusal of an empty checkout comes before anything is written.
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link StartCheckoutInputPort}
  * interface, which is a primary/driving port in the application layer.
@@ -85,15 +92,17 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
     // Cart and article data come from other contexts (remote-capable) - outside the transaction.
     // Scoped to the caller: a cart that is not theirs is indistinguishable from one that does not
     // exist.
-    final CartData cart =
-        cartDataPort
-            .findById(cartId, CustomerId.of(command.customerId()))
-            .orElseThrow(() -> new CartNotAvailableException(cartId));
+    final Optional<CartData> found =
+        cartDataPort.findById(cartId, CustomerId.of(command.customerId()));
+    if (found.isEmpty()) {
+      return new CartNotAvailable(cartId);
+    }
+    final CartData cart = found.get();
     if (!cart.active()) {
-      throw new CartNotActiveException(cartId);
+      return new CartNotActive(cartId);
     }
     if (cart.items().isEmpty()) {
-      throw new EmptyCartException(cartId);
+      return new EmptyCart(cartId);
     }
     final List<ProductId> productIds =
         cart.items().stream().map(CartData.CartItemData::productId).toList();
@@ -103,7 +112,7 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
     for (final CartData.CartItemData cartItem : cart.items()) {
       final CheckoutArticle article = articleDataMap.get(cartItem.productId());
       if (article == null) {
-        throw new ArticleNotAvailableException(cartItem.productId());
+        return new ArticleNotAvailable(cartItem.productId());
       }
       lineItems.add(
           new CheckoutLineItem(
@@ -121,7 +130,7 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
     final CheckoutCart checkoutCart =
         checkoutCartFactory.create(cart.cartId(), cart.customerId(), lineItems, articleDataMap);
     if (!checkoutCart.isValidForCheckout()) {
-      throw new CheckoutItemsUnavailableException(
+      return new CheckoutItemsUnavailable(
           checkoutCart.invalidItems().stream().map(item -> item.lineItem().productId()).toList());
     }
     final Money total = checkoutCart.calculateCurrentSubtotal();
@@ -132,6 +141,15 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
         () ->
             transactionBoundary.inTransaction(
                 () -> {
+                  // Decide, then write: the session refuses an empty checkout before the one it
+                  // replaces is superseded
+                  final CheckoutSession session;
+                  try {
+                    session =
+                        CheckoutSession.start(cart.cartId(), cart.customerId(), lineItems, total);
+                  } catch (final EmptyCheckoutException empty) {
+                    return new EmptyCart(empty.cartId());
+                  }
                   checkoutSessionRepository
                       .findActiveByCartId(cartId)
                       .ifPresent(
@@ -139,11 +157,9 @@ public class StartCheckoutUseCase implements StartCheckoutInputPort {
                             old.supersede();
                             checkoutSessionRepository.save(old);
                           });
-                  final CheckoutSession session =
-                      CheckoutSession.start(cart.cartId(), cart.customerId(), lineItems, total);
                   checkoutSessionRepository.save(session);
                   domainEventPublisher.publishAndClearEvents(session);
-                  return StartCheckoutResult.from(session);
+                  return Started.from(session);
                 }));
   }
 }

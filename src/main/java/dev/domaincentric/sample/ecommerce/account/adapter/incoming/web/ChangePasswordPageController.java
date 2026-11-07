@@ -5,6 +5,7 @@ import dev.domaincentric.sample.ecommerce.account.application.changepassword.Cha
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordResult;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewQuery;
+import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult;
 import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
@@ -83,19 +84,16 @@ public class ChangePasswordPageController {
       return LOGIN_REDIRECT;
     }
 
-    final boolean accountAccessible =
-        getAccountOverviewUseCase
-            .execute(new GetAccountOverviewQuery(identity.userId().value()))
-            .found();
-    if (!accountAccessible) {
-      return LOGIN_REDIRECT;
-    }
-
-    return render(
-        model,
-        AccountPageNotice.in(model)
-            .map(notice -> ChangePasswordPageViewModel.withSuccess(notice.sentence()))
-            .orElseGet(ChangePasswordPageViewModel::blank));
+    return switch (getAccountOverviewUseCase.execute(
+        new GetAccountOverviewQuery(identity.userId().value()))) {
+      case GetAccountOverviewResult.Found found ->
+          render(
+              model,
+              AccountPageNotice.in(model)
+                  .map(notice -> ChangePasswordPageViewModel.withSuccess(notice.sentence()))
+                  .orElseGet(ChangePasswordPageViewModel::blank));
+      case GetAccountOverviewResult.AccountNotAccessible refusal -> LOGIN_REDIRECT;
+    };
   }
 
   /**
@@ -124,21 +122,17 @@ public class ChangePasswordPageController {
       return render(model, ChangePasswordPageViewModel.withError(CONFIRMATION_MISMATCH));
     }
 
-    final ChangePasswordResult result =
-        changePasswordUseCase.execute(
-            new ChangePasswordCommand(identity.userId().value(), currentPassword, newPassword));
-
-    return switch (result.outcome()) {
-      case CHANGED ->
+    return switch (changePasswordUseCase.execute(
+        new ChangePasswordCommand(identity.userId().value(), currentPassword, newPassword))) {
+      case ChangePasswordResult.Changed changed ->
           AccountPageNotice.PASSWORD_CHANGED.redirectTo(CHANGE_PASSWORD_PATH, attributes);
-      case ACCOUNT_NOT_ACCESSIBLE -> LOGIN_REDIRECT;
-      case CURRENT_PASSWORD_INVALID ->
+      case ChangePasswordResult.AccountNotAccessible refusal -> LOGIN_REDIRECT;
+      case ChangePasswordResult.CurrentPasswordInvalid refusal ->
           render(model, ChangePasswordPageViewModel.withError(CURRENT_PASSWORD_INVALID));
-      case NEW_PASSWORD_REJECTED ->
+      case ChangePasswordResult.NewPasswordRejected refusal ->
           render(
               model,
-              ChangePasswordPageViewModel.withError(
-                  passwordRuleSentence(result.brokenRule().orElseThrow())));
+              ChangePasswordPageViewModel.withError(passwordRuleSentence(refusal.brokenRule())));
     };
   }
 

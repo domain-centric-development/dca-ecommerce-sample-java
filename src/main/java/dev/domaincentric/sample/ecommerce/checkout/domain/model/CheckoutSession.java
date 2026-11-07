@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
+import dev.domaincentric.dca.buildingblocks.ddd.tactical.Owned;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.BuyerInfoSubmitted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutAbandoned;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutCompleted;
@@ -46,7 +47,8 @@ import org.jspecify.annotations.Nullable;
  *   <li>{@link CheckoutExpired} - when session expires due to inactivity
  * </ul>
  */
-public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, CheckoutSessionId> {
+public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, CheckoutSessionId>
+    implements Owned<CustomerId> {
 
   private final CheckoutSessionId id;
   private final CartId cartId;

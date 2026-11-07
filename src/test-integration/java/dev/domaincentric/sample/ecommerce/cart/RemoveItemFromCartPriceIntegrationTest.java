@@ -14,6 +14,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfr
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceCommand;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceInputPort;
+import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceResult;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsQuery;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -51,10 +52,13 @@ class RemoveItemFromCartPriceIntegrationTest {
     final String cleanArchitecture = productIdOf("Clean Architecture");
     addItemToCart.execute(new AddItemToCartCommand(cartId, ada, ddd, 1));
     addItemToCart.execute(new AddItemToCartCommand(cartId, ada, cleanArchitecture, 1));
-    changePrice.execute(new ChangePriceCommand(ddd, new BigDecimal("49.99")));
+    assertThat(changePrice.execute(new ChangePriceCommand(ddd, new BigDecimal("49.99"))))
+        .isInstanceOf(ChangePriceResult.Changed.class);
 
-    final RemoveItemFromCartResult cart =
-        removeItemFromCart.execute(new RemoveItemFromCartCommand(cartId, ada, cleanArchitecture));
+    final RemoveItemFromCartResult.Removed cart =
+        (RemoveItemFromCartResult.Removed)
+            removeItemFromCart.execute(
+                new RemoveItemFromCartCommand(cartId, ada, cleanArchitecture));
 
     assertThat(cart.items())
         .extracting(CartItemSummary::productId, CartItemSummary::unitPrice)

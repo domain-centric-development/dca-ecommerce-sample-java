@@ -27,8 +27,9 @@ public interface StartCheckoutInputPort extends UseCase<StartCheckoutCommand, St
    * </ul>
    *
    * @param command the command containing the cart ID
-   * @return response containing the created checkout session details
-   * @throws IllegalArgumentException if cart is not found or cannot be checked out
+   * @return the created checkout session, or the refusal as a case: a cart not available, not
+   *     active or empty, an article without facts, positions that cannot be bought
+   * @throws IllegalArgumentException if a value of the command is malformed
    */
   @Override
   StartCheckoutResult execute(StartCheckoutCommand command);

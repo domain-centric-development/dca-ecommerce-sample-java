@@ -711,6 +711,7 @@ Cart and Inventory never import anything from Checkout. Instead, Checkout depend
 // cart/events/CartCompletionTrigger.java — Cart defines what it needs
 public interface CartCompletionTrigger extends IntegrationEvent {
     String cartId();
+    String customerId();   // the cart's owner: the cart is loaded through it
 }
 ```
 
@@ -734,7 +735,7 @@ public class CartCompletionEventConsumer {
     @ApplicationModuleListener
     void on(final CartCompletionTrigger event) {
         completeCartInputPort.execute(
-            new CompleteCartCommand(event.cartId(), /* ... */, event.eventId()));
+            new CompleteCartCommand(event.cartId(), event.customerId(), /* ... */, event.eventId()));
     }
 }
 ```
@@ -747,7 +748,9 @@ private static final String EFFECT = "complete-cart"; // stable: a rename would 
 
 @Override
 public CompleteCartResult execute(final CompleteCartCommand input) {   // @Transactional
-    final ShoppingCart cart = shoppingCartRepository.findById(cartId).orElseThrow(/* ... */);
+    final ShoppingCart cart =                                          // through its owner,
+        shoppingCartRepository.findByIdForCustomer(cartId, customerId)   // never by id alone
+            .orElse(/* CartNotFound */);
     if (input.eventId() != null && processedEvents.contains(EFFECT, input.eventId())) {
         return new CompleteCartResult(/* ... */, true);               // already completed
     }
@@ -765,7 +768,13 @@ keeps a `ProcessedEvents` store (`application/shared`, implemented by `InMemoryP
 react to the same event, and each runs. The consumer only translates the trigger into a command that
 carries `eventId()`; the use case checks and marks inside its transaction, the mark after the effect,
 so a redelivery changes nothing and a failed attempt leaves no mark and is retried. A command without
-an event id — an `api/` call — is not deduplicated. One event is one effect: the stock reduction takes
+an event id is not deduplicated.
+
+`ShoppingCart` and `CheckoutSession` are owned aggregates (`Owned<CustomerId>`, each context's own
+`CustomerId`): their repositories declare `findByIdForCustomer`, which `DCA-TAC-026` asks for, and
+every use case acting on one loads it through its owner — the completion triggered by an event
+included, because the trigger carries the customer the confirmed checkout belongs to. `findById`
+remains for system paths that hold no owner to name. One event is one effect: the stock reduction takes
 every line of the sale in one command (`reduce-stock`), and a line that cannot be reduced does not
 stop the others. The effects and their already-done flags: `complete-cart` / `alreadyCompleted`,
 `reduce-stock` / `alreadyReduced`, `set-stock-level` and `set-product-price` / `alreadyApplied`.
@@ -1349,7 +1358,7 @@ public class CreateProductUseCase implements UseCase<CreateProductInput, CreateP
         // 1. Validate business rules
         SKU sku = new SKU(input.sku());
         if (productRepository.existsBySku(sku)) {
-            throw new IllegalArgumentException("Product with SKU already exists");
+            return new CreateProductResult.DuplicateSku(sku);
         }
 
         // 2. Convert input to domain objects
@@ -1388,7 +1397,7 @@ Commands modify system state and publish domain events.
 - `AddItemToCartUseCase` - Adds item to cart
 - `StartCheckoutUseCase` - Captures the cart into a checkout session
 - `ChangePasswordUseCase` - Replaces an account's password; a wrong current password or a rejected
-  new one is reported as an outcome of `ChangePasswordResult`, not as an exception crossing the port
+  new one is a case of `ChangePasswordResult`, not an exception crossing the port
 - `ChangeProfileUseCase` (`account.application.changeprofile`) - Changes the basic information of
   an account behind `/account/profile`: its email address and the date of birth of its `Owner`. All
   submitted values are validated before the aggregate is mutated, so a rejected value leaves the
@@ -2252,7 +2261,9 @@ the file-location quick reference.
 
 ## Error Handling
 
-Three kinds of failure, three places they belong, and exactly one place where a failure becomes an answer.
+Three kinds of failure, and two channels: a broken rule of the model is thrown, an expected refusal of a use case
+is returned, and an argument guard stays the platform's own exception. Each refusal is answered once per context,
+by the incoming adapter.
 
 ### The model refuses: `DomainException`
 
@@ -2279,75 +2290,105 @@ business answer, and it carries the facts the rule compared so the caller can sa
 `PasswordTooWeak` — yes, so each is a domain exception with that word in its name. "Must not be null", "must be
 positive", "must not exceed 255 characters" — no, so those stay `IllegalArgumentException`.
 
-### The use case refuses: `UseCaseException`
+The model keeps throwing: an aggregate's behaviour method cannot return an outcome without polluting every call
+site, and a value object's constructor can only throw.
 
-Failures about the *request* rather than about an invariant belong to the application layer: the addressed
-aggregate does not exist, it is not the caller's, a precondition on a second aggregate does not hold, a uniqueness
-rule that only the store can see is broken.
+### The use case answers with a closed result
+
+Every use case of this shop that can refuse a request returns a sealed `<Op>Result`: one record for what happened,
+one record per refusal its caller answers (ADR-047). The refusal cases carry the ids and figures the refusal
+compared, never words, and each implements the `Refusal` marker of `dca-building-blocks`.
+
+```java
+public sealed interface CreateProductResult
+    permits CreateProductResult.Created, CreateProductResult.DuplicateSku {
+
+  record Created(String productId, String sku, ...) implements CreateProductResult {}
+
+  record DuplicateSku(SKU sku) implements CreateProductResult, Refusal {}
+}
+```
 
 ```java
 if (productRepository.existsBySku(sku)) {
-    throw new DuplicateSkuException(sku);      // only the repository sees the whole catalog
+    return new CreateProductResult.DuplicateSku(sku);   // only the repository sees the whole catalog
 }
 ```
 
-A failure the store itself detects is declared in the application layer too, beside the port whose contract it is
-(`ActiveCartAlreadyExistsException` next to `ShoppingCartRepository`), and raised by whichever adapter implements
-that port. That is what lets a use case react to a lost race without knowing which store it is talking to.
+A refusal case is named for the refusal — what an exception would have been called, without the suffix
+(`CartNotFound`, `DuplicateSku`, `CheckoutStepOutOfOrder`). A use case that refuses nothing keeps a plain record.
+
+**The domain's refusals are caught once, in the use case.** Where the model throws a refusal a caller answers, the
+use case catches that named type and returns its case:
+
+```java
+try {
+  account = Account.register(email, owner, command.password(), currentUserId, passwordHasher);
+} catch (final PasswordTooWeakException tooWeak) {
+  return new RegisterAccountResult.PasswordTooWeak(tooWeak.rule());
+}
+```
+
+**A failure an output port declares** is an `OutputPortException`, declared beside the port in the application
+layer (`ActiveCartAlreadyExistsException` next to `ShoppingCartRepository`) and raised by whichever adapter
+implements it. The use case catches it and returns its case. That is what lets a use case react to a lost race
+without knowing which store it is talking to. A use case's own failure that is not a refusal a caller answers
+would be a `UseCaseException`; all three base types sit below `PortException`.
+
+**Decide, then write.** A use case checks every refusal before its first write. Should one come later, the
+transaction still rolls back: `dca-spring` rolls back a `TransactionBoundary` and a `@Transactional` method whose
+work returns a `Refusal`, exactly as a thrown failure would. A remote effect taken before the local write — a stock
+reservation, a payment authorization — is no part of that transaction and keeps its own compensation (ADR-041).
+
+**An ignored result swallows a refusal.** Java has no must-use check: a caller that discards the result of a use
+case that can refuse has hidden that refusal. A test helper that sets up state through a use case asserts the
+success case; a caller with nobody to answer (an event consumer, an open host service, the start-up data) turns a
+refusal back into an `IllegalStateException`.
 
 ### The adapter answers
 
-Neither base type carries a status code, a header or a message shape, and neither is annotated. The incoming
-adapter maps type to protocol answer, in one place per context, and writes the words itself — from the failure's
-values, never from its message, which is for the log:
+No result carries a status code, a header or a message shape. The incoming adapter switches over the result — no
+`default`, so the compiler holds that every case has an answer — and writes the words itself, from the case's
+values:
 
 ```java
-@RestControllerAdvice(basePackages = "...product.adapter.incoming.api")
-public class ProductApiExceptionHandler {
-
-    @ExceptionHandler(DuplicateSkuException.class)
-    public ProblemDetail handleDuplicateSku(final DuplicateSkuException exception) {
-        return problem(HttpStatus.CONFLICT, "Stock keeping unit already in use",
-                "A product with SKU " + exception.sku().value() + " already exists.");
-    }
-    ...
-}
+return switch (createProduct.execute(input)) {
+  case CreateProductResult.Created created ->
+      ResponseEntity.status(HttpStatus.CREATED).body(converter.toDto(created));
+  case CreateProductResult.DuplicateSku refusal -> ProductProblems.duplicateSku(refusal.sku());
+};
 ```
 
-The status follows the failure, not the base type: `CartItemNotFoundException` is a rule of the model and still
-answers `404`, because what the caller has to do about it is ask for something that exists. Page controllers of
-the same context map the same types into the page's own sentence instead (`messageFor`, a `switch` on the
-failure's type). One use case, several protocols, one decision site
-each.
+The answers of one context live in one place (`ProductProblems`, `CartProblems`, `AccountProblems`,
+`PricingProblems`, the checkout's `CheckoutStepPage`): one sentence per refusal per protocol. What is still thrown
+towards an adapter — an argument the binding refuses, a value that does not parse, a rule of the model no use case
+returns as a case — is translated by the context's `@RestControllerAdvice` or a page's `catch`, with the same words.
+
+The status follows the refusal, not where it comes from: a position the cart does not hold is a rule of the model
+and still answers `404`, because what the caller has to do about it is ask for something that exists. Page
+controllers of the same context word the same cases into the page's own sentence. One use case, several protocols,
+one decision site each.
 
 ### Refusal wording
 
-Every sentence the shop refuses with — problem document titles and details per failure type, page sentences per
-page, failure type and fallback, and the sentences for the outcomes a use case result names — is listed in
-[refusal-wording.md](refusal-wording.md). The .NET twin carries the same file and produces the same sentences, so
-the two shops can be compared line by line. A use case result never carries a sentence: `ChangePasswordResult`
-names the outcome and the broken `PasswordRule`, `ChangeProfileResult` the outcome (`EMAIL_INVALID`,
-`DATE_OF_BIRTH_INVALID`, …), `ReduceStockResult` a `Failure` per line, and the page words them.
-
-### When a result variant is the better channel
-
-Some outcomes are part of what a use case promises its caller, and then the caller should be made to handle them.
-`ChangePasswordResult.Outcome` and `ReduceStockResult` do exactly that (ADR-023): the outcome is a value, not an
-exception, and the compiler keeps the caller honest. The two channels live side by side on purpose — the model's
-refusals travel as exceptions, because an aggregate's behaviour method cannot return an outcome without polluting
-every call site, and the use case decides per operation. What the base types changed there is the *catch*: the use
-case now names the rule it converts (`catch (PasswordTooWeakException e)`) instead of a generic type that would
-also swallow a defect.
+Every sentence the shop refuses with — problem document titles and details per refusal, page sentences per page,
+refusal and fallback — is listed in [refusal-wording.md](refusal-wording.md). The .NET twin carries the same file
+and produces the same sentences, so the two shops can be compared line by line. A use case result never carries a
+sentence: `ChangePasswordResult.NewPasswordRejected` names the broken `PasswordRule`, `ChangeProfileResult` names
+the refused value by its case (`EmailInvalid`, `DateOfBirthInvalid`, …), `ReduceStockResult` a `Failure` per line,
+and the page words them.
 
 ### What the rules check
 
 `DCA-ERR-001` … `DCA-ERR-005` check that an exception declared in a domain or application package extends the base
 type of that layer, resides there, carries no framework annotation and names no transport concept (no `Error`,
-`Fault`, `Failure` suffix; no `Http`, `Status`, `Response` in the name). `DCA-ERR-006` is informational: a `throw`
-and a `catch` are not in the import model, so no rule can decide whether a specific refusal should have been a
-domain exception, or whether an adapter catches too widely. Those stay with review.
+`Fault`, `Failure` suffix; no `Http`, `Status`, `Response` in the name). `DCA-ERR-008` checks that every closed
+use-case result has at least one case marked `Refusal` — the marker is what the transaction net rolls back on.
+`DCA-ERR-006` is informational: it lists incoming adapter packages that drive a use case and name neither a failure
+type nor a case of a closed result. The compiler holds the rest: a new refusal case breaks every switch that does
+not answer it.
 
-ADR-044 records the decision.
+ADR-044 records the failure types; ADR-047 the closed results.
 
 ---
 

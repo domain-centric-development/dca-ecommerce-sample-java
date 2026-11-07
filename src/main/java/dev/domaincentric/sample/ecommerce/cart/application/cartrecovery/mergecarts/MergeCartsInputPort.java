@@ -10,5 +10,8 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
  *
  * <p><b>Hexagonal Architecture:</b> This is a primary/driving port that adapters (e.g., web
  * controllers) use to invoke the use case.
+ *
+ * <p>Answers {@link MergeCartsResult.Merged}, or {@link MergeCartsResult.GuestCartNotOwned} for a
+ * guest other than the one the caller was before the login.
  */
 public interface MergeCartsInputPort extends UseCase<MergeCartsCommand, MergeCartsResult> {}

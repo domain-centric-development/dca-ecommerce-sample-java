@@ -19,7 +19,8 @@ public interface GetProductByIdInputPort
    * Retrieves a product by its unique identifier.
    *
    * @param query the query containing the product ID
-   * @return response containing product details or indication that product was not found
+   * @return {@link GetProductByIdResult.Found} with the product, or {@link
+   *     GetProductByIdResult.ProductNotFound} when there is no product under that identity
    */
   @Override
   GetProductByIdResult execute(GetProductByIdQuery query);

@@ -5,14 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.ExtendedModelMap;
@@ -22,11 +20,6 @@ class CheckoutStepPageTest {
 
   private static final CheckoutSessionId SESSION = CheckoutSessionId.generate();
 
-  private static final Supplier<StepAccess> NOT_ASKED =
-      () -> {
-        throw new AssertionError("step access asked for a refusal that did not come too early");
-      };
-
   private final RedirectAttributesModelMap attributes = new RedirectAttributesModelMap();
 
   @Test
@@ -35,7 +28,7 @@ class CheckoutStepPageTest {
     assertEquals(
         "redirect:/checkout/payment",
         CheckoutStepPage.submitting(
-            CheckoutStep.DELIVERY, NOT_ASKED, attributes, () -> "redirect:/checkout/payment"));
+            CheckoutStep.DELIVERY, attributes, () -> "redirect:/checkout/payment"));
     assertTrue(attributes.getFlashAttributes().isEmpty());
   }
 
@@ -46,7 +39,6 @@ class CheckoutStepPageTest {
         "redirect:/checkout/delivery",
         CheckoutStepPage.submitting(
             CheckoutStep.DELIVERY,
-            NOT_ASKED,
             attributes,
             () -> {
               throw new IllegalArgumentException("Street is required");
@@ -61,13 +53,10 @@ class CheckoutStepPageTest {
   void aStepSentTooEarlyLeadsToTheStepStillOpen() {
     assertEquals(
         "redirect:/checkout/buyer",
-        CheckoutStepPage.submitting(
+        CheckoutStepPage.stepNotCompleted(
             CheckoutStep.DELIVERY,
             () -> StepAccess.redirectTo(CheckoutStep.BUYER_INFO),
-            attributes,
-            () -> {
-              throw new CheckoutStepNotCompletedException(SESSION, CheckoutStep.BUYER_INFO);
-            }));
+            attributes));
     assertEquals(
         Map.of(CheckoutStepNotice.KEY, "earlier-steps-first"), attributes.getFlashAttributes());
   }
@@ -77,13 +66,8 @@ class CheckoutStepPageTest {
   void aStepSentTooEarlyWithoutACheckoutLeadsToTheCart() {
     assertEquals(
         "redirect:/cart",
-        CheckoutStepPage.submitting(
-            CheckoutStep.DELIVERY,
-            StepAccess::backToCart,
-            attributes,
-            () -> {
-              throw new CheckoutStepNotCompletedException(SESSION, CheckoutStep.BUYER_INFO);
-            }));
+        CheckoutStepPage.stepNotCompleted(
+            CheckoutStep.DELIVERY, StepAccess::backToCart, attributes));
     assertTrue(attributes.getFlashAttributes().isEmpty());
   }
 
@@ -116,15 +100,22 @@ class CheckoutStepPageTest {
   @DisplayName(
       "an order placed out of order asks for the review, any other step for the earlier steps")
   void anOutOfOrderStepNamesWhatComesFirst() {
-    final CheckoutStepOutOfOrderException outOfOrder =
-        new CheckoutStepOutOfOrderException(
-            SESSION, CheckoutStep.CONFIRMATION, CheckoutStep.PAYMENT);
+    final RedirectAttributesModelMap review = new RedirectAttributesModelMap();
+    final RedirectAttributesModelMap payment = new RedirectAttributesModelMap();
 
+    CheckoutStepPage.stepOutOfOrder(CheckoutStep.REVIEW, StepAccess::grant, review);
+    CheckoutStepPage.stepOutOfOrder(CheckoutStep.PAYMENT, StepAccess::grant, payment);
+
+    assertEquals(Map.of(CheckoutStepNotice.KEY, "review-first"), review.getFlashAttributes());
     assertEquals(
-        CheckoutStepNotice.REVIEW_FIRST,
-        CheckoutStepPage.noticeFor(CheckoutStep.REVIEW, outOfOrder));
-    assertEquals(
-        CheckoutStepNotice.EARLIER_STEPS_FIRST,
-        CheckoutStepPage.noticeFor(CheckoutStep.PAYMENT, outOfOrder));
+        Map.of(CheckoutStepNotice.KEY, "earlier-steps-first"), payment.getFlashAttributes());
+  }
+
+  @Test
+  @DisplayName("a step asked for a checkout the customer does not have sends them to the cart")
+  void aStepWithoutACheckoutSendsTheCustomerToTheCart() {
+    assertTrue(
+        CheckoutStepPage.stepAccessOf(new GetCheckoutSessionResult.CheckoutSessionNotFound(SESSION))
+            .isBackToCart());
   }
 }

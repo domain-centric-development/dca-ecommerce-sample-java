@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  * </ol>
  *
  * <p>An account that cannot log in ({@code SUSPENDED}, {@code CLOSED}) is not accessible and is
- * reported as {@link ChangePasswordResult.Outcome#ACCOUNT_NOT_ACCESSIBLE} — the same rule {@code
+ * reported as {@link ChangePasswordResult.AccountNotAccessible} — the same rule {@code
  * GetAccountOverviewUseCase} and {@code AuthenticateAccountUseCase} enforce. The aggregate itself
  * only blocks the terminal status, so without this check a suspended account holding a still-valid
  * token could change its password.
@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
  * decision about which caller is allowed to replace it.
  *
  * <p>Neither a wrong current password nor a rejected new one is an exception crossing the port;
- * both are ordinary outcomes of {@link ChangePasswordResult} (ADR-023).
+ * both are cases of {@link ChangePasswordResult} (ADR-023), decided before anything is written.
  *
  * <p>Changing the password does not invalidate the current session: the token carries the userId,
  * email and roles, never the password.
@@ -69,17 +69,17 @@ public class ChangePasswordUseCase implements ChangePasswordInputPort {
 
     if (accessibleAccount.isEmpty()) {
       LOG.warn("Password change attempt without an accessible account: {}", command.userId());
-      return ChangePasswordResult.accountNotAccessible();
+      return new ChangePasswordResult.AccountNotAccessible();
     }
 
     final Account account = accessibleAccount.get();
 
     if (!account.checkPassword(command.currentPassword(), passwordHasher)) {
       LOG.warn("Password change attempt with a wrong current password: {}", command.userId());
-      return ChangePasswordResult.currentPasswordInvalid();
+      return new ChangePasswordResult.CurrentPasswordInvalid();
     }
 
-    // Only the strength decision may become NEW_PASSWORD_REJECTED. The rule has its own type, so
+    // Only the strength decision may become NewPasswordRejected. The rule has its own type, so
     // a malformed call inside the hasher or the HashedPassword constructor - which would arrive as
     // the platform's argument exception - is no longer caught here and reported as if it were a
     // password rule.
@@ -87,7 +87,7 @@ public class ChangePasswordUseCase implements ChangePasswordInputPort {
       HashedPassword.validatePasswordStrength(command.newPassword());
     } catch (final PasswordTooWeakException e) {
       LOG.debug("Password change rejected for {}: {}", command.userId(), e.getMessage());
-      return ChangePasswordResult.newPasswordRejected(e.rule());
+      return new ChangePasswordResult.NewPasswordRejected(e.rule());
     }
 
     account.changePassword(command.newPassword(), passwordHasher);
@@ -98,6 +98,6 @@ public class ChangePasswordUseCase implements ChangePasswordInputPort {
 
     LOG.info("Password changed for user: {}", command.userId());
 
-    return ChangePasswordResult.changed();
+    return new ChangePasswordResult.Changed();
   }
 }

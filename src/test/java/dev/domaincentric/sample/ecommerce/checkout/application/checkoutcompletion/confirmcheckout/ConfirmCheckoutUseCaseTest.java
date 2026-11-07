@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompleti
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
@@ -57,7 +58,9 @@ class ConfirmCheckoutUseCaseTest {
   void aPaymentTheChosenProviderAuthorizedPlacesTheOrder() {
     final CheckoutSession session = sessionAtTheReview();
 
-    useCaseWith(new AuthorizingProvider(CHOSEN)).execute(commandFor(session));
+    assertInstanceOf(
+        ConfirmCheckoutResult.Confirmed.class,
+        useCaseWith(new AuthorizingProvider(CHOSEN)).execute(commandFor(session)));
 
     final CheckoutSession placed = sessions.findById(session.id()).orElseThrow();
     assertEquals(CheckoutSessionStatus.CONFIRMED, placed.status());
@@ -132,8 +135,8 @@ class ConfirmCheckoutUseCaseTest {
     }
 
     @Override
-    public PaymentResult initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
-      return PaymentResult.success("pay-1");
+    public String initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
+      return "pay-1";
     }
 
     @Override

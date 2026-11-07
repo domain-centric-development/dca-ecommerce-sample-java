@@ -15,7 +15,8 @@ public interface GetCheckoutReviewInputPort
    * The review of the caller's checkout at today's prices.
    *
    * @param query the checkout and the customer the caller is acting as
-   * @return the review and its fingerprint
+   * @return the review and its fingerprint, or {@link
+   *     GetCheckoutReviewResult.CheckoutSessionNotFound} when the caller has no such checkout
    */
   @Override
   GetCheckoutReviewResult execute(GetCheckoutReviewQuery query);

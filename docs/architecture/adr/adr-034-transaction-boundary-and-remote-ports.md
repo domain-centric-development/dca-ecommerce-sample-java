@@ -49,3 +49,13 @@ the sample already has. The `inmemory` profile keeps its in-memory repositories 
 Two integration tests hold it: one asserts the profile does not swap in a placeholder, the other publishes an
 integration event in a unit of work that then fails and asserts that no publication row survives it. Both fail
 against the placeholder — the second one on exactly that row, which is the fact this amendment is about.
+
+## Amendment (2026-11-07): a returned refusal rolls back
+
+Use cases now return their expected refusals as cases of a closed result (ADR-047) instead of throwing them. A
+returned value would commit what the work wrote before it, so both shapes of this ADR roll back on a refusal:
+`dca-spring`'s `SpringTransactionBoundary` sets the transaction rollback-only when the work returns a `Refusal`, and
+its `RefusalRollbackInterceptor` does the same for a `@Transactional` method (on by default,
+`dca.spring.refusal-rollback.enabled`). The sample defines no boundary of its own, so it takes both from the
+library. A use case may therefore catch a failure an output port declares inside the boundary and return the case
+from there — `CreateCartUseCase` does. "Decide, then write" stays the rule; the roll-back is the net.

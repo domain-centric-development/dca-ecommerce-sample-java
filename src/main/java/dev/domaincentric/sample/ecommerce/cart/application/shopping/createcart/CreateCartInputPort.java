@@ -18,7 +18,8 @@ public interface CreateCartInputPort extends UseCase<CreateCartCommand, CreateCa
    * Creates a new shopping cart for a customer.
    *
    * @param command the command containing customer ID
-   * @return response containing the created cart details
+   * @return {@link CreateCartResult.Created} with the new cart, or {@link
+   *     CreateCartResult.ActiveCartAlreadyExists} when the customer already shops in one
    */
   @Override
   CreateCartResult execute(CreateCartCommand command);

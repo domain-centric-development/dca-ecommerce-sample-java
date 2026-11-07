@@ -15,10 +15,14 @@ public interface OrderConfirmationMailer extends OutputPort {
   /**
    * Hands the order confirmation to the mail provider.
    *
+   * <p>The provider is a foreign system: its not accepting the mail is expected, and this contract
+   * declares it as its own failure, which every implementation raises whatever its mechanism is.
+   *
    * @param mail the order confirmation
-   * @return whether the provider accepted it or could not be reached
+   * @throws MailProviderUnavailableException if the provider did not accept the mail, could not be
+   *     reached, or did not answer in time — the mail is to be tried again with the same key
    */
-  Delivery send(OrderConfirmationMail mail);
+  void send(OrderConfirmationMail mail);
 
   /**
    * One order confirmation.
@@ -34,13 +38,5 @@ public interface OrderConfirmationMailer extends OutputPort {
       Objects.requireNonNull(key, "key");
       Objects.requireNonNull(orderTotal, "orderTotal");
     }
-  }
-
-  /** What the mail provider made of the mail. */
-  enum Delivery {
-    /** The provider accepted the mail. */
-    ACCEPTED,
-    /** The provider did not answer in time, could not be reached, or did not accept the mail. */
-    UNAVAILABLE
   }
 }

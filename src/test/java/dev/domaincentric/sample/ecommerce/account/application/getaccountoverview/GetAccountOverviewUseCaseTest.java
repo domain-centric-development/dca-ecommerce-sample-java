@@ -1,9 +1,8 @@
 package dev.domaincentric.sample.ecommerce.account.application.getaccountoverview;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.sample.ecommerce.account.application.getaccountoverview.GetAccountOverviewResult.AccountOverview;
 import dev.domaincentric.sample.ecommerce.account.application.shared.AccountRepository;
@@ -64,9 +63,14 @@ class GetAccountOverviewUseCaseTest {
     final GetAccountOverviewResult result =
         useCase.execute(new GetAccountOverviewQuery(LINKED_USER_ID));
 
-    assertTrue(result.found(), "account linked to the queried userId must be found");
-    assertEquals(EMAIL, result.account().orElseThrow().email());
-    assertEquals(LAST_LOGIN, result.account().orElseThrow().lastLoginAt());
+    final AccountOverview overview =
+        assertInstanceOf(
+                GetAccountOverviewResult.Found.class,
+                result,
+                "account linked to the queried userId must be found")
+            .account();
+    assertEquals(EMAIL, overview.email());
+    assertEquals(LAST_LOGIN, overview.lastLoginAt());
   }
 
   @Test
@@ -77,8 +81,10 @@ class GetAccountOverviewUseCaseTest {
     final GetAccountOverviewResult result =
         useCase.execute(new GetAccountOverviewQuery(UNKNOWN_USER_ID));
 
-    assertFalse(result.found(), "unknown userId must yield a not-found result");
-    assertTrue(result.account().isEmpty(), "not-found result must not expose a projection");
+    assertInstanceOf(
+        GetAccountOverviewResult.AccountNotAccessible.class,
+        result,
+        "unknown userId must yield a not-found result that exposes no projection");
   }
 
   @Test
@@ -107,8 +113,10 @@ class GetAccountOverviewUseCaseTest {
     final GetAccountOverviewResult result =
         useCase.execute(new GetAccountOverviewQuery(LINKED_USER_ID));
 
-    assertFalse(result.found(), status + " account must not be accessible");
-    assertTrue(result.account().isEmpty(), status + " account must not expose email or last login");
+    assertInstanceOf(
+        GetAccountOverviewResult.AccountNotAccessible.class,
+        result,
+        status + " account must not be accessible nor expose email or last login");
   }
 
   @Test
@@ -116,7 +124,9 @@ class GetAccountOverviewUseCaseTest {
   void reportsActiveAccountAsAccessible() {
     repository.save(anAccountWith(AccountStatus.ACTIVE));
 
-    assertTrue(useCase.execute(new GetAccountOverviewQuery(LINKED_USER_ID)).found());
+    assertInstanceOf(
+        GetAccountOverviewResult.Found.class,
+        useCase.execute(new GetAccountOverviewQuery(LINKED_USER_ID)));
   }
 
   @ParameterizedTest

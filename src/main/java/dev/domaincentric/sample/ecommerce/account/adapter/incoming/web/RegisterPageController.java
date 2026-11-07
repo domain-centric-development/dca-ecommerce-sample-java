@@ -1,15 +1,11 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
-import dev.domaincentric.sample.ecommerce.account.application.registeraccount.AccountAlreadyExistsException;
-import dev.domaincentric.sample.ecommerce.account.application.registeraccount.EmailAlreadyRegisteredException;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.registeraccount.RegisterAccountResult;
-import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordTooWeakException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.time.LocalDate;
@@ -110,29 +106,37 @@ public class RegisterPageController {
       return renderError(model, submission, SubmittedDate.NOT_A_DATE);
     }
 
+    final RegisterAccountResult result;
     try {
       final String currentUserId = identityProvider.getCurrentIdentity().userId().value();
-
-      final RegisterAccountCommand command =
-          new RegisterAccountCommand(
-              email, password, currentUserId, firstName, lastName, submittedDate.get());
-
-      final RegisterAccountResult result = registerAccountUseCase.execute(command);
-
-      final String token =
-          tokenService.generateRegisteredToken(
-              UserId.of(result.userId()), result.email(), result.roles());
-
-      identitySession.setRegisteredIdentity(token);
-
-      final String target = ReturnPage.isShopPage(returnUrl) ? returnUrl : "/";
-      return RegistrationNotice.ACCOUNT_CREATED.redirectTo(target, attributes);
-
-    } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
-      // The context's own refusals, plus the argument exception a form field still reaches a value
-      // object with.
+      result =
+          registerAccountUseCase.execute(
+              new RegisterAccountCommand(
+                  email, password, currentUserId, firstName, lastName, submittedDate.get()));
+    } catch (final DomainException | IllegalArgumentException e) {
+      // A rule of the model no use case returns as a case of its own, plus the argument exception
+      // a form field still reaches a value object with.
       return renderError(model, submission, messageFor(e));
     }
+
+    return switch (result) {
+      case RegisterAccountResult.Registered account -> {
+        identitySession.setRegisteredIdentity(
+            tokenService.generateRegisteredToken(
+                UserId.of(account.userId()), account.email(), account.roles()));
+        final String target = ReturnPage.isShopPage(returnUrl) ? returnUrl : "/";
+        yield RegistrationNotice.ACCOUNT_CREATED.redirectTo(target, attributes);
+      }
+      case RegisterAccountResult.EmailAlreadyRegistered refusal ->
+          renderError(model, submission, "This email address is already registered");
+      case RegisterAccountResult.AccountAlreadyExists refusal ->
+          renderError(model, submission, "You already have an account.");
+      case RegisterAccountResult.PasswordTooWeak refusal ->
+          renderError(
+              model,
+              submission,
+              ChangePasswordPageController.passwordRuleSentence(refusal.brokenRule()));
+    };
   }
 
   /**
@@ -170,15 +174,11 @@ public class RegisterPageController {
       @Nullable String returnUrl) {}
 
   /**
-   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
-   * The failure's message is for the log, never for the person at the form.
+   * The page's own sentence for what is still thrown: chosen by the failure's type. The failure's
+   * message is for the log, never for the person at the form.
    */
   private static String messageFor(final RuntimeException failure) {
     return switch (failure) {
-      case EmailAlreadyRegisteredException e -> "This email address is already registered";
-      case AccountAlreadyExistsException e -> "You already have an account.";
-      case PasswordTooWeakException e ->
-          ChangePasswordPageController.passwordRuleSentence(e.rule());
       case IllegalArgumentException e ->
           "Please check the email address, your name and your date of birth.";
       default -> "The account could not be created. Please try again.";

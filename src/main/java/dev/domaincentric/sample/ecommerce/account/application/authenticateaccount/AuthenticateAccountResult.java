@@ -1,40 +1,41 @@
 package dev.domaincentric.sample.ecommerce.account.application.authenticateaccount;
 
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
+import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import java.util.Set;
 
 /**
- * Response from authenticating an account.
- *
- * @param success whether authentication was successful
- * @param userId the user's ID (for JWT generation)
- * @param email the user's email
- * @param roles the user's roles
- * @param errorMessage error message if authentication failed
+ * What authenticating an account came to: the account signed in, the credentials were refused, or
+ * the account may not sign in. The result says what happened, never in words: the adapter that
+ * shows it words the refusal from the case.
  */
-public record AuthenticateAccountResult(
-    boolean success, String userId, String email, Set<Role> roles, String errorMessage) {
+public sealed interface AuthenticateAccountResult
+    permits AuthenticateAccountResult.Authenticated,
+        AuthenticateAccountResult.CredentialsRefused,
+        AuthenticateAccountResult.AccountNotAccessible {
 
   /**
-   * Creates a successful authentication response.
+   * The account signed in; its login time is recorded.
    *
-   * @param userId the user ID
-   * @param email the email
-   * @param roles the roles
-   * @return a successful response
+   * @param userId the user's ID (for JWT generation)
+   * @param email the user's email
+   * @param roles the user's roles
    */
-  public static AuthenticateAccountResult success(
-      final String userId, final String email, final Set<Role> roles) {
-    return new AuthenticateAccountResult(true, userId, email, roles, null);
-  }
+  record Authenticated(String userId, String email, Set<Role> roles)
+      implements AuthenticateAccountResult {}
 
   /**
-   * Creates a failed authentication response.
-   *
-   * @param errorMessage the error message
-   * @return a failed response
+   * The credentials do not name an account: an address that is no address, an address no account
+   * holds, or a wrong password — told apart on purpose by nothing, so the answer does not reveal
+   * which addresses are registered.
    */
-  public static AuthenticateAccountResult failure(final String errorMessage) {
-    return new AuthenticateAccountResult(false, null, null, null, errorMessage);
-  }
+  record CredentialsRefused() implements AuthenticateAccountResult, Refusal {}
+
+  /**
+   * The credentials are right, but the account's status does not allow signing in.
+   *
+   * @param status the account's status
+   */
+  record AccountNotAccessible(AccountStatus status) implements AuthenticateAccountResult, Refusal {}
 }

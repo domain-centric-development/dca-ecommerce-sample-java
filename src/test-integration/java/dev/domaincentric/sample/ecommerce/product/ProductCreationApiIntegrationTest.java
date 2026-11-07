@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.product;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -11,6 +12,7 @@ import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.Toke
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductCommand;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductInputPort;
+import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductResult;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.math.BigDecimal;
@@ -77,17 +79,18 @@ class ProductCreationApiIntegrationTest {
   @DisplayName("A product page without description")
   void aProductPageWithoutDescriptionSaysThatNoneIsAvailable() throws Exception {
     final String id =
-        createProduct
-            .execute(
-                new CreateProductCommand(
-                    "TOTE-002",
-                    "Bounded Context Tote",
-                    "",
-                    "",
-                    new BigDecimal("19.99"),
-                    "EUR",
-                    "Apparel",
-                    10))
+        assertInstanceOf(
+                CreateProductResult.Created.class,
+                createProduct.execute(
+                    new CreateProductCommand(
+                        "TOTE-002",
+                        "Bounded Context Tote",
+                        "",
+                        "",
+                        new BigDecimal("19.99"),
+                        "EUR",
+                        "Apparel",
+                        10)))
             .productId();
     Awaitility.await()
         .atMost(Duration.ofSeconds(15))

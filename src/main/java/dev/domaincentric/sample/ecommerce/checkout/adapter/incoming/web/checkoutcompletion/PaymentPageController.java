@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletio
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getpaymentproviders.GetPaymentProvidersResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -17,6 +18,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
+import java.util.function.Supplier;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -84,19 +86,19 @@ public class PaymentPageController {
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
-
     if (!activeSession.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
+    final String sessionId = activeSession.sessionId();
 
     // Full session details, plus the domain's decision whether this step may be opened
-    final GetCheckoutSessionResult result =
-        getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(
-                activeSession.sessionId(), customerId, CheckoutStep.PAYMENT));
-
-    if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+    final GetCheckoutSessionResult.Found result;
+    switch (getCheckoutSessionInputPort.execute(
+        GetCheckoutSessionQuery.forStep(sessionId, customerId, CheckoutStep.PAYMENT))) {
+      case GetCheckoutSessionResult.Found found -> result = found;
+      case GetCheckoutSessionResult.CheckoutSessionNotFound notFound -> {
+        return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+      }
     }
     final Optional<String> denied = CheckoutStepPage.redirectIfDenied(result.stepAccess(), model);
     if (denied.isPresent()) {
@@ -136,28 +138,40 @@ public class PaymentPageController {
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
-
     if (!activeSession.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
+    final String sessionId = activeSession.sessionId();
 
+    final CheckoutStep step = CheckoutStep.PAYMENT;
+    final Supplier<StepAccess> access = () -> stepAccess(sessionId, customerId, step);
     return CheckoutStepPage.submitting(
-        CheckoutStep.PAYMENT,
-        () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.PAYMENT),
+        step,
         attributes,
-        () -> {
-          submitPaymentInputPort.execute(
-              new SubmitPaymentCommand(activeSession.sessionId(), customerId, providerId));
-
-          return "redirect:/checkout/review";
-        });
+        () ->
+            switch (submitPaymentInputPort.execute(
+                new SubmitPaymentCommand(sessionId, customerId, providerId))) {
+              case SubmitPaymentResult.Submitted submitted -> "redirect:/checkout/review";
+              case SubmitPaymentResult.PaymentProviderNotFound refusal ->
+                  CheckoutStepPage.paymentMethodNotOffered(step, attributes);
+              case SubmitPaymentResult.CheckoutSessionNotFound refusal ->
+                  CheckoutStepPage.sessionNotFound(step, attributes);
+              case SubmitPaymentResult.CheckoutNotModifiable refusal ->
+                  CheckoutStepPage.notModifiable(step, attributes);
+              case SubmitPaymentResult.CheckoutStepNotCompleted refusal ->
+                  CheckoutStepPage.stepNotCompleted(step, access, attributes);
+              case SubmitPaymentResult.CheckoutStepOutOfOrder refusal ->
+                  CheckoutStepPage.stepOutOfOrder(step, access, attributes);
+              case SubmitPaymentResult.NothingToPay refusal ->
+                  CheckoutStepPage.nothingToPay(step, attributes);
+            });
   }
 
   /** The domain's decision whether the step may be opened, for a submission sent too early. */
   private StepAccess stepAccess(
       final String sessionId, final String customerId, final CheckoutStep step) {
-    return getCheckoutSessionInputPort
-        .execute(GetCheckoutSessionQuery.forStep(sessionId, customerId, step))
-        .stepAccess();
+    return CheckoutStepPage.stepAccessOf(
+        getCheckoutSessionInputPort.execute(
+            GetCheckoutSessionQuery.forStep(sessionId, customerId, step)));
   }
 }

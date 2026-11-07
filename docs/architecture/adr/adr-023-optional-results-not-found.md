@@ -1,8 +1,13 @@
 # ADR-023: Optional Results for Not-Found Cases
 
 **Date**: February 7, 2026
-**Status**: Accepted
+**Status**: Superseded by [ADR-047](adr-047-expected-refusals-are-sealed-use-case-results.md) (2026-11-07)
 **Deciders**: Architecture Team
+
+> **Superseded.** "Not found" is no longer an empty `Optional` in a result record: it is a refusal case of a
+> closed result (`GetCartByIdResult.CartNotFound`, `GetProductByIdResult.ProductNotFound`, …), marked `Refusal`,
+> beside the `Found` case. The reasoning below — not-found is not exceptional — still holds and is what ADR-047
+> builds on. Kept as the record of how the shop got there.
 
 ---
 

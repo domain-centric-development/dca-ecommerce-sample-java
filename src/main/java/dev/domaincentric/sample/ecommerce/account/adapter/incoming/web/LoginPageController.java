@@ -1,6 +1,5 @@
 package dev.domaincentric.sample.ecommerce.account.adapter.incoming.web;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.IdentitySession;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
@@ -8,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.account.application.authenticateaccoun
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountInputPort;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountResult;
 import dev.domaincentric.sample.ecommerce.account.domain.model.AccountNotAccessibleException;
+import dev.domaincentric.sample.ecommerce.account.domain.model.AccountStatus;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URLEncoder;
@@ -106,48 +106,68 @@ public class LoginPageController {
     // Capture anonymous user ID before authentication changes the identity
     final String anonymousUserId = identityProvider.getCurrentIdentity().userId().value();
 
+    final AuthenticateAccountResult result;
     try {
-      final AuthenticateAccountCommand command = new AuthenticateAccountCommand(email, password);
-      final AuthenticateAccountResult result = authenticateAccountUseCase.execute(command);
-
-      if (!result.success()) {
-        model.addAttribute("title", "Login");
-        model.addAttribute("error", result.errorMessage());
-        model.addAttribute("email", email);
-        addReturnPage(model, returnUrl);
-        return "account/login";
-      }
-
-      final UserId registeredUserId = UserId.of(result.userId());
-
-      // The session names the guest this browser was, so that the cart context brings only that
-      // guest's cart along — never one a request names.
-      final String token =
-          anonymousUserId.equals(registeredUserId.value())
-              ? tokenService.generateRegisteredToken(
-                  registeredUserId, result.email(), result.roles())
-              : tokenService.generateRegisteredToken(
-                  registeredUserId, result.email(), result.roles(), UserId.of(anonymousUserId));
-
-      identitySession.setRegisteredIdentity(token);
-
-      // Always redirect to merge page - let cart context decide if merge is needed
-      // This avoids cross-context dependency (account → cart)
-      String mergeUrl = "/cart/merge";
-      if (returnUrl != null && !returnUrl.isBlank()) {
-        mergeUrl += "?returnUrl=" + URLEncoder.encode(returnUrl, StandardCharsets.UTF_8);
-      }
-      return "redirect:" + mergeUrl;
-
-    } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
-      // The context's own refusals, plus the argument exception a form field still reaches a value
-      // object with.
-      model.addAttribute("title", "Login");
-      model.addAttribute("error", messageFor(e));
-      model.addAttribute("email", email);
-      addReturnPage(model, returnUrl);
-      return "account/login";
+      result = authenticateAccountUseCase.execute(new AuthenticateAccountCommand(email, password));
+    } catch (final DomainException | IllegalArgumentException e) {
+      // A rule of the model no use case returns as a case of its own, plus the argument exception
+      // a form field still reaches a value object with.
+      return renderError(model, email, returnUrl, messageFor(e));
     }
+
+    return switch (result) {
+      case AuthenticateAccountResult.Authenticated account ->
+          logIn(account, anonymousUserId, returnUrl);
+      case AuthenticateAccountResult.CredentialsRefused refusal ->
+          renderError(model, email, returnUrl, "Invalid email or password");
+      case AuthenticateAccountResult.AccountNotAccessible refusal ->
+          renderError(model, email, returnUrl, notAccessibleSentence(refusal.status()));
+    };
+  }
+
+  /** Issues the registered session for the account and leads on to the cart merge. */
+  private String logIn(
+      final AuthenticateAccountResult.Authenticated result,
+      final String anonymousUserId,
+      final @Nullable String returnUrl) {
+    final UserId registeredUserId = UserId.of(result.userId());
+
+    // The session names the guest this browser was, so that the cart context brings only that
+    // guest's cart along — never one a request names.
+    final String token =
+        anonymousUserId.equals(registeredUserId.value())
+            ? tokenService.generateRegisteredToken(registeredUserId, result.email(), result.roles())
+            : tokenService.generateRegisteredToken(
+                registeredUserId, result.email(), result.roles(), UserId.of(anonymousUserId));
+
+    identitySession.setRegisteredIdentity(token);
+
+    // Always redirect to merge page - let cart context decide if merge is needed
+    // This avoids cross-context dependency (account → cart)
+    String mergeUrl = "/cart/merge";
+    if (returnUrl != null && !returnUrl.isBlank()) {
+      mergeUrl += "?returnUrl=" + URLEncoder.encode(returnUrl, StandardCharsets.UTF_8);
+    }
+    return "redirect:" + mergeUrl;
+  }
+
+  /** The page's sentence for an account whose status does not allow signing in. */
+  private static String notAccessibleSentence(final AccountStatus status) {
+    return switch (status) {
+      case ACTIVE -> "Account is active";
+      case SUSPENDED -> "Account is suspended";
+      case CLOSED -> "Account is closed";
+    };
+  }
+
+  /** The login form again, with the refusal's sentence and the address as it was typed. */
+  private static String renderError(
+      final Model model, final String email, final @Nullable String returnUrl, final String error) {
+    model.addAttribute("title", "Login");
+    model.addAttribute("error", error);
+    model.addAttribute("email", email);
+    addReturnPage(model, returnUrl);
+    return "account/login";
   }
 
   /** Whether this browser is logged in to an account already. */
@@ -176,8 +196,8 @@ public class LoginPageController {
   }
 
   /**
-   * The page's own sentence for a refusal: chosen by the failure's type, filled with its values.
-   * The failure's message is for the log, never for the person at the form.
+   * The page's own sentence for what is still thrown: chosen by the failure's type. The failure's
+   * message is for the log, never for the person at the form.
    */
   private static String messageFor(final RuntimeException failure) {
     return switch (failure) {

@@ -1,7 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergecarts;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
-import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
@@ -27,8 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
  * result then reports no anonymous cart deleted.
  *
  * <p>Only the cart of the guest the caller was before the login is merged: a command that names
- * another guest is refused with {@link GuestCartNotOwnedException} before any cart is read (ADR-036
- * — ownership is the use case's).
+ * another guest is refused with {@link MergeCartsResult.GuestCartNotOwned} before any cart is read
+ * (ADR-036 — ownership is the use case's).
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link MergeCartsInputPort}
  * interface, which is a primary/driving port in the application layer.
@@ -53,7 +52,7 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
     final CustomerId registeredCustomerId = CustomerId.of(input.registeredUserId());
 
     if (!input.anonymousUserId().equals(input.guestBeforeLogin())) {
-      throw new GuestCartNotOwnedException(anonymousCustomerId);
+      return new MergeCartsResult.GuestCartNotOwned(anonymousCustomerId);
     }
 
     // Find both carts
@@ -75,7 +74,8 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
 
     // A guest cart that is absent or holds no line has nothing to bring: no cart changes
     if (anonymousCartOpt.isEmpty() || anonymousCartOpt.get().isEmpty()) {
-      return MergeCartsResult.from(accountCart, input.strategy(), 0, originalAccountItems, false);
+      return MergeCartsResult.Merged.from(
+          accountCart, input.strategy(), 0, originalAccountItems, false);
     }
 
     return switch (input.strategy()) {
@@ -87,7 +87,7 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
     };
   }
 
-  private MergeCartsResult mergeBothCarts(
+  private MergeCartsResult.Merged mergeBothCarts(
       final Optional<ShoppingCart> anonymousCartOpt,
       final ShoppingCart accountCart,
       final CartMergeStrategy strategy) {
@@ -114,10 +114,11 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
       shoppingCartRepository.deleteById(anonymousCart.id());
     }
 
-    return MergeCartsResult.from(accountCart, strategy, itemsFromAnonymous, itemsFromAccount, true);
+    return MergeCartsResult.Merged.from(
+        accountCart, strategy, itemsFromAnonymous, itemsFromAccount, true);
   }
 
-  private MergeCartsResult useAccountCartOnly(
+  private MergeCartsResult.Merged useAccountCartOnly(
       final Optional<ShoppingCart> anonymousCartOpt,
       final ShoppingCart accountCart,
       final int originalAccountItems,
@@ -128,10 +129,10 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
       shoppingCartRepository.deleteById(anonymousCartOpt.get().id());
     }
 
-    return MergeCartsResult.from(accountCart, strategy, 0, originalAccountItems, true);
+    return MergeCartsResult.Merged.from(accountCart, strategy, 0, originalAccountItems, true);
   }
 
-  private MergeCartsResult useAnonymousCartOnly(
+  private MergeCartsResult.Merged useAnonymousCartOnly(
       final Optional<ShoppingCart> anonymousCartOpt,
       final ShoppingCart accountCart,
       final CartMergeStrategy strategy) {
@@ -162,6 +163,6 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
       shoppingCartRepository.deleteById(anonymousCart.id());
     }
 
-    return MergeCartsResult.from(accountCart, strategy, itemsFromAnonymous, 0, true);
+    return MergeCartsResult.Merged.from(accountCart, strategy, itemsFromAnonymous, 0, true);
   }
 }

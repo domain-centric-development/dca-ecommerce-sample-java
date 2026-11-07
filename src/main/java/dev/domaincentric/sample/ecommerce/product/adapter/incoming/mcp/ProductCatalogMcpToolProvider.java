@@ -82,12 +82,9 @@ public class ProductCatalogMcpToolProvider {
       description =
           "Get detailed product information by product ID. Requires the internal product UUID. Returns complete product details including all attributes.")
   public ProductDto getProductById(final String id) {
-    final GetProductByIdResult output = getProductByIdUseCase.execute(new GetProductByIdQuery(id));
-
-    if (!output.found()) {
-      return null;
-    }
-
-    return productDtoConverter.toDto(output);
+    return switch (getProductByIdUseCase.execute(new GetProductByIdQuery(id))) {
+      case GetProductByIdResult.Found found -> productDtoConverter.toDto(found.product());
+      case GetProductByIdResult.ProductNotFound refusal -> null;
+    };
   }
 }

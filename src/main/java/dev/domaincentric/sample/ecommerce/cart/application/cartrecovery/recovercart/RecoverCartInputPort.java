@@ -11,5 +11,8 @@ import dev.domaincentric.dca.buildingblocks.hexagonal.port.in.UseCase;
  *
  * <p><b>Hexagonal Architecture:</b> This is a primary/driving port that adapters (e.g., web
  * controllers, event handlers) use to invoke the use case.
+ *
+ * <p>Answers {@link RecoverCartResult.Recovered}, or {@link RecoverCartResult.GuestCartNotOwned}
+ * for a guest other than the one the caller was before the login.
  */
 public interface RecoverCartInputPort extends UseCase<RecoverCartCommand, RecoverCartResult> {}

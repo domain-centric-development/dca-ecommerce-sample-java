@@ -1,6 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.payment;
 
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProvider;
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
@@ -42,14 +43,14 @@ public class MockPaymentProvider implements PaymentProvider {
   }
 
   @Override
-  public PaymentResult initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
+  public String initiatePayment(final CheckoutSessionId sessionId, final Money amount) {
     if (!available) {
-      return PaymentResult.failure("Mock payment provider is currently unavailable");
+      throw new PaymentProviderUnavailableException(
+          PROVIDER_ID, "Mock payment provider is currently unavailable");
     }
 
     // Generate a mock payment reference
-    final String reference = "mock-" + UUID.randomUUID().toString();
-    return PaymentResult.success(reference);
+    return "mock-" + UUID.randomUUID().toString();
   }
 
   @Override

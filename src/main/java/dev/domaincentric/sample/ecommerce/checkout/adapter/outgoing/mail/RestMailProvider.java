@@ -1,5 +1,6 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.mail;
 
+import dev.domaincentric.sample.ecommerce.checkout.application.shared.MailProviderUnavailableException;
 import dev.domaincentric.sample.ecommerce.checkout.application.shared.OrderConfirmationMailer;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import java.math.RoundingMode;
@@ -25,7 +26,7 @@ import org.springframework.web.client.RestClientException;
  * <p>A mail is {@code POST /messages} with the recipient, the template that names the mail, the
  * idempotency key and the template's values as text. {@code 202} accepts it; any other answer, no
  * connection or no answer within two seconds counts as unavailable. The provider's wire types stay
- * in this class; the port sees only {@link Delivery}.
+ * in this class; a mail not accepted is raised as the failure the port declares.
  *
  * <p>Active only where a provider address is configured; otherwise {@link StandInMailProvider}
  * stands in.
@@ -56,7 +57,7 @@ public class RestMailProvider implements OrderConfirmationMailer {
   }
 
   @Override
-  public Delivery send(final OrderConfirmationMail mail) {
+  public void send(final OrderConfirmationMail mail) {
     final MessageRequest request =
         new MessageRequest(
             mail.recipient(),
@@ -64,25 +65,26 @@ public class RestMailProvider implements OrderConfirmationMailer {
             mail.key(),
             Map.of("total", asShown(mail.orderTotal())));
     try {
-      return restClient
-          .post()
-          .uri("/messages")
-          .contentType(MediaType.APPLICATION_JSON)
-          .body(request)
-          .exchange((httpRequest, response) -> translate(response.getStatusCode(), mail.key()));
+      final HttpStatusCode status =
+          restClient
+              .post()
+              .uri("/messages")
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(request)
+              .exchange((httpRequest, response) -> response.getStatusCode());
+      accepted(status, mail.key());
     } catch (final RestClientException e) {
       LOG.warn("Mail {} could not be handed to the mail provider", mail.key(), e);
-      return Delivery.UNAVAILABLE;
+      throw new MailProviderUnavailableException(mail.key());
     }
   }
 
   /** {@code 202} accepts the mail; every other answer counts as unavailable. */
-  private static Delivery translate(final HttpStatusCode status, final String key) {
-    if (status.isSameCodeAs(HttpStatus.ACCEPTED)) {
-      return Delivery.ACCEPTED;
+  private static void accepted(final HttpStatusCode status, final String key) {
+    if (!status.isSameCodeAs(HttpStatus.ACCEPTED)) {
+      LOG.warn("Mail provider answered {} to mail {}", status, key);
+      throw new MailProviderUnavailableException(key);
     }
-    LOG.warn("Mail provider answered {} to mail {}", status, key);
-    return Delivery.UNAVAILABLE;
   }
 
   /** The amount as the shop's pages show it: two decimal places and the currency code. */

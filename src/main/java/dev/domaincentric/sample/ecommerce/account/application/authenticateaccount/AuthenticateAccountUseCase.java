@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><b>Security Notes:</b>
  *
  * <ul>
- *   <li>Generic error messages prevent email enumeration
+ *   <li>One refusal for an unknown address and a wrong password prevents email enumeration
  *   <li>Password comparison is timing-safe (BCrypt)
  *   <li>Failed attempts are logged for security monitoring
  * </ul>
@@ -44,8 +44,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthenticateAccountUseCase implements AuthenticateAccountInputPort {
 
   private static final Logger LOG = LoggerFactory.getLogger(AuthenticateAccountUseCase.class);
-
-  private static final String GENERIC_ERROR = "Invalid email or password";
 
   private final AccountRepository accountRepository;
   private final PasswordHasher passwordHasher;
@@ -68,7 +66,7 @@ public class AuthenticateAccountUseCase implements AuthenticateAccountInputPort 
       email = Email.of(command.email());
     } catch (IllegalArgumentException e) {
       LOG.debug("Invalid email format during login attempt: {}", command.email());
-      return AuthenticateAccountResult.failure(GENERIC_ERROR);
+      return new AuthenticateAccountResult.CredentialsRefused();
     }
 
     // Find account by email
@@ -76,7 +74,7 @@ public class AuthenticateAccountUseCase implements AuthenticateAccountInputPort 
 
     if (accountOpt.isEmpty()) {
       LOG.debug("Login attempt for non-existent email: {}", email.value());
-      return AuthenticateAccountResult.failure(GENERIC_ERROR);
+      return new AuthenticateAccountResult.CredentialsRefused();
     }
 
     final Account account = accountOpt.get();
@@ -84,14 +82,13 @@ public class AuthenticateAccountUseCase implements AuthenticateAccountInputPort 
     // Check password via the aggregate (which delegates to the domain gateway)
     if (!account.checkPassword(command.password(), passwordHasher)) {
       LOG.warn("Failed login attempt for email: {}", email.value());
-      return AuthenticateAccountResult.failure(GENERIC_ERROR);
+      return new AuthenticateAccountResult.CredentialsRefused();
     }
 
     // Check account status
     if (!account.status().canLogin()) {
       LOG.warn("Login attempt for {} account: {}", account.status(), email.value());
-      return AuthenticateAccountResult.failure(
-          "Account is " + account.status().name().toLowerCase());
+      return new AuthenticateAccountResult.AccountNotAccessible(account.status());
     }
 
     // Record successful login
@@ -102,7 +99,7 @@ public class AuthenticateAccountUseCase implements AuthenticateAccountInputPort 
 
     LOG.info("Successful login for user: {}", account.linkedUserId().value());
 
-    return AuthenticateAccountResult.success(
+    return new AuthenticateAccountResult.Authenticated(
         account.linkedUserId().value(), account.email().value(), account.roles());
   }
 }

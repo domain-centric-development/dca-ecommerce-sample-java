@@ -1,13 +1,19 @@
 package dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart;
 
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
 import dev.domaincentric.dca.buildingblocks.application.TransactionBoundary;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ArticleDataPort;
-import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult.Added;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult.ArticleNotAvailable;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult.CartNotFound;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult.CartNotModifiable;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult.InsufficientArticleStock;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartArticle;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartNotModifiableException;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartFactory;
@@ -15,6 +21,7 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.Quantity;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -33,6 +40,9 @@ import org.springframework.stereotype.Service;
  *   <li>After the commit: enriching the cart with today's article data of every product it holds,
  *       so the answer prices each item at today's price, as reading the cart does
  * </ol>
+ *
+ * <p>Every refusal is returned as a case of {@link AddItemToCartResult}. Each one is decided before
+ * the transaction writes anything, so the transaction that returns it commits nothing.
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link AddItemToCartInputPort}
  * interface, which is a primary/driving port in the application layer.
@@ -74,32 +84,45 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
     final Quantity quantity = new Quantity(input.quantity());
 
     // Remote-capable read (Product Catalog via ACL) - outside the transaction
-    final CartArticle cartArticle =
-        articleDataPort
-            .getArticleData(productId)
-            .orElseThrow(() -> new ArticleNotAvailableException(productId));
+    final Optional<CartArticle> article = articleDataPort.getArticleData(productId);
+    if (article.isEmpty()) {
+      return new ArticleNotAvailable(productId);
+    }
+    final CartArticle cartArticle = article.get();
     final Price priceAtAddition = Price.of(cartArticle.currentPrice());
 
     // Short transaction: load, check the line against the stock, mutate, save, publish
-    final ShoppingCart cart =
+    final Change change =
         transactionBoundary.inTransaction(
             () -> {
-              final ShoppingCart loaded =
-                  shoppingCartRepository
-                      .findByIdForCustomer(cartId, CustomerId.of(input.customerId()))
-                      .orElseThrow(() -> new CartNotFoundException(cartId));
+              final Optional<ShoppingCart> found =
+                  shoppingCartRepository.findByIdForCustomer(
+                      cartId, CustomerId.of(input.customerId()));
+              if (found.isEmpty()) {
+                return new Refused(new CartNotFound(cartId));
+              }
+              final ShoppingCart loaded = found.get();
               final int held = loaded.quantityOf(productId);
               if (!cartArticle.hasStockFor(held + quantity.value())) {
-                throw new InsufficientArticleStockException(
-                    productId, quantity.value(), held, cartArticle.availableStock());
+                return new Refused(
+                    new InsufficientArticleStock(
+                        productId, quantity.value(), held, cartArticle.availableStock()));
               }
-              loaded.addItem(productId, quantity, priceAtAddition);
+              try {
+                loaded.addItem(productId, quantity, priceAtAddition);
+              } catch (final CartNotModifiableException notModifiable) {
+                return new Refused(
+                    new CartNotModifiable(notModifiable.cartId(), notModifiable.status()));
+              }
               shoppingCartRepository.save(loaded);
               eventPublisher.publishAndClearEvents(loaded);
-              return loaded;
+              return new Saved(loaded);
             });
 
-    return AddItemToCartResult.from(atTodaysPrices(cart));
+    return switch (change) {
+      case Refused refused -> refused.refusal();
+      case Saved saved -> Added.from(atTodaysPrices(saved.cart()));
+    };
   }
 
   /**
@@ -111,4 +134,15 @@ public class AddItemToCartUseCase implements AddItemToCartInputPort {
         cart.items().stream().map(CartItem::productId).collect(Collectors.toSet());
     return enrichedCartFactory.create(cart, articleDataPort.getArticleData(productIds));
   }
+
+  /** What the transaction came to: the cart saved, or a refusal before anything was written. */
+  private sealed interface Change {}
+
+  private record Saved(ShoppingCart cart) implements Change {}
+
+  /**
+   * A refusal decided inside the transaction. It is a {@link Refusal}, so the boundary rolls the
+   * transaction back - nothing was written before it, the roll-back is the net.
+   */
+  private record Refused(AddItemToCartResult refusal) implements Change, Refusal {}
 }

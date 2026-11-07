@@ -29,9 +29,10 @@ public interface SubmitPaymentInputPort extends UseCase<SubmitPaymentCommand, Su
    * </ul>
    *
    * @param command the command containing session ID and payment provider selection
-   * @return response containing the updated session state
-   * @throws IllegalArgumentException if session is not found or provider does not exist
-   * @throws IllegalStateException if session is not modifiable or step validation fails
+   * @return the updated session state, or the refusal as a case: a provider not offered, no such
+   *     checkout, a session that takes no changes, a step not completed or out of order, nothing to
+   *     pay
+   * @throws IllegalArgumentException if a value of the command is malformed
    */
   @Override
   SubmitPaymentResult execute(SubmitPaymentCommand command);

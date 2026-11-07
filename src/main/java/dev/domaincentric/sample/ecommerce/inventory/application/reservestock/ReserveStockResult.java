@@ -1,25 +1,19 @@
 package dev.domaincentric.sample.ecommerce.inventory.application.reservestock;
 
-import java.util.Optional;
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
 
-/**
- * Result of reserving the stock of an order's lines.
- *
- * @param refusedProductId the first product, in line order, whose unreserved stock does not cover
- *     its line — nothing was reserved then; empty when every line was reserved
- */
-public record ReserveStockResult(Optional<String> refusedProductId) {
+/** What reserving the stock of an order's lines came to — all lines or none. */
+public sealed interface ReserveStockResult
+    permits ReserveStockResult.Reserved, ReserveStockResult.InsufficientUnreservedStock {
 
-  public static ReserveStockResult reserved() {
-    return new ReserveStockResult(Optional.empty());
-  }
+  /** Every line was reserved. */
+  record Reserved() implements ReserveStockResult {}
 
-  public static ReserveStockResult refused(final String productId) {
-    return new ReserveStockResult(Optional.of(productId));
-  }
-
-  /** Whether every line was reserved. */
-  public boolean success() {
-    return refusedProductId.isEmpty();
-  }
+  /**
+   * A line's unreserved stock does not cover it — or Inventory holds no stock for its product.
+   * Every line was checked before any was reserved, so nothing was reserved.
+   *
+   * @param productId the first product, in line order, whose line is not covered
+   */
+  record InsufficientUnreservedStock(String productId) implements ReserveStockResult, Refusal {}
 }

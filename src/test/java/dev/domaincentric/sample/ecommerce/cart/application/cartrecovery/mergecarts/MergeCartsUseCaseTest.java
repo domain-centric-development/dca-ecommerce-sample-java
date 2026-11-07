@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainEvent;
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
-import dev.domaincentric.sample.ecommerce.cart.application.shared.GuestCartNotOwnedException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
@@ -83,7 +82,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertEquals(CartMergeStrategy.MERGE_BOTH, response.strategyApplied());
@@ -120,7 +119,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertEquals(1, response.items().size());
@@ -148,7 +147,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertEquals(1, response.items().size());
@@ -185,7 +184,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertEquals(CartMergeStrategy.USE_ACCOUNT_CART, response.strategyApplied());
@@ -245,7 +244,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertEquals(1, response.items().size());
@@ -282,7 +281,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertEquals(CartMergeStrategy.USE_ANONYMOUS_CART, response.strategyApplied());
@@ -350,7 +349,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertEquals(1, response.items().size());
@@ -376,7 +375,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertEquals(0, response.itemsFromAnonymous());
@@ -396,13 +395,14 @@ class MergeCartsUseCaseTest {
       accountCart.addItem(product, Quantity.of(1), price);
       repository.save(accountCart);
 
-      MergeCartsResult response =
-          useCase.execute(
-              new MergeCartsCommand(
-                  ANONYMOUS_USER_ID,
-                  REGISTERED_USER_ID,
-                  CartMergeStrategy.MERGE_BOTH,
-                  ANONYMOUS_USER_ID));
+      MergeCartsResult.Merged response =
+          merged(
+              useCase.execute(
+                  new MergeCartsCommand(
+                      ANONYMOUS_USER_ID,
+                      REGISTERED_USER_ID,
+                      CartMergeStrategy.MERGE_BOTH,
+                      ANONYMOUS_USER_ID)));
 
       assertFalse(response.anonymousCartDeleted());
       assertEquals(1, response.items().size());
@@ -424,16 +424,15 @@ class MergeCartsUseCaseTest {
       accountCart.addItem(ProductId.generate(), Quantity.of(1), price);
       repository.save(accountCart);
 
-      GuestCartNotOwnedException refusal =
-          assertThrows(
-              GuestCartNotOwnedException.class,
-              () ->
-                  useCase.execute(
-                      new MergeCartsCommand(
-                          ANONYMOUS_USER_ID,
-                          REGISTERED_USER_ID,
-                          CartMergeStrategy.MERGE_BOTH,
-                          "another-guest-789")));
+      MergeCartsResult.GuestCartNotOwned refusal =
+          assertInstanceOf(
+              MergeCartsResult.GuestCartNotOwned.class,
+              useCase.execute(
+                  new MergeCartsCommand(
+                      ANONYMOUS_USER_ID,
+                      REGISTERED_USER_ID,
+                      CartMergeStrategy.MERGE_BOTH,
+                      "another-guest-789")));
 
       assertEquals(CustomerId.of(ANONYMOUS_USER_ID), refusal.guest());
       assertEquals(
@@ -454,12 +453,11 @@ class MergeCartsUseCaseTest {
     @Test
     @DisplayName("is refused when no guest before the login is known")
     void isRefusedWhenNoGuestBeforeTheLoginIsKnown() {
-      assertThrows(
-          GuestCartNotOwnedException.class,
-          () ->
-              useCase.execute(
-                  new MergeCartsCommand(
-                      ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH, null)));
+      assertInstanceOf(
+          MergeCartsResult.GuestCartNotOwned.class,
+          useCase.execute(
+              new MergeCartsCommand(
+                  ANONYMOUS_USER_ID, REGISTERED_USER_ID, CartMergeStrategy.MERGE_BOTH, null)));
     }
   }
 
@@ -486,7 +484,7 @@ class MergeCartsUseCaseTest {
               ANONYMOUS_USER_ID);
 
       // Act
-      MergeCartsResult response = useCase.execute(command);
+      MergeCartsResult.Merged response = merged(useCase.execute(command));
 
       // Assert
       assertNotNull(response.cartId());
@@ -566,5 +564,9 @@ class MergeCartsUseCaseTest {
     public List<DomainEvent> getPublishedEvents() {
       return publishedEvents;
     }
+  }
+
+  private static MergeCartsResult.Merged merged(final MergeCartsResult result) {
+    return assertInstanceOf(MergeCartsResult.Merged.class, result);
   }
 }

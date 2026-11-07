@@ -6,9 +6,9 @@ import dev.domaincentric.dca.buildingblocks.ddd.tactical.IntegrationEvent;
  * Interface for events that trigger cart completion.
  *
  * <p>This is the consumer-side interface for the Interface Inversion pattern. The Cart module
- * defines what it needs (a cart ID), and the producing module (Checkout) implements this interface
- * on its event. This way the Cart module listens to its own interface, avoiding a dependency on the
- * Checkout module.
+ * defines what it needs (a cart ID and its owner), and the producing module (Checkout) implements
+ * this interface on its event. This way the Cart module listens to its own interface, avoiding a
+ * dependency on the Checkout module.
  *
  * <p>Extends {@link IntegrationEvent}: delivery is at least once, so the consumer needs the event's
  * identity ({@code eventId()}) to recognise a redelivery, not only the payload.
@@ -20,6 +20,12 @@ public interface CartCompletionTrigger extends IntegrationEvent {
 
   /** The cart ID to complete. */
   String cartId();
+
+  /**
+   * The customer the cart belongs to. The cart is loaded through its owner, never by its ID alone,
+   * so a trigger that names somebody else's cart completes nothing.
+   */
+  String customerId();
 
   String sessionId();
 

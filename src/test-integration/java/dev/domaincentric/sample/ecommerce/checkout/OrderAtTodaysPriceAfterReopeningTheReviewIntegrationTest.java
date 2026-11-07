@@ -8,8 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.github.tomakehurst.wiremock.common.Json;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
@@ -20,25 +19,31 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.OrderChangedSinceReviewException;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot;
 import dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.LineItemSnapshot;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceCommand;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceInputPort;
+import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceResult;
 import dev.domaincentric.sample.ecommerce.product.application.shared.ProductRepository;
 import java.math.BigDecimal;
 import java.util.List;
@@ -95,28 +100,37 @@ class OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest {
     final String guest = "guest-" + UUID.randomUUID();
     final String ddd = productIdOf("Domain-Driven Design");
     final String sessionId = aCheckoutAtTheReview(guest, ddd);
-    final GetCheckoutReviewResult shown =
-        getCheckoutReview.execute(new GetCheckoutReviewQuery(sessionId, guest));
+    final GetCheckoutReviewResult.Found shown =
+        assertInstanceOf(
+            GetCheckoutReviewResult.Found.class,
+            getCheckoutReview.execute(new GetCheckoutReviewQuery(sessionId, guest)));
     assertThat(itemsOf(shown.review()))
         .as("the review as shown")
         .containsExactly("Domain-Driven Design x1 54.99 EUR");
-    changePrice.execute(new ChangePriceCommand(ddd, new BigDecimal("49.99")));
-    assertThatThrownBy(
-            () ->
-                confirmCheckout.execute(
-                    new ConfirmCheckoutCommand(sessionId, guest, shown.fingerprint())))
+    assertThat(changePrice.execute(new ChangePriceCommand(ddd, new BigDecimal("49.99"))))
+        .isInstanceOf(ChangePriceResult.Changed.class);
+    assertThat(
+            confirmCheckout.execute(
+                new ConfirmCheckoutCommand(sessionId, guest, shown.fingerprint())))
         .as("Place Order on the review shown before the change")
-        .isInstanceOf(OrderChangedSinceReviewException.class);
-    final GetCheckoutReviewResult now =
-        getCheckoutReview.execute(new GetCheckoutReviewQuery(sessionId, guest));
+        .isInstanceOf(ConfirmCheckoutResult.PriceChangedSinceReview.class);
+    final GetCheckoutReviewResult.Found now =
+        assertInstanceOf(
+            GetCheckoutReviewResult.Found.class,
+            getCheckoutReview.execute(new GetCheckoutReviewQuery(sessionId, guest)));
     assertThat(itemsOf(now.review()))
         .as("the review after the refusal")
         .containsExactly("Domain-Driven Design x1 49.99 EUR");
 
-    confirmCheckout.execute(new ConfirmCheckoutCommand(sessionId, guest, now.fingerprint()));
+    assertInstanceOf(
+        ConfirmCheckoutResult.Confirmed.class,
+        confirmCheckout.execute(new ConfirmCheckoutCommand(sessionId, guest, now.fingerprint())));
 
     final CheckoutCartSnapshot ordered =
-        getCheckoutSession.execute(GetCheckoutSessionQuery.of(sessionId, guest)).session();
+        assertInstanceOf(
+                GetCheckoutSessionResult.Found.class,
+                getCheckoutSession.execute(GetCheckoutSessionQuery.of(sessionId, guest)))
+            .session();
     assertThat(ordered.status().name()).isEqualTo("CONFIRMED");
     assertThat(itemsOf(ordered)).containsExactly("Domain-Driven Design x1 49.99 EUR");
     assertThat(paymentRequestsOf(sessionId))
@@ -131,38 +145,42 @@ class OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest {
   void placeOrderAfterAChangeInAnotherTabIsRefused() {
     final String guest = "guest-" + UUID.randomUUID();
     final String sessionId = aCheckoutAtTheReview(guest, productIdOf("Domain-Driven Design"));
-    final GetCheckoutReviewResult firstTab =
-        getCheckoutReview.execute(new GetCheckoutReviewQuery(sessionId, guest));
-    submitDelivery.execute(
-        new SubmitDeliveryCommand(
-            sessionId,
-            guest,
-            "Hauptstrasse 1",
-            null,
-            "Berlin",
-            "10115",
-            "Germany",
-            null,
-            "express"));
+    final GetCheckoutReviewResult.Found firstTab =
+        assertInstanceOf(
+            GetCheckoutReviewResult.Found.class,
+            getCheckoutReview.execute(new GetCheckoutReviewQuery(sessionId, guest)));
+    assertInstanceOf(
+        SubmitDeliveryResult.Submitted.class,
+        submitDelivery.execute(
+            new SubmitDeliveryCommand(
+                sessionId,
+                guest,
+                "Hauptstrasse 1",
+                null,
+                "Berlin",
+                "10115",
+                "Germany",
+                null,
+                "express")));
 
-    final Throwable refusal =
-        catchThrowable(
-            () ->
-                confirmCheckout.execute(
-                    new ConfirmCheckoutCommand(sessionId, guest, firstTab.fingerprint())));
+    final ConfirmCheckoutResult refusal =
+        confirmCheckout.execute(
+            new ConfirmCheckoutCommand(sessionId, guest, firstTab.fingerprint()));
 
     assertThat(refusal)
-        .isInstanceOfSatisfying(
-            OrderChangedSinceReviewException.class,
-            changed ->
-                assertThat(changed.productWithChangedPrice()).as("no price named").isEmpty());
+        .as("no price named")
+        .isInstanceOf(ConfirmCheckoutResult.OrderChangedSinceReview.class);
     final CheckoutCartSnapshot open =
-        getCheckoutSession.execute(GetCheckoutSessionQuery.of(sessionId, guest)).session();
+        assertInstanceOf(
+                GetCheckoutSessionResult.Found.class,
+                getCheckoutSession.execute(GetCheckoutSessionQuery.of(sessionId, guest)))
+            .session();
     assertThat(open.status().name()).as("the checkout stays open").isEqualTo("ACTIVE");
     assertThat(open.step().name()).as("at the review").isEqualTo("REVIEW");
     assertThat(
-            getCheckoutReview
-                .execute(new GetCheckoutReviewQuery(sessionId, guest))
+            assertInstanceOf(
+                    GetCheckoutReviewResult.Found.class,
+                    getCheckoutReview.execute(new GetCheckoutReviewQuery(sessionId, guest)))
                 .review()
                 .shippingOption()
                 .name())
@@ -185,22 +203,31 @@ class OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest {
         getOrCreateActiveCart.execute(new GetOrCreateActiveCartCommand(guest)).cartId();
     addItemToCart.execute(new AddItemToCartCommand(cartId, guest, productId, 1));
     final String sessionId =
-        startCheckout.execute(new StartCheckoutCommand(cartId, guest)).sessionId();
-    submitBuyerInfo.execute(
-        new SubmitBuyerInfoCommand(
-            sessionId, guest, "jane@example.com", "Jane", "Doe", "+49 30 1234567"));
-    submitDelivery.execute(
-        new SubmitDeliveryCommand(
-            sessionId,
-            guest,
-            "Hauptstrasse 1",
-            null,
-            "Berlin",
-            "10115",
-            "Germany",
-            null,
-            "standard"));
-    submitPayment.execute(new SubmitPaymentCommand(sessionId, guest, PROVIDER_ID));
+        assertInstanceOf(
+                StartCheckoutResult.Started.class,
+                startCheckout.execute(new StartCheckoutCommand(cartId, guest)))
+            .sessionId();
+    assertInstanceOf(
+        SubmitBuyerInfoResult.Submitted.class,
+        submitBuyerInfo.execute(
+            new SubmitBuyerInfoCommand(
+                sessionId, guest, "jane@example.com", "Jane", "Doe", "+49 30 1234567")));
+    assertInstanceOf(
+        SubmitDeliveryResult.Submitted.class,
+        submitDelivery.execute(
+            new SubmitDeliveryCommand(
+                sessionId,
+                guest,
+                "Hauptstrasse 1",
+                null,
+                "Berlin",
+                "10115",
+                "Germany",
+                null,
+                "standard")));
+    assertInstanceOf(
+        SubmitPaymentResult.Submitted.class,
+        submitPayment.execute(new SubmitPaymentCommand(sessionId, guest, PROVIDER_ID)));
     return sessionId;
   }
 

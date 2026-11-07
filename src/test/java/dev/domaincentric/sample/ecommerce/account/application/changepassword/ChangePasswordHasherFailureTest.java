@@ -4,6 +4,7 @@ import static dev.domaincentric.sample.ecommerce.account.application.changepassw
 import static dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.USER_ID;
 import static dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.accountWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import dev.domaincentric.sample.ecommerce.account.application.changepassword.ChangePasswordTestFixtures.TestAccountRepository;
@@ -16,7 +17,6 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.HashedPassword;
 import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordRule;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -80,7 +80,7 @@ class ChangePasswordHasherFailureTest {
   void strengthViolationStillRejects() {
     final ChangePasswordResult result = execute(new TestPasswordHasher(), "short");
 
-    assertEquals(ChangePasswordResult.Outcome.NEW_PASSWORD_REJECTED, result.outcome());
+    assertInstanceOf(ChangePasswordResult.NewPasswordRejected.class, result);
   }
 
   @Test
@@ -90,11 +90,12 @@ class ChangePasswordHasherFailureTest {
 
     final ChangePasswordResult result = execute(new TestPasswordHasher(), overLimit);
 
-    assertEquals(
-        ChangePasswordResult.Outcome.NEW_PASSWORD_REJECTED,
-        result.outcome(),
-        "the length rule lives in the domain, so this never reaches the hasher");
-    assertEquals(Optional.of(PasswordRule.TOO_LONG), result.brokenRule());
+    final ChangePasswordResult.NewPasswordRejected rejected =
+        assertInstanceOf(
+            ChangePasswordResult.NewPasswordRejected.class,
+            result,
+            "the length rule lives in the domain, so this never reaches the hasher");
+    assertEquals(PasswordRule.TOO_LONG, rejected.brokenRule());
   }
 
   private static ChangePasswordResult execute(

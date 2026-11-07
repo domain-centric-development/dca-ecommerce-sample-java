@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.complet
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.AggregateRoot;
@@ -17,8 +18,13 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** An event completes a cart once, however often it is delivered. */
+/**
+ * An event completes a cart once, however often it is delivered, and only the cart of the customer
+ * it names.
+ */
 class CompleteCartUseCaseTest {
+
+  private static final String OWNER = "customer-" + UUID.randomUUID();
 
   private final InMemoryShoppingCartRepository carts = new InMemoryShoppingCartRepository();
   private final InMemoryProcessedEvents processedEvents = new InMemoryProcessedEvents();
@@ -32,16 +38,40 @@ class CompleteCartUseCaseTest {
     final CartId cartId = storedCart();
     final UUID eventId = UUID.randomUUID();
 
-    final CompleteCartResult first =
-        useCase.execute(
-            new CompleteCartCommand(cartId.value().toString(), "session-1", List.of(), eventId));
-    final CompleteCartResult second =
-        useCase.execute(
-            new CompleteCartCommand(cartId.value().toString(), "session-1", List.of(), eventId));
+    final CompleteCartResult.Completed first =
+        assertInstanceOf(
+            CompleteCartResult.Completed.class,
+            useCase.execute(
+                new CompleteCartCommand(
+                    cartId.value().toString(), OWNER, "session-1", List.of(), eventId)));
+    final CompleteCartResult.Completed second =
+        assertInstanceOf(
+            CompleteCartResult.Completed.class,
+            useCase.execute(
+                new CompleteCartCommand(
+                    cartId.value().toString(), OWNER, "session-1", List.of(), eventId)));
 
     assertFalse(first.alreadyCompleted());
     assertTrue(second.alreadyCompleted());
     assertEquals(1, publisher.publications);
+  }
+
+  @Test
+  @DisplayName("A cart is loaded through its owner: another customer's cart is not found")
+  void anotherCustomersCartIsNotFound() {
+    final CartId cartId = storedCart();
+
+    final CompleteCartResult result =
+        useCase.execute(
+            new CompleteCartCommand(
+                cartId.value().toString(),
+                "customer-" + UUID.randomUUID(),
+                "session-1",
+                List.of(),
+                UUID.randomUUID()));
+
+    assertInstanceOf(CompleteCartResult.CartNotFound.class, result);
+    assertEquals(0, publisher.publications);
   }
 
   @Test
@@ -57,7 +87,7 @@ class CompleteCartUseCaseTest {
 
   private CartId storedCart() {
     final CartId cartId = CartId.generate();
-    carts.save(ShoppingCart.create(cartId, CustomerId.of("customer-" + UUID.randomUUID())));
+    carts.save(ShoppingCart.create(cartId, CustomerId.of(OWNER)));
     return cartId;
   }
 

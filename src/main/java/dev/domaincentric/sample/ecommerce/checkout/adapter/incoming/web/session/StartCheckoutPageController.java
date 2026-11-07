@@ -1,17 +1,11 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.session;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CartNotice;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.ArticleNotAvailableException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotActiveException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotAvailableException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutItemsUnavailableException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.EmptyCartException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.EmptyCheckoutException;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -71,37 +65,27 @@ public class StartCheckoutPageController {
       @RequestParam final String cartId, final RedirectAttributes attributes) {
 
     try {
-      startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, currentCustomerId()));
-      return "redirect:/checkout/buyer";
-
-    } catch (UseCaseException | DomainException | IllegalArgumentException e) {
-      // The two base types are the checkout's own refusals. IllegalArgumentException is still
-      // here because a form field the customer typed reaches a value object unvalidated; each
-      // field moved into request validation is one reason less to catch it.
-      return redirectFor(e, attributes);
+      return switch (startCheckoutInputPort.execute(
+          new StartCheckoutCommand(cartId, currentCustomerId()))) {
+        case StartCheckoutResult.Started started -> "redirect:/checkout/buyer";
+        case StartCheckoutResult.CartNotAvailable refusal ->
+            CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_FOUND, attributes);
+        case StartCheckoutResult.CartNotActive refusal ->
+            CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_CHECKABLE, attributes);
+        case StartCheckoutResult.EmptyCart refusal ->
+            CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART, attributes);
+        case StartCheckoutResult.ArticleNotAvailable refusal ->
+            CheckoutRoutes.redirectToCart(CartNotice.CART_PRODUCT_UNAVAILABLE, attributes);
+        case StartCheckoutResult.CheckoutItemsUnavailable refusal ->
+            CheckoutRoutes.redirectToCart(
+                CartNotice.ITEMS_UNAVAILABLE, refusal.productIds().size(), attributes);
+      };
+    } catch (DomainException | IllegalArgumentException residue) {
+      // IllegalArgumentException is still here because a form field the customer typed reaches a
+      // value object unvalidated; each field moved into request validation is one reason less to
+      // catch it. DomainException is a rule of the model no use case returns as a case. The
+      // failure's message is for the log, never for the customer.
+      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_STARTED, attributes);
     }
-  }
-
-  /**
-   * The cart page with the notice for a refusal: chosen by the failure's type, the number it names
-   * taken from its values. The failure's message is for the log, never for the customer.
-   */
-  private static String redirectFor(
-      final RuntimeException failure, final RedirectAttributes attributes) {
-    return switch (failure) {
-      case CartNotAvailableException e ->
-          CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_FOUND, attributes);
-      case CartNotActiveException e ->
-          CheckoutRoutes.redirectToCart(CartNotice.CART_NOT_CHECKABLE, attributes);
-      case EmptyCartException e -> CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART, attributes);
-      case EmptyCheckoutException e ->
-          CheckoutRoutes.redirectToCart(CartNotice.EMPTY_CART, attributes);
-      case ArticleNotAvailableException e ->
-          CheckoutRoutes.redirectToCart(CartNotice.CART_PRODUCT_UNAVAILABLE, attributes);
-      case CheckoutItemsUnavailableException e ->
-          CheckoutRoutes.redirectToCart(
-              CartNotice.ITEMS_UNAVAILABLE, e.productIds().size(), attributes);
-      default -> CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_STARTED, attributes);
-    };
   }
 }

@@ -1,11 +1,14 @@
 package dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart;
 
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
-import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
+import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartResult.CartNotFound;
+import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartResult.Completed;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ProcessedEvents;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>This use case is triggered when a checkout is confirmed (CheckoutConfirmed event), marking the
  * cart as completed to indicate the order has been placed.
+ *
+ * <p>The cart is loaded through its owner, the customer the confirmed checkout names: a cart that
+ * does not exist and one that is somebody else's are the same refusal, {@link CartNotFound}.
  *
  * <p><b>Hexagonal Architecture:</b> This class implements the {@link CompleteCartInputPort}
  * interface, which is a primary/driving port in the application layer.
@@ -43,15 +49,17 @@ public class CompleteCartUseCase implements CompleteCartInputPort {
   public CompleteCartResult execute(final CompleteCartCommand input) {
     final CartId cartId = CartId.of(input.cartId());
 
-    // Retrieve cart
-    final ShoppingCart cart =
-        shoppingCartRepository
-            .findById(cartId)
-            .orElseThrow(() -> new CartNotFoundException(cartId));
+    // Retrieve the cart through its owner, never by its ID alone
+    final Optional<ShoppingCart> found =
+        shoppingCartRepository.findByIdForCustomer(cartId, CustomerId.of(input.customerId()));
+    if (found.isEmpty()) {
+      return new CartNotFound(cartId);
+    }
+    final ShoppingCart cart = found.get();
 
     final UUID eventId = input.eventId();
     if (eventId != null && processedEvents.contains(EFFECT, eventId)) {
-      return new CompleteCartResult(cart.id().value().toString(), cart.status(), true);
+      return new Completed(cart.id().value().toString(), cart.status(), true);
     }
 
     // Complete cart (business logic validates status)
@@ -65,6 +73,6 @@ public class CompleteCartUseCase implements CompleteCartInputPort {
       processedEvents.markProcessed(EFFECT, eventId);
     }
 
-    return new CompleteCartResult(cart.id().value().toString(), cart.status(), false);
+    return new Completed(cart.id().value().toString(), cart.status(), false);
   }
 }

@@ -1,12 +1,14 @@
 package dev.domaincentric.sample.ecommerce.product;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductCommand;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductInputPort;
+import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductResult;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Optional;
@@ -46,16 +48,18 @@ class CreatedProductOnTheCatalogueIntegrationTest {
 
   @BeforeAll
   void staffCreatedTheAggregateMugWithoutAnImage() {
-    createProduct.execute(
-        new CreateProductCommand(
-            "MUG-002",
-            MUG,
-            "A mug with a consistency boundary.",
-            "",
-            new BigDecimal("14.99"),
-            "EUR",
-            "Desk & Office",
-            12));
+    assertInstanceOf(
+        CreateProductResult.Created.class,
+        createProduct.execute(
+            new CreateProductCommand(
+                "MUG-002",
+                MUG,
+                "A mug with a consistency boundary.",
+                "",
+                new BigDecimal("14.99"),
+                "EUR",
+                "Desk & Office",
+                12)));
     Awaitility.await()
         .atMost(Duration.ofSeconds(15))
         .until(

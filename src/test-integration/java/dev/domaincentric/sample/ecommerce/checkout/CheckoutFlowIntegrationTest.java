@@ -15,19 +15,22 @@ import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletio
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewQuery;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.EmptyCartException;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.shared.ProductRepository;
 import dev.domaincentric.sample.ecommerce.product.domain.model.Product;
@@ -103,73 +106,92 @@ class CheckoutFlowIntegrationTest {
     addItemToCartUseCase.execute(new AddItemToCartCommand(cartId, customerId, productId, 2));
 
     // Verify cart is ACTIVE with items
-    GetCartByIdResult cartBefore =
-        getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
-    assertTrue(cartBefore.found(), "Cart should be found");
+    GetCartByIdResult.Found cartBefore =
+        assertInstanceOf(
+            GetCartByIdResult.Found.class,
+            getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
     assertEquals(
-        "ACTIVE",
-        cartBefore.cart().orElseThrow().status().name(),
-        "Cart should be ACTIVE before checkout");
-    assertFalse(cartBefore.cart().orElseThrow().items().isEmpty(), "Cart should have items");
+        "ACTIVE", cartBefore.cart().status().name(), "Cart should be ACTIVE before checkout");
+    assertFalse(cartBefore.cart().items().isEmpty(), "Cart should have items");
 
     // Step 2: Start checkout (cart remains ACTIVE - user can still modify it)
-    StartCheckoutResult startResponse =
-        startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
+    StartCheckoutResult.Started startResponse =
+        assertInstanceOf(
+            StartCheckoutResult.Started.class,
+            startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)));
     String sessionId = startResponse.sessionId();
     assertNotNull(sessionId, "Checkout session should be created");
     assertEquals("BUYER_INFO", startResponse.currentStep(), "Should start at BUYER_INFO step");
     assertEquals("ACTIVE", startResponse.status(), "Session should be ACTIVE");
 
     // Verify cart remains ACTIVE during checkout (can still be modified)
-    GetCartByIdResult cartAfterStart =
-        getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
+    GetCartByIdResult.Found cartAfterStart =
+        assertInstanceOf(
+            GetCartByIdResult.Found.class,
+            getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
     assertEquals(
         "ACTIVE",
-        cartAfterStart.cart().orElseThrow().status().name(),
+        cartAfterStart.cart().status().name(),
         "Cart should remain ACTIVE during checkout");
 
     // Step 3: Submit buyer information
-    submitBuyerInfoInputPort.execute(
-        new SubmitBuyerInfoCommand(
-            sessionId, customerId, "test@example.com", "John", "Doe", "+1-555-0100"));
+    assertInstanceOf(
+        SubmitBuyerInfoResult.Submitted.class,
+        submitBuyerInfoInputPort.execute(
+            new SubmitBuyerInfoCommand(
+                sessionId, customerId, "test@example.com", "John", "Doe", "+1-555-0100")));
 
-    GetCheckoutSessionResult afterBuyer =
-        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));
+    GetCheckoutSessionResult.Found afterBuyer =
+        assertInstanceOf(
+            GetCheckoutSessionResult.Found.class,
+            getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId)));
     assertEquals("DELIVERY", afterBuyer.currentStep(), "Should advance to DELIVERY step");
 
     // Step 4: Submit delivery information
-    submitDeliveryInputPort.execute(
-        new SubmitDeliveryCommand(
-            sessionId,
-            customerId,
-            "123 Main Street",
-            null, // streetLine2
-            "Springfield",
-            "12345",
-            "United States",
-            "IL", // state
-            "standard")); // shippingOptionId
+    assertInstanceOf(
+        SubmitDeliveryResult.Submitted.class,
+        submitDeliveryInputPort.execute(
+            new SubmitDeliveryCommand(
+                sessionId,
+                customerId,
+                "123 Main Street",
+                null, // streetLine2
+                "Springfield",
+                "12345",
+                "United States",
+                "IL", // state
+                "standard"))); // shippingOptionId
 
-    GetCheckoutSessionResult afterDelivery =
-        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));
+    GetCheckoutSessionResult.Found afterDelivery =
+        assertInstanceOf(
+            GetCheckoutSessionResult.Found.class,
+            getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId)));
     assertEquals("PAYMENT", afterDelivery.currentStep(), "Should advance to PAYMENT step");
 
     // Step 5: Submit payment information (using "mock" payment provider)
-    submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, customerId, "mock"));
+    assertInstanceOf(
+        SubmitPaymentResult.Submitted.class,
+        submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, customerId, "mock")));
 
-    GetCheckoutSessionResult afterPayment =
-        getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));
+    GetCheckoutSessionResult.Found afterPayment =
+        assertInstanceOf(
+            GetCheckoutSessionResult.Found.class,
+            getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId)));
     assertEquals("REVIEW", afterPayment.currentStep(), "Should advance to REVIEW step");
 
     // Step 6: Confirm checkout
-    ConfirmCheckoutResult confirmResponse =
-        confirmCheckoutInputPort.execute(
-            new ConfirmCheckoutCommand(
-                sessionId,
-                customerId,
-                getCheckoutReviewInputPort
-                    .execute(new GetCheckoutReviewQuery(sessionId, customerId))
-                    .fingerprint()));
+    ConfirmCheckoutResult.Confirmed confirmResponse =
+        assertInstanceOf(
+            ConfirmCheckoutResult.Confirmed.class,
+            confirmCheckoutInputPort.execute(
+                new ConfirmCheckoutCommand(
+                    sessionId,
+                    customerId,
+                    assertInstanceOf(
+                            GetCheckoutReviewResult.Found.class,
+                            getCheckoutReviewInputPort.execute(
+                                new GetCheckoutReviewQuery(sessionId, customerId)))
+                        .fingerprint())));
 
     assertEquals("CONFIRMED", confirmResponse.status(), "Session should be CONFIRMED");
     // Note: orderReference is set when complete() is called, not during confirm()
@@ -191,9 +213,9 @@ class CheckoutFlowIntegrationTest {
     String cartId = cartResponse.cartId();
 
     // Try to start checkout with empty cart - should fail
-    assertThrows(
-        EmptyCartException.class,
-        () -> startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)),
+    assertInstanceOf(
+        StartCheckoutResult.EmptyCart.class,
+        startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)),
         "Should reject checkout of empty cart");
   }
 
@@ -213,18 +235,25 @@ class CheckoutFlowIntegrationTest {
     addItemToCartUseCase.execute(new AddItemToCartCommand(cartId, customerId, productId, 1));
 
     // Start first checkout
-    StartCheckoutResult firstSession =
-        startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
+    StartCheckoutResult.Started firstSession =
+        assertInstanceOf(
+            StartCheckoutResult.Started.class,
+            startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)));
     assertNotNull(firstSession.sessionId(), "First checkout session should be created");
 
     // Cart remains ACTIVE, so starting another checkout is allowed
     // (user abandoned previous checkout and started fresh)
-    StartCheckoutResult secondSession =
-        startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
+    StartCheckoutResult.Started secondSession =
+        assertInstanceOf(
+            StartCheckoutResult.Started.class,
+            startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)));
     assertNotNull(secondSession.sessionId(), "Second checkout session should be created");
 
     // Verify cart is still ACTIVE
-    GetCartByIdResult cart = getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
-    assertEquals("ACTIVE", cart.cart().orElseThrow().status().name(), "Cart should remain ACTIVE");
+    GetCartByIdResult.Found cart =
+        assertInstanceOf(
+            GetCartByIdResult.Found.class,
+            getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
+    assertEquals("ACTIVE", cart.cart().status().name(), "Cart should remain ACTIVE");
   }
 }

@@ -79,19 +79,19 @@ public class ReviewPageController {
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
-
     if (!activeSession.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
+    final String sessionId = activeSession.sessionId();
 
     // Full session details, plus the domain's decision whether this step may be opened
-    final GetCheckoutSessionResult result =
-        getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(
-                activeSession.sessionId(), customerId, CheckoutStep.REVIEW));
-
-    if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+    final GetCheckoutSessionResult.Found result;
+    switch (getCheckoutSessionInputPort.execute(
+        GetCheckoutSessionQuery.forStep(sessionId, customerId, CheckoutStep.REVIEW))) {
+      case GetCheckoutSessionResult.Found found -> result = found;
+      case GetCheckoutSessionResult.CheckoutSessionNotFound notFound -> {
+        return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+      }
     }
     final Optional<String> denied = CheckoutStepPage.redirectIfDenied(result.stepAccess(), model);
     if (denied.isPresent()) {
@@ -99,9 +99,14 @@ public class ReviewPageController {
     }
 
     // The order as it stands today, at today's prices, and the fingerprint Place Order carries
-    final GetCheckoutReviewResult review =
-        getCheckoutReviewInputPort.execute(
-            new GetCheckoutReviewQuery(activeSession.sessionId(), customerId));
+    final GetCheckoutReviewResult.Found review;
+    switch (getCheckoutReviewInputPort.execute(new GetCheckoutReviewQuery(sessionId, customerId))) {
+      case GetCheckoutReviewResult.Found found -> review = found;
+      case GetCheckoutReviewResult.CheckoutSessionNotFound notFound -> {
+        // Gone since the step was granted: the same answer as a session not found above
+        return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+      }
+    }
     final ReviewPageViewModel viewModel =
         ReviewPageViewModel.fromReview(review.review(), review.fingerprint());
 

@@ -1,14 +1,13 @@
 package dev.domaincentric.sample.ecommerce.cart.api;
 
 import dev.domaincentric.dca.buildingblocks.ddd.strategic.relationships.OpenHostService;
-import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartCommand;
-import dev.domaincentric.sample.ecommerce.cart.application.cartcheckout.completecart.CompleteCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.List;
@@ -19,30 +18,26 @@ import org.springframework.stereotype.Service;
 /**
  * Open Host Service for Shopping Cart.
  *
- * <p>Exposes cart snapshots and cart completion for cross-module access. The Checkout context uses
- * this service instead of directly accessing Cart internals (repository, domain model).
+ * <p>Exposes cart snapshots for cross-module access. Cart completion is no call here: Cart
+ * completes a cart when the confirmed checkout's integration event arrives. The Checkout context
+ * uses this service instead of directly accessing Cart internals (repository, domain model).
  *
  * <p><b>Hexagonal Architecture:</b> Like an incoming adapter, this service calls input ports (use
  * cases), never output ports (repositories) directly.
  */
 @OpenHostService(
     context = "Shopping Cart",
-    description =
-        "Provides cart data and cart completion for other bounded contexts (primarily Checkout)")
+    description = "Provides cart data for other bounded contexts (primarily Checkout)")
 @Service
 public class CartService {
 
   private final GetCartByIdInputPort getCartByIdInputPort;
   private final GetActiveCartInputPort getActiveCartInputPort;
-  private final CompleteCartInputPort completeCartInputPort;
 
   public CartService(
-      GetCartByIdInputPort getCartByIdInputPort,
-      GetActiveCartInputPort getActiveCartInputPort,
-      CompleteCartInputPort completeCartInputPort) {
+      GetCartByIdInputPort getCartByIdInputPort, GetActiveCartInputPort getActiveCartInputPort) {
     this.getCartByIdInputPort = getCartByIdInputPort;
     this.getActiveCartInputPort = getActiveCartInputPort;
-    this.completeCartInputPort = completeCartInputPort;
   }
 
   /**
@@ -92,14 +87,14 @@ public class CartService {
    * @return cart snapshot if found
    */
   public Optional<CartSnapshot> findCartById(UUID cartId, String customerId) {
-    GetCartByIdResult result =
-        getCartByIdInputPort.execute(new GetCartByIdQuery(cartId.toString(), customerId));
+    return switch (getCartByIdInputPort.execute(
+        new GetCartByIdQuery(cartId.toString(), customerId))) {
+      case GetCartByIdResult.Found found -> Optional.of(snapshotOf(found.cart()));
+      case GetCartByIdResult.CartNotFound refusal -> Optional.empty();
+    };
+  }
 
-    if (!result.found()) {
-      return Optional.empty();
-    }
-
-    var enrichedCart = result.cart().orElseThrow();
+  private static CartSnapshot snapshotOf(final EnrichedCart enrichedCart) {
 
     List<CartItemSnapshot> items =
         enrichedCart.items().stream()
@@ -112,25 +107,10 @@ public class CartService {
                         item.positionSnapshot()))
             .toList();
 
-    return Optional.of(
-        new CartSnapshot(
-            UUID.fromString(enrichedCart.cartId().value()),
-            enrichedCart.customerId().value(),
-            items,
-            enrichedCart.status() == CartStatus.ACTIVE));
-  }
-
-  /**
-   * Marks a cart as completed after checkout confirmation.
-   *
-   * <p>Unscoped on purpose: this one acts on nobody's behalf — it is the system reacting to its own
-   * event, delivered at least once, with no caller to check.
-   *
-   * @param cartId the cart ID to complete
-   */
-  public void completeCart(
-      UUID cartId, String sessionId, java.util.List<String> purchasedPositions) {
-    completeCartInputPort.execute(
-        new CompleteCartCommand(cartId.toString(), sessionId, purchasedPositions));
+    return new CartSnapshot(
+        UUID.fromString(enrichedCart.cartId().value()),
+        enrichedCart.customerId().value(),
+        items,
+        enrichedCart.status() == CartStatus.ACTIVE);
   }
 }

@@ -22,8 +22,8 @@ import org.springframework.stereotype.Component;
 @Component
 public final class ShoppingCartDtoConverter {
 
-  /** Converts CreateCartResult to DTO. */
-  public ShoppingCartDto toDto(final CreateCartResult output) {
+  /** Converts the opened cart to DTO. */
+  public ShoppingCartDto toDto(final CreateCartResult.Created output) {
     return new ShoppingCartDto(
         output.cartId(),
         output.customerId(),
@@ -50,8 +50,8 @@ public final class ShoppingCartDtoConverter {
         items.size());
   }
 
-  /** Converts AddItemToCartResult to DTO. */
-  public ShoppingCartDto toDto(final AddItemToCartResult output) {
+  /** Converts the cart after the item was added to DTO. */
+  public ShoppingCartDto toDto(final AddItemToCartResult.Added output) {
     final List<CartItemDto> items = output.items().stream().map(this::toItemDto).toList();
 
     return new ShoppingCartDto(
@@ -64,8 +64,8 @@ public final class ShoppingCartDtoConverter {
         items.size());
   }
 
-  /** Converts RemoveItemFromCartResult to DTO. */
-  public ShoppingCartDto toDto(final RemoveItemFromCartResult output) {
+  /** Converts the cart after the item was removed to DTO. */
+  public ShoppingCartDto toDto(final RemoveItemFromCartResult.Removed output) {
     final List<CartItemDto> items = output.items().stream().map(this::toItemDto).toList();
 
     return new ShoppingCartDto(

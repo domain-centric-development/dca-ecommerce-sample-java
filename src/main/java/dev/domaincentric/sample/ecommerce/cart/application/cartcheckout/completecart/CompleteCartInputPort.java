@@ -16,9 +16,9 @@ public interface CompleteCartInputPort extends UseCase<CompleteCartCommand, Comp
    * Completes a shopping cart after checkout confirmation.
    *
    * @param command the command containing cart ID
-   * @return response containing completion confirmation
-   * @throws IllegalArgumentException if cart not found
-   * @throws IllegalStateException if the cart cannot be reconciled in its current status
+   * @return {@link CompleteCartResult.Completed} with the cart's status, or {@link
+   *     CompleteCartResult.CartNotFound} when there is no cart under that identity
+   * @throws IllegalArgumentException if the command's positions do not parse
    */
   @Override
   CompleteCartResult execute(CompleteCartCommand command);

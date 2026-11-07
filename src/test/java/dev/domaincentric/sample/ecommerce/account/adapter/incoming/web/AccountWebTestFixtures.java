@@ -58,7 +58,7 @@ final class AccountWebTestFixtures {
   static final class TestGetAccountOverview implements GetAccountOverviewInputPort {
 
     private final List<GetAccountOverviewQuery> receivedQueries = new ArrayList<>();
-    private GetAccountOverviewResult result = GetAccountOverviewResult.notFound();
+    private GetAccountOverviewResult result = new GetAccountOverviewResult.AccountNotAccessible();
 
     @Override
     public GetAccountOverviewResult execute(final GetAccountOverviewQuery query) {
@@ -79,7 +79,7 @@ final class AccountWebTestFixtures {
   static final class TestGetProfile implements GetProfileInputPort {
 
     private final List<GetProfileQuery> receivedQueries = new ArrayList<>();
-    private GetProfileResult result = GetProfileResult.notFound();
+    private GetProfileResult result = new GetProfileResult.AccountNotAccessible();
 
     @Override
     public GetProfileResult execute(final GetProfileQuery query) {

@@ -59,9 +59,11 @@ public class MyAccountPageController {
       return LOGIN_REDIRECT;
     }
 
-    final GetAccountOverviewResult result =
-        getAccountOverviewUseCase.execute(new GetAccountOverviewQuery(identity.userId().value()));
-    return result.account().map(overview -> renderOverview(model, overview)).orElse(LOGIN_REDIRECT);
+    return switch (getAccountOverviewUseCase.execute(
+        new GetAccountOverviewQuery(identity.userId().value()))) {
+      case GetAccountOverviewResult.Found found -> renderOverview(model, found.account());
+      case GetAccountOverviewResult.AccountNotAccessible refusal -> LOGIN_REDIRECT;
+    };
   }
 
   private static String renderOverview(final Model model, final AccountOverview overview) {

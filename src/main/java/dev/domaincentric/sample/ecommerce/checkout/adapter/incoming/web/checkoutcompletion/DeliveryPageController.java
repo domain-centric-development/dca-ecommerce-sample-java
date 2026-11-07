@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletio
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getshippingoptions.GetShippingOptionsResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -17,6 +18,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
+import java.util.function.Supplier;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -84,19 +86,19 @@ public class DeliveryPageController {
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
-
     if (!activeSession.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
+    final String sessionId = activeSession.sessionId();
 
     // Full session details, plus the domain's decision whether this step may be opened
-    final GetCheckoutSessionResult result =
-        getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(
-                activeSession.sessionId(), customerId, CheckoutStep.DELIVERY));
-
-    if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+    final GetCheckoutSessionResult.Found result;
+    switch (getCheckoutSessionInputPort.execute(
+        GetCheckoutSessionQuery.forStep(sessionId, customerId, CheckoutStep.DELIVERY))) {
+      case GetCheckoutSessionResult.Found found -> result = found;
+      case GetCheckoutSessionResult.CheckoutSessionNotFound notFound -> {
+        return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+      }
     }
     final Optional<String> denied = CheckoutStepPage.redirectIfDenied(result.stepAccess(), model);
     if (denied.isPresent()) {
@@ -150,37 +152,47 @@ public class DeliveryPageController {
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
-
     if (!activeSession.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
+    final String sessionId = activeSession.sessionId();
 
+    final CheckoutStep step = CheckoutStep.DELIVERY;
+    final Supplier<StepAccess> access = () -> stepAccess(sessionId, customerId, step);
     return CheckoutStepPage.submitting(
-        CheckoutStep.DELIVERY,
-        () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.DELIVERY),
+        step,
         attributes,
-        () -> {
-          submitDeliveryInputPort.execute(
-              new SubmitDeliveryCommand(
-                  activeSession.sessionId(),
-                  customerId,
-                  street,
-                  streetLine2,
-                  city,
-                  postalCode,
-                  country,
-                  state,
-                  shippingOptionId));
-
-          return "redirect:/checkout/payment";
-        });
+        () ->
+            switch (submitDeliveryInputPort.execute(
+                new SubmitDeliveryCommand(
+                    sessionId,
+                    customerId,
+                    street,
+                    streetLine2,
+                    city,
+                    postalCode,
+                    country,
+                    state,
+                    shippingOptionId))) {
+              case SubmitDeliveryResult.Submitted submitted -> "redirect:/checkout/payment";
+              case SubmitDeliveryResult.ShippingOptionNotOffered refusal ->
+                  CheckoutStepPage.shippingMethodNotOffered(step, attributes);
+              case SubmitDeliveryResult.CheckoutSessionNotFound refusal ->
+                  CheckoutStepPage.sessionNotFound(step, attributes);
+              case SubmitDeliveryResult.CheckoutNotModifiable refusal ->
+                  CheckoutStepPage.notModifiable(step, attributes);
+              case SubmitDeliveryResult.CheckoutStepNotCompleted refusal ->
+                  CheckoutStepPage.stepNotCompleted(step, access, attributes);
+              case SubmitDeliveryResult.CheckoutStepOutOfOrder refusal ->
+                  CheckoutStepPage.stepOutOfOrder(step, access, attributes);
+            });
   }
 
   /** The domain's decision whether the step may be opened, for a submission sent too early. */
   private StepAccess stepAccess(
       final String sessionId, final String customerId, final CheckoutStep step) {
-    return getCheckoutSessionInputPort
-        .execute(GetCheckoutSessionQuery.forStep(sessionId, customerId, step))
-        .stepAccess();
+    return CheckoutStepPage.stepAccessOf(
+        getCheckoutSessionInputPort.execute(
+            GetCheckoutSessionQuery.forStep(sessionId, customerId, step)));
   }
 }

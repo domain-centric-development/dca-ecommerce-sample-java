@@ -1,18 +1,20 @@
 package dev.domaincentric.sample.ecommerce.cart;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 
-import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CartNotAvailableException;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsQuery;
@@ -49,8 +51,10 @@ class CartOwnershipIntegrationTest {
     final String stranger = "stranger-" + System.nanoTime();
     final String cartId = activeCartOf(owner);
 
-    assertThat(getCartById.execute(new GetCartByIdQuery(cartId, owner)).found()).isTrue();
-    assertThat(getCartById.execute(new GetCartByIdQuery(cartId, stranger)).found()).isFalse();
+    assertThat(getCartById.execute(new GetCartByIdQuery(cartId, owner)))
+        .isInstanceOf(GetCartByIdResult.Found.class);
+    assertThat(getCartById.execute(new GetCartByIdQuery(cartId, stranger)))
+        .isInstanceOf(GetCartByIdResult.CartNotFound.class);
   }
 
   @Test
@@ -61,15 +65,17 @@ class CartOwnershipIntegrationTest {
     final String cartId = activeCartOf(owner);
     final String productId = anyProductId();
 
-    assertThatThrownBy(
-            () -> addItemToCart.execute(new AddItemToCartCommand(cartId, stranger, productId, 1)))
-        .isInstanceOf(CartNotFoundException.class)
-        .hasMessageContaining("Cart not found");
+    assertThat(addItemToCart.execute(new AddItemToCartCommand(cartId, stranger, productId, 1)))
+        .asInstanceOf(type(AddItemToCartResult.CartNotFound.class))
+        .extracting(refusal -> refusal.cartId().value())
+        .isEqualTo(cartId);
 
     // The owner is unaffected
     addItemToCart.execute(new AddItemToCartCommand(cartId, owner, productId, 1));
     assertThat(
-            getCartById.execute(new GetCartByIdQuery(cartId, owner)).cart().orElseThrow().items())
+            ((GetCartByIdResult.Found) getCartById.execute(new GetCartByIdQuery(cartId, owner)))
+                .cart()
+                .items())
         .hasSize(1);
   }
 
@@ -81,12 +87,12 @@ class CartOwnershipIntegrationTest {
     final String cartId = activeCartOf(owner);
     addItemToCart.execute(new AddItemToCartCommand(cartId, owner, anyProductId(), 1));
 
-    assertThatThrownBy(() -> startCheckout.execute(new StartCheckoutCommand(cartId, stranger)))
-        .isInstanceOf(CartNotAvailableException.class)
-        .hasMessageContaining("Cart not found");
+    assertThat(startCheckout.execute(new StartCheckoutCommand(cartId, stranger)))
+        .isEqualTo(new StartCheckoutResult.CartNotAvailable(CartId.of(cartId)));
 
     // and the owner can still start theirs
-    assertThat(startCheckout.execute(new StartCheckoutCommand(cartId, owner))).isNotNull();
+    assertThat(startCheckout.execute(new StartCheckoutCommand(cartId, owner)))
+        .isInstanceOf(StartCheckoutResult.Started.class);
   }
 
   private String activeCartOf(final String customerId) {

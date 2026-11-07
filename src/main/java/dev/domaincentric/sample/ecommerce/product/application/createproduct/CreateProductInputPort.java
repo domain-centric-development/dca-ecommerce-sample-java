@@ -20,8 +20,9 @@ public interface CreateProductInputPort extends UseCase<CreateProductCommand, Cr
    * Creates a new product.
    *
    * @param command the command containing product details
-   * @return the created product details
-   * @throws IllegalArgumentException if SKU already exists or validation fails
+   * @return {@link CreateProductResult.Created} with the created product, or {@link
+   *     CreateProductResult.DuplicateSku} when the catalog already carries the stock keeping unit
+   * @throws IllegalArgumentException if a value of the command does not parse
    */
   @Override
   CreateProductResult execute(CreateProductCommand command);

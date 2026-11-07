@@ -430,8 +430,7 @@ dev.domaincentric.sample.ecommerce
 │   │   │   ├── ProvisionInitialPriceCommand, ProvisionInitialPriceResult
 │   │   ├── changeprice/
 │   │   │   ├── ChangePriceInputPort, ChangePriceUseCase
-│   │   │   ├── ChangePriceCommand, ChangePriceResult
-│   │   │   ├── ProductPriceNotFoundException
+│   │   │   ├── ChangePriceCommand, ChangePriceResult   # Changed | ProductPriceNotFound
 │   │   ├── getpricesforproducts/
 │   │   │   ├── GetPricesForProductsInputPort, GetPricesForProductsUseCase
 │   │   │   ├── GetPricesForProductsQuery, GetPricesForProductsResult
@@ -443,7 +442,8 @@ dev.domaincentric.sample.ecommerce
 │       │   ├── api/
 │       │   │   ├── PriceResource
 │       │   │   ├── ChangePriceRequest
-│       │   │   └── PricingApiExceptionHandler
+│       │   │   ├── PricingProblems                # the answer to each refusal
+│       │   │   └── PricingApiExceptionHandler     # what is still thrown
 │       │   └── event/
 │       │       └── PriceInitializationEventConsumer
 │       └── outgoing/

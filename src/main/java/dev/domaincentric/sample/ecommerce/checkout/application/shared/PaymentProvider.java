@@ -33,14 +33,18 @@ public interface PaymentProvider extends OutputPort {
   /**
    * Initiates a payment for the given checkout session.
    *
-   * <p>This creates a payment intent or equivalent with the provider. The returned result contains
-   * a provider-specific reference that can be used to track or complete the payment.
+   * <p>This creates a payment intent or equivalent with the provider. The provider is a foreign
+   * system: its refusal and its being unreachable are expected, and this contract declares each as
+   * its own failure, which every implementation raises whatever its mechanism is.
    *
    * @param sessionId the checkout session to process payment for
    * @param amount the total amount to charge
-   * @return the result of the payment initiation
+   * @return the provider-specific reference the payment is tracked and completed by
+   * @throws PaymentInitiationFailedException if the provider answered and refused the payment
+   * @throws PaymentProviderUnavailableException if the provider did not answer in time, could not
+   *     be reached, or answered outside its contract
    */
-  PaymentResult initiatePayment(CheckoutSessionId sessionId, Money amount);
+  String initiatePayment(CheckoutSessionId sessionId, Money amount);
 
   /**
    * Confirms a previously initiated payment.

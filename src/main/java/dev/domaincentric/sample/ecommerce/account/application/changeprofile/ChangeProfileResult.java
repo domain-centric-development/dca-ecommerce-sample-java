@@ -1,66 +1,47 @@
 package dev.domaincentric.sample.ecommerce.account.application.changeprofile;
 
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
 import java.time.LocalDate;
-import java.util.Optional;
 
 /**
- * Output model of the Change Profile use case.
+ * What a profile change attempt came to.
  *
- * <p>Per ADR-023 a rejected profile change is a normal return value, not an exception crossing the
- * port. The result says what happened and which value was refused, never in words: the page that
- * shows it words the refusal from the outcome.
- *
- * @param outcome what happened
- * @param profile the stored profile after the change, present exactly for {@link Outcome#CHANGED}
+ * <p>A rejected profile change is a case of the result, not an exception crossing the port. The
+ * result says what happened and which value was refused, never in words: the page that shows it
+ * words the refusal from the case.
  */
-public record ChangeProfileResult(Outcome outcome, Optional<Profile> profile) {
+public sealed interface ChangeProfileResult
+    permits ChangeProfileResult.Changed,
+        ChangeProfileResult.AccountNotAccessible,
+        ChangeProfileResult.EmailAlreadyInUse,
+        ChangeProfileResult.EmailInvalid,
+        ChangeProfileResult.DateOfBirthInvalid {
 
-  public ChangeProfileResult {
-    if (outcome == null) {
-      throw new IllegalArgumentException("Outcome cannot be null");
+  /**
+   * The profile was stored.
+   *
+   * @param profile the stored profile after the change
+   */
+  record Changed(Profile profile) implements ChangeProfileResult {
+
+    public Changed {
+      if (profile == null) {
+        throw new IllegalArgumentException("A stored change carries the profile");
+      }
     }
-    if (profile == null) {
-      throw new IllegalArgumentException("Profile optional cannot be null, use Optional.empty()");
-    }
-    if ((outcome == Outcome.CHANGED) != profile.isPresent()) {
-      throw new IllegalArgumentException(
-          "Only a stored change carries the profile, and it always does: " + outcome);
-    }
   }
 
-  /** Possible outcomes of a profile change attempt. */
-  public enum Outcome {
-    /** The profile was stored. */
-    CHANGED,
-    /** No account for the given UserId, or the account cannot log in. */
-    ACCOUNT_NOT_ACCESSIBLE,
-    /** Another account already uses the submitted email address. */
-    EMAIL_ALREADY_IN_USE,
-    /** The submitted email address is not a valid address. */
-    EMAIL_INVALID,
-    /** The submitted date of birth is missing or does not lie before today. */
-    DATE_OF_BIRTH_INVALID
-  }
+  /** No account for the given UserId, or the account cannot log in. */
+  record AccountNotAccessible() implements ChangeProfileResult, Refusal {}
 
-  public static ChangeProfileResult changed(final Profile profile) {
-    return new ChangeProfileResult(Outcome.CHANGED, Optional.of(profile));
-  }
+  /** Another account already uses the submitted email address. */
+  record EmailAlreadyInUse() implements ChangeProfileResult, Refusal {}
 
-  public static ChangeProfileResult accountNotAccessible() {
-    return new ChangeProfileResult(Outcome.ACCOUNT_NOT_ACCESSIBLE, Optional.empty());
-  }
+  /** The submitted email address is not a valid address. */
+  record EmailInvalid() implements ChangeProfileResult, Refusal {}
 
-  public static ChangeProfileResult emailAlreadyInUse() {
-    return new ChangeProfileResult(Outcome.EMAIL_ALREADY_IN_USE, Optional.empty());
-  }
-
-  public static ChangeProfileResult emailInvalid() {
-    return new ChangeProfileResult(Outcome.EMAIL_INVALID, Optional.empty());
-  }
-
-  public static ChangeProfileResult dateOfBirthInvalid() {
-    return new ChangeProfileResult(Outcome.DATE_OF_BIRTH_INVALID, Optional.empty());
-  }
+  /** The submitted date of birth is missing or does not lie before today. */
+  record DateOfBirthInvalid() implements ChangeProfileResult, Refusal {}
 
   /**
    * The stored profile after a successful change.
@@ -68,5 +49,5 @@ public record ChangeProfileResult(Outcome outcome, Optional<Profile> profile) {
    * @param email the stored email address
    * @param dateOfBirth the stored date of birth of the account's owner
    */
-  public record Profile(String email, LocalDate dateOfBirth) {}
+  record Profile(String email, LocalDate dateOfBirth) {}
 }

@@ -91,7 +91,7 @@ class ProfilePageControllerTest {
   private void givenRegisteredIdentityWithAccessibleAccount() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getProfile.setResult(
-        GetProfileResult.found(
+        new GetProfileResult.Found(
             new Profile(EMAIL, FIRST_NAME, LAST_NAME, FULL_NAME, DATE_OF_BIRTH)));
   }
 
@@ -131,7 +131,7 @@ class ProfilePageControllerTest {
   @DisplayName("GET without an accessible account redirects and exposes no profile data")
   void getWithoutAccessibleAccountRedirects() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
-    getProfile.setResult(GetProfileResult.notFound());
+    getProfile.setResult(new GetProfileResult.AccountNotAccessible());
 
     assertEquals(LOGIN_REDIRECT, controller.showProfilePage(model));
     assertNull(
@@ -227,7 +227,7 @@ class ProfilePageControllerTest {
   void postPassesSubmittedValuesToUseCase() {
     givenRegisteredIdentityWithAccessibleAccount();
     changeProfile.setResult(
-        ChangeProfileResult.changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
+        new ChangeProfileResult.Changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
 
     controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
@@ -240,7 +240,7 @@ class ProfilePageControllerTest {
   @DisplayName("an inaccessible account redirects to login")
   void inaccessibleAccountRedirectsToLogin() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
-    changeProfile.setResult(ChangeProfileResult.accountNotAccessible());
+    changeProfile.setResult(new ChangeProfileResult.AccountNotAccessible());
 
     final String viewName =
         controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model, attributes);
@@ -254,7 +254,7 @@ class ProfilePageControllerTest {
   void successRedirectsWithFlashMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
     changeProfile.setResult(
-        ChangeProfileResult.changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
+        new ChangeProfileResult.Changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
 
     final String viewName =
         controller.handleProfileUpdate(NEW_EMAIL, NEW_DATE_OF_BIRTH_INPUT, model, attributes);
@@ -271,7 +271,7 @@ class ProfilePageControllerTest {
   void successReIssuesToken() {
     givenRegisteredIdentityWithAccessibleAccount();
     changeProfile.setResult(
-        ChangeProfileResult.changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
+        new ChangeProfileResult.Changed(profileResult(NEW_EMAIL, NEW_DATE_OF_BIRTH)));
 
     controller.handleProfileUpdate(
         NEW_EMAIL.toUpperCase(Locale.ROOT), NEW_DATE_OF_BIRTH_INPUT, model, attributes);
@@ -291,7 +291,7 @@ class ProfilePageControllerTest {
   @DisplayName("an email already in use re-renders with the message and the submitted values")
   void emailAlreadyInUseReRenders() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changeProfile.setResult(ChangeProfileResult.emailAlreadyInUse());
+    changeProfile.setResult(new ChangeProfileResult.EmailAlreadyInUse());
 
     final String viewName =
         controller.handleProfileUpdate(
@@ -314,7 +314,7 @@ class ProfilePageControllerTest {
   @DisplayName("an invalid email re-renders with the page's sentence for it")
   void rejectedInputReRendersWithMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changeProfile.setResult(ChangeProfileResult.emailInvalid());
+    changeProfile.setResult(new ChangeProfileResult.EmailInvalid());
 
     final String viewName =
         controller.handleProfileUpdate("not-an-email", NEW_DATE_OF_BIRTH_INPUT, model, attributes);
@@ -328,7 +328,7 @@ class ProfilePageControllerTest {
   @DisplayName("a rejected change issues no token")
   void rejectedChangeIssuesNoToken() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changeProfile.setResult(ChangeProfileResult.emailAlreadyInUse());
+    changeProfile.setResult(new ChangeProfileResult.EmailAlreadyInUse());
 
     controller.handleProfileUpdate("taken@example.com", NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
@@ -341,7 +341,7 @@ class ProfilePageControllerTest {
   @DisplayName("no error re-render exposes a success message")
   void errorReRenderExposesNoSuccessMessage() {
     givenRegisteredIdentityWithAccessibleAccount();
-    changeProfile.setResult(ChangeProfileResult.emailInvalid());
+    changeProfile.setResult(new ChangeProfileResult.EmailInvalid());
 
     controller.handleProfileUpdate("nope", NEW_DATE_OF_BIRTH_INPUT, model, attributes);
 
@@ -395,7 +395,7 @@ class ProfilePageControllerTest {
   private static final class TestChangeProfile implements ChangeProfileInputPort {
 
     private final List<ChangeProfileCommand> receivedCommands = new ArrayList<>();
-    private ChangeProfileResult result = ChangeProfileResult.accountNotAccessible();
+    private ChangeProfileResult result = new ChangeProfileResult.AccountNotAccessible();
 
     @Override
     public ChangeProfileResult execute(final ChangeProfileCommand command) {

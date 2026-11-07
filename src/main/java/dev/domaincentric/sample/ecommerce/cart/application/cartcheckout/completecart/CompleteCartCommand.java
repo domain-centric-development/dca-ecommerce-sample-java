@@ -11,12 +11,14 @@ import org.jspecify.annotations.Nullable;
  * and the effect is not deduplicated.
  *
  * @param cartId the cart ID to complete
+ * @param customerId the customer the cart belongs to - the cart is loaded through its owner
  * @param sessionId the confirmed checkout session
  * @param purchasedPositions the purchased positions, as {@code <cart item id>:<units>} snapshots
  * @param eventId the id of the integration event that asked for it, if any
  */
 public record CompleteCartCommand(
     String cartId,
+    String customerId,
     String sessionId,
     java.util.List<String> purchasedPositions,
     @Nullable UUID eventId) {
@@ -24,9 +26,10 @@ public record CompleteCartCommand(
   /** A completion no integration event asked for — not deduplicated. */
   public CompleteCartCommand(
       final String cartId,
+      final String customerId,
       final String sessionId,
       final java.util.List<String> purchasedPositions) {
-    this(cartId, sessionId, purchasedPositions, null);
+    this(cartId, customerId, sessionId, purchasedPositions, null);
   }
 
   /** Compact constructor with validation. */
@@ -34,6 +37,9 @@ public record CompleteCartCommand(
     purchasedPositions = java.util.List.copyOf(purchasedPositions);
     if (cartId == null || cartId.isBlank()) {
       throw new IllegalArgumentException("Cart ID cannot be null or blank");
+    }
+    if (customerId == null || customerId.isBlank()) {
+      throw new IllegalArgumentException("Customer ID cannot be null or blank");
     }
   }
 }

@@ -1,16 +1,18 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.shared;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.dca.buildingblocks.application.OutputPortException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderId;
 import java.io.Serial;
 
 /**
- * Raised when the payment provider refused to open a payment for this checkout.
+ * Raised when the payment provider answered and refused to open a payment for this checkout.
  *
- * <p>The provider's own reason is carried through unchanged for logs and callers; the shop has no
- * way to judge it. The payment page shows the customer a fixed message of its own instead.
+ * <p>Part of the {@link PaymentProvider} contract: the adapter raises it, the use case catches it
+ * and answers with a case of its result. The provider's own reason is carried through unchanged for
+ * logs; the shop has no way to judge it, and the page shows the customer a fixed message of its own
+ * instead.
  */
-public final class PaymentInitiationFailedException extends UseCaseException {
+public final class PaymentInitiationFailedException extends OutputPortException {
 
   @Serial private static final long serialVersionUID = 1L;
 

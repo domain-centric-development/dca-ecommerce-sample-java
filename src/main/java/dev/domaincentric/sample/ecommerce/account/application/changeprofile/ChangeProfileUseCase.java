@@ -47,7 +47,7 @@ public class ChangeProfileUseCase implements ChangeProfileInputPort {
 
     if (accessibleAccount.isEmpty()) {
       LOG.warn("Profile change attempt without an accessible account: {}", command.userId());
-      return ChangeProfileResult.accountNotAccessible();
+      return new ChangeProfileResult.AccountNotAccessible();
     }
 
     final Account account = accessibleAccount.get();
@@ -58,16 +58,16 @@ public class ChangeProfileUseCase implements ChangeProfileInputPort {
       newEmail = Email.of(command.email());
     } catch (final IllegalArgumentException e) {
       LOG.debug("Profile change rejected for {}: {}", command.userId(), e.getMessage());
-      return ChangeProfileResult.emailInvalid();
+      return new ChangeProfileResult.EmailInvalid();
     }
     if (!UsableDateOfBirth.RULE.isSatisfiedBy(command.dateOfBirth())) {
       LOG.debug("Profile change rejected for {}: date of birth not usable", command.userId());
-      return ChangeProfileResult.dateOfBirthInvalid();
+      return new ChangeProfileResult.DateOfBirthInvalid();
     }
 
     if (!newEmail.equals(account.email()) && accountRepository.existsByEmail(newEmail)) {
       LOG.debug("Profile change rejected for {}: email already in use", command.userId());
-      return ChangeProfileResult.emailAlreadyInUse();
+      return new ChangeProfileResult.EmailAlreadyInUse();
     }
 
     account.changeEmail(newEmail);
@@ -79,7 +79,7 @@ public class ChangeProfileUseCase implements ChangeProfileInputPort {
 
     LOG.info("Profile changed for user: {}", command.userId());
 
-    return ChangeProfileResult.changed(
+    return new ChangeProfileResult.Changed(
         new Profile(account.email().value(), account.owner().dateOfBirth()));
   }
 }

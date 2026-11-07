@@ -18,7 +18,8 @@ public interface GetCartByIdInputPort extends UseCase<GetCartByIdQuery, GetCartB
    * Retrieves a shopping cart by its unique identifier.
    *
    * @param query the query containing the cart ID
-   * @return result containing the enriched cart read model, or not found
+   * @return {@link GetCartByIdResult.Found} with the enriched cart read model, or {@link
+   *     GetCartByIdResult.CartNotFound} when the caller holds no cart under that identity
    */
   @Override
   GetCartByIdResult execute(GetCartByIdQuery query);

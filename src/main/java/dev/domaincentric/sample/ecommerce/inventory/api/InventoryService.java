@@ -12,6 +12,7 @@ import dev.domaincentric.sample.ecommerce.inventory.application.releasestock.Rel
 import dev.domaincentric.sample.ecommerce.inventory.application.releasestock.ReleaseStockInputPort;
 import dev.domaincentric.sample.ecommerce.inventory.application.reservestock.ReserveStockCommand;
 import dev.domaincentric.sample.ecommerce.inventory.application.reservestock.ReserveStockInputPort;
+import dev.domaincentric.sample.ecommerce.inventory.application.reservestock.ReserveStockResult;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.util.Collection;
 import java.util.Collections;
@@ -176,16 +177,16 @@ public class InventoryService {
    *     unreserved stock does not cover its line, and nothing was reserved
    */
   public Optional<ProductId> reserveStock(List<StockLine> lines) {
-    return reserveStockInputPort
-        .execute(
-            new ReserveStockCommand(
-                lines.stream()
-                    .map(
-                        line ->
-                            new ReserveStockCommand.Line(line.productId().value(), line.quantity()))
-                    .toList()))
-        .refusedProductId()
-        .map(ProductId::of);
+    return switch (reserveStockInputPort.execute(
+        new ReserveStockCommand(
+            lines.stream()
+                .map(
+                    line -> new ReserveStockCommand.Line(line.productId().value(), line.quantity()))
+                .toList()))) {
+      case ReserveStockResult.Reserved reserved -> Optional.empty();
+      case ReserveStockResult.InsufficientUnreservedStock refusal ->
+          Optional.of(ProductId.of(refusal.productId()));
+    };
   }
 
   /**

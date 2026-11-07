@@ -87,18 +87,17 @@ public class ProductPageController {
    */
   @GetMapping("/{id}")
   public ModelAndView showProductDetail(@PathVariable final String id) {
-    final GetProductByIdResult result = getProductByIdUseCase.execute(new GetProductByIdQuery(id));
-
-    if (!result.found()) {
-      return new ModelAndView("error/404", HttpStatus.NOT_FOUND);
-    }
-
-    // Convert Result → page-specific ViewModel
-    final ProductDetailPageViewModel viewModel = ProductDetailPageViewModel.fromResult(result);
-
-    return new ModelAndView("product/detail")
-        .addObject("productDetail", viewModel)
-        .addObject("title", viewModel.pageTitle());
+    return switch (getProductByIdUseCase.execute(new GetProductByIdQuery(id))) {
+      case GetProductByIdResult.Found found -> {
+        // Convert Result → page-specific ViewModel
+        final ProductDetailPageViewModel viewModel = ProductDetailPageViewModel.fromResult(found);
+        yield new ModelAndView("product/detail")
+            .addObject("productDetail", viewModel)
+            .addObject("title", viewModel.pageTitle());
+      }
+      case GetProductByIdResult.ProductNotFound refusal ->
+          new ModelAndView("error/404", HttpStatus.NOT_FOUND);
+    };
   }
 
   /**

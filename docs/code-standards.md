@@ -80,8 +80,10 @@ feels "business" or "technical":
   caller and a stranger's data. The caller is part of the command (`GetCartByIdQuery(cartId, customerId)`,
   `CheckoutCartCommand(cartId, customerId)`, `StartCheckoutCommand(cartId, customerId)`) and the use case asks a
   scoped question — `ShoppingCartRepository#findByIdForCustomer`, not `findById` plus an `if`. The Cart's Open
-  Host Service demands the customer for the same reason, so Checkout inherits the rule. `findById` stays for the
-  system paths that act on nobody's behalf (`CompleteCart` from an integration event).
+  Host Service demands the customer for the same reason, so Checkout inherits the rule. `ShoppingCart` and
+  `CheckoutSession` implement `Owned<CustomerId>`, and `DCA-TAC-026` holds their repositories to the scoped lookup.
+  `CompleteCart`, run from an integration event, loads through the owner as well: the trigger carries the customer.
+  `findById` stays only for system paths that hold no owner to name.
 - **The refusal is rendered at the edge:** a cart that is not the caller's answers `404`, not `403` — a `403`
   would confirm the id exists.
 
@@ -106,7 +108,7 @@ Catalog reads are public. Resources and MCP tool providers depend on `*InputPort
 3. **Raise Domain Events** - Capture important business occurrences
 4. **Reference by ID** - Aggregates reference each other by identity only
 5. **Keep Aggregates Small** - Focus on transactional consistency boundaries
-6. **Name Failures by the Broken Rule** - Domain and use-case exceptions carry the rule in the domain's words, with the suffix `Exception` (`CartNotModifiableException`) — the method's `failure_suffix: Exception`
+6. **Name Failures by the Broken Rule** - Domain and port exceptions carry the rule in the domain's words, with the suffix `Exception` (`CartNotModifiableException`) — the method's `failure_suffix: Exception`; a refusal case of a use-case result carries the same words without the suffix (`CartNotFound`, `DuplicateSku`)
 
 ### Event-Driven Design
 
@@ -170,5 +172,32 @@ Catalog reads are public. Resources and MCP tool providers depend on `*InputPort
 - Delegate business logic to domain
 - Publish domain events after save
 - Only use infrastructure.api (not implementations)
+
+### Refusals (ADR-047)
+
+This shop returns its expected refusals; it does not throw them.
+
+❌ **Don't:**
+- Throw a `UseCaseException` for a refusal a caller answers — not found, not the caller's, a precondition, a
+  uniqueness the store sees
+- Return a refusal as a flag, an `Optional` or an outcome enum beside the success data
+- Write before every refusal is decided ("decide, then write") — the transaction net rolls a returned `Refusal`
+  back, but it is the net, not the design
+- Ignore the result of a use case that can refuse — in production code or in a test helper
+- Catch `PortException`, `InputPortException` or `OutputPortException` generically in an adapter
+- Put a `default` in a switch over a use-case result
+
+✅ **Do:**
+- Return a sealed `<Op>Result`: the success case named for what happened, one record per refusal, named like the
+  failure without `Exception`, carrying ids and figures, never words
+- Mark every refusal case with `Refusal` (`DCA-ERR-008`); a use case without a refusal keeps a plain record
+- Catch a domain refusal (`DomainException` subtype) and a failure an output port declares (`OutputPortException`
+  subtype) by its own name, once, in the use case, and return its case
+- Switch exhaustively in the incoming adapter and take the words from the context's one place for them
+  (`*Problems`, the page's sentence); keep a `catch` only for what is still thrown
+- Turn a refusal into an `IllegalStateException` where nobody can answer it (an event consumer, an open host
+  service, start-up data)
+- In tests: assert the returned case; a stub of an input port returns the case; a setup call asserts the success
+  case
 
 ---

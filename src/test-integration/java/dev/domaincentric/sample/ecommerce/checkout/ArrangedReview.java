@@ -56,7 +56,7 @@ final class ArrangedReview implements GetCheckoutReviewInputPort {
     session.submitDelivery(
         DeliveryAddress.of("Hauptstrasse 1", "Berlin", "10115", "Germany"), shipping);
     session.submitPayment(PaymentSelection.of(PaymentProviderId.of("mock")));
-    return new GetCheckoutReviewResult(CheckoutCartSnapshot.from(session), fingerprint());
+    return new GetCheckoutReviewResult.Found(CheckoutCartSnapshot.from(session), fingerprint());
   }
 
   /** The fingerprint the review answers today. */

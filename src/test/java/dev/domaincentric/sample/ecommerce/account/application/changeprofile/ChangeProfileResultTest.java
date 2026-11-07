@@ -1,24 +1,26 @@
 package dev.domaincentric.sample.ecommerce.account.application.changeprofile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileResult.Outcome;
+import dev.domaincentric.dca.buildingblocks.application.Refusal;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileResult.Profile;
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Unit tests for {@link ChangeProfileResult}.
  *
- * <p>Pins that every rejection is a return value rather than an exception crossing the port, and
- * that the result cannot be built in a state that contradicts its outcome. A rejection carries no
- * words: the page words it from the outcome.
+ * <p>Pins that every rejection is a case of the result rather than an exception crossing the port,
+ * and that the result cannot be built in a state that contradicts its case. A rejection carries no
+ * words: the page words it from the case.
  */
 @DisplayName("ChangeProfileResult")
 class ChangeProfileResultTest {
@@ -29,45 +31,39 @@ class ChangeProfileResultTest {
   @Test
   @DisplayName("a change carries the stored profile")
   void changedCarriesProfile() {
-    final ChangeProfileResult result = ChangeProfileResult.changed(PROFILE);
+    final ChangeProfileResult result = new ChangeProfileResult.Changed(PROFILE);
 
-    assertEquals(Outcome.CHANGED, result.outcome());
-    assertEquals(Optional.of(PROFILE), result.profile());
+    assertEquals(PROFILE, assertInstanceOf(ChangeProfileResult.Changed.class, result).profile());
+    assertFalse(result instanceof Refusal, "a stored change is no refusal");
   }
 
   @Test
   @DisplayName("a change without the stored profile is refused")
   void changeNeedsProfile() {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new ChangeProfileResult(Outcome.CHANGED, Optional.empty()));
+    assertThrows(IllegalArgumentException.class, () -> new ChangeProfileResult.Changed(null));
+  }
+
+  static Stream<ChangeProfileResult> rejections() {
+    return Stream.of(
+        new ChangeProfileResult.EmailAlreadyInUse(),
+        new ChangeProfileResult.EmailInvalid(),
+        new ChangeProfileResult.DateOfBirthInvalid());
   }
 
   @ParameterizedTest
-  @EnumSource(
-      value = Outcome.class,
-      names = {"EMAIL_ALREADY_IN_USE", "EMAIL_INVALID", "DATE_OF_BIRTH_INVALID"})
-  @DisplayName("a rejection carrying a profile is refused")
-  void rejectionCarriesNoProfile(final Outcome outcome) {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new ChangeProfileResult(outcome, Optional.of(PROFILE)));
+  @MethodSource("rejections")
+  @DisplayName("a rejection is a refusal and carries no profile")
+  void rejectionCarriesNoProfile(final ChangeProfileResult rejection) {
+    assertTrue(rejection instanceof Refusal, "a rejection rolls back like a thrown failure");
+    assertEquals(0, rejection.getClass().getRecordComponents().length, "no profile, no words");
   }
 
   @Test
   @DisplayName("an inaccessible account carries no profile")
   void accountNotAccessibleCarriesNothing() {
-    final ChangeProfileResult result = ChangeProfileResult.accountNotAccessible();
+    final ChangeProfileResult result = new ChangeProfileResult.AccountNotAccessible();
 
-    assertEquals(Outcome.ACCOUNT_NOT_ACCESSIBLE, result.outcome());
-    assertTrue(result.profile().isEmpty());
-  }
-
-  @Test
-  @DisplayName("a null optional is refused instead of being treated as absent")
-  void nullOptionalIsRefused() {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new ChangeProfileResult(Outcome.ACCOUNT_NOT_ACCESSIBLE, null));
+    assertTrue(result instanceof Refusal);
+    assertEquals(0, result.getClass().getRecordComponents().length);
   }
 }

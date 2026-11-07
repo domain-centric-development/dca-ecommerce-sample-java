@@ -30,10 +30,9 @@ public interface SubmitDeliveryInputPort
    * </ul>
    *
    * @param command the command containing session ID, delivery address, and shipping option
-   * @return response containing the updated session state
-   * @throws IllegalArgumentException if session is not found
-   * @throws IllegalStateException if session is not modifiable, step validation fails, or buyer
-   *     info step is not completed
+   * @return the updated session state, or the refusal as a case: a shipping option not offered, no
+   *     such checkout, a session that takes no changes, a step not completed or out of order
+   * @throws IllegalArgumentException if a value of the command is malformed
    */
   @Override
   SubmitDeliveryResult execute(SubmitDeliveryCommand command);

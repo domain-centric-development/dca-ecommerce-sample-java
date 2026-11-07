@@ -29,6 +29,10 @@ import org.springframework.web.bind.annotation.*;
  * the framework answers {@code 401} to a stranger and {@code 403} to a customer without the role
  * (ADR-036).
  *
+ * <p><b>Refusals:</b> each route switches over its use case's result — no {@code default}, so the
+ * compiler holds that every refusal has an answer — and takes the answer from {@link
+ * ProductProblems}. What is still thrown is {@link ProductApiExceptionHandler}'s.
+ *
  * <p><b>Bearer only:</b> {@code /api/**} is authenticated by an {@code Authorization: Bearer}
  * header and never by a browser cookie, which is what makes its CSRF exemption sound (ADR-035).
  */
@@ -54,8 +58,7 @@ public class ProductResource {
 
   @PostMapping
   @PreAuthorize("hasRole('STAFF')")
-  public ResponseEntity<ProductDto> createProduct(
-      @Valid @RequestBody final CreateProductRequest request) {
+  public ResponseEntity<?> createProduct(@Valid @RequestBody final CreateProductRequest request) {
 
     final CreateProductCommand input =
         new CreateProductCommand(
@@ -68,8 +71,11 @@ public class ProductResource {
             request.category(),
             request.stock());
 
-    final CreateProductResult output = createProduct.execute(input);
-    return ResponseEntity.status(HttpStatus.CREATED).body(converter.toDto(output));
+    return switch (createProduct.execute(input)) {
+      case CreateProductResult.Created created ->
+          ResponseEntity.status(HttpStatus.CREATED).body(converter.toDto(created));
+      case CreateProductResult.DuplicateSku refusal -> ProductProblems.duplicateSku(refusal.sku());
+    };
   }
 
   @GetMapping
@@ -83,12 +89,9 @@ public class ProductResource {
 
   @GetMapping("/{id}")
   public ResponseEntity<ProductDto> getProductById(@PathVariable final String id) {
-    final GetProductByIdResult output = getProductById.execute(new GetProductByIdQuery(id));
-
-    if (!output.found()) {
-      return ResponseEntity.notFound().build();
-    }
-
-    return ResponseEntity.ok(converter.toDto(output));
+    return switch (getProductById.execute(new GetProductByIdQuery(id))) {
+      case GetProductByIdResult.Found found -> ResponseEntity.ok(converter.toDto(found.product()));
+      case GetProductByIdResult.ProductNotFound refusal -> ResponseEntity.notFound().build();
+    };
   }
 }

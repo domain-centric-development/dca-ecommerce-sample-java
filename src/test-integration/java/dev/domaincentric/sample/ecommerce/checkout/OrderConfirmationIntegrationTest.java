@@ -11,6 +11,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import dev.domaincentric.sample.ecommerce.checkout.application.orderconfirmation.sendorderconfirmation.SendOrderConfirmationCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.orderconfirmation.sendorderconfirmation.SendOrderConfirmationInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.orderconfirmation.sendorderconfirmation.SendOrderConfirmationResult;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import java.time.Duration;
 import java.util.List;
@@ -71,8 +72,10 @@ class OrderConfirmationIntegrationTest {
     mailProvider.stubFor(post("/messages").willReturn(aResponse().withStatus(202)));
     final String orderReference = orderReferenceOn(placedOrderOf(BUYER_EMAIL));
 
-    sendOrderConfirmation.execute(new SendOrderConfirmationCommand(orderReference));
-    sendOrderConfirmation.execute(new SendOrderConfirmationCommand(orderReference));
+    assertThat(sendOrderConfirmation.execute(new SendOrderConfirmationCommand(orderReference)))
+        .isInstanceOf(SendOrderConfirmationResult.Sent.class);
+    assertThat(sendOrderConfirmation.execute(new SendOrderConfirmationCommand(orderReference)))
+        .isInstanceOf(SendOrderConfirmationResult.Sent.class);
 
     Awaitility.await()
         .atMost(SHORTLY)

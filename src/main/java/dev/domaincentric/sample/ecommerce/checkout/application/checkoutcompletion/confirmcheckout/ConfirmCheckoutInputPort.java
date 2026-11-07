@@ -29,10 +29,11 @@ public interface ConfirmCheckoutInputPort
    * </ul>
    *
    * @param command the command containing the session ID
-   * @return response containing the confirmed session state
-   * @throws IllegalArgumentException if session is not found
-   * @throws IllegalStateException if session is not modifiable, steps are incomplete, or not at
-   *     review step
+   * @return the confirmed session state, or the refusal as a case: no such checkout, a session that
+   *     takes no changes, a step incomplete or not at the review, a line that no longer passes or
+   *     whose stock could not be reserved, an order changed since its review, a payment provider
+   *     not offered, unavailable or refusing
+   * @throws IllegalArgumentException if a value of the command is malformed
    */
   @Override
   ConfirmCheckoutResult execute(ConfirmCheckoutCommand command);

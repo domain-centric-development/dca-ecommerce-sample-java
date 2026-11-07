@@ -78,6 +78,8 @@ public class ProductCatalogService {
    * @param category the product category
    * @param stockQuantity the initial stock quantity
    * @return the created product's ID
+   * @throws IllegalStateException when the catalog already carries the stock keeping unit: the
+   *     callers of this service create products they name themselves and have no answer to it
    */
   public CreatedProduct createProduct(
       String sku,
@@ -88,18 +90,22 @@ public class ProductCatalogService {
       String priceCurrency,
       String category,
       int stockQuantity) {
-    CreateProductResult result =
-        createProductInputPort.execute(
-            new CreateProductCommand(
-                sku,
-                name,
-                description,
-                imageUrl,
-                priceAmount,
-                priceCurrency,
-                category,
-                stockQuantity));
-    return new CreatedProduct(ProductId.of(result.productId()));
+    return switch (createProductInputPort.execute(
+        new CreateProductCommand(
+            sku,
+            name,
+            description,
+            imageUrl,
+            priceAmount,
+            priceCurrency,
+            category,
+            stockQuantity))) {
+      case CreateProductResult.Created created ->
+          new CreatedProduct(ProductId.of(created.productId()));
+      case CreateProductResult.DuplicateSku refusal ->
+          throw new IllegalStateException(
+              "Product with SKU already exists: " + refusal.sku().value());
+    };
   }
 
   /**
@@ -109,16 +115,16 @@ public class ProductCatalogService {
    * @return product info if found
    */
   public Optional<ProductInfo> getProductInfo(ProductId productId) {
-    GetProductByIdResult response =
-        getProductByIdInputPort.execute(new GetProductByIdQuery(productId.value()));
-
-    if (!response.found() || response.product() == null) {
-      return Optional.empty();
-    }
-
-    var product = response.product();
-    return Optional.of(
-        new ProductInfo(product.productId(), product.name(), product.sku(), product.imageUrl()));
+    return switch (getProductByIdInputPort.execute(new GetProductByIdQuery(productId.value()))) {
+      case GetProductByIdResult.Found found ->
+          Optional.of(
+              new ProductInfo(
+                  found.product().productId(),
+                  found.product().name(),
+                  found.product().sku(),
+                  found.product().imageUrl()));
+      case GetProductByIdResult.ProductNotFound refusal -> Optional.empty();
+    };
   }
 
   /**

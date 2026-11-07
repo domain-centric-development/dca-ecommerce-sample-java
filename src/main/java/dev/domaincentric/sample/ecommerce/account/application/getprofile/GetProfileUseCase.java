@@ -12,8 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Read-only: loads the account linked to the given UserId and projects the fields the profile
  * page renders — the owner's name for display, the email and the date of birth for editing. An
- * account that cannot log in ({@code SUSPENDED}, {@code CLOSED}) is reported as absent, the same
- * rule {@code GetAccountOverviewUseCase} enforces.
+ * account that cannot log in ({@code SUSPENDED}, {@code CLOSED}) is reported as {@link
+ * GetProfileResult.AccountNotAccessible}, the same rule {@code GetAccountOverviewUseCase} enforces.
  */
 @Service
 public class GetProfileUseCase implements GetProfileInputPort {
@@ -31,8 +31,8 @@ public class GetProfileUseCase implements GetProfileInputPort {
         .findByLinkedUserId(UserId.of(query.userId()))
         .filter(account -> account.status().canLogin())
         .map(account -> profileOf(account.email().value(), account.owner()))
-        .map(GetProfileResult::found)
-        .orElseGet(GetProfileResult::notFound);
+        .<GetProfileResult>map(GetProfileResult.Found::new)
+        .orElseGet(GetProfileResult.AccountNotAccessible::new);
   }
 
   private static Profile profileOf(final String email, final Owner owner) {

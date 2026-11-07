@@ -681,8 +681,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── ChangePriceInputPort.java
 │   │   │   ├── ChangePriceUseCase.java
 │   │   │   ├── ChangePriceCommand.java
-│   │   │   ├── ChangePriceResult.java
-│   │   │   └── ProductPriceNotFoundException.java
+│   │   │   └── ChangePriceResult.java       # Changed | ProductPriceNotFound
 │   │   ├── getpricesforproducts/         # Use case: Get Prices for Products
 │   │   │   ├── GetPricesForProductsInputPort.java
 │   │   │   ├── GetPricesForProductsUseCase.java
@@ -695,6 +694,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │   ├── api/
 │       │   │   ├── PriceResource.java
 │       │   │   ├── ChangePriceRequest.java
+│       │   │   ├── PricingProblems.java      # the answer to each refusal
 │       │   │   └── PricingApiExceptionHandler.java
 │       │   └── event/
 │       │       └── PriceInitializationEventConsumer.java
@@ -838,11 +838,14 @@ stated by each resource, not by the filter chain: the JWT filter gives every req
 ### How a refusal reads
 
 Every refused request answers with an RFC 9457 problem document (`application/problem+json`), built by the
-context's own `*ApiExceptionHandler`. The status follows what went wrong, not which layer noticed it:
+context's REST adapter: the resource switches over the use case's result and takes the answer for a refusal from
+the context's `*Problems`; the context's `*ApiExceptionHandler` answers what is still thrown (a refused field, a
+value that does not parse, a rule of the model no use case returns). The status follows what went wrong, not which
+layer noticed it:
 
 | Status | When |
 |---|---|
-| `401` | a login whose address or password does not hold — titled "Authentication failed", no detail, with `WWW-Authenticate: Bearer`; `AuthResource` answers it, since the refusal is an outcome of the use case, not a failure |
+| `401` | a login whose address or password does not hold — titled "Authentication failed", no detail, with `WWW-Authenticate: Bearer`; `AuthResource` answers it from the authentication result's refusal case |
 | `404` | the addressed thing is not there, or not the caller's — a cart, a session, an article, a position in a cart, a product in the price address |
 | `409` | a conflict with existing state — a stock keeping unit already in use, a second active cart, a cart that no longer takes changes |
 | `422` | the request was understood and a rule refused it — a password below the strength rules, a checkout step that has no data yet |
@@ -853,9 +856,11 @@ context's own `*ApiExceptionHandler`. The status follows what went wrong, not wh
   "detail": "A product with SKU API-42 already exists." }
 ```
 
-The failures themselves are types, not status codes: the use cases and the model raise
-`DuplicateSkuException`, `CartNotFoundException`, `InsufficientStockException` and their kin, and only the
-adapter decides what a caller is told (ADR-044). `ApiProblemDetailIntegrationTest` holds that mapping.
+The refusals themselves are types, not status codes: a use case returns them as cases of a closed result —
+`CreateProductResult.DuplicateSku`, `AddItemToCartResult.CartNotFound`, `AddItemToCartResult.InsufficientArticleStock`
+and their kin, each marked `Refusal` so a refused transaction rolls back like a thrown one — the model throws its
+rules as `DomainException`s, and only the adapter decides what a caller is told (ADR-044, ADR-047).
+`ApiProblemDetailIntegrationTest` holds that mapping.
 
 ### Authentication
 

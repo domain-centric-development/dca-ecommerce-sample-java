@@ -6,6 +6,7 @@ import dev.domaincentric.sample.ecommerce.pricing.domain.model.ProductPrice;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,10 +31,11 @@ public class ChangePriceUseCase implements ChangePriceInputPort {
   @Override
   public ChangePriceResult execute(final ChangePriceCommand command) {
     final ProductId productId = ProductId.of(command.productId());
-    final ProductPrice productPrice =
-        productPriceRepository
-            .findByProductId(productId)
-            .orElseThrow(() -> new ProductPriceNotFoundException(productId));
+    final Optional<ProductPrice> found = productPriceRepository.findByProductId(productId);
+    if (found.isEmpty()) {
+      return new ChangePriceResult.ProductPriceNotFound(productId);
+    }
+    final ProductPrice productPrice = found.get();
 
     final Money current = productPrice.currentPrice().value();
     productPrice.updatePrice(Price.of(new Money(command.priceAmount(), current.currency())));
@@ -42,7 +44,7 @@ public class ChangePriceUseCase implements ChangePriceInputPort {
     eventPublisher.publishAndClearEvents(productPrice);
 
     final Money changed = productPrice.currentPrice().value();
-    return new ChangePriceResult(
+    return new ChangePriceResult.Changed(
         productId.value(),
         changed.amount(),
         changed.currency().getCurrencyCode(),

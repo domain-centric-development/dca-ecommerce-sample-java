@@ -1,6 +1,6 @@
 package dev.domaincentric.sample.ecommerce.cart.application.shared;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
+import dev.domaincentric.dca.buildingblocks.application.OutputPortException;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import java.io.Serial;
 
@@ -11,8 +11,11 @@ import java.io.Serial;
  * store sees every cart of a customer at once, so only the store can refuse the second one. Every
  * implementation reports it with this type, whatever its own mechanism is, so a caller can react to
  * a lost race without knowing which store it is talking to.
+ *
+ * <p>A failure the output port declares: the adapter raises it, the use case catches it and answers
+ * with a case of its result.
  */
-public final class ActiveCartAlreadyExistsException extends UseCaseException {
+public final class ActiveCartAlreadyExistsException extends OutputPortException {
 
   @Serial private static final long serialVersionUID = 1L;
 

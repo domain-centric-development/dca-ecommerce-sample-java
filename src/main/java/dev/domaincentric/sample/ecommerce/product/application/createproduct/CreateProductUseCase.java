@@ -21,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>This use case orchestrates the creation of a new product by:
  *
  * <ol>
- *   <li>Validating business rules (SKU uniqueness)
+ *   <li>Validating business rules (SKU uniqueness) - a stock keeping unit the catalog already
+ *       carries is returned as {@link CreateProductResult.DuplicateSku} before anything is written
  *   <li>Creating the product aggregate using the factory
  *   <li>Persisting the product via repository
  *   <li>Publishing domain events (for Pricing and Inventory contexts)
@@ -57,7 +58,7 @@ public class CreateProductUseCase implements CreateProductInputPort {
 
     // Business rule: SKU must be unique
     if (productRepository.existsBySku(sku)) {
-      throw new DuplicateSkuException(sku);
+      return new CreateProductResult.DuplicateSku(sku);
     }
 
     // Convert input to domain value objects
@@ -81,7 +82,7 @@ public class CreateProductUseCase implements CreateProductInputPort {
 
     // Map to output (price comes from the Price built above, rounded to cents, since it's not
     // stored in Product)
-    return new CreateProductResult(
+    return new CreateProductResult.Created(
         product.id().value().toString(),
         product.sku().value(),
         product.name().value(),

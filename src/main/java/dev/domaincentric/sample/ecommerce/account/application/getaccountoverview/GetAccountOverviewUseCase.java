@@ -13,9 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
  * the account overview page. Performs no write.
  *
  * <p>An account that cannot log in ({@code SUSPENDED}, {@code CLOSED}) is not accessible and is
- * reported as absent — the same rule {@code AuthenticateAccountUseCase} enforces on the login path.
- * Without it, a suspended account holding a still-valid token would keep rendering its account
- * data.
+ * reported as {@link GetAccountOverviewResult.AccountNotAccessible} — the same rule {@code
+ * AuthenticateAccountUseCase} enforces on the login path. Without it, a suspended account holding a
+ * still-valid token would keep rendering its account data.
  *
  * <p>A UserId with no account at all is the stale-token case that the authentication filter
  * normally downgrades to anonymous through {@code IsAccountRegisteredUseCase}; this branch covers
@@ -37,7 +37,7 @@ public class GetAccountOverviewUseCase implements GetAccountOverviewInputPort {
         .findByLinkedUserId(UserId.of(query.userId()))
         .filter(account -> account.status().canLogin())
         .map(account -> new AccountOverview(account.email().value(), account.lastLoginAt()))
-        .map(GetAccountOverviewResult::found)
-        .orElseGet(GetAccountOverviewResult::notFound);
+        .<GetAccountOverviewResult>map(GetAccountOverviewResult.Found::new)
+        .orElseGet(GetAccountOverviewResult.AccountNotAccessible::new);
   }
 }

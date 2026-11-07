@@ -34,6 +34,10 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>POST /api/auth/logout - No-op acknowledgement; the client discards its token
  * </ul>
  *
+ * <p><b>Refusals:</b> each route switches over its use case's result — no {@code default}, so the
+ * compiler holds that every refusal has an answer — and takes the answer from {@link
+ * AccountProblems}. What is still thrown is {@link AccountApiExceptionHandler}'s.
+ *
  * <p><b>Stateless by design:</b> the API never sets or reads cookies. Clients send the returned
  * token as {@code Authorization: Bearer}; browser sessions are established through the web login
  * form instead (ADR-035).
@@ -64,17 +68,16 @@ public class AuthResource {
     final AuthenticateAccountCommand command =
         new AuthenticateAccountCommand(request.email(), request.password());
 
-    final AuthenticateAccountResult result = authenticateAccountUseCase.execute(command);
-
-    if (!result.success()) {
-      return refusedLogin();
-    }
-
-    final String token =
-        tokenService.generateRegisteredToken(
-            UserId.of(result.userId()), result.email(), result.roles());
-
-    return ResponseEntity.ok(LoginResponse.success(token, result.email()));
+    return switch (authenticateAccountUseCase.execute(command)) {
+      case AuthenticateAccountResult.Authenticated account -> {
+        final String token =
+            tokenService.generateRegisteredToken(
+                UserId.of(account.userId()), account.email(), account.roles());
+        yield ResponseEntity.ok(LoginResponse.success(token, account.email()));
+      }
+      case AuthenticateAccountResult.CredentialsRefused refusal -> refusedLogin();
+      case AuthenticateAccountResult.AccountNotAccessible refusal -> refusedLogin();
+    };
   }
 
   /**
@@ -92,8 +95,7 @@ public class AuthResource {
   }
 
   @PostMapping("/register")
-  public ResponseEntity<RegisterResponse> register(
-      @Valid @RequestBody final RegisterRequest request) {
+  public ResponseEntity<?> register(@Valid @RequestBody final RegisterRequest request) {
 
     final String currentUserId = identityProvider.getCurrentIdentity().userId().value();
 
@@ -106,14 +108,21 @@ public class AuthResource {
             request.lastName(),
             request.dateOfBirth());
 
-    final RegisterAccountResult result = registerAccountUseCase.execute(command);
-
-    final String token =
-        tokenService.generateRegisteredToken(
-            UserId.of(result.userId()), result.email(), result.roles());
-
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(RegisterResponse.success(token, result.email()));
+    return switch (registerAccountUseCase.execute(command)) {
+      case RegisterAccountResult.Registered account -> {
+        final String token =
+            tokenService.generateRegisteredToken(
+                UserId.of(account.userId()), account.email(), account.roles());
+        yield ResponseEntity.status(HttpStatus.CREATED)
+            .body(RegisterResponse.success(token, account.email()));
+      }
+      case RegisterAccountResult.EmailAlreadyRegistered refusal ->
+          AccountProblems.emailAlreadyRegistered(refusal.email());
+      case RegisterAccountResult.AccountAlreadyExists refusal ->
+          AccountProblems.accountAlreadyExists();
+      case RegisterAccountResult.PasswordTooWeak refusal ->
+          AccountProblems.passwordTooWeak(refusal.brokenRule());
+    };
   }
 
   /**

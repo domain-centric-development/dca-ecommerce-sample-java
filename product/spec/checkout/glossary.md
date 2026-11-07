@@ -596,9 +596,11 @@ confirmed; the page answers "Your order could not be placed. Please try again."
 **Definition:** What the use case could not get hold of before a session exists, or could not address afterwards.
 Session and cart lookups are scoped to the caller, so "not yours" reads as "not found" (ADR-036).
 `CheckoutItemsUnavailable` is the start's refusal of a cart whose lines are unavailable or short of stock; it
-carries their product ids, in cart order.
+carries their product ids, in cart order. `EmptyCart` also answers a start whose checkout would hold no line (the
+model's `EmptyCheckout`).
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `CartDataPort`, `CheckoutArticleDataPort`
+**Type:** Refusal cases of the use-case results (`Refusal`) — `StartCheckout`; `CheckoutSessionNotFound` of every
+step, of `ConfirmCheckout` and of the session queries · **Related terms:** `CartDataPort`, `CheckoutArticleDataPort`
 
 ---
 
@@ -606,13 +608,16 @@ carries their product ids, in cart order.
 
 **Definition:** The selected provider is unknown to the shop; it is unavailable (it says it is not taking payments,
 cannot be reached, does not answer in time or answers outside its contract); or it refused to open a payment. The
-provider's reason travels on the failure and into the log; each carries the `PaymentProviderId` it met, not the raw
+provider's reason travels on the refusal and into the log; each carries the `PaymentProviderId` it met, not the raw
 input. A refusal or an unavailable provider at Place Order keeps the customer at the review, places no order and
 gives the reserved stock back. The customer sees the shop's own text: "The payment was
 refused. Please choose another way to pay." for a refusal, "The payment provider is not available right now. Please
 try again later." when the provider is unavailable.
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `PaymentProviderRegistry`, `PaymentProvider`,
+**Type:** Refusal cases of `ConfirmCheckout`'s result (`Refusal`); `PaymentProviderNotFound` also of
+`SubmitPayment`'s. The provider is a foreign system: its port declares the refusal and the unavailability as
+`PaymentInitiationFailedException` and `PaymentProviderUnavailableException` (`OutputPortException`), the adapter
+raises them, the use case returns the case · **Related terms:** `PaymentProviderRegistry`, `PaymentProvider`,
 `PaymentResult`
 
 ---
@@ -620,36 +625,39 @@ try again later." when the provider is unavailable.
 ### MailProviderUnavailable (MailProviderUnavailableException)
 
 **Definition:** The mail provider did not accept a mail: it answered other than `202`, did not answer in time or
-could not be reached. The failure carries the mail's key; the delivery that asked for the mail is tried again later,
-under the same key. No customer sees it.
+could not be reached. The case carries the mail's key; the event consumer throws it back, so the delivery that asked
+for the mail is tried again later, under the same key. No customer sees it.
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `OrderConfirmationMailer`, Order confirmation
+**Type:** Refusal case of `SendOrderConfirmation`'s result (`Refusal`). The provider is a foreign system: its port
+declares the failure as `MailProviderUnavailableException` (`OutputPortException`), the adapter raises it, the use
+case returns the case · **Related terms:** `OrderConfirmationMailer`, Order confirmation
 
 ---
 
-### ShippingOptionNotOffered (ShippingOptionNotOfferedException)
+### ShippingOptionNotOffered
 
 **Definition:** The shipping option the delivery form names is not one the shop offers. Carries the shipping option
 id it met. The delivery step opens again with "This shipping method is not offered. Please choose another one."
 
-**Type:** Use-case failure (`UseCaseException`) · **Related terms:** `ShippingOptionRegistry`, `ShippingOption`
+**Type:** Refusal case of `SubmitDelivery`'s result (`Refusal`) · **Related terms:** `ShippingOptionRegistry`, `ShippingOption`
 
 ---
 
 ### PaymentResult
 
-**Definition:** What the payment provider made of a payment operation, as checkout understands it. A payment
-request — sent at Place Order, after the review's checks and the stock reservation — carries the checkout session's
-total amount and currency and the checkout reference to the provider; its outcome is one of:
+**Definition:** What the payment provider made of confirming or cancelling a payment, as checkout understands it:
+`SUCCEEDED`, `REFUSED` or `UNAVAILABLE`. A payment request — sent at Place Order, after the review's checks and the
+stock reservation — carries the checkout session's total amount and currency and the checkout reference to the
+provider and ends one of three ways:
 
-- `SUCCEEDED` — an **authorized payment**: the provider accepted it and gave a payment reference. Only then
-  does the session authorize the payment (`authorizePayment`), publish `PaymentSubmitted` and confirm.
-- `REFUSED` — a **refused payment**: the provider answered and declined. The checkout stays at the review
-  (`PaymentInitiationFailed`).
-- `UNAVAILABLE` — an **unavailable provider**: no answer within 2 seconds, no connection, or an answer outside
-  the provider's contract. The checkout stays at the review (`PaymentProviderUnavailable`).
+- an **authorized payment**: the provider accepted it and gave a payment reference, which the port returns. Only
+  then does the session authorize the payment (`authorizePayment`), publish `PaymentSubmitted` and confirm.
+- a **refused payment**: the provider answered and declined (`PaymentInitiationFailedException`). The checkout
+  stays at the review (`PaymentInitiationFailed`).
+- an **unavailable provider**: no answer within 2 seconds, no connection, or an answer outside the provider's
+  contract (`PaymentProviderUnavailableException`). The checkout stays at the review (`PaymentProviderUnavailable`).
 
-**Type:** Concept (result of the `PaymentProvider` output port)
+**Type:** Concept (result of the `PaymentProvider` output port's confirmation and cancellation)
 
 **Related terms:** `PaymentProviderId`, `PaymentSelection`, `PaymentSubmitted`.
 
@@ -748,8 +756,8 @@ provider delays it and never undoes the order.
 - send the order confirmation (`sendorderconfirmation`, through `SendOrderConfirmationInputPort`) — mails the placed
   checkout's total to its buyer e-mail through the mail provider, under one key per checkout
   (`order-confirmation-<checkout session id>`), so a repeated delivery reaches the buyer once; a session with no
-  placed order is answered `NO_PLACED_ORDER`; a provider that does not accept the mail is
-  `MailProviderUnavailableException`, and the confirmation is tried again
+  placed order is answered `NoPlacedOrder`; a provider that does not accept the mail is answered
+  `MailProviderUnavailable`, and the confirmation is tried again
 
 **Notes:** "Order confirmation" is the mail to the buyer — not the confirmation step (`CheckoutStep.CONFIRMATION`),
 not `confirm` and not `CheckoutConfirmed`, which all mean placing the order.
@@ -760,10 +768,10 @@ not `confirm` and not `CheckoutConfirmed`, which all mean placing the order.
 
 **Definition:** The outside service that sends the shop's mails; it accepts a mail under a key and sends one
 mail per key. An external upstream of checkout — outbound, over REST — translated by an anti-corruption layer:
-the REST adapter `RestMailProvider` turns the provider's answers into the port's `ACCEPTED` or `UNAVAILABLE`
-behind the output port `OrderConfirmationMailer`; with no provider address configured, the stand-in
+the REST adapter `RestMailProvider` turns any answer but an acceptance into the port's
+`MailProviderUnavailableException` behind the output port `OrderConfirmationMailer`; with no provider address configured, the stand-in
 `StandInMailProvider` accepts every mail and sends nothing.
 
 **Type:** Concept (external system, declared `@ExternalUpstream` on the checkout package)
 
-**Related terms:** Order confirmation, `MailProviderUnavailableException`.
+**Related terms:** Order confirmation, `MailProviderUnavailable`.

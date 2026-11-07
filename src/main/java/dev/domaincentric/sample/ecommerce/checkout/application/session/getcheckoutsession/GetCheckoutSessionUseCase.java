@@ -32,15 +32,10 @@ public class GetCheckoutSessionUseCase implements GetCheckoutSessionInputPort {
     return checkoutSessionRepository
         .findByIdForCustomer(query.sessionId(), query.customerId())
         .map(CheckoutCartSnapshot::from)
-        .map(
+        .<GetCheckoutSessionResult>map(
             snapshot ->
-                requestedStep == null
-                    ? GetCheckoutSessionResult.found(snapshot)
-                    : GetCheckoutSessionResult.found(snapshot, snapshot.accessTo(requestedStep)))
-        .orElseGet(
-            () ->
-                requestedStep == null
-                    ? GetCheckoutSessionResult.notFound()
-                    : GetCheckoutSessionResult.notFoundForStep());
+                new GetCheckoutSessionResult.Found(
+                    snapshot, requestedStep == null ? null : snapshot.accessTo(requestedStep)))
+        .orElseGet(() -> new GetCheckoutSessionResult.CheckoutSessionNotFound(query.sessionId()));
   }
 }

@@ -20,12 +20,16 @@ import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletio
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewQuery;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
@@ -259,14 +263,18 @@ class ArticleDataFlowIntegrationTest {
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 2));
 
       // When: Starting checkout
-      StartCheckoutResult result =
-          startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
+      StartCheckoutResult.Started result =
+          assertInstanceOf(
+              StartCheckoutResult.Started.class,
+              startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)));
 
       // Then: The command answers small; the session query carries the line items
       assertNotNull(result.sessionId(), "Session should be created");
       CheckoutCartSnapshot session =
-          getCheckoutSessionInputPort
-              .execute(GetCheckoutSessionQuery.of(result.sessionId(), customerId))
+          assertInstanceOf(
+                  GetCheckoutSessionResult.Found.class,
+                  getCheckoutSessionInputPort.execute(
+                      GetCheckoutSessionQuery.of(result.sessionId(), customerId)))
               .session();
       assertFalse(session.lineItems().isEmpty(), "Should have line items");
 
@@ -290,13 +298,17 @@ class ArticleDataFlowIntegrationTest {
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 1));
 
       // When: Starting checkout
-      StartCheckoutResult result =
-          startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
+      StartCheckoutResult.Started result =
+          assertInstanceOf(
+              StartCheckoutResult.Started.class,
+              startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)));
 
       // Then: Line item should have product name
       LineItemSnapshot lineItem =
-          getCheckoutSessionInputPort
-              .execute(GetCheckoutSessionQuery.of(result.sessionId(), customerId))
+          assertInstanceOf(
+                  GetCheckoutSessionResult.Found.class,
+                  getCheckoutSessionInputPort.execute(
+                      GetCheckoutSessionQuery.of(result.sessionId(), customerId)))
               .session()
               .lineItems()
               .get(0);
@@ -325,18 +337,22 @@ class ArticleDataFlowIntegrationTest {
       addItemToCartUseCase.execute(
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 1));
 
-      StartCheckoutResult startResult =
-          startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
+      StartCheckoutResult.Started startResult =
+          assertInstanceOf(
+              StartCheckoutResult.Started.class,
+              startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)));
       String sessionId = startResult.sessionId();
 
       // Complete all checkout steps
       completeCheckoutSteps(sessionId, customerId);
 
       // When: Confirming checkout
-      ConfirmCheckoutResult result =
-          confirmCheckoutInputPort.execute(
-              new ConfirmCheckoutCommand(
-                  sessionId, customerId, reviewFingerprintOf(sessionId, customerId)));
+      ConfirmCheckoutResult.Confirmed result =
+          assertInstanceOf(
+              ConfirmCheckoutResult.Confirmed.class,
+              confirmCheckoutInputPort.execute(
+                  new ConfirmCheckoutCommand(
+                      sessionId, customerId, reviewFingerprintOf(sessionId, customerId))));
 
       // Then: Checkout should be confirmed successfully
       assertEquals("CONFIRMED", result.status(), "Checkout should be confirmed");
@@ -354,23 +370,30 @@ class ArticleDataFlowIntegrationTest {
       addItemToCartUseCase.execute(
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 1));
 
-      StartCheckoutResult startResult =
-          startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
+      StartCheckoutResult.Started startResult =
+          assertInstanceOf(
+              StartCheckoutResult.Started.class,
+              startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)));
       String sessionId = startResult.sessionId();
 
       // Complete all checkout steps
       completeCheckoutSteps(sessionId, customerId);
 
       // Get session before confirmation
-      GetCheckoutSessionResult beforeConfirm =
-          getCheckoutSessionInputPort.execute(GetCheckoutSessionQuery.of(sessionId, customerId));
+      GetCheckoutSessionResult.Found beforeConfirm =
+          assertInstanceOf(
+              GetCheckoutSessionResult.Found.class,
+              getCheckoutSessionInputPort.execute(
+                  GetCheckoutSessionQuery.of(sessionId, customerId)));
       assertEquals("REVIEW", beforeConfirm.currentStep(), "Should be at review step");
 
       // When: Confirming - the resolver will fetch fresh prices from CheckoutArticleDataPort
-      ConfirmCheckoutResult result =
-          confirmCheckoutInputPort.execute(
-              new ConfirmCheckoutCommand(
-                  sessionId, customerId, reviewFingerprintOf(sessionId, customerId)));
+      ConfirmCheckoutResult.Confirmed result =
+          assertInstanceOf(
+              ConfirmCheckoutResult.Confirmed.class,
+              confirmCheckoutInputPort.execute(
+                  new ConfirmCheckoutCommand(
+                      sessionId, customerId, reviewFingerprintOf(sessionId, customerId))));
 
       // Then: Confirmation should use prices from the resolver
       assertEquals("CONFIRMED", result.status());
@@ -394,12 +417,13 @@ class ArticleDataFlowIntegrationTest {
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 2));
 
       // When: Getting cart by ID
-      GetCartByIdResult result =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
+      GetCartByIdResult.Found result =
+          assertInstanceOf(
+              GetCartByIdResult.Found.class,
+              getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
 
       // Then: Cart items should have current pricing from ArticleDataPort
-      assertTrue(result.found(), "Cart should be found");
-      EnrichedCart cart = result.cart().orElseThrow();
+      EnrichedCart cart = result.cart();
       assertFalse(cart.items().isEmpty(), "Cart should have items");
 
       EnrichedCartItem item = cart.items().get(0);
@@ -423,11 +447,13 @@ class ArticleDataFlowIntegrationTest {
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 1));
 
       // When: Getting cart
-      GetCartByIdResult result =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
+      GetCartByIdResult.Found result =
+          assertInstanceOf(
+              GetCartByIdResult.Found.class,
+              getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
 
       // Then: Item should have both price at addition and current price
-      EnrichedCartItem item = result.cart().orElseThrow().items().get(0);
+      EnrichedCartItem item = result.cart().items().get(0);
 
       assertNotNull(item.priceAtAddition(), "Price at addition should be set");
       assertNotNull(
@@ -455,11 +481,13 @@ class ArticleDataFlowIntegrationTest {
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 1));
 
       // When: Getting cart immediately (price hasn't changed)
-      GetCartByIdResult result =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
+      GetCartByIdResult.Found result =
+          assertInstanceOf(
+              GetCartByIdResult.Found.class,
+              getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
 
       // Then: Price should not be marked as changed
-      EnrichedCartItem item = result.cart().orElseThrow().items().get(0);
+      EnrichedCartItem item = result.cart().items().get(0);
       assertFalse(
           item.hasPriceChanged(),
           "Price should not be marked as changed when current equals original");
@@ -487,9 +515,11 @@ class ArticleDataFlowIntegrationTest {
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 1));
 
       // Get initial cart state
-      GetCartByIdResult initialResult =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
-      EnrichedCartItem initialItem = initialResult.cart().orElseThrow().items().get(0);
+      GetCartByIdResult.Found initialResult =
+          assertInstanceOf(
+              GetCartByIdResult.Found.class,
+              getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
+      EnrichedCartItem initialItem = initialResult.cart().items().get(0);
       BigDecimal originalPrice = initialItem.priceAtAddition().value().amount();
 
       // When: Price changes (update to a different price)
@@ -498,9 +528,11 @@ class ArticleDataFlowIntegrationTest {
           new ProvisionInitialPriceCommand(testProductIdString, newPrice, "EUR"));
 
       // Then: Getting cart should show price changed
-      GetCartByIdResult updatedResult =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
-      EnrichedCartItem updatedItem = updatedResult.cart().orElseThrow().items().get(0);
+      GetCartByIdResult.Found updatedResult =
+          assertInstanceOf(
+              GetCartByIdResult.Found.class,
+              getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
+      EnrichedCartItem updatedItem = updatedResult.cart().items().get(0);
 
       assertTrue(
           updatedItem.hasPriceChanged(), "Price should be marked as changed after price update");
@@ -536,14 +568,15 @@ class ArticleDataFlowIntegrationTest {
           new AddItemToCartCommand(cartId, customerId, product2Id.value().toString(), 1));
 
       // Get initial prices
-      GetCartByIdResult initialResult =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
-      assertEquals(
-          2, initialResult.cart().orElseThrow().items().size(), "Cart should have 2 items");
+      GetCartByIdResult.Found initialResult =
+          assertInstanceOf(
+              GetCartByIdResult.Found.class,
+              getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
+      assertEquals(2, initialResult.cart().items().size(), "Cart should have 2 items");
 
       // Change price for only first product
       EnrichedCartItem item1Initial =
-          initialResult.cart().orElseThrow().items().stream()
+          initialResult.cart().items().stream()
               .filter(i -> i.productId().equals(product1Id))
               .findFirst()
               .orElseThrow();
@@ -554,18 +587,20 @@ class ArticleDataFlowIntegrationTest {
           new ProvisionInitialPriceCommand(product1Id.value().toString(), newPrice, "EUR"));
 
       // When: Getting cart
-      GetCartByIdResult result =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
+      GetCartByIdResult.Found result =
+          assertInstanceOf(
+              GetCartByIdResult.Found.class,
+              getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
 
       // Then: Only first product should show price change
       EnrichedCartItem item1 =
-          result.cart().orElseThrow().items().stream()
+          result.cart().items().stream()
               .filter(i -> i.productId().equals(product1Id))
               .findFirst()
               .orElseThrow();
 
       EnrichedCartItem item2 =
-          result.cart().orElseThrow().items().stream()
+          result.cart().items().stream()
               .filter(i -> i.productId().equals(product2Id))
               .findFirst()
               .orElseThrow();
@@ -592,19 +627,24 @@ class ArticleDataFlowIntegrationTest {
           new AddItemToCartCommand(cartId, customerId, testProductIdString, 2));
 
       // Step 1: Verify cart enrichment
-      GetCartByIdResult cartResult =
-          getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId));
-      assertTrue(cartResult.found());
+      GetCartByIdResult.Found cartResult =
+          assertInstanceOf(
+              GetCartByIdResult.Found.class,
+              getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)));
       assertNotNull(
-          cartResult.cart().orElseThrow().items().get(0).currentArticle().currentPrice(),
+          cartResult.cart().items().get(0).currentArticle().currentPrice(),
           "Cart should have fresh pricing from ArticleDataPort");
 
       // Step 2: Start checkout (uses CheckoutArticleDataPort for pricing)
-      StartCheckoutResult startResult =
-          startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId));
+      StartCheckoutResult.Started startResult =
+          assertInstanceOf(
+              StartCheckoutResult.Started.class,
+              startCheckoutInputPort.execute(new StartCheckoutCommand(cartId, customerId)));
       assertNotNull(
-          getCheckoutSessionInputPort
-              .execute(GetCheckoutSessionQuery.of(startResult.sessionId(), customerId))
+          assertInstanceOf(
+                  GetCheckoutSessionResult.Found.class,
+                  getCheckoutSessionInputPort.execute(
+                      GetCheckoutSessionQuery.of(startResult.sessionId(), customerId)))
               .session()
               .lineItems()
               .get(0)
@@ -616,10 +656,12 @@ class ArticleDataFlowIntegrationTest {
       completeCheckoutSteps(sessionId, customerId);
 
       // Step 4: Confirm (uses resolver with fresh pricing)
-      ConfirmCheckoutResult confirmResult =
-          confirmCheckoutInputPort.execute(
-              new ConfirmCheckoutCommand(
-                  sessionId, customerId, reviewFingerprintOf(sessionId, customerId)));
+      ConfirmCheckoutResult.Confirmed confirmResult =
+          assertInstanceOf(
+              ConfirmCheckoutResult.Confirmed.class,
+              confirmCheckoutInputPort.execute(
+                  new ConfirmCheckoutCommand(
+                      sessionId, customerId, reviewFingerprintOf(sessionId, customerId))));
       assertEquals(
           "CONFIRMED",
           confirmResult.status(),
@@ -649,32 +691,39 @@ class ArticleDataFlowIntegrationTest {
 
   /** The fingerprint of the session's review as the review page would show it now. */
   private String reviewFingerprintOf(String sessionId, String customerId) {
-    return getCheckoutReviewInputPort
-        .execute(new GetCheckoutReviewQuery(sessionId, customerId))
+    return assertInstanceOf(
+            GetCheckoutReviewResult.Found.class,
+            getCheckoutReviewInputPort.execute(new GetCheckoutReviewQuery(sessionId, customerId)))
         .fingerprint();
   }
 
   /** Helper method to complete all checkout steps before confirmation. */
   private void completeCheckoutSteps(String sessionId, String customerId) {
     // Submit buyer info
-    submitBuyerInfoInputPort.execute(
-        new SubmitBuyerInfoCommand(
-            sessionId, customerId, "test@example.com", "John", "Doe", "+1-555-0100"));
+    assertInstanceOf(
+        SubmitBuyerInfoResult.Submitted.class,
+        submitBuyerInfoInputPort.execute(
+            new SubmitBuyerInfoCommand(
+                sessionId, customerId, "test@example.com", "John", "Doe", "+1-555-0100")));
 
     // Submit delivery
-    submitDeliveryInputPort.execute(
-        new SubmitDeliveryCommand(
-            sessionId,
-            customerId,
-            "123 Main Street",
-            null,
-            "Springfield",
-            "12345",
-            "United States",
-            "IL",
-            "standard"));
+    assertInstanceOf(
+        SubmitDeliveryResult.Submitted.class,
+        submitDeliveryInputPort.execute(
+            new SubmitDeliveryCommand(
+                sessionId,
+                customerId,
+                "123 Main Street",
+                null,
+                "Springfield",
+                "12345",
+                "United States",
+                "IL",
+                "standard")));
 
     // Submit payment
-    submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, customerId, "mock"));
+    assertInstanceOf(
+        SubmitPaymentResult.Submitted.class,
+        submitPaymentInputPort.execute(new SubmitPaymentCommand(sessionId, customerId, "mock")));
   }
 }

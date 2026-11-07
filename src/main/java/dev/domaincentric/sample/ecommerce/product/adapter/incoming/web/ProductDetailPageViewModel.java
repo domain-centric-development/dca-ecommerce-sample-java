@@ -39,18 +39,13 @@ public record ProductDetailPageViewModel(
     String pageTitle) {
 
   /**
-   * Creates a ViewModel from the use case result.
+   * Creates a ViewModel from the product the use case found.
    *
-   * @param result the use case result containing the enriched product
+   * @param found the use case's case carrying the enriched product
    * @return the page-specific ViewModel
-   * @throws IllegalArgumentException if the result indicates product was not found
    */
-  public static ProductDetailPageViewModel fromResult(final GetProductByIdResult result) {
-    if (!result.found() || result.product() == null) {
-      throw new IllegalArgumentException("Cannot create ViewModel from not-found result");
-    }
-
-    final EnrichedProduct product = result.product();
+  public static ProductDetailPageViewModel fromResult(final GetProductByIdResult.Found found) {
+    final EnrichedProduct product = found.product();
 
     return new ProductDetailPageViewModel(
         product.productId().value().toString(),

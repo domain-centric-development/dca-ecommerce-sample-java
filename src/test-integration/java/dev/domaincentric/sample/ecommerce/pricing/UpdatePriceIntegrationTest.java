@@ -1,13 +1,13 @@
 package dev.domaincentric.sample.ecommerce.pricing;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceCommand;
 import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceInputPort;
-import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ProductPriceNotFoundException;
+import dev.domaincentric.sample.ecommerce.pricing.application.changeprice.ChangePriceResult;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +39,8 @@ class UpdatePriceIntegrationTest {
     final ShopRequests shop = new ShopRequests(mockMvc, tokenService);
     final String ddd = shop.productIdOf("Domain-Driven Design");
 
-    changePrice.execute(new ChangePriceCommand(ddd, new BigDecimal("0.01")));
+    assertThat(changePrice.execute(new ChangePriceCommand(ddd, new BigDecimal("0.01"))))
+        .isInstanceOf(ChangePriceResult.Changed.class);
 
     assertThat(shop.shownPriceOf(ddd)).isEqualTo("0.01 EUR");
   }
@@ -47,11 +48,12 @@ class UpdatePriceIntegrationTest {
   @Test
   @DisplayName("A product Pricing holds no price for is refused by name")
   void aProductWithoutAPriceIsRefusedAsNotFound() {
-    assertThatThrownBy(
-            () ->
-                changePrice.execute(
-                    new ChangePriceCommand(
-                        "00000000-0000-4000-8000-000000000001", new BigDecimal("49.99"))))
-        .isInstanceOf(ProductPriceNotFoundException.class);
+    assertThat(
+            changePrice.execute(
+                new ChangePriceCommand(
+                    "00000000-0000-4000-8000-000000000001", new BigDecimal("49.99"))))
+        .asInstanceOf(type(ChangePriceResult.ProductPriceNotFound.class))
+        .extracting(refusal -> refusal.productId().value())
+        .isEqualTo("00000000-0000-4000-8000-000000000001");
   }
 }

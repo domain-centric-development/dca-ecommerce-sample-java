@@ -1,11 +1,11 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCart;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.EnrichedCartItem;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
@@ -89,16 +89,21 @@ public class MiniBasketControllerAdvice {
               .cartId()
               .flatMap(
                   cartId ->
-                      getCartByIdUseCase.execute(new GetCartByIdQuery(cartId, customerId)).cart());
+                      switch (getCartByIdUseCase.execute(
+                          new GetCartByIdQuery(cartId, customerId))) {
+                        case GetCartByIdResult.Found found -> Optional.of(found.cart());
+                        case GetCartByIdResult.CartNotFound refusal -> Optional.empty();
+                      });
 
       if (activeCart.isPresent()) {
         final EnrichedCart cart = activeCart.get();
         populateMiniBasket(model, cart);
         return;
       }
-    } catch (final UseCaseException | DomainException ex) {
-      // The basket is decoration on every page: a cart the use case refuses to hand out leaves it
-      // empty rather than breaking the page. Anything else is a defect and keeps travelling.
+    } catch (final DomainException ex) {
+      // The basket is decoration on every page: a rule of the model that refuses to price the cart
+      // leaves it empty rather than breaking the page. Anything else is a defect and keeps
+      // travelling.
       LOG.debug("Could not load mini basket data: {}", ex.getMessage());
     }
 

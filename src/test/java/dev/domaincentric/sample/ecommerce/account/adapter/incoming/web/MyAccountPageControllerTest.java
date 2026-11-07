@@ -58,7 +58,7 @@ class MyAccountPageControllerTest {
   void registeredIdentityRendersOverview() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getAccountOverview.setResult(
-        GetAccountOverviewResult.found(new AccountOverview(EMAIL, LAST_LOGIN)));
+        new GetAccountOverviewResult.Found(new AccountOverview(EMAIL, LAST_LOGIN)));
 
     final String viewName = controller.showMyAccountPage(model);
 
@@ -74,7 +74,7 @@ class MyAccountPageControllerTest {
   void exposesViewModelWithEmail() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
     getAccountOverview.setResult(
-        GetAccountOverviewResult.found(new AccountOverview(EMAIL, LAST_LOGIN)));
+        new GetAccountOverviewResult.Found(new AccountOverview(EMAIL, LAST_LOGIN)));
 
     controller.showMyAccountPage(model);
 
@@ -102,7 +102,7 @@ class MyAccountPageControllerTest {
   @DisplayName("registered identity without an account redirects instead of throwing")
   void registeredIdentityWithoutAccountRedirectsToLogin() {
     identityProvider.setIdentity(TestIdentity.registered(UserId.of(USER_ID), EMAIL));
-    getAccountOverview.setResult(GetAccountOverviewResult.notFound());
+    getAccountOverview.setResult(new GetAccountOverviewResult.AccountNotAccessible());
 
     final String viewName = controller.showMyAccountPage(model);
 

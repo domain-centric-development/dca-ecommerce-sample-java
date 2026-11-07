@@ -1,10 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import dev.domaincentric.sample.ecommerce.checkout.adapter.outgoing.persistence.InMemoryCheckoutSessionRepository;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
@@ -25,43 +22,41 @@ class GetCheckoutSessionUseCaseTest {
   private final GetCheckoutSessionUseCase useCase = new GetCheckoutSessionUseCase(sessions);
 
   @Test
-  @DisplayName("a requested step sends the customer back to the cart")
-  void aRequestedStepSendsTheCustomerBackToTheCart() {
+  @DisplayName("a requested step finds no checkout the customer does not have")
+  void aRequestedStepFindsNoCheckout() {
+    final CheckoutSessionId sessionId = CheckoutSessionId.generate();
     final GetCheckoutSessionResult result =
         useCase.execute(
             new GetCheckoutSessionQuery(
-                CheckoutSessionId.generate(),
-                CustomerId.of("someone-else"),
-                CheckoutStep.BUYER_INFO));
+                sessionId, CustomerId.of("someone-else"), CheckoutStep.BUYER_INFO));
 
-    assertFalse(result.found());
-    assertNotNull(result.stepAccess());
-    assertTrue(result.stepAccess().isBackToCart());
+    assertEquals(new GetCheckoutSessionResult.CheckoutSessionNotFound(sessionId), result);
   }
 
   @Test
-  @DisplayName("every step sends the customer back to the cart")
-  void everyStepSendsTheCustomerBackToTheCart() {
+  @DisplayName("every step finds no checkout the customer does not have")
+  void everyStepFindsNoCheckout() {
     for (final CheckoutStep step : CheckoutStep.values()) {
       final GetCheckoutSessionResult result =
           useCase.execute(
               new GetCheckoutSessionQuery(
                   CheckoutSessionId.generate(), CustomerId.of("someone-else"), step));
 
-      assertTrue(result.stepAccess().isBackToCart(), "Should redirect for step: " + step);
+      assertInstanceOf(
+          GetCheckoutSessionResult.CheckoutSessionNotFound.class,
+          result,
+          "Should not be found for step: " + step);
     }
   }
 
   @Test
-  @DisplayName("without a requested step there is no access decision to take")
-  void withoutARequestedStepThereIsNoAccessDecisionToTake() {
+  @DisplayName("without a requested step no checkout is found either")
+  void withoutARequestedStepNoCheckoutIsFound() {
     final GetCheckoutSessionResult result =
         useCase.execute(
             new GetCheckoutSessionQuery(
                 CheckoutSessionId.generate(), CustomerId.of("someone-else"), null));
 
-    assertFalse(result.found());
-    assertNull(result.stepAccess());
-    assertEquals(null, result.currentStep());
+    assertInstanceOf(GetCheckoutSessionResult.CheckoutSessionNotFound.class, result);
   }
 }

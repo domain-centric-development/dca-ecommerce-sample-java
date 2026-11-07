@@ -6,6 +6,8 @@ Java 25 with Spring Boot 4 and Spring Modulith, built with Gradle (the wrapper i
 The DCA building blocks and the DCA ArchUnit rules come as published packages. It is the reference
 implementation: the .NET sample follows its behaviour.
 
+Refusals: returned — expected refusals are cases of a closed use-case result (ADR-047)
+
 ## Frontend approach
 
 Server-rendered pages from Pug templates, with a little progressive enhancement (theme choice, view

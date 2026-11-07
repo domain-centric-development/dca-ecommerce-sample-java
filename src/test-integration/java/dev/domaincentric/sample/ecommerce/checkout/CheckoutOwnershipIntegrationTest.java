@@ -1,7 +1,7 @@
 package dev.domaincentric.sample.ecommerce.checkout;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
@@ -9,15 +9,20 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionId;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsQuery;
@@ -56,10 +61,10 @@ class CheckoutOwnershipIntegrationTest {
     final String stranger = "stranger-" + System.nanoTime();
     final String sessionId = checkoutOf(owner);
 
-    assertThat(getCheckoutSession.execute(GetCheckoutSessionQuery.of(sessionId, owner)).found())
-        .isTrue();
-    assertThat(getCheckoutSession.execute(GetCheckoutSessionQuery.of(sessionId, stranger)).found())
-        .isFalse();
+    assertThat(getCheckoutSession.execute(GetCheckoutSessionQuery.of(sessionId, owner)))
+        .isInstanceOf(GetCheckoutSessionResult.Found.class);
+    assertThat(getCheckoutSession.execute(GetCheckoutSessionQuery.of(sessionId, stranger)))
+        .isInstanceOf(GetCheckoutSessionResult.CheckoutSessionNotFound.class);
   }
 
   @Test
@@ -69,20 +74,20 @@ class CheckoutOwnershipIntegrationTest {
     final String stranger = "stranger-" + System.nanoTime();
     final String sessionId = checkoutOf(owner);
 
-    assertThatThrownBy(
-            () ->
-                submitBuyerInfo.execute(
-                    new SubmitBuyerInfoCommand(
-                        sessionId, stranger, "eve@example.com", "Eve", "Adams", "+1-555-0199")))
-        .isInstanceOf(CheckoutSessionNotFoundException.class)
-        .hasMessageContaining("Session not found");
+    assertThat(
+            submitBuyerInfo.execute(
+                new SubmitBuyerInfoCommand(
+                    sessionId, stranger, "eve@example.com", "Eve", "Adams", "+1-555-0199")))
+        .isEqualTo(
+            new SubmitBuyerInfoResult.CheckoutSessionNotFound(CheckoutSessionId.of(sessionId)));
 
     // The owner is unaffected
     assertThat(
-            submitBuyerInfo
-                .execute(
-                    new SubmitBuyerInfoCommand(
-                        sessionId, owner, "ada@example.com", "Ada", "Lovelace", "+1-555-0100"))
+            assertInstanceOf(
+                    SubmitBuyerInfoResult.Submitted.class,
+                    submitBuyerInfo.execute(
+                        new SubmitBuyerInfoCommand(
+                            sessionId, owner, "ada@example.com", "Ada", "Lovelace", "+1-555-0100")))
                 .currentStep())
         .isEqualTo("DELIVERY");
   }
@@ -94,15 +99,13 @@ class CheckoutOwnershipIntegrationTest {
     final String stranger = "stranger-" + System.nanoTime();
     final String sessionId = checkoutOf(owner);
 
-    assertThatThrownBy(
-            () -> submitPayment.execute(new SubmitPaymentCommand(sessionId, stranger, "mock")))
-        .isInstanceOf(CheckoutSessionNotFoundException.class)
-        .hasMessageContaining("Session not found");
+    assertThat(submitPayment.execute(new SubmitPaymentCommand(sessionId, stranger, "mock")))
+        .isEqualTo(
+            new SubmitPaymentResult.CheckoutSessionNotFound(CheckoutSessionId.of(sessionId)));
 
-    assertThatThrownBy(
-            () -> confirmCheckout.execute(new ConfirmCheckoutCommand(sessionId, stranger, "")))
-        .isInstanceOf(CheckoutSessionNotFoundException.class)
-        .hasMessageContaining("Session not found");
+    assertThat(confirmCheckout.execute(new ConfirmCheckoutCommand(sessionId, stranger, "")))
+        .isEqualTo(
+            new ConfirmCheckoutResult.CheckoutSessionNotFound(CheckoutSessionId.of(sessionId)));
   }
 
   /** An active checkout session on a cart with one item, belonging to the given customer. */
@@ -110,7 +113,10 @@ class CheckoutOwnershipIntegrationTest {
     final String cartId =
         getOrCreateActiveCart.execute(new GetOrCreateActiveCartCommand(customerId)).cartId();
     addItemToCart.execute(new AddItemToCartCommand(cartId, customerId, anyProductId(), 1));
-    return startCheckout.execute(new StartCheckoutCommand(cartId, customerId)).sessionId();
+    return assertInstanceOf(
+            StartCheckoutResult.Started.class,
+            startCheckout.execute(new StartCheckoutCommand(cartId, customerId)))
+        .sessionId();
   }
 
   private String anyProductId() {

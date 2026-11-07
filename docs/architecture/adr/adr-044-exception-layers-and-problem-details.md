@@ -78,3 +78,13 @@ type: `ChangePasswordUseCase` catches `PasswordTooWeakException`, `ReduceStockUs
 
 2026-10-11: a page no longer renders the failure's message; the adapter words the refusal from its type and values
 (guide: The adapter answers; WP-101).
+
+2026-11-07: amended by [ADR-047](adr-047-expected-refusals-are-sealed-use-case-results.md). The domain layer and the
+argument guard stay as decided here. The use-case layer changed: every expected refusal a caller answers is now a
+case of the use case's closed result, not a `UseCaseException`. 18 of the 20 application-layer exception types are
+gone; what remains are the failures an output port declares, each an `OutputPortException` the use case turns
+into a case (`ActiveCartAlreadyExistsException`, and the payment and mail providers' failures — ADR-047's
+amendment). The adapter
+still translates, and still only the adapter — by an exhaustive `switch` over the result instead of an
+`@ExceptionHandler` per type; the handlers keep what is still thrown. "The result channel stays where it is" no
+longer describes a mix: the whole shop answers refusals through results.

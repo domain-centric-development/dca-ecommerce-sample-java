@@ -5,6 +5,7 @@ import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.Checkout
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionQuery;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getactivecheckoutsession.GetActiveCheckoutSessionResult;
@@ -17,6 +18,7 @@ import dev.domaincentric.sample.ecommerce.checkout.application.session.getconfir
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
+import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -98,26 +100,46 @@ public class ConfirmationPageController {
     // Find active checkout session for the user
     final GetActiveCheckoutSessionResult activeSession =
         getActiveCheckoutSessionInputPort.execute(GetActiveCheckoutSessionQuery.of(customerId));
-
     if (!activeSession.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_ACTIVE_CHECKOUT, attributes);
     }
+    final String sessionId = activeSession.sessionId();
 
     if (!REVIEW_PAGE.equals(sentFrom)) {
       return CheckoutStepPage.askForTheReview(
-          stepAccess(activeSession.sessionId(), customerId, CheckoutStep.REVIEW), attributes);
+          stepAccess(sessionId, customerId, CheckoutStep.REVIEW), attributes);
     }
 
+    final CheckoutStep step = CheckoutStep.REVIEW;
+    final Supplier<StepAccess> access = () -> stepAccess(sessionId, customerId, step);
     return CheckoutStepPage.submitting(
-        CheckoutStep.REVIEW,
-        () -> stepAccess(activeSession.sessionId(), customerId, CheckoutStep.REVIEW),
+        step,
         attributes,
-        () -> {
-          confirmCheckoutInputPort.execute(
-              new ConfirmCheckoutCommand(activeSession.sessionId(), customerId, reviewFingerprint));
-
-          return "redirect:/checkout/confirmation";
-        });
+        () ->
+            switch (confirmCheckoutInputPort.execute(
+                new ConfirmCheckoutCommand(sessionId, customerId, reviewFingerprint))) {
+              case ConfirmCheckoutResult.Confirmed confirmed -> "redirect:/checkout/confirmation";
+              case ConfirmCheckoutResult.CheckoutSessionNotFound refusal ->
+                  CheckoutStepPage.sessionNotFound(step, attributes);
+              case ConfirmCheckoutResult.CheckoutNotModifiable refusal ->
+                  CheckoutStepPage.notModifiable(step, attributes);
+              case ConfirmCheckoutResult.CheckoutStepNotCompleted refusal ->
+                  CheckoutStepPage.stepNotCompleted(step, access, attributes);
+              case ConfirmCheckoutResult.CheckoutStepOutOfOrder refusal ->
+                  CheckoutStepPage.stepOutOfOrder(step, access, attributes);
+              case ConfirmCheckoutResult.CheckoutValidation refusal ->
+                  CheckoutStepPage.stockRanShort(step, refusal.validation(), attributes);
+              case ConfirmCheckoutResult.PriceChangedSinceReview refusal ->
+                  CheckoutStepPage.priceChangedSinceReview(step, refusal.productName(), attributes);
+              case ConfirmCheckoutResult.OrderChangedSinceReview refusal ->
+                  CheckoutStepPage.orderChangedSinceReview(step, attributes);
+              case ConfirmCheckoutResult.PaymentProviderNotFound refusal ->
+                  CheckoutStepPage.paymentMethodNotOffered(step, attributes);
+              case ConfirmCheckoutResult.PaymentProviderUnavailable refusal ->
+                  CheckoutStepPage.paymentProviderUnavailable(step, attributes);
+              case ConfirmCheckoutResult.PaymentInitiationFailed refusal ->
+                  CheckoutStepPage.paymentRefused(step, attributes);
+            });
   }
 
   /**
@@ -142,19 +164,19 @@ public class ConfirmationPageController {
     final GetConfirmedCheckoutSessionResult confirmedSession =
         getConfirmedCheckoutSessionInputPort.execute(
             GetConfirmedCheckoutSessionQuery.of(customerId));
-
     if (!confirmedSession.found()) {
       return CheckoutRoutes.redirectToCart(CartNotice.NO_CONFIRMED_ORDER, attributes);
     }
+    final String sessionId = confirmedSession.sessionId();
 
     // Full session details, plus the domain's decision whether this step may be opened
-    final GetCheckoutSessionResult result =
-        getCheckoutSessionInputPort.execute(
-            GetCheckoutSessionQuery.forStep(
-                confirmedSession.sessionId(), customerId, CheckoutStep.CONFIRMATION));
-
-    if (!result.found()) {
-      return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+    final GetCheckoutSessionResult.Found result;
+    switch (getCheckoutSessionInputPort.execute(
+        GetCheckoutSessionQuery.forStep(sessionId, customerId, CheckoutStep.CONFIRMATION))) {
+      case GetCheckoutSessionResult.Found found -> result = found;
+      case GetCheckoutSessionResult.CheckoutSessionNotFound notFound -> {
+        return CheckoutRoutes.redirectToCart(CartNotice.CHECKOUT_NOT_FOUND, attributes);
+      }
     }
     if (!result.stepAccess().granted()) {
       // Its own refusal, never one handed on. Not reachable today: the session looked up above is
@@ -179,8 +201,8 @@ public class ConfirmationPageController {
    */
   private StepAccess stepAccess(
       final String sessionId, final String customerId, final CheckoutStep step) {
-    return getCheckoutSessionInputPort
-        .execute(GetCheckoutSessionQuery.forStep(sessionId, customerId, step))
-        .stepAccess();
+    return CheckoutStepPage.stepAccessOf(
+        getCheckoutSessionInputPort.execute(
+            GetCheckoutSessionQuery.forStep(sessionId, customerId, step)));
   }
 }

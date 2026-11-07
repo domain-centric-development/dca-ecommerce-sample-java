@@ -6,6 +6,7 @@ import dev.domaincentric.sample.ecommerce.account.domain.gateway.PasswordHasher;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Account;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Email;
 import dev.domaincentric.sample.ecommerce.account.domain.model.Owner;
+import dev.domaincentric.sample.ecommerce.account.domain.model.PasswordTooWeakException;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Publishes domain events (AccountRegistered, AccountLinkedToIdentity)
  *   <li>Returns information needed to issue a new JWT
  * </ol>
+ *
+ * <p>Every refusal - an address another account holds, a user who has an account, a password the
+ * model refuses - is returned as a case of {@link RegisterAccountResult} before anything is
+ * written.
  *
  * <p>After registration, the controller should:
  *
@@ -56,20 +61,24 @@ public class RegisterAccountUseCase implements RegisterAccountInputPort {
 
     // Check if email is already registered
     if (accountRepository.existsByEmail(email)) {
-      throw new EmailAlreadyRegisteredException(email);
+      return new RegisterAccountResult.EmailAlreadyRegistered(email);
     }
 
     final UserId currentUserId = UserId.of(command.currentUserId());
 
     // Check if this user already has an account
     if (accountRepository.findByLinkedUserId(currentUserId).isPresent()) {
-      throw new AccountAlreadyExistsException(currentUserId);
+      return new RegisterAccountResult.AccountAlreadyExists(currentUserId);
     }
 
     // Create the account (password validation and hashing done by aggregate via gateway)
     final Owner owner = Owner.of(command.firstName(), command.lastName(), command.dateOfBirth());
-    final Account account =
-        Account.register(email, owner, command.password(), currentUserId, passwordHasher);
+    final Account account;
+    try {
+      account = Account.register(email, owner, command.password(), currentUserId, passwordHasher);
+    } catch (final PasswordTooWeakException tooWeak) {
+      return new RegisterAccountResult.PasswordTooWeak(tooWeak.rule());
+    }
 
     // Persist the account
     accountRepository.save(account);
@@ -77,7 +86,7 @@ public class RegisterAccountUseCase implements RegisterAccountInputPort {
     // Publish domain events
     eventPublisher.publishAndClearEvents(account);
 
-    return RegisterAccountResult.of(
+    return new RegisterAccountResult.Registered(
         account.id().value(),
         account.linkedUserId().value(),
         account.email().value(),

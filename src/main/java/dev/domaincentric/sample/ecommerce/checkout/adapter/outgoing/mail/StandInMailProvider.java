@@ -17,8 +17,7 @@ public class StandInMailProvider implements OrderConfirmationMailer {
   private static final Logger LOG = LoggerFactory.getLogger(StandInMailProvider.class);
 
   @Override
-  public Delivery send(final OrderConfirmationMail mail) {
+  public void send(final OrderConfirmationMail mail) {
     LOG.info("No mail provider configured; order confirmation {} is not sent", mail.key());
-    return Delivery.ACCEPTED;
   }
 }

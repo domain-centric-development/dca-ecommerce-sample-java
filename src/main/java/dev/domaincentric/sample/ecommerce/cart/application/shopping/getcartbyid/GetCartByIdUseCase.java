@@ -51,7 +51,7 @@ public class GetCartByIdUseCase implements GetCartByIdInputPort {
         shoppingCartRepository.findByIdForCustomer(cartId, CustomerId.of(input.customerId()));
 
     if (cartOpt.isEmpty()) {
-      return GetCartByIdResult.notFound();
+      return new GetCartByIdResult.CartNotFound(cartId);
     }
 
     final ShoppingCart cart = cartOpt.get();
@@ -67,6 +67,6 @@ public class GetCartByIdUseCase implements GetCartByIdInputPort {
 
     // The page shows how much of the subtotal is VAT - a domain figure, computed here, not in
     // the adapter
-    return GetCartByIdResult.found(enrichedCart, CartTotals.from(enrichedCart));
+    return new GetCartByIdResult.Found(enrichedCart, CartTotals.from(enrichedCart));
   }
 }

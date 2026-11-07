@@ -45,7 +45,8 @@ public interface ShoppingCartRepository extends Repository<ShoppingCart, CartId>
    *
    * <p>Every use case that acts on a cart a caller named reaches for this rather than {@code
    * findById}: the two cases are indistinguishable on purpose, and a persistence adapter expresses
-   * it as one predicate. {@code findById} stays for the system paths that act on nobody's behalf.
+   * it as one predicate. The cart is an owned aggregate; {@code findById} stays for the system
+   * paths that act on nobody's behalf and hold no owner to name.
    *
    * @param cartId the cart ID
    * @param customerId the customer the caller is acting as

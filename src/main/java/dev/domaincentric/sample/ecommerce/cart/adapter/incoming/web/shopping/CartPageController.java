@@ -1,13 +1,10 @@
 package dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.shopping;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.cart.adapter.incoming.web.CartPageNotice;
-import dev.domaincentric.sample.ecommerce.cart.application.shared.CartNotFoundException;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartInputPort;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.ArticleNotAvailableException;
-import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.InsufficientArticleStockException;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocart.AddItemToCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
@@ -18,7 +15,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreatea
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemInputPort;
-import dev.domaincentric.sample.ecommerce.cart.domain.model.CartNotModifiableException;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.removecartitem.RemoveCartItemResult;
 import dev.domaincentric.sample.ecommerce.sharedkernel.application.shared.IdentityProvider;
 import java.util.Optional;
 import org.springframework.stereotype.Controller;
@@ -99,21 +96,17 @@ public class CartPageController {
       return "cart/view";
     }
 
-    final GetCartByIdResult result =
-        getCartByIdUseCase.execute(new GetCartByIdQuery(activeCartId.get(), customerId));
-
-    if (!result.found()) {
-      return "error/404";
-    }
-
-    // Convert to page-specific ViewModel
-    final CartPageViewModel viewModel =
-        CartPageViewModel.fromEnrichedCart(result.cart().orElseThrow(), result.totals());
-
-    model.addAttribute("shoppingCart", viewModel);
-    model.addAttribute("title", "Shopping Cart");
-
-    return "cart/view";
+    return switch (getCartByIdUseCase.execute(
+        new GetCartByIdQuery(activeCartId.get(), customerId))) {
+      case GetCartByIdResult.Found found -> {
+        // Convert to page-specific ViewModel
+        model.addAttribute(
+            "shoppingCart", CartPageViewModel.fromEnrichedCart(found.cart(), found.totals()));
+        model.addAttribute("title", "Shopping Cart");
+        yield "cart/view";
+      }
+      case GetCartByIdResult.CartNotFound refusal -> "error/404";
+    };
   }
 
   /**
@@ -149,14 +142,17 @@ public class CartPageController {
     // Add product to cart
     final AddItemToCartCommand command =
         new AddItemToCartCommand(cartResponse.cartId(), customerId, productId, quantity);
+    final AddItemToCartResult result;
     try {
-      addItemToCartUseCase.execute(command);
-      return CartPageNotice.PRODUCT_ADDED.redirectTo(CART_PATH, attributes);
-    } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
-      // The context's own refusals, plus the argument exception a form field still reaches a value
-      // object with.
-      return redirectFor(e, attributes);
+      result = addItemToCartUseCase.execute(command);
+    } catch (final IllegalArgumentException e) {
+      // A form field that still reaches a value object as text the value object refuses.
+      return CartPageNotice.INVALID_QUANTITY.redirectTo(CART_PATH, attributes);
+    } catch (final DomainException e) {
+      // A rule of the model no use case returns as a case of its own.
+      return CartPageNotice.PRODUCT_NOT_ADDED.redirectTo(CART_PATH, attributes);
     }
+    return redirectFor(result, attributes);
   }
 
   /**
@@ -176,36 +172,46 @@ public class CartPageController {
 
     final Optional<String> activeCartId =
         getActiveCartUseCase.execute(new GetActiveCartQuery(customerId)).cartId();
-    if (activeCartId.isPresent()) {
-      try {
-        removeCartItemUseCase.execute(
-            new RemoveCartItemCommand(activeCartId.get(), customerId, cartItemId));
-      } catch (final UseCaseException | DomainException | IllegalArgumentException e) {
-        // The cart stays as it is; the page shows it.
-      }
+    if (activeCartId.isEmpty()) {
+      return "redirect:" + CART_PATH;
     }
-    return "redirect:" + CART_PATH;
+    final RemoveCartItemResult result;
+    try {
+      result =
+          removeCartItemUseCase.execute(
+              new RemoveCartItemCommand(activeCartId.get(), customerId, cartItemId));
+    } catch (final IllegalArgumentException malformed) {
+      // A line id that is no id: the cart stays as it is; the page shows it.
+      return "redirect:" + CART_PATH;
+    }
+    // Every outcome leads to the cart page as it now is, without a notice.
+    return switch (result) {
+      case RemoveCartItemResult.Removed _,
+          RemoveCartItemResult.CartNotFound _,
+          RemoveCartItemResult.CartItemNotFound _,
+          RemoveCartItemResult.CartNotModifiable _ ->
+          "redirect:" + CART_PATH;
+    };
   }
 
   /**
-   * The cart page with the notice for a refusal: chosen by the failure's type, the number it names
-   * taken from its values. The failure's message is for the log, never for the customer.
+   * The cart page with the notice for what adding came to: chosen by the case, the numbers it names
+   * taken from its values.
    */
   private static String redirectFor(
-      final RuntimeException failure, final RedirectAttributes attributes) {
-    return switch (failure) {
-      case InsufficientArticleStockException e ->
+      final AddItemToCartResult result, final RedirectAttributes attributes) {
+    return switch (result) {
+      case AddItemToCartResult.Added added ->
+          CartPageNotice.PRODUCT_ADDED.redirectTo(CART_PATH, attributes);
+      case AddItemToCartResult.InsufficientArticleStock refusal ->
           CartPageNotice.NOT_ENOUGH_STOCK.redirectTo(
-              CART_PATH, attributes, e.requested(), e.held(), e.inStock());
-      case ArticleNotAvailableException e ->
+              CART_PATH, attributes, refusal.requested(), refusal.held(), refusal.inStock());
+      case AddItemToCartResult.ArticleNotAvailable refusal ->
           CartPageNotice.PRODUCT_UNAVAILABLE.redirectTo(CART_PATH, attributes);
-      case CartNotFoundException e ->
+      case AddItemToCartResult.CartNotFound refusal ->
           CartPageNotice.CART_NOT_FOUND.redirectTo(CART_PATH, attributes);
-      case CartNotModifiableException e ->
+      case AddItemToCartResult.CartNotModifiable refusal ->
           CartPageNotice.CART_NOT_MODIFIABLE.redirectTo(CART_PATH, attributes);
-      case IllegalArgumentException e ->
-          CartPageNotice.INVALID_QUANTITY.redirectTo(CART_PATH, attributes);
-      default -> CartPageNotice.PRODUCT_NOT_ADDED.redirectTo(CART_PATH, attributes);
     };
   }
 }

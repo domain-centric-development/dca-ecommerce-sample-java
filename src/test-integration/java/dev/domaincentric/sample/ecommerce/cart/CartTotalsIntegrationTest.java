@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.additemtocar
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.CartTotals;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartInputPort;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
@@ -79,7 +80,8 @@ class CartTotalsIntegrationTest {
   }
 
   private CartTotals totalsOf(final String cartId, final String customerId) {
-    return getCartById.execute(new GetCartByIdQuery(cartId, customerId)).totals();
+    return ((GetCartByIdResult.Found) getCartById.execute(new GetCartByIdQuery(cartId, customerId)))
+        .totals();
   }
 
   private String productIdOf(final String name) {

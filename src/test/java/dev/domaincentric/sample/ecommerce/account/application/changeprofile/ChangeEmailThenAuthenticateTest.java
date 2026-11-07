@@ -6,14 +6,11 @@ import static dev.domaincentric.sample.ecommerce.account.application.changeprofi
 import static dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.PASSWORD;
 import static dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.USER_ID;
 import static dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.accountWith;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountCommand;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountResult;
 import dev.domaincentric.sample.ecommerce.account.application.authenticateaccount.AuthenticateAccountUseCase;
-import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileResult.Outcome;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestAccountRepository;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestDomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.account.application.changeprofile.ChangeProfileTestFixtures.TestPasswordHasher;
@@ -50,19 +47,23 @@ class ChangeEmailThenAuthenticateTest {
   @Test
   @DisplayName("the new email authenticates with the unchanged password, the old one does not")
   void newEmailAuthenticatesAfterChange() {
-    assertEquals(
-        Outcome.CHANGED,
-        changeProfile
-            .execute(new ChangeProfileCommand(USER_ID, NEW_EMAIL, DATE_OF_BIRTH))
-            .outcome(),
+    assertInstanceOf(
+        ChangeProfileResult.Changed.class,
+        changeProfile.execute(new ChangeProfileCommand(USER_ID, NEW_EMAIL, DATE_OF_BIRTH)),
         "precondition: the email change must succeed");
 
     final AuthenticateAccountResult withNewEmail =
         authenticate.execute(new AuthenticateAccountCommand(NEW_EMAIL, PASSWORD));
-    assertTrue(withNewEmail.success(), "the new email must authenticate");
+    assertInstanceOf(
+        AuthenticateAccountResult.Authenticated.class,
+        withNewEmail,
+        "the new email must authenticate");
 
     final AuthenticateAccountResult withOldEmail =
         authenticate.execute(new AuthenticateAccountCommand(EMAIL, PASSWORD));
-    assertFalse(withOldEmail.success(), "the superseded email must no longer authenticate");
+    assertInstanceOf(
+        AuthenticateAccountResult.CredentialsRefused.class,
+        withOldEmail,
+        "the superseded email must no longer authenticate");
   }
 }

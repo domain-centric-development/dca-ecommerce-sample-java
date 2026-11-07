@@ -45,7 +45,7 @@ public class ReserveStockUseCase implements ReserveStockInputPort {
       final Optional<StockLevel> stockLevel =
           stockLevelRepository.findByProductId(ProductId.of(line.productId()));
       if (stockLevel.isEmpty() || unreserved(stockLevel.get()) < line.quantity()) {
-        return ReserveStockResult.refused(line.productId());
+        return new ReserveStockResult.InsufficientUnreservedStock(line.productId());
       }
       stockLevels.add(stockLevel.get());
     }
@@ -56,7 +56,7 @@ public class ReserveStockUseCase implements ReserveStockInputPort {
       stockLevelRepository.save(stockLevel);
       eventPublisher.publishAndClearEvents(stockLevel);
     }
-    return ReserveStockResult.reserved();
+    return new ReserveStockResult.Reserved();
   }
 
   /** The quantity that can still be reserved: available minus reserved. */

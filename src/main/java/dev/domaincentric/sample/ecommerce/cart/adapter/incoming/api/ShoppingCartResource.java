@@ -10,6 +10,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecar
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getactivecart.GetActiveCartQuery;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdQuery;
+import dev.domaincentric.sample.ecommerce.cart.application.shopping.getcartbyid.GetCartByIdResult;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartInputPort;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.removeitemfromcart.RemoveItemFromCartResult;
@@ -35,6 +36,10 @@ import org.springframework.web.bind.annotation.*;
  * would confirm that the id exists, which is exactly the fact a stranger must not learn. Listing
  * every cart in the shop crosses that boundary by design; it is the cart oversight's, {@link
  * CartOversightResource}.
+ *
+ * <p><b>Refusals:</b> each route switches over its use case's result — no {@code default}, so the
+ * compiler holds that every refusal has an answer — and takes the answer from {@link CartProblems}.
+ * What is still thrown is {@link CartApiExceptionHandler}'s.
  *
  * <p><b>Bearer only:</b> {@code /api/**} is authenticated by an {@code Authorization: Bearer}
  * header and never by a browser cookie, which is what makes its CSRF exemption sound (ADR-035).
@@ -70,10 +75,13 @@ public class ShoppingCartResource {
 
   /** Creates a cart for the caller. The customer is the caller's identity, never a parameter. */
   @PostMapping
-  public ResponseEntity<ShoppingCartDto> createCart() {
-    final CreateCartResult output = createCart.execute(new CreateCartCommand(currentCustomerId()));
-
-    return ResponseEntity.status(HttpStatus.CREATED).body(converter.toDto(output));
+  public ResponseEntity<?> createCart() {
+    return switch (createCart.execute(new CreateCartCommand(currentCustomerId()))) {
+      case CreateCartResult.Created created ->
+          ResponseEntity.status(HttpStatus.CREATED).body(converter.toDto(created));
+      case CreateCartResult.ActiveCartAlreadyExists refusal ->
+          CartProblems.activeCartAlreadyExists(refusal.customerId());
+    };
   }
 
   @GetMapping("/{cartId}")
@@ -103,7 +111,7 @@ public class ShoppingCartResource {
   }
 
   @PostMapping("/{cartId}/items")
-  public ResponseEntity<ShoppingCartDto> addItemToCart(
+  public ResponseEntity<?> addItemToCart(
       @PathVariable final String cartId, @Valid @RequestBody final AddToCartRequest request) {
 
     if (ownCart(cartId).isEmpty()) {
@@ -114,12 +122,19 @@ public class ShoppingCartResource {
         new AddItemToCartCommand(
             cartId, currentCustomerId(), parsedProductId(request.productId()), request.quantity());
 
-    final AddItemToCartResult output = addItemToCart.execute(input);
-    return ResponseEntity.ok(converter.toDto(output));
+    return switch (addItemToCart.execute(input)) {
+      case AddItemToCartResult.Added added -> ResponseEntity.ok(converter.toDto(added));
+      case AddItemToCartResult.ArticleNotAvailable refusal ->
+          CartProblems.articleNotAvailable(refusal.productId());
+      case AddItemToCartResult.CartNotFound refusal -> CartProblems.cartNotFound(refusal.cartId());
+      case AddItemToCartResult.InsufficientArticleStock refusal ->
+          CartProblems.notEnoughStock(refusal.productId(), refusal.requested());
+      case AddItemToCartResult.CartNotModifiable refusal -> CartProblems.cartRefusesTheChange();
+    };
   }
 
   @DeleteMapping("/{cartId}/items/{productId}")
-  public ResponseEntity<ShoppingCartDto> removeItemFromCart(
+  public ResponseEntity<?> removeItemFromCart(
       @PathVariable final String cartId, @PathVariable final String productId) {
 
     if (ownCart(cartId).isEmpty()) {
@@ -128,9 +143,15 @@ public class ShoppingCartResource {
 
     final RemoveItemFromCartCommand input =
         new RemoveItemFromCartCommand(cartId, currentCustomerId(), parsedProductId(productId));
-    final RemoveItemFromCartResult output = removeItemFromCart.execute(input);
-
-    return ResponseEntity.ok(converter.toDto(output));
+    return switch (removeItemFromCart.execute(input)) {
+      case RemoveItemFromCartResult.Removed removed -> ResponseEntity.ok(converter.toDto(removed));
+      case RemoveItemFromCartResult.CartNotFound refusal ->
+          CartProblems.cartNotFound(refusal.cartId());
+      case RemoveItemFromCartResult.CartItemNotFound refusal ->
+          CartProblems.positionNotInCart(refusal.productId().value());
+      case RemoveItemFromCartResult.CartNotModifiable refusal ->
+          CartProblems.cartRefusesTheChange();
+    };
   }
 
   /**
@@ -153,9 +174,11 @@ public class ShoppingCartResource {
    * there.
    */
   private Optional<EnrichedCart> ownCart(final String cartId) {
-    return getCartById
-        .execute(new GetCartByIdQuery(cartId, currentCustomerId()))
-        .cart()
-        .filter(cart -> cart.customerId().value().equals(currentCustomerId()));
+    final Optional<EnrichedCart> found =
+        switch (getCartById.execute(new GetCartByIdQuery(cartId, currentCustomerId()))) {
+          case GetCartByIdResult.Found result -> Optional.of(result.cart());
+          case GetCartByIdResult.CartNotFound refusal -> Optional.empty();
+        };
+    return found.filter(cart -> cart.customerId().value().equals(currentCustomerId()));
   }
 }

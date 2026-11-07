@@ -82,7 +82,8 @@ class CheckoutSpecificationTest {
         var next = f.start();
         assertNotEquals(session.id(), next.id());
         assertEquals(CheckoutSessionStatus.SUPERSEDED, session.status());
-        assertThrows(CheckoutNotModifiableException.class, () -> f.confirm(session));
+        assertInstanceOf(
+            ConfirmCheckoutResult.CheckoutNotModifiable.class, f.attemptConfirm(session));
         assertTrue(session.domainEvents().isEmpty());
       }
       case "checkout.abandon.preserves-cart" -> {
@@ -103,11 +104,15 @@ class CheckoutSpecificationTest {
         int events = f.events.published.size();
         var shown = f.reviewOf(session);
         f.price = Money.of(new java.math.BigDecimal(vector.path("newUnitPrice").asText()), EUR);
-        var failure =
-            assertThrows(OrderChangedSinceReviewException.class, () -> f.confirm(session, shown));
+        var failure = f.attemptConfirm(session, shown);
+        assertTrue(
+            failure instanceof ConfirmCheckoutResult.PriceChangedSinceReview
+                || failure instanceof ConfirmCheckoutResult.OrderChangedSinceReview,
+            "refused as changed since the review: " + failure);
         assertFalse(vector.path("accept").asBoolean());
         assertEquals(
-            vector.path("errors").asInt(), failure.productWithChangedPrice().stream().count());
+            vector.path("errors").asInt(),
+            failure instanceof ConfirmCheckoutResult.PriceChangedSinceReview ? 1 : 0);
         assertEquals(CheckoutSessionStatus.ACTIVE, session.status());
         assertEquals(totals, session.totals());
         assertTrue(session.domainEvents().isEmpty());
@@ -122,7 +127,9 @@ class CheckoutSpecificationTest {
         if (vector.hasNonNull("newStock")) {
           f.stock = vector.path("newStock").asInt();
         }
-        var failure = assertThrows(CheckoutValidationException.class, () -> f.confirm(session));
+        var failure =
+            assertInstanceOf(
+                ConfirmCheckoutResult.CheckoutValidation.class, f.attemptConfirm(session));
         assertEquals(f.product, failure.validation().errors().get(0).productId());
         assertFalse(vector.path("accept").asBoolean());
         assertEquals(vector.path("errors").asInt(), failure.validation().errors().size());
@@ -161,8 +168,7 @@ class CheckoutSpecificationTest {
           executor.submit(
               () -> {
                 attempted.countDown();
-                if (confirmationWins) f.start();
-                else f.confirm(session);
+                return confirmationWins ? f.start() : f.attemptConfirm(session);
               });
       assertTrue(attempted.await(5, TimeUnit.SECONDS));
       // A start that comes second cannot finish while the confirmation holds the repository
@@ -176,9 +182,7 @@ class CheckoutSpecificationTest {
         assertEquals(CheckoutSessionStatus.CONFIRMED, session.status());
       } else {
         assertInstanceOf(
-            CheckoutNotModifiableException.class,
-            assertThrows(ExecutionException.class, () -> second.get(5, TimeUnit.SECONDS))
-                .getCause());
+            ConfirmCheckoutResult.CheckoutNotModifiable.class, second.get(5, TimeUnit.SECONDS));
         assertEquals(CheckoutSessionStatus.SUPERSEDED, session.status());
       }
     } finally {
@@ -220,23 +224,30 @@ class CheckoutSpecificationTest {
 
     CheckoutSession start() {
       var result =
-          new StartCheckoutUseCase(
-                  this,
-                  new CheckoutCartFactory(),
-                  this,
-                  repository,
-                  events,
-                  new InMemoryTransactionBoundary())
-              .execute(new StartCheckoutCommand(cart.id().value(), cart.customerId().value()));
+          assertInstanceOf(
+              StartCheckoutResult.Started.class,
+              new StartCheckoutUseCase(
+                      this,
+                      new CheckoutCartFactory(),
+                      this,
+                      repository,
+                      events,
+                      new InMemoryTransactionBoundary())
+                  .execute(new StartCheckoutCommand(cart.id().value(), cart.customerId().value())));
       return repository.findById(CheckoutSessionId.of(result.sessionId())).orElseThrow();
     }
 
+    /** Places the order, which must be placed. */
     void confirm(CheckoutSession session) {
-      confirm(session, reviewOf(session));
+      assertInstanceOf(ConfirmCheckoutResult.Confirmed.class, attemptConfirm(session));
     }
 
-    void confirm(CheckoutSession session, String reviewFingerprint) {
-      new ConfirmCheckoutUseCase(
+    ConfirmCheckoutResult attemptConfirm(CheckoutSession session) {
+      return attemptConfirm(session, reviewOf(session));
+    }
+
+    ConfirmCheckoutResult attemptConfirm(CheckoutSession session, String reviewFingerprint) {
+      return new ConfirmCheckoutUseCase(
               repository,
               this,
               new CheckoutPricing(),
@@ -251,8 +262,12 @@ class CheckoutSpecificationTest {
 
     /** The fingerprint of the session's review as it would be shown now. */
     String reviewOf(CheckoutSession session) {
-      return new GetCheckoutReviewUseCase(repository, this, new CheckoutPricing())
-          .execute(new GetCheckoutReviewQuery(session.id().value(), session.customerId().value()))
+      return assertInstanceOf(
+              GetCheckoutReviewResult.Found.class,
+              new GetCheckoutReviewUseCase(repository, this, new CheckoutPricing())
+                  .execute(
+                      new GetCheckoutReviewQuery(
+                          session.id().value(), session.customerId().value())))
           .fingerprint();
     }
 
@@ -307,8 +322,8 @@ class CheckoutSpecificationTest {
               return "Always authorized";
             }
 
-            public PaymentResult initiatePayment(CheckoutSessionId sessionId, Money amount) {
-              return PaymentResult.success("pay-" + sessionId.value());
+            public String initiatePayment(CheckoutSessionId sessionId, Money amount) {
+              return "pay-" + sessionId.value();
             }
 
             public PaymentResult confirmPayment(String providerReference) {

@@ -1,23 +1,14 @@
 package dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.checkoutcompletion;
 
-import dev.domaincentric.dca.buildingblocks.application.UseCaseException;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.DomainException;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutRoutes;
 import dev.domaincentric.sample.ecommerce.checkout.adapter.incoming.web.CheckoutStepNotice;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.CheckoutSessionNotFoundException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentInitiationFailedException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderNotFoundException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.PaymentProviderUnavailableException;
-import dev.domaincentric.sample.ecommerce.checkout.application.shared.ShippingOptionNotOfferedException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutNotModifiableException;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepNotCompletedException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStepOutOfOrderException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationException;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.NothingToPayException;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.OrderChangedSinceReviewException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.springframework.ui.Model;
@@ -27,22 +18,23 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * What every checkout step page does the same way: it opens only when the domain grants the step,
  * and it turns a refused submission into the redirect with its notice.
  *
- * <p>A refusal is translated here, once: the step controllers call {@link #submitting} with their
- * use-case call and never catch a refusal themselves. What a refusal looks like to the customer is
- * decided in {@link #noticeFor}, and for a "Place Order" not sent from the review in {@link
- * #askForTheReview}.
+ * <p>Each step controller switches over its use case's result and answers each refusing case with
+ * the method here that names it — what a refusal looks like to the customer is decided here, once
+ * per kind of refusal, and for a "Place Order" not sent from the review in {@link
+ * #askForTheReview}. What is still thrown — a malformed value, a rule of the model no use case
+ * returns — is caught by {@link #submitting}.
  */
 final class CheckoutStepPage {
 
   private CheckoutStepPage() {}
 
-  /** A step's submission: the use-case call and the redirect it leads to when accepted. */
+  /** A step's submission: the use-case call and the redirect its result leads to. */
   @FunctionalInterface
   interface Submission {
     /**
      * Submits the step.
      *
-     * @return the redirect the accepted submission leads to
+     * @return the redirect the submission's result leads to
      */
     String submit();
   }
@@ -67,28 +59,139 @@ final class CheckoutStepPage {
   }
 
   /**
-   * Submits a step, and turns a refusal into the redirect with its notice: back to the step, or —
-   * for a step sent before the earlier ones are done — to the step still open, which says why.
+   * The domain's decision whether a step may be opened, read from the session query asked for that
+   * step: a checkout the caller does not have sends them back to the cart.
+   *
+   * @param result the session query's answer for the step
+   * @return the decision
+   */
+  static StepAccess stepAccessOf(final GetCheckoutSessionResult result) {
+    return switch (result) {
+      case GetCheckoutSessionResult.Found found -> Objects.requireNonNull(found.stepAccess());
+      case GetCheckoutSessionResult.CheckoutSessionNotFound notFound -> StepAccess.backToCart();
+    };
+  }
+
+  /**
+   * Submits a step: the submission's own switch answers every case of its result; what is still
+   * thrown becomes the redirect back to the step with the notice for a malformed or unexpected
+   * submission.
    *
    * @param step the step the submission belongs to
-   * @param access the domain's decision for the step, asked only when the submission came too early
    * @param attributes the redirect's attributes, which take the notice
-   * @param submission the use-case call
-   * @return the redirect the submission leads to, or the one with the refusal's notice
+   * @param submission the use-case call and the answer to its result
+   * @return the redirect the submission leads to
    */
   static String submitting(
-      final CheckoutStep step,
-      final Supplier<StepAccess> access,
-      final RedirectAttributes attributes,
-      final Submission submission) {
+      final CheckoutStep step, final RedirectAttributes attributes, final Submission submission) {
     try {
       return submission.submit();
-    } catch (UseCaseException | DomainException | IllegalArgumentException refusal) {
-      // The two base types are the checkout's own refusals. IllegalArgumentException is still
-      // here because a form field the customer typed reaches a value object unvalidated; each
-      // field moved into request validation is one reason less to catch it.
-      return redirectFor(step, refusal, access, attributes);
+    } catch (DomainException | IllegalArgumentException residue) {
+      // IllegalArgumentException is still here because a form field the customer typed reaches a
+      // value object unvalidated; each field moved into request validation is one reason less to
+      // catch it. DomainException is a rule of the model no use case returns as a case.
+      return CheckoutRoutes.redirectTo(step, residueNoticeFor(step, residue), attributes);
     }
+  }
+
+  /** The caller has no such checkout. */
+  static String sessionNotFound(final CheckoutStep step, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(step, CheckoutStepNotice.SESSION_NOT_FOUND, attributes);
+  }
+
+  /** The checkout no longer takes changes. */
+  static String notModifiable(final CheckoutStep step, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(step, CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE, attributes);
+  }
+
+  /**
+   * A step sent while an earlier one still misses its data: to the step the domain sends the
+   * customer to, saying so.
+   */
+  static String stepNotCompleted(
+      final CheckoutStep step,
+      final Supplier<StepAccess> access,
+      final RedirectAttributes attributes) {
+    return sentTooEarly(step, CheckoutStepNotice.EARLIER_STEPS_FIRST, access, attributes);
+  }
+
+  /**
+   * A step sent ahead of the step the session stands at: an order placed out of order asks for the
+   * review, any other step for the earlier steps.
+   */
+  static String stepOutOfOrder(
+      final CheckoutStep step,
+      final Supplier<StepAccess> access,
+      final RedirectAttributes attributes) {
+    final CheckoutStepNotice notice =
+        step == CheckoutStep.REVIEW
+            ? CheckoutStepNotice.REVIEW_FIRST
+            : CheckoutStepNotice.EARLIER_STEPS_FIRST;
+    return sentTooEarly(step, notice, access, attributes);
+  }
+
+  /** The shipping option chosen is not one the shop offers. */
+  static String shippingMethodNotOffered(
+      final CheckoutStep step, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(
+        step, CheckoutStepNotice.SHIPPING_METHOD_NOT_OFFERED, attributes);
+  }
+
+  /** The way to pay chosen is not one the shop offers. */
+  static String paymentMethodNotOffered(
+      final CheckoutStep step, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(
+        step, CheckoutStepNotice.PAYMENT_METHOD_NOT_OFFERED, attributes);
+  }
+
+  /** The payment provider cannot take a payment right now. */
+  static String paymentProviderUnavailable(
+      final CheckoutStep step, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(
+        step, CheckoutStepNotice.PAYMENT_PROVIDER_UNAVAILABLE, attributes);
+  }
+
+  /** The payment provider refused the payment. */
+  static String paymentRefused(final CheckoutStep step, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(step, CheckoutStepNotice.PAYMENT_REFUSED, attributes);
+  }
+
+  /** The order has nothing to pay. */
+  static String nothingToPay(final CheckoutStep step, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(step, CheckoutStepNotice.NOTHING_TO_PAY, attributes);
+  }
+
+  /**
+   * A price changed since the review: the review the redirect leads to shows the order as it stands
+   * today, naming the product whose price changed.
+   */
+  static String priceChangedSinceReview(
+      final CheckoutStep step, final String productName, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(
+        step, CheckoutStepNotice.PRICE_CHANGED_SINCE_REVIEW, productName, attributes);
+  }
+
+  /**
+   * The order changed since the review: the review the redirect leads to shows the order as it
+   * stands today.
+   */
+  static String orderChangedSinceReview(
+      final CheckoutStep step, final RedirectAttributes attributes) {
+    return CheckoutRoutes.redirectTo(
+        step, CheckoutStepNotice.ORDER_CHANGED_SINCE_REVIEW, attributes);
+  }
+
+  /**
+   * A line no longer passes, or its stock ran short: the line unavailable or short of stock is
+   * named, whichever check found it.
+   */
+  static String stockRanShort(
+      final CheckoutStep step,
+      final CheckoutValidationResult validation,
+      final RedirectAttributes attributes) {
+    final ValidationError shortOfStock = validation.shortOfStock().orElseThrow();
+    return CheckoutRoutes.redirectTo(
+        step, CheckoutStepNotice.STOCK_RAN_SHORT, shortOfStock.productName(), attributes);
   }
 
   /**
@@ -107,66 +210,28 @@ final class CheckoutStepPage {
   }
 
   /**
-   * The redirect for a refusal of a step's submission, handing on the notice the page shows and the
-   * number it names. A submission sent too early goes to the step the domain sends the customer to
-   * — the step itself would only pass them on, and a denied step passes no notice on.
+   * A submission sent too early goes to the step the domain sends the customer to — the step itself
+   * would only pass them on, and a denied step passes no notice on.
    */
-  private static String redirectFor(
+  private static String sentTooEarly(
       final CheckoutStep step,
-      final RuntimeException refusal,
+      final CheckoutStepNotice notice,
       final Supplier<StepAccess> access,
       final RedirectAttributes attributes) {
-    if (refusal instanceof CheckoutStepNotCompletedException
-        || refusal instanceof CheckoutStepOutOfOrderException) {
-      final StepAccess stillOpen = access.get();
-      if (!stillOpen.granted()) {
-        return CheckoutRoutes.redirectFor(stillOpen, noticeFor(step, refusal), attributes);
-      }
+    final StepAccess stillOpen = access.get();
+    if (!stillOpen.granted()) {
+      return CheckoutRoutes.redirectFor(stillOpen, notice, attributes);
     }
-    if (step == CheckoutStep.REVIEW
-        && refusal instanceof OrderChangedSinceReviewException changed) {
-      // The review the redirect leads to shows the order as it stands today
-      return changed
-          .productWithChangedPrice()
-          .map(
-              product ->
-                  CheckoutRoutes.redirectTo(
-                      step, CheckoutStepNotice.PRICE_CHANGED_SINCE_REVIEW, product, attributes))
-          .orElseGet(
-              () ->
-                  CheckoutRoutes.redirectTo(
-                      step, CheckoutStepNotice.ORDER_CHANGED_SINCE_REVIEW, attributes));
-    }
-    if (step == CheckoutStep.REVIEW && refusal instanceof CheckoutValidationException invalid) {
-      // A line unavailable or short of stock is named, whichever check found it
-      final ValidationError shortOfStock = invalid.validation().shortOfStock().orElseThrow();
-      return CheckoutRoutes.redirectTo(
-          step, CheckoutStepNotice.STOCK_RAN_SHORT, shortOfStock.productName(), attributes);
-    }
-    return CheckoutRoutes.redirectTo(step, noticeFor(step, refusal), attributes);
+    return CheckoutRoutes.redirectTo(step, notice, attributes);
   }
 
   /**
-   * The notice for a refusal: chosen by the failure's type, and for a malformed or unexpected one
-   * by the step it met. The failure's message is for the log, never for the customer.
+   * The notice for what is still thrown: chosen by the step it met. The failure's message is for
+   * the log, never for the customer.
    */
-  static CheckoutStepNotice noticeFor(final CheckoutStep step, final RuntimeException refusal) {
-    return switch (refusal) {
-      case CheckoutStepNotCompletedException e -> CheckoutStepNotice.EARLIER_STEPS_FIRST;
-      case CheckoutStepOutOfOrderException e ->
-          step == CheckoutStep.REVIEW
-              ? CheckoutStepNotice.REVIEW_FIRST
-              : CheckoutStepNotice.EARLIER_STEPS_FIRST;
-      case CheckoutSessionNotFoundException e -> CheckoutStepNotice.SESSION_NOT_FOUND;
-      case CheckoutNotModifiableException e -> CheckoutStepNotice.CHECKOUT_NOT_MODIFIABLE;
-      case PaymentInitiationFailedException e -> CheckoutStepNotice.PAYMENT_REFUSED;
-      case PaymentProviderUnavailableException e -> CheckoutStepNotice.PAYMENT_PROVIDER_UNAVAILABLE;
-      case PaymentProviderNotFoundException e -> CheckoutStepNotice.PAYMENT_METHOD_NOT_OFFERED;
-      case ShippingOptionNotOfferedException e -> CheckoutStepNotice.SHIPPING_METHOD_NOT_OFFERED;
-      case NothingToPayException e -> CheckoutStepNotice.NOTHING_TO_PAY;
-      case IllegalArgumentException e -> invalidInputOn(step);
-      default -> notSavedOn(step);
-    };
+  private static CheckoutStepNotice residueNoticeFor(
+      final CheckoutStep step, final RuntimeException residue) {
+    return residue instanceof IllegalArgumentException ? invalidInputOn(step) : notSavedOn(step);
   }
 
   private static CheckoutStepNotice invalidInputOn(final CheckoutStep step) {

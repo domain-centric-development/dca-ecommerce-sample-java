@@ -8,7 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.github.tomakehurst.wiremock.common.Json;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
@@ -22,20 +22,24 @@ import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletio
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.confirmcheckout.ConfirmCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewQuery;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.getcheckoutreview.GetCheckoutReviewResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitbuyerinfo.SubmitBuyerInfoResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitdelivery.SubmitDeliveryResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.checkoutcompletion.submitpayment.SubmitPaymentResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionInputPort;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionQuery;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.getcheckoutsession.GetCheckoutSessionResult;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutCommand;
 import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutInputPort;
+import dev.domaincentric.sample.ecommerce.checkout.application.session.startcheckout.StartCheckoutResult;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionStatus;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
-import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationException;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutValidationResult.ValidationError;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
 import dev.domaincentric.sample.ecommerce.inventory.application.provisioninitialstock.ProvisionInitialStockCommand;
@@ -96,7 +100,7 @@ class PaymentAtPlaceOrderIntegrationTest {
     providerAuthorizesEveryPayment();
     final CustomersCheckout checkout = checkoutAtThePaymentStep(anyProductId(), 1);
 
-    final SubmitPaymentResult chosen = choosePayment(checkout);
+    final SubmitPaymentResult.Submitted chosen = choosePayment(checkout);
 
     assertThat(chosen.currentStep()).isEqualTo(CheckoutStep.REVIEW.name());
     assertThat(paymentRequests()).as("the payment provider received no payment request").isEmpty();
@@ -111,7 +115,7 @@ class PaymentAtPlaceOrderIntegrationTest {
     final Money total = totalOf(checkout);
     paymentProvider.resetRequests();
 
-    placeOrder(checkout);
+    assertInstanceOf(ConfirmCheckoutResult.Confirmed.class, placeOrder(checkout));
 
     final List<LoggedRequest> requests = paymentRequests();
     assertThat(requests).as("one payment request").hasSize(1);
@@ -130,13 +134,18 @@ class PaymentAtPlaceOrderIntegrationTest {
     choosePayment(guest);
     final CustomersCheckout anotherVisitor = checkoutAtThePaymentStep(deskModel, 5);
     choosePayment(anotherVisitor);
-    assertThat(placeOrder(anotherVisitor).status())
+    assertThat(
+            assertInstanceOf(ConfirmCheckoutResult.Confirmed.class, placeOrder(anotherVisitor))
+                .status())
         .isEqualTo(CheckoutSessionStatus.CONFIRMED.name());
 
-    final CheckoutValidationException refused =
-        catchThrowableOfType(CheckoutValidationException.class, () -> placeOrder(guest));
+    final ConfirmCheckoutResult placed = placeOrder(guest);
 
-    assertThat(refused).as("Place Order is refused").isNotNull();
+    assertThat(placed)
+        .as("Place Order is refused")
+        .isInstanceOf(ConfirmCheckoutResult.CheckoutValidation.class);
+    final ConfirmCheckoutResult.CheckoutValidation refused =
+        (ConfirmCheckoutResult.CheckoutValidation) placed;
     assertThat(refused.validation().shortOfStock().map(ValidationError::productName))
         .contains(DESK_MODEL);
     assertThat(currentStep(guest)).isEqualTo(CheckoutStep.REVIEW);
@@ -166,32 +175,40 @@ class PaymentAtPlaceOrderIntegrationTest {
                 matchingJsonPath("$.merchantReference", equalTo(checkout.sessionId()))));
   }
 
-  private SubmitPaymentResult choosePayment(final CustomersCheckout checkout) {
-    return submitPayment.execute(
-        new SubmitPaymentCommand(checkout.sessionId(), checkout.customerId(), PROVIDER_ID));
+  private SubmitPaymentResult.Submitted choosePayment(final CustomersCheckout checkout) {
+    return assertInstanceOf(
+        SubmitPaymentResult.Submitted.class,
+        submitPayment.execute(
+            new SubmitPaymentCommand(checkout.sessionId(), checkout.customerId(), PROVIDER_ID)));
   }
 
   /** Place Order from the review as it is shown now. */
   private ConfirmCheckoutResult placeOrder(final CustomersCheckout checkout) {
     final String reviewFingerprint =
-        getCheckoutReview
-            .execute(new GetCheckoutReviewQuery(checkout.sessionId(), checkout.customerId()))
+        assertInstanceOf(
+                GetCheckoutReviewResult.Found.class,
+                getCheckoutReview.execute(
+                    new GetCheckoutReviewQuery(checkout.sessionId(), checkout.customerId())))
             .fingerprint();
     return confirmCheckout.execute(
         new ConfirmCheckoutCommand(checkout.sessionId(), checkout.customerId(), reviewFingerprint));
   }
 
   private Money totalOf(final CustomersCheckout checkout) {
-    return getCheckoutSession
-        .execute(GetCheckoutSessionQuery.of(checkout.sessionId(), checkout.customerId()))
+    return assertInstanceOf(
+            GetCheckoutSessionResult.Found.class,
+            getCheckoutSession.execute(
+                GetCheckoutSessionQuery.of(checkout.sessionId(), checkout.customerId())))
         .session()
         .totals()
         .total();
   }
 
   private CheckoutStep currentStep(final CustomersCheckout checkout) {
-    return getCheckoutSession
-        .execute(GetCheckoutSessionQuery.of(checkout.sessionId(), checkout.customerId()))
+    return assertInstanceOf(
+            GetCheckoutSessionResult.Found.class,
+            getCheckoutSession.execute(
+                GetCheckoutSessionQuery.of(checkout.sessionId(), checkout.customerId())))
         .session()
         .step();
   }
@@ -206,22 +223,29 @@ class PaymentAtPlaceOrderIntegrationTest {
         getOrCreateActiveCart.execute(new GetOrCreateActiveCartCommand(customerId)).cartId();
     addItemToCart.execute(new AddItemToCartCommand(cartId, customerId, productId, quantity));
     final String sessionId =
-        startCheckout.execute(new StartCheckoutCommand(cartId, customerId)).sessionId();
+        assertInstanceOf(
+                StartCheckoutResult.Started.class,
+                startCheckout.execute(new StartCheckoutCommand(cartId, customerId)))
+            .sessionId();
 
-    submitBuyerInfo.execute(
-        new SubmitBuyerInfoCommand(
-            sessionId, customerId, "ada@example.com", "Ada", "Lovelace", "+1-555-0100"));
-    submitDelivery.execute(
-        new SubmitDeliveryCommand(
-            sessionId,
-            customerId,
-            "123 Main Street",
-            null,
-            "Springfield",
-            "12345",
-            "United States",
-            "IL",
-            "standard"));
+    assertInstanceOf(
+        SubmitBuyerInfoResult.Submitted.class,
+        submitBuyerInfo.execute(
+            new SubmitBuyerInfoCommand(
+                sessionId, customerId, "ada@example.com", "Ada", "Lovelace", "+1-555-0100")));
+    assertInstanceOf(
+        SubmitDeliveryResult.Submitted.class,
+        submitDelivery.execute(
+            new SubmitDeliveryCommand(
+                sessionId,
+                customerId,
+                "123 Main Street",
+                null,
+                "Springfield",
+                "12345",
+                "United States",
+                "IL",
+                "standard")));
 
     return new CustomersCheckout(sessionId, customerId);
   }

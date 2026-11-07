@@ -2,6 +2,7 @@ package dev.domaincentric.sample.ecommerce.product.adapter.incoming.bootstrap;
 
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductCommand;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductInputPort;
+import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductResult;
 import java.math.BigDecimal;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -250,7 +251,9 @@ public class SampleDataInitializer implements ApplicationRunner {
       final String category,
       final int initialStock) {
 
-    createProduct.execute(
+    // Nobody answers a refusal at start-up: a sample product the catalog refuses is a defect of
+    // this list, so it fails the start rather than going missing without a word.
+    switch (createProduct.execute(
         new CreateProductCommand(
             sku,
             name,
@@ -259,6 +262,10 @@ public class SampleDataInitializer implements ApplicationRunner {
             BigDecimal.valueOf(price),
             "EUR",
             category,
-            initialStock));
+            initialStock))) {
+      case CreateProductResult.Created created -> {}
+      case CreateProductResult.DuplicateSku refusal ->
+          throw new IllegalStateException("Sample SKU listed twice: " + refusal.sku().value());
+    }
   }
 }

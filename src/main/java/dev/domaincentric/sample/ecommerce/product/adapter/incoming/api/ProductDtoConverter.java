@@ -1,7 +1,6 @@
 package dev.domaincentric.sample.ecommerce.product.adapter.incoming.api;
 
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductResult;
-import dev.domaincentric.sample.ecommerce.product.application.getproductbyid.GetProductByIdResult;
 import dev.domaincentric.sample.ecommerce.product.domain.model.EnrichedProduct;
 import org.springframework.stereotype.Component;
 
@@ -18,14 +17,14 @@ import org.springframework.stereotype.Component;
 public final class ProductDtoConverter {
 
   /**
-   * Converts CreateProductResult to DTO.
+   * Converts the created product to DTO.
    *
-   * <p>Note: Stock information is not available in CreateProductResult as it's a write operation.
+   * <p>Note: Stock information is not available on a created product as it's a write operation.
    *
    * @param output the use case output
    * @return product DTO
    */
-  public ProductDto toDto(final CreateProductResult output) {
+  public ProductDto toDto(final CreateProductResult.Created output) {
     return new ProductDto(
         output.productId(),
         output.sku(),
@@ -37,22 +36,6 @@ public final class ProductDtoConverter {
         output.category(),
         null,
         null);
-  }
-
-  /**
-   * Converts GetProductByIdResult to DTO.
-   *
-   * <p>Extracts the EnrichedProduct domain read model from the result and maps to DTO.
-   *
-   * @param result the use case result containing an EnrichedProduct
-   * @return product DTO
-   * @throws IllegalArgumentException if the result indicates product was not found
-   */
-  public ProductDto toDto(final GetProductByIdResult result) {
-    if (!result.found() || result.product() == null) {
-      throw new IllegalArgumentException("Cannot convert not-found result to DTO");
-    }
-    return toDto(result.product());
   }
 
   /**

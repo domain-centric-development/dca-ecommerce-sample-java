@@ -15,9 +15,9 @@ import org.springframework.stereotype.Component;
  *
  * <p>The result maps onto the registry: a sent confirmation completes the publication; a checkout
  * that holds no placed order is parked — logged and completed, since trying again changes nothing;
- * an unavailable mail provider throws {@code MailProviderUnavailableException} out of this method,
- * which leaves the publication failed for the registry's bounded retry. The order itself is never
- * undone by it.
+ * an unavailable mail provider has nobody here to answer it, so the case is thrown back out of this
+ * method, which leaves the publication failed for the registry's bounded retry. The order itself is
+ * never undone by it.
  */
 @Component
 public class OrderConfirmationEventConsumer {
@@ -38,12 +38,16 @@ public class OrderConfirmationEventConsumer {
    */
   @ApplicationModuleListener
   void on(final CheckoutConfirmed event) {
-    final SendOrderConfirmationResult result =
-        sendOrderConfirmation.execute(new SendOrderConfirmationCommand(event.sessionId().value()));
-    if (result.outcome() == SendOrderConfirmationResult.Outcome.NO_PLACED_ORDER) {
-      LOG.warn(
-          "No order confirmation for checkout session {}: it holds no placed order",
-          result.sessionId());
+    switch (sendOrderConfirmation.execute(
+        new SendOrderConfirmationCommand(event.sessionId().value()))) {
+      case SendOrderConfirmationResult.Sent sent -> {}
+      case SendOrderConfirmationResult.NoPlacedOrder refusal ->
+          LOG.warn(
+              "No order confirmation for checkout session {}: it holds no placed order",
+              refusal.sessionId());
+      case SendOrderConfirmationResult.MailProviderUnavailable refusal ->
+          throw new IllegalStateException(
+              "The mail provider did not accept the mail " + refusal.key());
     }
   }
 }
