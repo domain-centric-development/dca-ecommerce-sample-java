@@ -3,17 +3,49 @@ integration — through the output port StageDelivery."""
 
 from __future__ import annotations
 
+from ....building_blocks import DomainException, UseCaseException
 from ...domain.model.stage_story import Presence
-from ...domain.model.story_state import Detail
-from ...domain.service.acceptance_rules import AcceptanceRules
+from ...domain.model.verdict import Said
+from ...domain.model.acceptance import ACCEPTANCE, AcceptanceStep
 from ...domain.service.adopt_checks import AdoptChecks, Adoption
+from ..shared.stage_delivery import Landing
 from .check_stage import on_pass, Run
+from .adopt_on_plan import AdoptOnPlanCommand
+from .ask_acceptance import AskAcceptanceCommand
+from .deliver_story import DeliverStoryCommand
+from .split_off_on_plan import SplitOffOnPlanCommand
 
 DELIVERED_LEFT = "a delivered story is checked and its marks are left as they are"
 
 
 def delivered(run: Run) -> bool:
-    return bool(run.story.status.value == "delivered")
+    return bool(run.story.content.written_status.value == "delivered")
+
+
+def deliver(run: Run, landing: Landing) -> bool:
+    """The delivery a passing gate makes: what goes before the story's state — the spec merged, a task's findings
+    closed —, the story delivered by the gate through its aggregate (`run.deliveries`, one input port per landing),
+    what is kept beside it. False where any of it refused, the reason in the verdict."""
+    result = run.result
+    if not run.delivery.prepare(result, run.story_id, run.story_path, run.front, landing):
+        return False
+    try:
+        done = run.deliveries[landing].execute(DeliverStoryCommand(run.story.id, run.now()))
+    except DomainException as refused:
+        result.fail("delivered", str(refused))
+        return False
+    run.delivery.delivered(result, run.story_id, run.story_path, run.front, done.delivery, landing)
+    return not result.failed
+
+
+def integrate(run: Run) -> None:
+    """The story where it lands — the main checkout takes its commit, or its own checkout is published —, delivered
+    there, and handed on: committed on the main line, or its branch pushed."""
+    landing = run.delivery.landing()
+    if not run.delivery.take_in(run.result, run.story_id, run.story_path, landing):
+        return
+    if deliver(run, landing):
+        run.delivery.hand_on(run.result, run.story_id, run.story_path, run.front, landing, run.close)
 
 
 @on_pass("plan", rule=(
@@ -27,11 +59,23 @@ def _plan_passed(run: Run) -> None:
         run.result.note("story", f"{run.story_id} is delivered — checked, its marks are left as they are")
     else:
         run.delivery.plan_marks(run.story_id, run.story_path)
-        adoption = run.evidence.plan_adoption(run.story.story)
+        adoption = run.evidence.plan_adoption(run.story.id)
         outcome = AdoptChecks.outcome(run.story, adoption)
-        if adoption is not None and outcome is not Adoption.NONE:
-            run.delivery.adopt(run.result, run.story_id, run.story_path,
-                               [(row.key.value, row.test.value) for row in adoption.rows], outcome is Adoption.WHOLE)
+        if adoption is not None and outcome is Adoption.WHOLE:
+            try:
+                run.adoptions.execute(AdoptOnPlanCommand(run.story.id, adoption, run.now()))
+            except DomainException as refused:
+                run.result.fail("plan-adopts", str(refused))
+                return
+            run.delivery.adopted(run.result, run.story_id, run.story_path)
+        elif adoption is not None and outcome is not Adoption.NONE:
+            try:
+                split = run.splits.execute(SplitOffOnPlanCommand(run.story.id, adoption, run.now()))
+            except DomainException as refused:
+                run.result.fail("plan-adopts", str(refused))
+                return
+            run.delivery.split_kept(run.result, run.story_id, run.story_path, split.into.value,
+                                    [key.value for key in adoption.keys()])
 
 
 @on_pass("test", rule="GATE-PASS-RED-TREE")
@@ -57,14 +101,17 @@ def _document_passed(run: Run) -> None:
             result.fail("acceptance", facts.refused)
             return
         if facts.applies and facts.acceptance is not None:
-            step = AcceptanceRules.at_delivery(facts.acceptance)
+            step = AcceptanceStep.at_delivery(facts.acceptance)
             result.take(step.findings)
             if step.ask is Presence.PRESENT:
-                asked, where, refused = run.delivery.ask(story_id, story_path, run.criteria)
-                if refused is not None:
-                    result.fail("acceptance", refused)
+                try:
+                    asked = run.acceptances.execute(AskAcceptanceCommand(run.story.id, run.now())).record
+                except UseCaseException as refused:
+                    result.fail("acceptance", str(refused))
                     return
-                result.take(AcceptanceRules.asked(Detail(asked), Detail(where)))
+                where = run.delivery.record_place(story_id, story_path, asked.value)
+                result.take((ACCEPTANCE.wait(Said(f"{asked.value} asks a human to accept the story before it is "
+                                                   f"delivered — {where}, answered through /factory-decisions")),))
             if step.goes_on is Presence.ABSENT:
                 return
     if result.failed:
@@ -75,7 +122,7 @@ def _document_passed(run: Run) -> None:
         result.ok("integrate", f"every check passed — {story_id} is delivered once its worktree is integrated into "
                                f"the main checkout (the runner's integrate step)")
         return
-    run.delivery.deliver(result, story_id, story_path, run.front)
+    deliver(run, Landing.STORY)
 
 
 @on_pass("adopt", rule="GATE-PASS-ADOPTED")
@@ -86,9 +133,9 @@ def _adopt_passed(run: Run) -> None:
         run.result.ok("integrate", f"every check passed — {run.story_id} is adopted once its tests are integrated into "
                                    f"the main checkout (the runner's integrate step)")
         return
-    run.delivery.deliver(run.result, run.story_id, run.story_path, run.front)
+    deliver(run, Landing.STORY)
 
 
 @on_pass("integrate", rule="GATE-INTEGRATED")
 def _integrate_passed(run: Run) -> None:
-    run.delivery.integrate(run.result, run.story_id, run.story_path, run.front, run.close)
+    integrate(run)

@@ -6,15 +6,46 @@ import enum
 import typing
 
 from ....building_blocks import Value
-from .decision_record import DecisionState, RecordId, RecordKind
-from .stage import StageName, StoryKind
+from .story_words import Detail as Detail, StatusWord as StatusWord
+from .decision_record import RecordId
+from .stage import StageName
 from .story import StoryId
+from .verdict import CheckName, Finding, Said
 
 #: The schedule's states of a story that can run now: not started, begun, or stopped where it can continue.
 RUNNABLE = ("ready", "in-progress", "resumable")
 
 #: Rounds of judge and build a story may take before it stops as not converging.
 MAX_ROUNDS = 3
+
+ENVIRONMENT = "gate:fail environment"
+FAILED, CLOSING = "gate:fail ", "gate:fail story "
+
+
+class Judged(enum.Enum):
+    """What the judge's verdict means for the run."""
+
+    PASS = "pass"                       # on to the document stage
+    AGAIN = "changes-requested"         # a round back to the stage the judge names
+    CONFLICT = "story-conflict"         # the story or the plan is wrong: a person decides
+    MISSING = "missing"                 # no `verdict:` line: the judge stage is not finished
+    UNKNOWN = "unknown"                 # a word that is none of the three
+
+    def adopt_finding(self) -> Finding:
+        """A fresh judge confirms that each mapped test asserts its scenario before the story counts as adopted."""
+        if self is not Judged.PASS:
+            return CheckName("adopt-judged").fail(Said("judge.md carries no `verdict: pass` — a fresh judge confirms "
+                                                       "that each mapped test asserts its scenario before the story "
+                                                       "counts as adopted"))
+        return CheckName("adopt-judged").ok(Said("the judge confirmed that the tests prove the scenarios"))
+
+
+class Refusal(enum.Enum):
+    """What the integrate gate refused the story for on the main line."""
+
+    MOVED = "moved"             # nothing but the main line moving on meanwhile
+    MAIN_TESTS = "main-tests"   # the resolution dropped what the main line added to a test
+    CHECKOUT = "checkout"       # the main checkout could not take the story
 
 
 class StateName(enum.Enum):
@@ -39,12 +70,6 @@ ENDED = frozenset((StateName.DELIVERED, StateName.SUPERSEDED))
 ENDED_WORDS = frozenset(state.value for state in ENDED)
 
 
-class Detail(Value):
-    """Why a story stands where it stands, for a person — "" where nothing needs saying."""
-
-    value: str
-
-
 class Standing(Value):
     """A story's state, the stage it runs from (None where it runs from none), and why."""
 
@@ -52,11 +77,13 @@ class Standing(Value):
     start: typing.Optional[StageName]
     detail: Detail
 
-
-class StatusWord(Value):
-    """A story's `status:` as it is written, lower case — `approved`, `adopted`, `draft`, or a word nobody knows."""
-
-    value: str
+    @classmethod
+    def twin(cls, story: StoryId, others: typing.Sequence[Detail]) -> typing.Optional[Standing]:
+        """Two stories under one id would share a run folder and a row: each stops, naming where the others are."""
+        if not others:
+            return None
+        return cls(StateName.STOPPED, None, Detail(
+            f"id {story.value!r} is not unique — also {', '.join(o.value for o in others)}; give one of them another"))
 
 
 class Claimant(Value):
@@ -89,15 +116,10 @@ class Mark(enum.Enum):
     DOCUMENT_PASSED = "document-passed"
 
 
-class StoryFront(Value):
-    """What a story says about itself, and the marks read before its run: enough for every story not running."""
+class StoryMarks(Value):
+    """The marks read before a story's run: in its evidence folder (a stage changed it, it is published), and the
+    claim another factory holds on it."""
 
-    story: StoryId
-    status: StatusWord
-    kind: StoryKind
-    #: who claims the delivery where the story is delivered — "" for the gate, `hand:<who>` for a person; None where
-    #: it is not delivered
-    delivered_by: typing.Optional[Detail]
     marks: typing.FrozenSet[Mark]
     claimant: typing.Optional[Claimant]
 
@@ -108,28 +130,13 @@ class HandOverText(Value):
     value: str
 
 
-class VerdictWord(Value):
-    """The judge's `verdict:` — `pass`, `changes-requested`, `story-conflict` — or "" where it wrote none."""
-
-    value: str
-
-
 class HandOverFacts(Value):
     """A current stage file: its text, its `verdict:`, and the records its `## needs-human` names (None without
     one)."""
 
     text: HandOverText
-    verdict: VerdictWord
+    verdict: Judged
     asks: typing.Optional[typing.Tuple[RecordId, ...]]
-
-
-class RecordFacts(Value):
-    """A decision record of the story: its id, its state, the stage its answer resumes at, and its kind."""
-
-    id: RecordId
-    state: DecisionState
-    resumes: typing.Optional[StageName]
-    kind: RecordKind
 
 
 class GateReport(Value):
@@ -137,11 +144,46 @@ class GateReport(Value):
 
     value: str
 
+    def environment(self) -> typing.Optional[Detail]:
+        """A refusal whose cause is the machine, not the story — no stage can put a tool on the PATH, so it counts no
+        round: its reason; None for a refusal of the story."""
+        lines = self.value.splitlines()
+        if not any(line.startswith(ENVIRONMENT) for line in lines):
+            return None
+        return Detail(next((line[len(ENVIRONMENT + " — "):] for line in lines
+                            if line.startswith(ENVIRONMENT + " — ")), ""))
+
+    def integration(self) -> typing.FrozenSet[Refusal]:
+        """What the checks that failed on the main line say — not the report's closing `gate:fail story` line: only
+        that the main line moved on, or that a test of the main line lost its side, or that the checkout could not
+        take the story; empty for a refusal of the story itself."""
+        fails = [line for line in self.value.splitlines() if line.startswith(FAILED) and not line.startswith(CLOSING)]
+        if fails and all(line.startswith(FAILED + Refusal.MOVED.value) for line in fails):
+            return frozenset((Refusal.MOVED,))
+        return frozenset(refusal for refusal in (Refusal.MAIN_TESTS, Refusal.CHECKOUT)
+                         if any(line.startswith(FAILED + refusal.value) for line in fails))
+
+    def refused_checks(self) -> typing.Tuple[CheckName, ...]:
+        """The checks a gate's report says failed, each once, in its order — not its closing `gate:fail story` line."""
+        names: typing.List[CheckName] = []
+        for line in self.value.splitlines():
+            if line.startswith(FAILED) and not line.startswith(CLOSING):
+                name = CheckName(line[len(FAILED):].split(" ", 1)[0])
+                if name not in names:
+                    names.append(name)
+        return tuple(names)
+
 
 class Rounds(Value):
     """How many rounds of judge and build the story took."""
 
     value: int
+
+    def converged(self) -> typing.Optional[Detail]:
+        """Where the rounds did not converge, why — None while another round may run."""
+        if self.value >= MAX_ROUNDS:
+            return Detail(f"{MAX_ROUNDS} rounds did not converge")
+        return None
 
 
 class AcceptanceVerdict(enum.Enum):
@@ -159,11 +201,11 @@ class Acceptance(Value):
 
 
 class RunFacts(Value):
-    """What the run of a released story left: the current pass's stage files, the records (or why they could not
-    be read), the marks, the refusals, the rounds and the acceptance."""
+    """What the run of a released story left: the current pass's stage files, why its decision records could not be
+    read (the records themselves are aggregates, read on their own), the marks, the refusals, the rounds and the
+    acceptance."""
 
     hand_overs: typing.Mapping[StageName, HandOverFacts]
-    records: typing.Tuple[RecordFacts, ...]
     unreadable: typing.Optional[Detail]
     marks: typing.FrozenSet[Mark]
     rounds: Rounds

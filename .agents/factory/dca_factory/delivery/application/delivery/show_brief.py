@@ -11,7 +11,7 @@ from ...domain.model.stack_profile import SkillName
 from ...domain.model.stage import StageName, StageText, Trait
 from ...domain.model.story import StoryId
 from ...domain.service.stage_brief import Brief, Carrier, CarrierRole, StageBrief
-from ..shared.profile_source import ProfileSource
+from ....sharedkernel.application.profile_source import ProfileSource
 from ..shared.story_repository import StoryRepository
 from .check_stage import judging
 from .pipeline_rules import RULES
@@ -29,7 +29,7 @@ class ShowBriefInputPort(UseCase[ShowBriefQuery, Brief], typing.Protocol):
     has no such stage or the story's kind does not run it."""
 
 
-class ShowBriefUseCase:
+class ShowBriefUseCase(ShowBriefInputPort):
     def __init__(self, stories: StoryRepository, profile: ProfileSource) -> None:
         self._stories = stories
         self._profile = profile
@@ -41,13 +41,14 @@ class ShowBriefUseCase:
                                           self._carriers(query.stage))
 
     def _carriers(self, stage: StageName) -> typing.List[Carrier]:
-        """The skills the profile names for the stage: its craft, the guard where it writes production code, the
-        method's knowledge."""
+        """The skills the profile names for the stage: its craft, the guard and the frontend craft where it writes
+        production code, the method's knowledge."""
         profile = self._profile.profile()
         row = workflow().stage(stage)
         wanted = [(CarrierRole.CRAFT, f"carrier.{stage.value}")]
         if row is not None and Trait.GUARDED in row.traits:
             wanted.append((CarrierRole.GUARD, "carrier.guard"))
+            wanted.append((CarrierRole.FRONTEND, "carrier.frontend"))
         wanted.append((CarrierRole.KNOWLEDGE, "knowledge"))
         found = []
         for role, key in wanted:
@@ -61,6 +62,6 @@ class ShowEveryStageInputPort(UseCase[None, StageText], typing.Protocol):
     """What every stage is told, for a session that works no stage."""
 
 
-class ShowEveryStageUseCase:
+class ShowEveryStageUseCase(ShowEveryStageInputPort):
     def execute(self, query: None = None) -> StageText:
         return StageBrief(workflow()).every_stage(list(RULES.values()))

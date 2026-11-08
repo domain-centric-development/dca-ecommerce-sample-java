@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from ....domain.model.stage import Role
+from ..pipeline.stage_rows import stage_of
+
 import os
 import typing
 
@@ -19,6 +22,7 @@ from .snapshots import STAGES_MADE
 from .story_facts_files import StoryFactsFiles
 from .story_layout import find_story, story_files, story_id_of
 from ....domain.model.story_state import ENDED
+from ....application.shared.story_runs import StoryRuns
 
 #: What the gate and the runner keep in a story's evidence folder that a new pass starts without: the red ledger, the
 #: story's digest, the tests baseline, the round count, the base tree and the red tree. The journal and the snapshots carry on.
@@ -49,7 +53,7 @@ def keep_pass(folder: str) -> typing.Optional[str]:
     return target
 
 
-class StoryRunFiles:
+class StoryRunFiles(StoryRuns):
     """The stories' runs as files: the run folder <runs>, the stories under <epics>, the project <cwd>."""
 
     def __init__(self, cwd: str, epics: str, runs: str) -> None:
@@ -65,7 +69,7 @@ class StoryRunFiles:
             except (GateError, MarkdownError):
                 continue
             story_id = story_id_of(path, front)
-            if story_id == exclude.value or not os.path.isfile(os.path.join(self._runs, story_id, stage_files()["test"])):
+            if story_id == exclude.value or not os.path.isfile(os.path.join(self._runs, story_id, stage_files()[stage_of(Role.TESTS)])):
                 continue
             standing = stand_story(StoryFactsFiles(self._cwd, self._runs, story_id, front, path))
             if standing.state not in ENDED:
@@ -83,5 +87,5 @@ class StoryRunFiles:
         os.makedirs(evidence, exist_ok=True)
         path = os.path.join(evidence, CLAIM_FILE)
         with open(path, "a", encoding="utf-8") as handle:
-            handle.write(f"{at.value}\tdelivered_by={claim.by.value or 'unknown'}\tdelivered={claim.on.value}\n")
+            handle.write(f"{at.value}\tdelivered_by={claim.by.line().value or 'unknown'}\tdelivered={claim.on.value}\n")
         return path

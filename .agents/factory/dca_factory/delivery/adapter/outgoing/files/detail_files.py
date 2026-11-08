@@ -9,6 +9,8 @@ import os
 import re
 import typing
 
+from .run_shots import shots_of
+from ....domain.model.shot import Shot
 from ..pipeline.stage_rows import stage_windows
 from .criteria_files import criteria_of, scenarios_of
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import MarkdownError, read_front_matter
@@ -20,6 +22,7 @@ from .journal_files import Event, journal_events
 from .story_layout import EPIC_FILE, story_kind
 from .stream_records import journal_parts, parts_incomplete
 from .usage_files import journal_denials
+from ....application.shared.detail_facts import DetailFacts
 
 Facts = typing.Dict[str, typing.Any]
 
@@ -61,11 +64,14 @@ def window_parts(events: typing.List[Event], window: str) -> typing.List[Facts]:
     return sorted(rows, key=lambda r: order.index(r["stage"]) if r["stage"] in order else len(order))
 
 
-class DetailFactFiles:
+class DetailFactFiles(DetailFacts):
     """The detail's facts, read from the project's epics and run folder."""
 
     def __init__(self, epics: str, runs: str) -> None:
         self._epics, self._runs = epics, runs
+
+    def shots(self, story_id: str) -> typing.List[Shot]:
+        return shots_of(os.getcwd(), self._runs, story_id)
 
     def story_text(self, path: str, body: str, front: Facts) -> Facts:
         try:

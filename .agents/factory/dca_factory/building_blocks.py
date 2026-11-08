@@ -13,7 +13,12 @@ dataclass by its base: it declares its fields and carries no decorator of its ow
     InputPort, UseCase         the entry to the application; one user action or system operation
     OutputPort                 what the application needs from outside, implemented by an outgoing adapter
     Repository, Store          aggregates with a life cycle; operational data recorded or looked up without one
+    DomainEventPublisher       publishes an aggregate's events once it is saved
+    TransactionBoundary        runs a use case's writes as one unit
     UseCaseException           a use case's failure about the request, not about an invariant
+    OutputPortException        a failure an output port reports, outside what the model or the request can say
+    BoundedContext, Upstream   a context's declaration, `__dca__` in its package, and the contexts it depends on
+    SharedKernel               the shared kernel's declaration
 
 A marker that exists is not a duty to use it: an entity, an aggregate, a repository is used where something has a
 life cycle, a value where something is described.
@@ -23,6 +28,7 @@ from __future__ import annotations
 
 import abc
 import dataclasses
+import enum
 import typing
 
 
@@ -239,6 +245,34 @@ class Repository(OutputPort, typing.Protocol[AGGREGATE, ID_IN]):
         ...
 
 
+class DomainEventPublisher(OutputPort, typing.Protocol):
+    """Marker for the port that publishes an aggregate's domain events once it is saved — the use case calls it inside
+    its transaction, then the events are cleared, so none is published twice."""
+
+    def publish(self, event: DomainEvent) -> None:
+        """Publish one event."""
+        ...
+
+    def publish_and_clear_events(self, aggregate: AggregateRoot[typing.Any]) -> None:
+        """Publish every event the aggregate registered, in order, then clear them."""
+        for event in aggregate.domain_events():
+            self.publish(event)
+        aggregate.clear_domain_events()
+
+
+T = typing.TypeVar("T")
+
+
+class TransactionBoundary(OutputPort, typing.Protocol):
+    """Marker for the port that runs a use case's writes as one unit: the aggregate saved and its events published
+    together, or neither. Where the storage cannot roll back — files written in order — an implementation says so and
+    holds at least one writer at a time; the use case then writes after every refusal it can give, never before."""
+
+    def in_transaction(self, work: typing.Callable[[], T]) -> T:
+        """Run <work> inside the boundary and return what it returned."""
+        ...
+
+
 class Store(OutputPort, typing.Protocol):
     """Marker for Stores — output ports that record or look up operational data without an aggregate life cycle:
     a journal appended to, a queue of requests, usage recorded and counted. A lookup by key is fine on a store; an
@@ -254,3 +288,49 @@ class UseCaseException(Exception):
     stays the platform's own. It names no transport vocabulary — the incoming adapter maps it onto its protocol's
     answer.
     """
+
+
+class OutputPortException(Exception):
+    """The base of every failure an output port reports to the application: the outside did not answer as it should,
+    or ended the work. It names no technology — the adapter translates its own failure into it."""
+
+
+class Translation(enum.Enum):
+    """How a downstream context takes over an upstream's model."""
+
+    ANTI_CORRUPTION_LAYER = "acl"
+    CONFORMIST = "conformist"
+
+
+class Consumes(enum.Enum):
+    """The channel through which a downstream context uses an upstream: its `api` or its `api.events`."""
+
+    API = "api"
+    EVENTS = "events"
+
+
+@dataclasses.dataclass(frozen=True)
+class Upstream:
+    """Another bounded context this context depends on, through its published interface."""
+
+    context: str
+    translation: Translation
+    via: tuple[Consumes, ...]
+    rationale: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
+class BoundedContext:
+    """The declaration of a bounded context, as `__dca__` in its package's `__init__.py`. The architecture rules read
+    it from the source, so its arguments are literals and the enums above."""
+
+    name: str
+    description: str = ""
+    upstreams: tuple[Upstream, ...] = ()
+
+
+@dataclasses.dataclass(frozen=True)
+class SharedKernel:
+    """The declaration of the shared kernel, as `__dca__` in its package's `__init__.py`."""
+
+    description: str = ""

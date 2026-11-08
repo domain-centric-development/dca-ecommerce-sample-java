@@ -14,6 +14,7 @@ from ....domain.model.context_spec import (
     ContextName, ContextSpec, Feature, SharedKernel, Statement, Subdomain, Term, TermKind, TermName)
 from ....domain.model.criterion import Criterion, CriterionKey, FeatureName, Form, Line, RuleText, Selector
 from .spec_files import GLOSSARY_FILE, parse_spec, SCENARIOS_FILE
+from ....application.shared.context_specs import ContextSpecs
 
 #: A row of the designed domain's context table: | `cart` | Shopping cart … | Core |
 CONTEXT_ROW = re.compile(r"^\|\s*`?([A-Za-z][\w -]*?)`?\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*$")
@@ -99,7 +100,16 @@ def mentions_of(glossary: str) -> typing.FrozenSet[TermName]:
     return frozenset(TermName(name) for name in NAMED.findall(text))
 
 
-class ContextSpecFiles:
+def subdomain_of(written: str) -> Subdomain:
+    """The subdomain the description's table names — `Core`, `Core domain`, `generic subdomain` alike; a word that names
+    none of the three is a supporting one, nothing written is none."""
+    word = written.strip().lower()
+    if not word:
+        return Subdomain.UNSTATED
+    return next((s for s in (Subdomain.CORE, Subdomain.GENERIC) if s.value.lower() in word), Subdomain.SUPPORTING)
+
+
+class ContextSpecFiles(ContextSpecs):
     """The contexts of the project <cwd>."""
 
     def __init__(self, cwd: str) -> None:
@@ -123,7 +133,7 @@ class ContextSpecFiles:
                                                       for item in parse_spec(read_text(path))[1]))
                     for feature, path in files]
         glossary = os.path.join(folder, GLOSSARY_FILE)
-        return ContextSpec(ContextName(name), Statement(said[0]), Subdomain(said[1]), terms_of(glossary), features,
+        return ContextSpec.restore(ContextName(name), Statement(said[0]), subdomain_of(said[1]), terms_of(glossary), features,
                            identities_of(glossary), mentions_of(glossary))
 
     def shared_kernel(self) -> typing.Optional[SharedKernel]:

@@ -5,9 +5,10 @@ from __future__ import annotations
 import dataclasses
 import typing
 
-from ....building_blocks import UseCase
+from ....building_blocks import DomainEventPublisher, TransactionBoundary, UseCase
 from ...domain.model.moment import Moment
 from ...domain.model.person import Person
+from ...domain.model.stage_story import Place
 from ...domain.model.story import Delivery, StoryId
 from ..shared.story_claims import ClaimHeld, StoryClaims
 from ..shared.story_journal import StoryJournal
@@ -30,7 +31,7 @@ class DeliveredByHand:
 
     delivery: Delivery
     unproven: SpecChange
-    where: str
+    where: Place
 
 
 @dataclasses.dataclass(frozen=True)
@@ -54,13 +55,16 @@ class DeliverByHandInputPort(UseCase[DeliverByHandCommand, DeliverByHandResult],
     """Deliver a story by hand."""
 
 
-class DeliverByHandUseCase:
+class DeliverByHandUseCase(DeliverByHandInputPort):
     """A story a person built is delivered, claimed by them — works where the factory never ran; `--prove` checks it
     later. Its new criteria go into the spec without a test line. A story another factory claimed is delivered only
     with force, and that is journaled; one that changes what holds is not delivered by hand."""
 
     def __init__(self, stories: StoryRepository, claims: StoryClaims, spec: StorySpec,
-                 journal: StoryJournal) -> None:
+                 journal: StoryJournal,
+                 events: DomainEventPublisher, transactions: TransactionBoundary) -> None:
+        self._events = events
+        self._transactions = transactions
         self._stories = stories
         self._claims = claims
         self._spec = spec
@@ -70,12 +74,18 @@ class DeliverByHandUseCase:
         story = self._stories.get(command.story)
         delivery = story.deliver_by_hand(command.by, command.at)
         held = self._claims.held_elsewhere(story.id)
-        if held is not None:
-            if not command.force:
-                return ClaimedElsewhere(held)
-            self._journal.delivered_over_claim(story.id, held.who)
+        if held is not None and not command.force:
+            return ClaimedElsewhere(held)
         changing = self._spec.changing(story.id)
         if changing.keys:
             return ChangesWhatHolds(changing)
-        self._stories.save(story)
-        return DeliveredByHand(delivery, self._spec.take_unproven(story.id), self._stories.path_of(story.id))
+
+        def save() -> SpecChange:
+            self._stories.save(story)
+            self._events.publish_and_clear_events(story)
+            if held is not None:
+                self._journal.delivered_over_claim(story.id, held.who)
+            return self._spec.take_unproven(story.id)
+
+        unproven = self._transactions.in_transaction(save)
+        return DeliveredByHand(delivery, unproven, self._stories.place_of(story.id))

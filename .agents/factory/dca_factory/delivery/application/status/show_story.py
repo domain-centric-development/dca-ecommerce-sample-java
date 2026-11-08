@@ -9,15 +9,15 @@ import typing
 
 from ....building_blocks import UseCase, UseCaseException
 from ...domain.model.usage import USAGE_FIELDS
-from ..requests.pending import mark_pending
+from ..shared.pending import mark_pending
 from ..requests.pending_requests import PendingRequestsQuery, PendingRequestsUseCase
 from ..shared.detail_facts import DetailFacts
 from ..shared.front import accepted, created_of, front_text, is_acceptance
 from ..shared.status_facts import StatusFacts
-from .actions import make_action, offered
+from ..shared.actions import make_action, offered
 from .show_status import ShowStatusInputPort, ShowStatusQuery
 from .texts import figures, parse_time, stamp_text, took_text
-from ...domain.model.decision_record import ANSWERED_WORDS
+from ...domain.model.decision_record import DecisionState
 
 Model = typing.Dict[str, typing.Any]
 
@@ -42,7 +42,7 @@ class ShowStoryInputPort(UseCase[ShowStoryQuery, Model], typing.Protocol):
     """One story as a person reads it."""
 
 
-class ShowStoryUseCase:
+class ShowStoryUseCase(ShowStoryInputPort):
     """A story's detail over the status: the row the status shows of it, and what its file, its journal and its
     records say beyond that — the passes, why a stage ran more than once, the decisions, what is up with it."""
 
@@ -63,7 +63,7 @@ class ShowStoryUseCase:
         front, body = data.get("front") or {}, data.get("body") or ""
         text = self._detail.story_text(data.get("path") or "", body, front)
         accepted_by = next((str(f["id"]).strip() for _p, f, _b, st, a in reversed(records)
-                            if is_acceptance(f) and st in ANSWERED_WORDS and accepted(a)), None)
+                            if is_acceptance(f) and DecisionState(st).answered and accepted(a)), None)
         passes = []
         for i, p in enumerate(told["passes"]):
             before = told["passes"][i - 1]["end"] if i else None
@@ -92,7 +92,7 @@ class ShowStoryUseCase:
         decisions = []
         for _p, record, said, state, answer in records:
             question = (said.strip().splitlines() or ["(no title)"])[0].lstrip("# ").strip()
-            given = str(answer.get("answer", "")).strip() if state in ANSWERED_WORDS else ""
+            given = str(answer.get("answer", "")).strip() if DecisionState(state).answered else ""
             line = (f"{given}" if is_acceptance(record) and given else
                     f"{given} — {question}" if given else f"open — {question}")
             decisions.append(dict(id=str(record["id"]).strip(), state=state,
@@ -125,7 +125,8 @@ class ShowStoryUseCase:
                     created=created_of(front), intent=front_text(front.get("intent")),
                     description=text["description"], scenarios=text["scenarios"],
                     superseded=data.get("state") == "superseded",
-                    sections=text["sections"], criteria_at=text["criteria_at"],
+                    sections=text["sections"], criteria_at=text["criteria_at"], shots=[dict(path=s.path.value, name=s.name.value, stage=s.taker.value, at=s.at.value)
+                                                 for s in self._detail.shots(story_id)],
                     **story_situation(row, data, overview, text["sections"], now),
                     context=str(front.get("context", "")).strip(), criteria=text["criteria"],
                     accepted_by=accepted_by, passes=passes, stages=stages, decisions=decisions, models=models,
@@ -139,7 +140,7 @@ def pass_label(index: int, pass_: Model, records: typing.List[typing.Tuple[typin
     if index == 0:
         return "first delivery"
     corrections = [str(f["id"]).strip() for _p, f, _b, st, a in records
-                   if is_acceptance(f) and st in ANSWERED_WORDS and not accepted(a)
+                   if is_acceptance(f) and DecisionState(st).answered and not accepted(a)
                    and parse_time(str(a.get("at", ""))) and parse_time(str(a.get("at", ""))) <= pass_["start"]]
     return "correction" if corrections else "again from plan"
 

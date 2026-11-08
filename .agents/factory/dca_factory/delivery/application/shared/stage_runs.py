@@ -3,6 +3,8 @@ what it keeps of the runs: the red ledger, the rules' proofs, a re-proved test."
 
 from __future__ import annotations
 
+from ...domain.model.story_state import Judged
+
 import typing
 
 from ....building_blocks import OutputPort
@@ -75,8 +77,14 @@ class StageRuns(OutputPort, typing.Protocol):
         """The tests' `gate:invariants` table — None where it has none."""
         ...
 
-    def rule_proofs(self, story: str, rows: typing.Sequence[typing.Tuple[str, typing.List[int], str, str]]) -> None:
-        """How each rule's test was shown to guard it, kept in the evidence and the journal."""
+    def rule_proofs(self, story: str, rows: typing.Sequence[typing.Tuple[str, typing.List[int], str, str]],
+                    located: typing.Optional[Located] = None) -> None:
+        """How each rule's test was shown to guard it, kept in the evidence and the journal — each with the version
+        of its test file (`located`) the proof was taken against."""
+        ...
+
+    def rules_seen_red(self, story: str, located: Located) -> typing.FrozenSet[str]:
+        """The rules' tests an earlier run of the story's test gate saw red, in the version of their file there now."""
         ...
 
     def answered_tests(self, story: str) -> typing.List[str]:
@@ -99,5 +107,5 @@ class StageRuns(OutputPort, typing.Protocol):
         """The tests the adoption wrote itself, named as the reports name them."""
         ...
 
-    def judge_verdict(self, story: str) -> str:
+    def judge_verdict(self, story: str) -> Judged:
         ...

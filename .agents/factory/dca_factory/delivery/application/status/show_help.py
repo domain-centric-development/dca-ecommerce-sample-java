@@ -8,7 +8,7 @@ import typing
 from ....building_blocks import UseCase
 from ..shared.project_facts import ProjectFacts
 from ..shared.status_facts import StatusFacts
-from .actions import make_action, RUNNER
+from ..shared.actions import make_action, RUNNER
 from .show_status import ShowStatusInputPort, ShowStatusQuery
 from ...domain.model.story_state import ENDED_WORDS
 
@@ -91,7 +91,7 @@ class ShowHelpInputPort(UseCase[ShowHelpQuery, Model], typing.Protocol):
     """The factory explained."""
 
 
-class ShowHelpUseCase:
+class ShowHelpUseCase(ShowHelpInputPort):
     """The factory explained in one fixed view: the text is the same everywhere; only the marks in the flow and the
     Next line come from the project."""
 
@@ -129,7 +129,8 @@ class ShowHelpUseCase:
                  what="product, technical decisions, designed domain — a new project with its skeleton: /dca-new project",
                  skill="/dca-describe", shell="", done=started),
             dict(step="set up", part="foundation",
-                 what="the stack profile: build, test, format and browser commands, the carriers",
+                 what="the stack profile: build, test, format and browser commands, the carriers "
+                      "(each stage's craft, the guard, the frontend craft)",
                  skill="/factory-setup", shell="setup --check" if profile_file else "setup", done=bool(profile_file)),
             dict(step="discover", part="inflow", what="which problem is worth solving — a report with sources "
                                                      "and proposed epics, each with its outcome event",
@@ -179,7 +180,10 @@ class ShowHelpUseCase:
                   "the project's commands and the skills each stage uses"),
                  ("decisions", f"{epics}/<epic>/<story>/{place('decisions')}/",
                   "one record per question or acceptance, in its story's folder"),
-                 ("a story's run", f"{place('runs')}/<story>/", "hand-overs, marks, the journal — protocol, disposable")]
+                 ("a story's run", f"{place('runs')}/<story>/", "hand-overs, marks, the journal — protocol, disposable"),
+                 ("the page's theme", f"{own_folder(place('runs'))}/theme/theme.css",
+                  "the page in your colours and with your logo — from the plugin's theme.example.css; committed; "
+                  "serve --fixture all-states shows it in every state")]
         return dict(project=status_view["project"],
                     flow=flow, parts=[dict(p) for p in PARTS],
                     commands=[dict(zip(("name", "what", "skill", "shell"), c)) for c in HELP_COMMANDS],
@@ -189,3 +193,9 @@ class ShowHelpUseCase:
 
     def _action(self, skill: str = "", shell: str = "") -> typing.Any:
         return make_action(self._facts.names_story, skill=skill, shell=shell)
+
+
+def own_folder(runs: str) -> str:
+    """The factory's own folder, the run folder's parent: `.dca-factory` by default."""
+    parent = runs.rstrip("/").rpartition("/")[0]
+    return parent or ".dca-factory"

@@ -5,9 +5,11 @@ from __future__ import annotations
 import dataclasses
 import typing
 
-from ....building_blocks import UseCase
+from ....building_blocks import DomainEventPublisher, TransactionBoundary, UseCase
 from ...domain.model.decision_record import RecordId
-from ...domain.model.story import StoryId
+from ...domain.model.moment import Moment
+from ...domain.model.story import CitedCorrection, StoryId
+from ...domain.model.story_words import Detail
 from ..shared.acceptances import Acceptances
 from ..shared.story_repository import StoryRepository
 from ..shared.story_runs import StoryRuns
@@ -16,6 +18,7 @@ from ..shared.story_runs import StoryRuns
 @dataclasses.dataclass(frozen=True)
 class ReopenStoryCommand:
     story: StoryId
+    at: Moment
 
 
 @dataclasses.dataclass(frozen=True)
@@ -59,19 +62,21 @@ class ReopenStoryInputPort(UseCase[ReopenStoryCommand, ReopenStoryResult], typin
     """Take a delivered story back for a correction."""
 
 
-class ReopenStoryUseCase:
+class ReopenStoryUseCase(ReopenStoryInputPort):
     """Only with an answered acceptance record the story cites — the answer is in the story, not in a prompt. Before
     a story was accepted every answer is a correction; after an acceptance, one that changes a criterion as accepted
     is a new wish. The pass the story ran is kept aside, and the story runs again from plan."""
 
-    def __init__(self, stories: StoryRepository, acceptances: Acceptances, runs: StoryRuns) -> None:
+    def __init__(self, stories: StoryRepository, acceptances: Acceptances, runs: StoryRuns,
+                 events: DomainEventPublisher, transactions: TransactionBoundary) -> None:
+        self._events = events
+        self._transactions = transactions
         self._stories = stories
         self._acceptances = acceptances
         self._runs = runs
 
     def execute(self, command: ReopenStoryCommand) -> ReopenStoryResult:
         story = self._stories.get(command.story)
-        story.reopen()
         record = self._acceptances.correction_of(story.id)
         if record is None:
             return NoCorrection()
@@ -83,6 +88,12 @@ class ReopenStoryUseCase:
         changed = tuple(self._acceptances.changed_since_accepted(story.id))
         if changed:
             return NewWish(changed)
+        story.reopen(CitedCorrection(Detail(record.value)), command.at)
         kept = self._runs.keep_pass(story.id)
-        self._stories.save(story)
+
+        def save() -> None:
+            self._stories.save(story)
+            self._events.publish_and_clear_events(story)
+
+        self._transactions.in_transaction(save)
         return Reopened(record, kept)

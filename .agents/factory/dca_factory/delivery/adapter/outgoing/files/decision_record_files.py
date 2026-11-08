@@ -17,15 +17,19 @@ from ....application.shared.decision_record_repository import RecordNotFound
 from ....application.shared.front import is_acceptance
 from ....application.shared.story_repository import StoryNotFound
 from ....domain.model.decision_record import (
-    ANSWER_FIELDS as DOMAIN_ANSWER_FIELDS, ANSWERED_WORDS, AnswerField, Asker, DecisionRecord, DecisionState, OptionKey,
-    Given, RecordId, RecordKind, Section, WAITING_WORDS)
+    ANSWER_FIELDS as DOMAIN_ANSWER_FIELDS, AnswerField, Asker, DecisionRecord, DecisionState, OptionKey,
+    Given, OptionLine, RecordContent, RecordId, RecordKind, Section)
 from ....domain.model.stage import StageName
+from ....domain.model.story_words import Detail
 from ....domain.model.story_state import AcceptanceVerdict
 from ....domain.model.story import StoryId
-from ....domain.service.story_route import StoryRoute
 from ....domain.model.stage_story import Presence
-from ....domain.service.acceptance_rules import AcceptanceMode, AcceptanceRules
+from ....domain.model.acceptance import AcceptanceMode, acceptance_verdict
 from ....application.delivery.pipeline_workflow import workflow
+from ....application.shared.decision_inbox import DecisionInbox
+from ....application.shared.decision_record_repository import DecisionRecordRepository
+from ....application.shared.request_records import RequestRecords
+from ....domain.model.decision_record import DecisionState
 
 GateError = MarkdownError
 
@@ -58,16 +62,16 @@ def answer_appended(given: str, by: str, at: str) -> str:
     return f"\n## Answer\nanswer: {given}\nby: {by}\nat: {at}\n"
 
 
-class DecisionRecordFiles:
+class DecisionRecordFiles(DecisionRecordRepository):
     """The decision record repository as files, under the project the process works in."""
 
-    def __init__(self, cwd: str) -> None:
+    def __init__(self, cwd: str, epics: typing.Optional[str] = None) -> None:
         self._cwd = cwd
-        self._epics = os.path.join(cwd, place("epics"))
+        self._epics = epics or os.path.join(cwd, place("epics"))
 
     def path_of(self, record_id: RecordId) -> str:
         """The record's file; RecordNotFound with the reason where none has the id, or it cannot be read."""
-        for name, front, _body, _state, error, path in decision_files(self._cwd):
+        for name, front, _body, _state, error, path in decision_files(self._cwd, self._epics):
             rid = str(front.get("id", name)).strip() if not error else name
             if rid.lower() == record_id.value.lower():
                 if error:
@@ -77,7 +81,7 @@ class DecisionRecordFiles:
 
     def get(self, record_id: RecordId) -> DecisionRecord:
         path = self.path_of(record_id)
-        for name, front, body, state, _error, at in decision_files(self._cwd):
+        for name, front, body, state, _error, at in decision_files(self._cwd, self._epics):
             if at == path:
                 return self.record(name, front, body, state)
         raise RecordNotFound(f"no decision record {record_id.value} — `factory.sh decisions` lists them")
@@ -89,12 +93,15 @@ class DecisionRecordFiles:
             return None
 
     def save(self, aggregate: DecisionRecord) -> DecisionRecord:
-        """The answer the record took, appended as its `## Answer` — the one write a record takes here."""
-        answer = aggregate.answer_given
+        """What the record took, appended: the answer as its `## Answer`, the stage that applied it as its
+        `## Applied`."""
+        answer, applied = aggregate.answer_given, aggregate.applied
         path = self.path_of(aggregate.id)
         if answer is not None and decision_state(read_text(path))[1].get("answer") != answer.given.value:
             with open(path, "a", encoding="utf-8") as handle:
                 handle.write(answer_appended(answer.given.value, answer.by.value, answer.at.value))
+        if applied is not None and decision_state(read_text(path))[0] != DecisionState.APPLIED.value:
+            stamp_applied(path, applied.stage.value, applied.at.value)
         return aggregate
 
     def delete_by_id(self, aggregate_id: RecordId) -> None:
@@ -106,24 +113,24 @@ class DecisionRecordFiles:
         except GateError as error:
             raise StoryNotFound(f"no story {story.value} under {place('epics')}/ — {error}") from None
         found = [rid for rid, _front, state, _a, _b in acceptance_records(self._cwd, story.value, path)
-                 if state in WAITING_WORDS]
+                 if DecisionState(state).waits]
         return self.get(RecordId(found[-1])) if found else None
 
     def open_records_of(self, story: StoryId) -> typing.Sequence[DecisionRecord]:
         return [self.record(name, front, body, state) for name, front, body, state, error, _path
                 in decision_files(self._cwd)
-                if not error and str(front.get("story", "")).strip() == story.value and state in WAITING_WORDS]
+                if not error and str(front.get("story", "")).strip() == story.value and DecisionState(state).waits]
+
+    def next_acceptance_id(self, story: StoryId) -> RecordId:
+        try:
+            path = find_story(self._epics, story.value)
+            return RecordId(f"{story.value}-accept-{len(acceptance_records(self._cwd, story.value, path)) + 1}")
+        except GateError as error:
+            raise RecordNotFound(str(error)) from None
 
     @staticmethod
     def record(name: str, front: Front, body: str, state: str) -> DecisionRecord:
-        story = str(front.get("story", "")).strip()
-        return DecisionRecord(
-            RecordId(str(front.get("id", name)).strip()),
-            RecordKind.ACCEPTANCE if is_acceptance(front) else RecordKind.QUESTION,
-            Asker.REQUEST if str(front.get("request", "")).strip() else Asker.STAGE,
-            DecisionState(state),
-            [OptionKey(option["key"]) for option in decision_options(body)],
-            StoryId(story) if story else None)
+        return record_of(name, front, body, state, decision_state(body)[1])
 
 
 # --- the records as the gate, the runner and the views read them -------------------------------------------------
@@ -255,7 +262,7 @@ def read_decisions(store: str, story_id: str) -> Records:
 def applying_stage(front: Front, answer: typing.Mapping[str, str]) -> str:
     """The stage that applies an answer: the one the answer names (`applies: test` — an answer that changes a
     test goes back to the test stage, whoever asked), else the record's `stage:`, the stage that asked."""
-    return StoryRoute(workflow()).applying(StageName(str(front.get("stage", "")).strip()),
+    return workflow().applying(StageName(str(front.get("stage", "")).strip()),
                                StageName(str((answer or {}).get("applies", "")).strip().lower())).value
 
 
@@ -263,7 +270,7 @@ def resume_stage(front: Front, answer: typing.Mapping[str, str]) -> typing.Optio
     """Where the story resumes for an answer: the earlier of the stage that asked and the one the answer
     names. A plan's question answered `applies: test` still re-plans — the plan lists the tests that change —
     and the test stage after it takes the changed expectation."""
-    return StoryRoute(workflow()).resumes_at(StageName(str(front.get("stage", "")).strip()),
+    return workflow().resumes_at(StageName(str(front.get("stage", "")).strip()),
                                  StageName(str((answer or {}).get("applies", "")).strip().lower())).value
 
 
@@ -274,7 +281,7 @@ def answered_decisions(cwd: str, story_id: str, stage: str) -> typing.List[str]:
     except GateError:
         return []
     return [str(front["id"]).strip() for _p, front, _b, state, answer in records
-            if state in ANSWERED_WORDS and applying_stage(front, answer) == stage]
+            if DecisionState(state).answered and applying_stage(front, answer) == stage]
 
 
 def nothing_line(line: str) -> bool:
@@ -300,16 +307,16 @@ def needs_human_ids(text: str) -> typing.Optional[typing.List[str]]:
     return ids
 
 
-def stamp_applied(path: str, stage: str) -> None:
+def stamp_applied(path: str, stage: str, at: str) -> None:
+    """The record's `## Applied`: by which stage, when — written by the repository only."""
     with open(path, "a", encoding="utf-8") as handle:
-        handle.write(f"\n## Applied\nat: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
-                     f"stage: {stage}\n")
+        handle.write(f"\n## Applied\nat: {at}\nstage: {stage}\n")
 
 
-def decision_files(cwd: str) -> typing.Iterator[typing.Tuple[typing.Any, ...]]:
+def decision_files(cwd: str, epics: typing.Optional[str] = None) -> typing.Iterator[typing.Tuple[typing.Any, ...]]:
     """(id from the file name, front, body, state, error, path) for every record of every story, story by
-    story in the order of the files."""
-    for story_path in story_files(os.path.join(cwd, place("epics"))):
+    story in the order of the files — under <epics> where given."""
+    for story_path in story_files(epics or os.path.join(cwd, place("epics"))):
         store = decisions_store(story_path)
         if not os.path.isdir(store):
             continue
@@ -365,17 +372,6 @@ def answer_section(text: str) -> typing.Optional[str]:
     return "\n".join(lines).rstrip() if lines else None      # a section appended after it leaves it as it was
 
 
-def answer_sentence(body: str, answer: typing.Mapping[str, typing.Any]) -> str:
-    """The sentence an answered record leaves in its story — deterministic: where the answer names an option of the
-    record's `## Options` by its label (`a`, `B`, `option b`), that option's first line; else the answer itself.
-    One line, markup and runs of white space taken out."""
-    given = " ".join(str(answer.get("answer", "")).split())
-    label = re.sub(r"^(?:option\s+)", "", given, flags=re.I).strip(" .):*")
-    if re.fullmatch(r"[A-Za-z0-9]{1,3}", label or ""):
-        given = next((o["line"] for o in decision_options(body) if o["key"].lower() == label.lower()), given)
-    return plain(given)
-
-
 #: A story delivered only once a human looked at it: the record kind, the modes of `acceptance:`.
 ACCEPTANCE_KIND = "acceptance"
 
@@ -409,16 +405,16 @@ def acceptance_state(cwd: str, story_id: str,
     story changed since — a correction written in — is asked again once it has run."""
     records = acceptance_records(cwd, story_id, story_path)
     if not records:
-        return AcceptanceRules.verdict(None, Given(""), Presence.ABSENT).value, None
-    rid, front, state, answer, _body = records[-1]
+        return acceptance_verdict(None, Presence.ABSENT).value, None
+    rid, front, state, answer, body = records[-1]
     same = Presence.PRESENT if str(front.get("digest", "")).strip() == story_digest(story_path or "") else Presence.ABSENT
-    return AcceptanceRules.verdict(DecisionState(state), Given(str(answer.get("answer", ""))), same).value, rid
+    return acceptance_verdict(record_of(rid, front, body, state, answer), same).value, rid
 
 
 def latest_verdict(records: Records) -> AcceptanceVerdict:
     """What the latest of a story's acceptance records says, the story's digest left aside."""
-    _rid, _front, state, answer, _body = records[-1]
-    return AcceptanceRules.verdict(DecisionState(state), Given(str(answer.get("answer", ""))), Presence.PRESENT)
+    rid, front, state, answer, body = records[-1]
+    return acceptance_verdict(record_of(rid, front, body, state, answer), Presence.PRESENT)
 
 
 def record_sections(body: str) -> typing.List[typing.Dict[str, str]]:
@@ -429,7 +425,7 @@ def record_sections(body: str) -> typing.List[typing.Dict[str, str]]:
             if s["heading"].split("(")[0].strip().lower() not in ("recommendation", "answer")]
 
 
-class DecisionInboxFiles:
+class DecisionInboxFiles(DecisionInbox):
     """The decision inbox as files, under the project the process works in."""
 
     def __init__(self, cwd: str) -> None:
@@ -460,7 +456,7 @@ class DecisionInboxFiles:
         return f"{place('epics')}/<epic>/<story>/{DECISIONS_DIR}/"
 
 
-class RequestRecordFiles:
+class RequestRecordFiles(RequestRecords):
     """The records the requests of the project <cwd> wrote, beside the stories and the project's own."""
 
     def __init__(self, cwd: str) -> None:
@@ -469,10 +465,24 @@ class RequestRecordFiles:
     def asked(self, request: str) -> typing.List[typing.Tuple[str, str, str]]:
         return [(str(shown(path)), rid, state) for path, rid, state in request_records(self._cwd, request)]
 
-    def applied(self, request: str) -> None:
-        for path, _rid, state in request_records(self._cwd, request):
-            if state == "answered":
-                stamp_applied(path, "request")
-
     def questioned(self, paths: typing.Sequence[str], request: str) -> None:
         mark_questioned(self._cwd, place("runs"), paths, request)
+
+
+def record_of(name: str, front: Front, body: str, state: str, answer: typing.Mapping[str, typing.Any]) -> DecisionRecord:
+    """The record in a file named <name>, read off its front matter, its body, its state and its `## Answer`."""
+    story = str(front.get("story", "")).strip()
+    stage = str(front.get("stage", "")).strip() if DecisionState(state).waits else resume_stage(front, answer)
+    return DecisionRecord.restore(
+        RecordId(str(front.get("id", name)).strip()),
+        RecordKind.ACCEPTANCE if is_acceptance(front) else RecordKind.QUESTION,
+        Asker.REQUEST if str(front.get("request", "")).strip() else Asker.STAGE,
+        DecisionState(state),
+        [OptionKey(option["key"]) for option in decision_options(body)],
+        StoryId(story) if story else None,
+        content=RecordContent(
+            Detail((body.strip().splitlines() or ["(no title)"])[0].lstrip("# ").strip()),
+            StageName(stage) if stage else None,
+            Detail(str(answer.get("answer"))), Detail(str(answer.get("by"))),
+            tuple(AnswerField(f) for f in ANSWER_FIELDS if not answer.get(f)),
+            tuple(OptionLine(OptionKey(option["key"]), Detail(option["line"])) for option in decision_options(body))))

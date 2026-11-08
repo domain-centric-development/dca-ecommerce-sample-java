@@ -72,70 +72,78 @@ import sys
 import typing
 
 from .....contract import CONTRACT, VERSION
-from .....discovery.api import check_report
-from .....infrastructure import gate as wiring
-from .....infrastructure.description import check_description
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import GateError
 from .....sharedkernel.adapter.outgoing.profile.profile_files import (
     location, place, PROFILE_FILE, read_profile, resolve_profile, set_places)
-from ....application.backlog.check_backlog import CheckBacklogCommand
-from ....application.delivery.check_change import CheckChangeCommand
-from ....application.delivery.check_parity import CheckParityCommand
+from ....application.backlog.check_backlog import CheckBacklogInputPort
+from ....application.delivery.check_change import CheckChangeCommand, CheckChangeInputPort
+from ....application.delivery.check_parity import CheckParityCommand, CheckParityInputPort
 from ....application.delivery.check_stage import Verdict
 from ....application.delivery.pipeline_rules import decides
-from ....application.description.check_description import CheckDescriptionCommand
+from ....application.description.check_description import CheckDescriptionInputPort
+from ....application.profile.check_profile import CheckProfileQuery, CheckProfileInputPort
 from ....domain.model.stage import Trait
-from ....domain.model.story import StoryId
-from ....domain.model.verdict import FindingState
 from ....application.delivery.pipeline_workflow import workflow
+from . import backlog_check, description_check
+
+Profile = typing.Mapping[str, typing.Any]
+Report = typing.Callable[[typing.Optional[str]], int]
 
 
-def check_contract(result: Verdict, profile: wiring.Profile) -> None:
-    """The profile's contract and its unknown keys (`ProfileChecks.contract`)."""
-    result.take(wiring.contract_findings(profile))
+class GateRoot(typing.Protocol):
+    """What the gate's command line takes from the composition root: its use cases and the runs it records — given
+    at start (`wire`), never imported."""
+
+    def check_backlog(self, cwd: str, epics: str, profile: Profile) -> CheckBacklogInputPort: ...
+    def check_change(self, cwd: str, profile: Profile) -> CheckChangeInputPort: ...
+    def check_parity(self) -> CheckParityInputPort: ...
+    def check_profile(self, profile: Profile) -> CheckProfileInputPort: ...
+    def check_description(self, cwd: str, profile: typing.Mapping[str, str]) -> CheckDescriptionInputPort: ...
+    def check_discovery(self, cwd: str, folder: str, topic: str) -> typing.Tuple[bool, str]: ...
+    def gate_story(self, result: Verdict, args: typing.Any, cwd: str, profile: Profile, report: Report) -> int: ...
+    def layout_note(self, cwd: str, profile: Profile) -> typing.Optional[str]: ...
+    def missing_tools(self) -> typing.List[typing.Tuple[str, str]]: ...
+    def stage_changes(self, cwd: str, runs: str, story_id: str, stage: str) -> None: ...
+    def story_base(self, cwd: str, runs: str, story_id: str) -> None: ...
+    def window_end(self, runs: str, story_id: str, window: str, ran: str) -> int: ...
+    def window_start(self, runs: str, story_id: str) -> None: ...
 
 
-def check_models(result: Verdict, profile: wiring.Profile) -> None:
+#: the composition root, given by `wire` before `main` runs
+wiring: GateRoot
+
+
+def wire(root: GateRoot) -> None:
+    """The composition root this command line builds its use cases from."""
+    global wiring
+    wiring = root
+
+
+def check_contract(result: Verdict, profile: Profile) -> None:
+    """The profile's contract and its unknown keys (`GateRelease.profile_findings`)."""
+    result.take(wiring.check_profile(profile).execute(CheckProfileQuery()).contract)
+
+
+def check_models(result: Verdict, profile: Profile) -> None:
     """The profile's model keys, each bound to a tool (`ProfileChecks.models`)."""
-    result.take(wiring.model_findings(profile))
+    result.take(wiring.check_profile(profile).execute(CheckProfileQuery()).models)
 
 
 #: Where the method keeps the project's conventions; `verify_command:` there is the architecture command the
 #: profile's `architecture:` was copied from at setup. Two files, two owners — the method's and the factory's —
 #: and nothing merges them, so the pair is compared and a difference is named.
-def check_project(result: Verdict, cwd: str, profile: wiring.Profile) -> bool:
-    """The two mandatory parts of the project description — the description feature's check, said as the gate
-    says its checks."""
-    checked = check_description(cwd, profile).execute(CheckDescriptionCommand())
-    for verdict in checked.verdicts:
-        getattr(result, verdict.state)(verdict.part, verdict.said)
-    return checked.complete
+def check_project(result: Verdict, cwd: str, profile: Profile) -> bool:
+    """The two mandatory parts of the project description (`description_check`)."""
+    return description_check.check_project(result, wiring.check_description(cwd, profile))
 
 
-def check_backlog(cwd: str, epics: str, profile: wiring.Profile, only: typing.Optional[str] = None) -> int:
-    """The plan gate's backlog checks over every story that is not done, or over `only` (`CheckBacklogUseCase`),
-    said one line per finding that did not pass."""
-    hint = wiring.layout_note(cwd, profile)
-    if hint:
-        print(f"gate:note layout — {hint}")
-    checked = wiring.check_backlog(cwd, epics, profile).execute(CheckBacklogCommand(StoryId(only) if only else None))
-    for verdict in checked.verdicts:
-        for finding in verdict.findings:
-            if finding.state is not FindingState.PASS:
-                print(f"gate:{finding.state.value} {verdict.label.value} {finding.check.value} — {finding.said.value}")
-    refused = [label.value for label in checked.refused]
-    if not checked.checked and not refused:
-        if only:
-            print(f"backlog: no story {only} to check under {epics}/ (not there, delivered or superseded)")
-            return 1
-        print(f"backlog: no story to check under {epics}/")
-        return 0
-    print(f"backlog: {checked.checked} story(ies) checked" + (f", refused: {', '.join(refused)}" if refused
-                                                             else " — every one holds for the plan gate"))
-    return 1 if refused else 0
+def check_backlog(cwd: str, epics: str, profile: Profile, only: typing.Optional[str] = None) -> int:
+    """The plan gate's backlog checks (`backlog_check`)."""
+    return backlog_check.check_backlog(wiring.check_backlog(cwd, epics, profile), wiring.layout_note(cwd, profile),
+                                       epics, only)
 
 
-class Result(Verdict):
+class ReportedVerdict(Verdict):
     """A gate run's verdict, as the gate reports it."""
 
     def report(self, story_id: typing.Optional[str], stage: str, as_json: bool, brief: bool = False) -> int:
@@ -277,7 +285,7 @@ def main(argv: typing.Sequence[str]) -> int:
     if args.check_backlog:
         return check_backlog(cwd, args.epics, read_profile(resolve_profile(args.profile, cwd)), args.story)
     if args.check_contract:
-        result = Result()
+        result = ReportedVerdict()
         profile = read_profile(resolve_profile(args.profile, cwd))
         check_contract(result, profile)
         check_models(result, profile)
@@ -303,18 +311,18 @@ def main(argv: typing.Sequence[str]) -> int:
             wiring.stage_changes(cwd, args.runs, args.story, args.record_changes)
         return 0
     if args.check_discovery:
-        result = Result()
+        result = ReportedVerdict()
         try:
             folder = location(read_profile(resolve_profile(args.profile, cwd)), "discovery")
-            checked = check_report(cwd, folder, args.check_discovery)
-            (result.ok if checked.passed else result.fail)("discovery", checked.said)
+            passed, said = wiring.check_discovery(cwd, folder, args.check_discovery)
+            (result.ok if passed else result.fail)("discovery", said)
         except GateError as error:
             result.fail("discovery", str(error))
         for state, check, message in result.entries:
             print(f"gate:{state} {check} — {message}")
         return 1 if result.failed else 0
     if args.project:
-        result = Result()
+        result = ReportedVerdict()
         try:
             profile = read_profile(resolve_profile(args.profile, cwd))
             check_project(result, cwd, profile)
@@ -327,7 +335,7 @@ def main(argv: typing.Sequence[str]) -> int:
             print(f"gate:{state} {check} — {message}")
         return 1 if result.failed else (3 if any(e[0] == "note" for e in result.entries) else 0)
     if args.change or args.parity:
-        result, label = Result(), "change" if args.change else "parity"
+        result, label = ReportedVerdict(), "change" if args.change else "parity"
         try:
             if args.change:
                 profile = read_profile(resolve_profile(args.profile, cwd))
@@ -346,7 +354,7 @@ def main(argv: typing.Sequence[str]) -> int:
     if not args.story or not args.stage:
         parser.error("--story and --stage are required (or --change, --parity, --check-backlog, --project; "
                      "status, schedule, usage and the inbox are factory-cli.py's)")
-    result = Result()
+    result = ReportedVerdict()
     profile = read_profile(resolve_profile(args.profile, cwd))
     hint = wiring.layout_note(cwd, profile)
     if hint:

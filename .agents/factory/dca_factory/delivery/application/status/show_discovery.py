@@ -7,11 +7,11 @@ import dataclasses
 import typing
 
 from ....building_blocks import UseCase
-from ..requests.pending import mark_pending
+from ..shared.pending import mark_pending
 from ..shared.discovery_list import DiscoveryList
 from ..shared.requests import PENDING, RequestStore
 from ..shared.story_repository import StoryRepository
-from .actions import make_action, offered
+from ..shared.actions import make_action, offered
 
 Model = typing.Dict[str, typing.Any]
 
@@ -25,7 +25,7 @@ class ShowDiscoveryInputPort(UseCase[ShowDiscoveryQuery, Model], typing.Protocol
     """`project`, `store`, `topics` — each proposal and change with its `actions`."""
 
 
-class ShowDiscoveryUseCase:
+class ShowDiscoveryUseCase(ShowDiscoveryInputPort):
     def __init__(self, discovery: DiscoveryList, requests: RequestStore, stories: StoryRepository) -> None:
         self._discovery = discovery
         self._requests = requests

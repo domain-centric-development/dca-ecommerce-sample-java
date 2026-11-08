@@ -11,7 +11,7 @@ import typing
 from ....building_blocks import AggregateRoot, Id, Value
 from .criterion import Criterion, CriterionKey, FeatureName, RuleText, Selector
 from .delta import Verdict
-from .living_spec import LivingSpec
+from .living_spec import Change
 
 
 class ContextName(Id):
@@ -26,10 +26,14 @@ class Statement(Value):
     value: str
 
 
-class Subdomain(Value):
-    """How the designed domain classifies a context: Core, Supporting, Generic — as written."""
+class Subdomain(enum.Enum):
+    """How the designed domain classifies a context — what modelling effort it gets, how strict its rules and reviews
+    are; none where the description does not say."""
 
-    value: str
+    CORE = "Core"
+    SUPPORTING = "Supporting"
+    GENERIC = "Generic"
+    UNSTATED = ""
 
 
 class TermKind(enum.Enum):
@@ -218,6 +222,13 @@ class ContextSpec(AggregateRoot[ContextName]):
         self._identities = tuple(identities)
         self._mentions = frozenset(mentions)
 
+    @classmethod
+    def restore(cls, name: ContextName, purpose: Statement, subdomain: Subdomain,
+                terms: typing.Sequence[Term], features: typing.Sequence[Feature],
+                identities: typing.Sequence[TermName] = (), mentions: typing.AbstractSet[TermName] = frozenset()) -> ContextSpec:
+        """The context spec as it was kept — the one way a repository builds it."""
+        return cls(name, purpose, subdomain, terms, features, identities, mentions)
+
     @property
     def id(self) -> ContextName:
         return self._name
@@ -257,13 +268,13 @@ class ContextSpec(AggregateRoot[ContextName]):
 
     def pending(self, stories: typing.Sequence[OpenStory]) -> typing.Tuple[PendingChange, ...]:
         """Each criterion an open story of this context adds or changes — one it holds word for word changes
-        nothing and is left out; the comparison is the spec's own (`LivingSpec.derived`)."""
+        nothing and is left out; the comparison is the spec's own (`Change.derived`)."""
         held = self.held()
         found = []
         for story in stories:
             if story.context != self._name:
                 continue
-            for key, verdict in LivingSpec.derived(story.criteria, held).items():
+            for key, verdict in Change(tuple(story.criteria)).derived(held).items():
                 if verdict is not Verdict.HOLDS:
                     found.append(PendingChange(story.story, story.title, story.status, key, verdict))
         return tuple(found)

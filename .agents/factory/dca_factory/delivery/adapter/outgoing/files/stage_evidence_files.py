@@ -3,6 +3,9 @@ story."""
 
 from __future__ import annotations
 
+from ....domain.model.stage import Role
+from ..pipeline.stage_rows import stage_of
+
 import contextlib
 import os
 import re
@@ -17,40 +20,40 @@ from .....sharedkernel.adapter.outgoing.markdown.front_matter import read_front_
 from .....sharedkernel.adapter.outgoing.profile.profile_files import (
     evidence_dir, factory_home, HOME_VARIABLE, in_worktree, places_in, location, METHOD_PROFILE, place, read_flat, shown, unknown_profile_keys)
 from ....application.profile.profile_rules import perspectives_of
-from ....application.shared.front import is_acceptance
 from ....domain.model.decision_record import (
-    ANSWERED_WORDS, AnswerField, DecisionState, RecordId, RecordKind, WAITING_WORDS)
+    RecordId)
 from ....domain.model.epic import EpicId
 from ....domain.model.schedule import ContextName
 from ....domain.model.stage import StageName, StoryKind
+from ....domain.model.story import Story
 from ....domain.model.stage_story import (
-    AssertionAt, AdoptRow, BriefFacts, ChangedTest, PlanAdoption, Rename, RenamedTest, SymbolName, DocumentFacts, Integration, MainTestLines, MainTests, MappedTest, OutcomeEvent, OutcomeFacts, PassGap,
+    AssertionAt, AdoptRow, BriefFacts, ChangedTest, PlanAdoption, Rename, RenamedTest, SymbolName, DocumentFacts, Integration, MainTestLines, MainTests, MappedTest, OutcomeEventPlaces, OutcomeFacts, PassGap,
     PipelineFacts, PlannedDigest, ProposalFacts, ReviewFacts, StoryPass, SpecDelta, SpecTests, StoryCommit, DecidedRecord, KeptTests, PlannedTestChange, RedProof, StageChanges,
-    TestChange, TestEdit, Unobserved, AssertionFact, ByteSize, Clause, ClauseRow, CommandKey, Count,
+    TestChange, TestDiff, TestEdit, Unobserved, AssertionFact, ByteSize, Clause, ClauseRow, CommandKey, Count,
     ElementName, ElementRules, FileChange, InvariantFacts, InvariantRow, PlannedFile, PortName, Presence, Rule,
-    ScenarioClauses, Selector, ContextMapFacts, HandOverName, HandOverSize, PlanLevels, DecisionFacts, DecisionsFacts, HandOverAsk, ContractNumber, EpicFacts, EpicField, EventName, GateRelease, InstructionFile,
+    ScenarioClauses, Selector, ContextMapFacts, HandOverName, HandOverSize, PlanLevels, DecisionsFacts, HandOverAsk, ContractNumber, EpicFacts, EpicField, EventName, GateRelease, InstructionFile,
     Metric, ModelKey, OwnedFacts, OwnedPart, Place, ProfileKey, ProfileText, RoundsRecord, RowId, RowState,
-    ScenarioKey, StageStory, UnknownKey)
-from ....domain.model.story import DeliveredOn, StoryId
+    ScenarioKey, StoryContent, TestSource, UnknownKey)
+from ....domain.model.story import StoryId
 from ....domain.model.story_state import Detail, HandOverText, Rounds, StatusWord
 from ....domain.service.backlog_checks import EPIC_FIELDS, normal_name
-from ....domain.service.decision_checks import Applying
 from .brief_files import given_digest, named_digest
+from ....domain.model.decision_record import DecisionRecord
 from .decision_record_files import (
-    ANSWER_FIELDS, answer_sentence, decisions_store, needs_human_ids, read_decisions, record_path, resume_stage,
-    stamp_applied)
+    record_of,
+    decisions_store, needs_human_ids, read_decisions, record_path)
 from .epic_files import epic_dependency_problem
 from .findings_files import confirmed_defects, findings_path, findings_rows, project_findings_path
-from .owned_files import owned_changes, write_answered
+from .owned_files import owned_changes, regard_gate_line
 import glob
 from .delivery_files import (
     glossary_files, IMPORT_LINE, PATHLIKE, PIPELINE_DIR, plan_proposals, production_files,
     proposal_words, REVIEW_RANKS)
 from .decision_record_files import NOTHING
 from .kept_files import bare_path, row_cells
-from .run_marks import current_stage_files, STORY_DIGEST, verdict_in
+from .run_marks import current_stage_files, STORY_DIGEST, judged_of, verdict_in
 from .snapshots import NOT_OBSERVED
-from .story_layout import journeys_hold, story_digest
+from .story_layout import depends_on, journeys_hold, story_digest
 from ..claims.remote_claims import claim_config_here
 from ..git.integration import (
     CONFLICT_MARKER, integration_target, lost_text, MAIN_TESTS, main_tests_adapted, main_tests_lost, main_tests_waiver,
@@ -59,7 +62,6 @@ from .test_files import locate_tests, plan_levels, stage_bytes, unfinished_level
 from .....spec.api import delta_problems, derived, placement_problems, read_delta, rule_problems, story_entries, touches
 from ..spec.story_spec_files import adopt_rows, moved_tests, spec_backing, story_spec
 from ....domain.model.verdict import FindingState
-from ....domain.service.test_checks import TestChecks
 from ..git.repository import git, git_blob
 from .decision_record_files import answered_decisions, records_of
 from .kept_files import (
@@ -69,10 +71,12 @@ from .run_marks import last_ended, stage_open, window_open
 from .snapshots import git_tree, listed_files, snapshot_reason, tree_changes
 from .story_layout import file_digest
 from .design_files import (
-    adapter_level_keys, asserts_at, locate_selector, MOCK_MARKERS, mocked_ports, PLAN_FILE_LINE, plan_domain_elements,
-    plan_invariants, read_clause_rows, read_invariant_rows, scenario_clauses)
+    adapter_shapes, asserts_at, locate_selector, MOCK_MARKERS, mocked_ports, PLAN_FILE_LINE, plan_domain_elements,
+    plan_invariants, read_clause_rows, read_invariant_rows, scenario_actions, scenario_clauses)
 from .run_marks import OWNED_CHANGED
-from .story_layout import delivered_on, EPIC_FILE, epic_folder, find_story, story_kind
+from .story_layout import EPIC_FILE, epic_folder, find_story
+from ....application.shared.decision_stamps import DecisionStamps
+from ....domain.model.decision_record import DecisionState
 
 Front = typing.Mapping[str, typing.Any]
 
@@ -181,42 +185,32 @@ def publishes_of(front: Front) -> typing.List[str]:
     return [str(item).strip().strip("`") for item in items if str(item).strip().strip("`")]
 
 
-def depends_on_of(front: Front) -> typing.List[str]:
-    """The stories a journey walks, under `depends_on:` — a list, or one line of comma-separated ids."""
-    needs = front.get("depends_on")
-    if isinstance(needs, str):
-        return [n.strip() for n in needs.strip("[] ").split(",") if n.strip()]
-    return [str(n) for n in needs] if isinstance(needs, list) else []
-
-
 def contract_of(profile: typing.Mapping[str, typing.Any]) -> int:
     """The contract the profile declares, else the gate's own."""
     declared = str(profile.get("contract", "")).strip()
     return int(declared) if declared.isdigit() else CONTRACT
 
 
-def stage_story(story_id: str, story_path: str, front: Front, body: str,
-                criteria: typing.Sequence[typing.Tuple[str, str]]) -> StageStory:
-    """The story under a gate, read off its front matter and its criteria."""
-    named = front.get("epic")
-    return StageStory(
-        StoryId(story_id), Place(story_path),
-        EpicId(str(named)) if named and not isinstance(named, list) else None,
-        ContextName(str(front.get("context", "")).strip()), StoryKind(story_kind(front)),
-        StatusWord(str(front.get("status", "")).strip().lower()), DeliveredOn(delivered_on(front)),
+def story_content(front: Front, body: str, criteria: typing.Sequence[typing.Tuple[str, str]]) -> StoryContent:
+    """What a story says, read off its front matter, its body and its criteria."""
+    return StoryContent(
+        ContextName(str(front.get("context", "")).strip()), StatusWord(str(front.get("status", "")).strip().lower()),
         tuple(ScenarioKey(key) for key, _text in criteria), tuple(ScenarioKey(k) for k in happy_paths(body)),
-        tuple(StoryId(s) for s in depends_on_of(front)), tuple(RowId(r) for r in closes_of(front)),
+        tuple(StoryId(s) for s in depends_on(front)), tuple(RowId(r) for r in closes_of(front)),
         tuple(EventName(e) for e in publishes_of(front)),
-        tuple(ScenarioClauses(ScenarioKey(key), tuple(Clause(Count(n), Detail(text)) for n, text in clauses))
+        tuple(ScenarioClauses(ScenarioKey(key), tuple(Clause(Count(n), Detail(text)) for n, text in clauses),
+                              tuple(Detail(a) for a in scenario_actions(body).get(key, [])))
               for key, clauses in scenario_clauses(body).items()),
         Count(sum(1 for line in section_of(body, "changed expectations") or []
                   if line.strip().startswith(("-", "*")) and human_line(line.strip()[1:].strip()))),
         Detail(str(front.get("feature") or "").strip()))
 
 
-def spec_front(story: StageStory) -> typing.Dict[str, typing.Any]:
+def spec_front(story: Story) -> typing.Dict[str, typing.Any]:
     """The fields of the story's front matter that place it in the spec."""
-    return {"context": story.context.value, "feature": story.feature.value or None, "status": story.status.value,
+    content = story.content
+    return {"context": content.context.value, "feature": content.feature.value or None,
+            "status": content.written_status.value,
             "kind": story.kind.value if story.kind in (StoryKind.JOURNEY, StoryKind.TASK) else ""}
 
 
@@ -232,6 +226,9 @@ class StageEvidenceFiles:
 
     def gate(self) -> GateRelease:
         return GateRelease(ContractNumber(CONTRACT), Detail(VERSION))
+
+    def place_of(self, story: StoryId) -> Place:
+        return Place(str(find_story(self._epics, story.value)))
 
     def declared_contract(self) -> ProfileText:
         return ProfileText(str(self._profile.get("contract", "")))
@@ -253,13 +250,13 @@ class StageEvidenceFiles:
         except (ValueError, GateError):
             return RoundsRecord(Place(path), None)
 
-    def owned(self, story: StageStory) -> OwnedFacts:
-        marked = os.path.join(evidence_dir(self._runs, story.story.value), OWNED_CHANGED)
+    def owned(self, story: Story) -> OwnedFacts:
+        marked = os.path.join(evidence_dir(self._runs, story.id.value), OWNED_CHANGED)
         if os.path.isfile(marked):
             parts = [line.split(":", 1)[1].strip() for line in read_text(marked).splitlines()
                      if line.startswith("changed:")]
             return OwnedFacts(tuple(OwnedPart(p) for p in parts), None)
-        changed = owned_changes(self._runs, story.story.value, story.place.value)
+        changed = owned_changes(self._runs, story.id.value, self.place_of(story.id).value)
         return OwnedFacts((), tuple(OwnedPart(p) for p in changed) if changed is not None else None)
 
     def brief(self, story: StoryId, stage: StageName, hand_over: HandOverName) -> BriefFacts:
@@ -290,11 +287,11 @@ class StageEvidenceFiles:
                 return InstructionFile(Place(name), ByteSize(os.path.getsize(path)))
         return None
 
-    def epic(self, story: StageStory) -> EpicFacts:
+    def epic(self, story: Story) -> EpicFacts:
         try:
-            epic_path, epic_name = epic_of(story.place.value, read_front_matter(story.place.value)[0], self._epics)
+            epic_path, epic_name = epic_of(self.place_of(story.id).value, read_front_matter(self.place_of(story.id).value)[0], self._epics)
         except GateError as error:
-            return EpicFacts(story.place, EpicId(""), (), None, None, Metric(""), Detail(str(error)))
+            return EpicFacts(self.place_of(story.id), EpicId(""), (), None, None, Metric(""), Detail(str(error)))
         front = read_front_matter(epic_path)[0]
         # A key with no value parses as an empty list, and `str([])` is "[]" — non-empty, so the field would count as
         # filled. A mandatory field is a sentence, so only a non-empty string counts.
@@ -311,25 +308,14 @@ class StageEvidenceFiles:
         path, found = closed_rows(row.value)
         return RowState(found[6]) if path and found else None
 
-    def decisions(self, story: StageStory) -> DecisionsFacts:
-        story_id = story.story.value
+    def decisions(self, story: Story) -> DecisionsFacts:
+        story_id = story.id.value
         try:
-            place_of = story.place.value or find_story(place("epics"), story_id)
+            place_of = self.place_of(story.id).value or find_story(place("epics"), story_id)
             store = decisions_store(place_of)
-            read = read_decisions(store, story_id)
+            read_decisions(store, story_id)
         except GateError as error:
-            return DecisionsFacts(Place(""), (), (), Detail(str(error)))
-        records = []
-        for path, front, body, state, answer in read:
-            asked = state in WAITING_WORDS
-            stage = str(front.get("stage", "")).strip() if asked else resume_stage(front, answer)
-            records.append(DecisionFacts(
-                RecordId(str(front["id"]).strip()), RecordKind.ACCEPTANCE if is_acceptance(front) else RecordKind.QUESTION,
-                DecisionState(state), StageName(stage) if stage else None,
-                Detail((body.strip().splitlines() or ["(no title)"])[0].lstrip("# ").strip()),
-                Place(os.path.relpath(path, self._cwd).replace(os.sep, "/")),     # one spelling on every platform
-                Detail(str(answer.get("answer"))), Detail(str(answer.get("by"))),
-                tuple(AnswerField(f) for f in ANSWER_FIELDS if not answer.get(f))))
+            return DecisionsFacts(Place(""), (), Detail(str(error)))
         hand_overs = []
         for stage_name, name in stage_files().items():
             path = os.path.join(self._runs, story_id, name)
@@ -338,10 +324,19 @@ class StageEvidenceFiles:
                 ids = needs_human_ids(text)
                 hand_overs.append(HandOverAsk(StageName(stage_name), Place(path), HandOverText(text),
                                               tuple(RecordId(i) for i in ids) if ids is not None else None))
-        return DecisionsFacts(Place(shown(store)), tuple(records), tuple(hand_overs))
+        return DecisionsFacts(Place(shown(store)), tuple(hand_overs))
 
-    def record_place(self, story: StageStory, record: RecordId) -> Place:
-        return Place(shown(record_path(story.story.value, record.value, story.place.value)))
+    def decision_records(self, story: Story) -> typing.Sequence[DecisionRecord]:
+        try:
+            store = decisions_store(self.place_of(story.id).value or find_story(place("epics"), story.id.value))
+            read = read_decisions(store, story.id.value)
+        except GateError:
+            return ()
+        return [record_of(os.path.basename(path)[:-3], front, body, state, answer)
+                for path, front, body, state, answer in read]
+
+    def record_place(self, story: Story, record: RecordId) -> Place:
+        return Place(shown(record_path(story.id.value, record.value, self.place_of(story.id).value)))
 
 
     def command(self, key: CommandKey) -> typing.Optional[ProfileText]:
@@ -351,9 +346,11 @@ class StageEvidenceFiles:
     def plan_levels(self, story: StoryId) -> typing.Optional[PlanLevels]:
         if not os.path.isfile(os.path.join(self._runs, story.value, "plan.md")):
             return None
+        alone, both = adapter_shapes(self._runs, story.value)
         return PlanLevels(tuple(ScenarioKey(k) for k in unfinished_levels(self._runs, story.value)),
                           frozenset(ScenarioKey(k) for k in plan_levels(self._runs, story.value)),
-                          frozenset(ScenarioKey(k) for k in adapter_level_keys(self._runs, story.value)))
+                          frozenset(ScenarioKey(k) for k in alone),
+                          frozenset(ScenarioKey(k) for k in both))
 
     def hand_over_sizes(self, story: StoryId,
                         names: typing.Tuple[HandOverName, ...]) -> typing.Tuple[HandOverSize, ...]:
@@ -368,11 +365,11 @@ class StageEvidenceFiles:
         path = os.path.join(self._runs, story.value, name)
         return read_text(path) if os.path.isfile(path) else None
 
-    def invariants(self, story: StageStory) -> typing.Optional[InvariantFacts]:
-        plan = self._run_file(story.story, "plan.md")
+    def invariants(self, story: Story) -> typing.Optional[InvariantFacts]:
+        plan = self._run_file(story.id, "plan.md")
         if plan is None:
             return None
-        tests = self._run_file(story.story, "tests.md")
+        tests = self._run_file(story.id, "tests.md")
         named = plan_invariants(plan) or {}
         listed = sum(1 for line in section_of(plan, "invariants") or [] if line.strip().startswith("-"))
         rows = read_invariant_rows(tests) if tests is not None else None
@@ -412,6 +409,13 @@ class StageEvidenceFiles:
                 return tuple(PortName(name) for name in mocked_ports(handle.read(), markers, suffixes))
         except (OSError, UnicodeDecodeError):
             return ()
+
+    def test_source(self, test: Place) -> typing.Optional[TestSource]:
+        try:
+            with open(os.path.join(self._cwd, test.value), encoding="utf-8") as handle:
+                return TestSource(handle.read())
+        except (OSError, UnicodeDecodeError):
+            return None
 
     def plan_files(self, story: StoryId) -> typing.Optional[typing.Tuple[PlannedFile, ...]]:
         plan = self._run_file(story, "plan.md")
@@ -532,7 +536,7 @@ class StageEvidenceFiles:
                 # A name the story renamed, read from the tree: the test holds its assertions under the new name.
                 renames = renames_in(cwd, base, "\n".join(was), "\n".join(now), os.path.splitext(rel)[1])
                 held = bool(renames) and assertions_kept("\n".join(was), "\n".join(now), renames)
-            edit = TestEdit.of(*(Presence.PRESENT if fact else Presence.ABSENT for fact in (off, kept, held)))
+            edit = TestDiff(*(Presence.PRESENT if fact else Presence.ABSENT for fact in (off, kept, held))).edit()
             if edit is TestEdit.SWITCHED_OFF:
                 changed.append(ChangedTest(Place(rel), TestChange.SWITCHED_OFF))
             elif edit is TestEdit.ARRANGED and renames:
@@ -567,7 +571,7 @@ class StageEvidenceFiles:
     def answered_records(self, story: StoryId) -> typing.FrozenSet[RecordId]:
         try:
             return frozenset(RecordId(str(front["id"]).strip()) for _p, front, _b, state, _a in records_of(story.value)
-                             if state in ANSWERED_WORDS)
+                             if DecisionState(state).answered)
         except GateError:
             return frozenset()
 
@@ -577,7 +581,7 @@ class StageEvidenceFiles:
         if not os.path.isfile(ledger):
             return None
         located = {t.selector.value: t.place.value for t in tests if t.place is not None}
-        if stage.value == "tidy" and red_tree(self._runs, story.value) \
+        if stage.value == stage_of(Role.TIDIES) and red_tree(self._runs, story.value) \
                 and tidy_moves(self._cwd, self._runs, story.value, located):
             return RedProof(Count(0), Count(0), (), Presence.PRESENT)
         digests = read_red_digests(self._runs, story.value)
@@ -587,13 +591,13 @@ class StageEvidenceFiles:
     def _absent(self, cwd: str, wanted: typing.Mapping[str, typing.Sequence[str]]) -> typing.List[str]:
         """`<selector>: …` for each wanted test that is not there."""
         looked = locate_tests(cwd, wanted)[1]
-        return [f.said.value.split(" — ")[0] for f in TestChecks.exist(looked) if f.state is FindingState.FAIL]
+        return [f.said.value.split(" — ")[0] for f in (t.finding() for t in looked) if f.state is FindingState.FAIL]
 
-    def spec_delta(self, story: StageStory) -> typing.Optional[SpecDelta]:
-        plan_path = os.path.join(self._runs, story.story.value, "plan.md")
+    def spec_delta(self, story: Story) -> typing.Optional[SpecDelta]:
+        plan_path = os.path.join(self._runs, story.id.value, "plan.md")
         if not os.path.isfile(plan_path):
             return None
-        front, body = spec_front(story), read_front_matter(story.place.value)[1]
+        front, body = spec_front(story), read_front_matter(self.place_of(story.id).value)[1]
         target, spec, features, feature = story_spec(front)
         if not target:
             return None
@@ -608,19 +612,19 @@ class StageEvidenceFiles:
                          tuple(ScenarioKey(k) for k in (touches(entries, spec, delta) if not problems else [])),
                          Count(sum(v == "adds" for v in found.values())), Count(sum(v == "holds" for v in found.values())))
 
-    def spec_backing(self, story: StageStory) -> typing.Optional[Detail]:
-        body = read_front_matter(story.place.value)[1]
-        backing = spec_backing(self._cwd, story.story.value, body, story.place.value or None)
+    def spec_backing(self, story: Story) -> typing.Optional[Detail]:
+        body = read_front_matter(self.place_of(story.id).value)[1]
+        backing = spec_backing(self._cwd, story.id.value, body, self.place_of(story.id).value or None)
         return Detail(backing) if backing else None
 
-    def spec_tests(self, story: StageStory, tests: typing.Tuple[MappedTest, ...]) -> typing.Optional[SpecTests]:
+    def spec_tests(self, story: Story, tests: typing.Tuple[MappedTest, ...]) -> typing.Optional[SpecTests]:
         target, spec, _features, _feature = story_spec(spec_front(story))
         if not target:
             return None
-        plan = os.path.join(self._runs, story.story.value, "plan.md")
+        plan = os.path.join(self._runs, story.id.value, "plan.md")
         # a criterion the story takes away takes its test with it (WP-106 B): the delta's removals are not asked for
         removed = set(read_delta(read_text(plan))["removes"]) if os.path.isfile(plan) else set()
-        moved = moved_tests(self._runs, story.story.value)
+        moved = moved_tests(self._runs, story.id.value)
         # a row names the test as it is now: the old one is gone, and the delivery writes the row into the spec
         absent = self._absent(self._cwd, moved) if moved else []
         if absent:
@@ -635,7 +639,7 @@ class StageEvidenceFiles:
             missing = [m for m in missing if m.split(":")[0] in gone_there]
         return SpecTests(Place(shown(target)), (), Count(len(wanted)), tuple(Detail(m) for m in missing))
 
-    def story_commit(self, story: StageStory, tests: typing.Tuple[MappedTest, ...]) -> typing.Optional[StoryCommit]:
+    def story_commit(self, story: Story, tests: typing.Tuple[MappedTest, ...]) -> typing.Optional[StoryCommit]:
         cwd = self._cwd
         target, spec, _features, _feature = story_spec(spec_front(story))
         wanted: typing.Dict[str, typing.List[str]] = {}
@@ -668,8 +672,8 @@ class StageEvidenceFiles:
                 missing.append(f"{rel} differs from it")
         return StoryCommit(Detail(head), Count(len(files)), tuple(Detail(m) for m in missing))
 
-    def story_pass(self, story: StageStory) -> StoryPass:
-        runs, story_id = self._runs, story.story.value
+    def story_pass(self, story: Story) -> StoryPass:
+        runs, story_id = self._runs, story.id.value
         order = order_for(story.kind.value)
         folder = os.path.join(runs, story_id)
         texts = current_stage_files(runs, story_id, order)
@@ -678,24 +682,27 @@ class StageEvidenceFiles:
                      for s in order if s not in texts)
         planned = os.path.join(evidence_dir(runs, story_id), STORY_DIGEST)
         digest = PlannedDigest.MISSING if not os.path.isfile(planned) else \
-            PlannedDigest.SAME if read_text(planned).strip() == story_digest(story.place.value) else PlannedDigest.CHANGED
-        return StoryPass(gaps, Detail(verdict_in(texts["judge"]) or "" if "judge" in texts else ""), digest)
+            PlannedDigest.SAME if read_text(planned).strip() == story_digest(self.place_of(story.id).value) else PlannedDigest.CHANGED
+        return StoryPass(gaps, judged_of(verdict_in(texts[stage_of(Role.JUDGES)]) if stage_of(Role.JUDGES) in texts else ""), digest)
 
-    def outcome(self, story: StageStory) -> OutcomeFacts:
+    def outcome(self, story: Story) -> OutcomeFacts:
         cwd = self._cwd
         texts = {rel: read_text(os.path.join(cwd, rel)) for rel in production_files(cwd)}
-        record = os.path.join(evidence_dir(self._runs, story.story.value), "changed.txt")
+        record = os.path.join(evidence_dir(self._runs, story.id.value), "changed.txt")
         changed: typing.Optional[typing.FrozenSet[Place]] = None
         if os.path.isfile(record) and not read_text(record).startswith(NOT_OBSERVED):
             changed = frozenset(Place(parts[1]) for parts in (line.split("\t", 1) for line in read_text(record).splitlines())
                                 if len(parts) == 2 and parts[0] in ("added", "modified"))
         events = []
-        for name in story.publishes:
+        for name in story.content.publishes:
             event = name.value
             declares = re.compile(rf"\b(?:class|record|interface|struct|enum|object|type)\s+{re.escape(event)}\b")
             declared = [rel for rel, text in texts.items() if declares.search(text)]
             mention = re.compile(rf"(?<!\w){re.escape(event)}(?!\w)")
-            constructs = re.compile(rf"\bnew\s+{re.escape(event)}\b|(?<!\w){re.escape(event)}\s*\.\s*\w+\s*\(")
+            # `new X(…)`, `X.of(…)`, and - where a language constructs without `new` - a call `X(…)` (Python,
+            # Kotlin) or a struct literal `X { … }` (Rust); the declaration itself is taken out first.
+            constructs = re.compile(rf"\bnew\s+{re.escape(event)}\b|(?<!\w){re.escape(event)}\s*\.\s*\w+\s*\("
+                                    rf"|(?<![\w.]){re.escape(event)}\s*[({{]")
 
             def raises(rel: str, text: str) -> bool:
                 # The event's own file (`TaskCompleted.java`) never raises it: its factory names it, nothing else does.
@@ -705,9 +712,9 @@ class StageEvidenceFiles:
                 if os.path.splitext(os.path.basename(rel))[0] == event.rsplit(".", 1)[-1]:
                     return False
                 body = IMPORT_LINE.sub("", text)
-                return bool(constructs.search(body)) if rel in declared else bool(mention.search(body))
+                return bool(constructs.search(declares.sub("", body))) if rel in declared else bool(mention.search(body))
             raising = [rel for rel, text in texts.items() if raises(rel, text)] if declared else []
-            events.append(OutcomeEvent(name, tuple(Place(d) for d in declared), tuple(Place(r) for r in raising)))
+            events.append(OutcomeEventPlaces(name, tuple(Place(d) for d in declared), tuple(Place(r) for r in raising)))
         return OutcomeFacts(tuple(events), changed)
 
     def document(self, story: StoryId) -> DocumentFacts:
@@ -850,23 +857,17 @@ class StageEvidenceFiles:
         return MainTests(adapted, tuple(waived), Detail(lost_text(lost) if lost else ""),
                          Detail(integration_target(runs, story_id) or "the main line"))
 
-class DecisionStampFiles:
+class DecisionStampFiles(DecisionStamps):
     """The decision records beside the story and its `## Assumptions`, the journal under the run folder <runs>."""
 
-    def __init__(self, runs: str) -> None:
+    def __init__(self, runs: str, epics: str) -> None:
         self._runs = runs
+        self._epics = epics
 
-    def apply(self, story: StageStory, applying: Applying) -> typing.Optional[Place]:
-        rid = applying.record.record.value
-        found = next(((path, body, answer) for path, front, body, _state, answer
-                      in read_decisions(decisions_store(story.place.value), story.story.value)
-                      if str(front["id"]).strip() == rid), None)
-        if found is None:
-            return None
-        path, body, answer = found
-        stamp_applied(path, applying.stage.value)
-        written = write_answered(story.place.value, self._runs, rid, answer_sentence(body, answer))
-        return Place(shown(story.place.value)) if written else None
+    def regard(self, story: StoryId) -> Place:
+        where = find_story(self._epics, story.value)
+        regard_gate_line(where, self._runs)
+        return Place(shown(where))
 
 
 class MainLineEvidence(StageEvidenceFiles):
@@ -876,10 +877,10 @@ class MainLineEvidence(StageEvidenceFiles):
     def _main_line(self) -> typing.ContextManager[None]:
         return places_in(self._cwd) if claim_config_here(factory_home() or self._cwd) else contextlib.nullcontext()
 
-    def spec_delta(self, story: StageStory) -> typing.Optional[SpecDelta]:
+    def spec_delta(self, story: Story) -> typing.Optional[SpecDelta]:
         with self._main_line():
             return super().spec_delta(story)
 
-    def spec_backing(self, story: StageStory) -> typing.Optional[Detail]:
+    def spec_backing(self, story: Story) -> typing.Optional[Detail]:
         with self._main_line():
             return super().spec_backing(story)

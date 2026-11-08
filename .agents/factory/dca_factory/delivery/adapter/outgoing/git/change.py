@@ -12,14 +12,16 @@ import typing
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import GateError
 from .....sharedkernel.adapter.outgoing.profile.profile_files import (
     DEFAULTS, evidence_rel, findings_rel, PLACES_REL, read_profile)
-from ....domain.model.stage_story import (
-    Count, ImplementationReports, ParityFacts, ParityScenario, Place, Presence, Snapshot)
+from ....domain.model.change import ImplementationReports, ParityFacts, ParityScenario, Snapshot
+from ....domain.model.stage_story import Count, Place, Presence
 from ....domain.model.story_state import Detail
 from ..stack.commands import tail, TOOL_FOLDERS
 from ..stack.test_reports import read_scenarios, reported_names
 from ..files.decision_record_files import project_decisions_rel
 from ..files.delivery_files import PIPELINE_DIR
 from .repository import git
+from ....application.shared.change_index import ChangeIndex
+from ....application.shared.parity_reports import ParityReports
 
 #: (folders, files) — or (folders, files, never)
 Places = typing.Tuple[typing.Any, ...]
@@ -147,7 +149,7 @@ def parity_facts(config_path: str) -> ParityFacts:
                        tuple(implementations))
 
 
-class ChangeIndexFiles:
+class ChangeIndexFiles(ChangeIndex):
     """The index and the working tree of the project <cwd>, as git holds them."""
 
     def __init__(self, cwd: str) -> None:
@@ -174,7 +176,7 @@ class ChangeIndexFiles:
         os.environ.pop("GIT_INDEX_FILE", None)
 
 
-class ParityReportFiles:
+class ParityReportFiles(ParityReports):
     """The parity configs, each read with the reports it names."""
 
     def facts(self, config: str) -> ParityFacts:

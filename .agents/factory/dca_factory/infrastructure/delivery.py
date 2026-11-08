@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from ..delivery.adapter.incoming.requests.settle import Settlement
+from ..delivery.adapter.outgoing.files.shown_files import ShownProjectFiles
+from ..delivery.application.status.show_project_file import ShowProjectFileUseCase
+from ..delivery.adapter.outgoing.files.handed_files import HandedFileFolder
 from ..delivery.adapter.outgoing.discovery.discovery_list_files import DiscoveryListFiles
 from ..delivery.adapter.outgoing.process.factory_process_files import FactoryProcessFiles
 from ..delivery.adapter.outgoing.tools.runner_table_files import RunnerTableFiles
@@ -28,7 +31,15 @@ from ..delivery.adapter.outgoing.files.project_files import ProjectFiles
 from ..delivery.adapter.outgoing.files.made_items import MadeItemFiles
 from ..delivery.adapter.outgoing.files.request_files import RequestFiles
 from ..delivery.adapter.outgoing.files.status_facts import StatusFactFiles
-from .schedule import schedule_data
+from .description import show_part as show_part
+from ..delivery.adapter.outgoing.files.journal_events import FileTransactions, JournalEventPublisher
+from ..delivery.adapter.outgoing.files.request_files import (
+    default_by as default_by, factory_dir as factory_dir, stamp_utc as stamp_utc)
+from ..delivery.adapter.outgoing.process.factory_process import (
+    cli_path as cli_path, own_file as own_file, read_json as read_json, say as say, SERVE_FILE as SERVE_FILE,
+    write_json as write_json)
+from .profile import ask_profile as ask_profile
+from .schedule import schedule_data as schedule_data, start_of as start_of
 from ..delivery.adapter.outgoing.files.story_files import StoryFiles
 from ..sharedkernel.adapter.outgoing.profile.profile_files import ProfileFiles, resolve_profile
 from ..delivery.adapter.outgoing.files.story_runs import StoryRunFiles
@@ -65,6 +76,8 @@ from ..delivery.application.checkout.give_checkout_back import GiveCheckoutBackU
 from ..delivery.application.checkout.mark_listening import MarkListeningUseCase
 from ..delivery.application.status.list_findings import ListFindingsUseCase
 from ..delivery.application.status.follow_output import FollowOutputUseCase
+from ..delivery.application.status.follow_factory_log import FollowFactoryLogUseCase
+from ..delivery.adapter.outgoing.files.factory_log_file import FactoryLogFile
 from ..delivery.application.status.show_stage_outputs import ShowStageOutputsUseCase
 from ..delivery.application.cost.show_spent import ShowSpentUseCase
 from ..delivery.application.status.show_journal_story import ShowJournalStoryUseCase
@@ -103,8 +116,12 @@ def request_check(cwd: str) -> RequestCheck:
                         ContractStages())
 
 
+def show_project_file(cwd: str) -> ShowProjectFileUseCase:
+    return ShowProjectFileUseCase(ShownProjectFiles(cwd))
+
+
 def write_request(cwd: str) -> WriteRequestUseCase:
-    return WriteRequestUseCase(request_check(cwd), RequestFiles(cwd))
+    return WriteRequestUseCase(request_check(cwd), RequestFiles(cwd), HandedFileFolder())
 
 
 def check_request(cwd: str) -> CheckRequestUseCase:
@@ -129,8 +146,10 @@ def pending_requests(cwd: str) -> PendingRequestsUseCase:
 
 def settlement(cwd: str, runs: str) -> Settlement:
     stories, records = StoryFiles(cwd), DecisionRecordFiles(cwd)
-    return Settlement(AcceptDeliveryUseCase(stories, records), AnswerQuestionUseCase(records),
-                      ReleaseStoriesUseCase(stories, records, StoryJournalFiles(cwd, runs)))
+    events, transactions = JournalEventPublisher(runs), FileTransactions()
+    return Settlement(AcceptDeliveryUseCase(stories, records, events, transactions),
+                      AnswerQuestionUseCase(records, events, transactions),
+                      ReleaseStoriesUseCase(stories, records, StoryJournalFiles(cwd, runs), events, transactions))
 
 
 def book_request_cost(cwd: str, runs: str) -> BookRequestCostUseCase:
@@ -163,16 +182,18 @@ def show_help(cwd: str, epics: str, runs: str) -> ShowHelpUseCase:
 
 
 def reopen_story(cwd: str, epics: str, runs: str) -> ReopenStoryUseCase:
-    return ReopenStoryUseCase(StoryFiles(cwd, epics), AcceptanceFiles(cwd, epics), StoryRunFiles(cwd, epics, runs))
+    return ReopenStoryUseCase(StoryFiles(cwd, epics), AcceptanceFiles(cwd, epics), StoryRunFiles(cwd, epics, runs),
+                              JournalEventPublisher(runs), FileTransactions())
 
 
 def prove_delivery(cwd: str, epics: str, runs: str) -> ProveDeliveryUseCase:
-    return ProveDeliveryUseCase(StoryFiles(cwd, epics), StoryRunFiles(cwd, epics, runs))
+    return ProveDeliveryUseCase(StoryFiles(cwd, epics), StoryRunFiles(cwd, epics, runs), JournalEventPublisher(runs),
+                                FileTransactions())
 
 
 def deliver_by_hand(cwd: str, epics: str, runs: str) -> DeliverByHandUseCase:
     return DeliverByHandUseCase(StoryFiles(cwd, epics), RemoteStoryClaims(cwd, runs), StorySpecFiles(epics),
-                                StoryJournalFiles(cwd, runs))
+                                StoryJournalFiles(cwd, runs), JournalEventPublisher(runs), FileTransactions())
 
 
 def confirm_owned(cwd: str, runs: str) -> ConfirmOwnedUseCase:
@@ -196,7 +217,8 @@ def show_spec_delta(runs: str, epics: str) -> ShowSpecDeltaUseCase:
 
 
 def take_back_delivery(cwd: str, runs: str, epics: str) -> TakeBackDeliveryUseCase:
-    return TakeBackDeliveryUseCase(PublishedBranchFiles(cwd, runs, epics))
+    return TakeBackDeliveryUseCase(PublishedBranchFiles(cwd, runs, epics), JournalEventPublisher(runs),
+                                   FileTransactions())
 
 
 def resolve_run_argument(cwd: str) -> ResolveRunArgumentUseCase:
@@ -221,6 +243,10 @@ def show_stage_outputs(runs: str) -> ShowStageOutputsUseCase:
 
 def follow_output(runs: str) -> FollowOutputUseCase:
     return FollowOutputUseCase(StageOutputFiles(runs))
+
+
+def follow_factory_log(cwd: str) -> FollowFactoryLogUseCase:
+    return FollowFactoryLogUseCase(FactoryLogFile(cwd))
 
 
 def list_findings(cwd: str, epics: str, runs: str) -> ListFindingsUseCase:

@@ -3,6 +3,9 @@ from that run's reports by name — and the red ledger the verdicts are held to.
 
 from __future__ import annotations
 
+from ....domain.model.stage import Role
+from ..pipeline.stage_rows import stage_of
+
 import contextlib
 import os
 import typing
@@ -15,13 +18,11 @@ from ....domain.model.stage_story import (
     CommandKey, Count, Evidence, Place, Presence, RedLedger, RunEnd, RunState, ScenarioKey, Selector, TestOutcome,
     TestRun)
 from ....domain.model.story_state import Detail
-from ..files.decision_record_files import acceptance_records, answered_decisions
+from ..files.decision_record_files import acceptance_records, answered_decisions, record_of
 from ..files.kept_files import read_red_digests, red_ledger_path
 from ..files.story_layout import file_digest
 from .commands import command_for, discriminates, joined_filter, recorded_run, red_on_timeout, run, tail
 from .test_reports import display_name_of, fill, normalise, outcome_for
-from ....domain.model.decision_record import DecisionState, Given
-from ....domain.service.acceptance_rules import AcceptanceRules
 
 Located = typing.Mapping[str, str]
 #: {command: (key, code, output, ran)} of a command run whole
@@ -154,10 +155,9 @@ def red_ledger(cwd: str, runs: typing.Optional[str], story: typing.Optional[str]
     if red:
         changed_on = answered_decisions(cwd, story or "", "test")
         with contextlib.suppress(GateError):
-            changed_on += [rid for rid, _f, state, answer, _b in acceptance_records(cwd, story or "")
-                           if AcceptanceRules.corrects(DecisionState(state), Given(str(answer.get("answer", ""))))
-                           is Presence.PRESENT]
-    built = bool(runs and story) and os.path.isfile(os.path.join(runs or "", story or "", stage_files()["build"]))
+            changed_on += [rid for rid, front, state, answer, body in acceptance_records(cwd, story or "")
+                           if record_of(rid, front, body, state, answer).corrects()]
+    built = bool(runs and story) and os.path.isfile(os.path.join(runs or "", story or "", stage_files()[stage_of(Role.BUILDS)]))
     moved = frozenset(Selector(selector) for selector, recorded in digests.items()
                       if recorded and located.get(selector) and os.path.isfile(os.path.join(cwd, located[selector]))
                       and file_digest(os.path.join(cwd, located[selector])) != recorded)

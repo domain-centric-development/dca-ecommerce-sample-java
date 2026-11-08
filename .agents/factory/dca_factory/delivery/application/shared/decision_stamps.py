@@ -1,18 +1,18 @@
-"""An answer applied: its record stamped, the story given its `answered:` line."""
+"""An answer applied: the line the gate wrote into the story is its own."""
 
 from __future__ import annotations
 
 import typing
 
 from ....building_blocks import OutputPort
-from ...domain.model.stage_story import Place, StageStory
-from ...domain.service.decision_checks import Applying
+from ...domain.model.stage_story import Place
+from ...domain.model.story import StoryId
 
 
 class DecisionStamps(OutputPort, typing.Protocol):
-    """The records and the story, written where an answer was applied."""
+    """The story's marks, where the gate wrote an answer into it."""
 
-    def apply(self, story: StageStory, applying: Applying) -> typing.Optional[Place]:
-        """The record stamped applied by its stage, the answer an `answered:` line of the story — the story's place
-        where the line was written, None where the story has it already."""
+    def regard(self, story: StoryId) -> Place:
+        """The answered line the gate wrote is its own — the story as planned takes it, so it does not read as the
+        story changed after it was planned —; where the story is."""
         ...

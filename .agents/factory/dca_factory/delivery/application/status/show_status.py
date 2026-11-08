@@ -10,16 +10,16 @@ from ....building_blocks import UseCase
 from ...domain.model.story_state import RUNNABLE
 from ...domain.model.usage import USAGE_FIELDS
 from ..requests.list_requests import ListRequestsQuery, ListRequestsUseCase
-from ..requests.pending import mark_pending
+from ..shared.pending import mark_pending
 from ..shared.requests import PENDING, RequestStore, place_of
 from ..description.parts import parts_as_they_stand
 from ..shared.description_store import DescriptionStore
 from ..shared.status_facts import StatusFacts
-from .actions import Action, entry_actions, make_action, offered, RUNNER
+from ..shared.actions import Action, entry_actions, make_action, offered, RUNNER
 from .now_columns import now_columns, places_of
 from .texts import claim_age, figures, newest_first, parse_time, signal_totals, stamp_text, took_text, worker_text
-from ...domain.model.decision_record import WAITING_WORDS
 from ...domain.model.story_state import ENDED_WORDS
+from ...domain.model.decision_record import DecisionState
 
 Model = typing.Dict[str, typing.Any]
 
@@ -41,7 +41,7 @@ class ShowStatusInputPort(UseCase[ShowStatusQuery, Model], typing.Protocol):
     """Where the factory stands."""
 
 
-class ShowStatusUseCase:
+class ShowStatusUseCase(ShowStatusInputPort):
     """The status every view draws — the terminal, the page, the cockpit, a session's start: the order, the marks,
     the words, the figures and every action are decided here, a view composes none of its own."""
 
@@ -92,7 +92,7 @@ class ShowStatusUseCase:
             story_id = str(front.get("story", "")).strip() if not error else ""
             if story_id in stories:
                 continue                                  # its story's row already says so
-            if error or state in WAITING_WORDS:
+            if error or DecisionState(state).waits:
                 waiting.append(dict(mark="question", story=story_id or name, what="an open question",
                                     record=facts.shown(path), draft=False,
                                     place=place_of(str(front.get("request", "")).strip()) if not error else "decide",
@@ -285,7 +285,7 @@ class ShowStatusUseCase:
         """(mark, state words, action) for one story — the words a person uses."""
         state, detail = story["state"], story.get("detail", "")
         records = self._facts.story_records(story_id, story.get("path"))
-        open_records = [(path, front) for path, front, _body, st, _a in records if st in WAITING_WORDS]
+        open_records = [(path, front) for path, front, _body, st, _a in records if DecisionState(st).waits]
         shown = self._facts.shown
         record = shown(open_records[0][0]) if open_records else ""
         by_hand = f"write the answer into {record} under `## Answer`" if record else ""
@@ -332,7 +332,7 @@ class ShowStatusUseCase:
     def _open_record(self, story_id: str, story: Model) -> str:
         """The open record a waiting story waits on, as a path a person reads — '' where none is open."""
         records = self._facts.story_records(story_id, story.get("path"))
-        opened = [(path, front) for path, front, _b, st, _a in records if st in WAITING_WORDS]
+        opened = [(path, front) for path, front, _b, st, _a in records if DecisionState(st).waits]
         chosen = next((p for p, f in opened if is_acceptance(f)), opened[0][0] if opened else "")
         return self._facts.shown(chosen) if chosen else ""
 

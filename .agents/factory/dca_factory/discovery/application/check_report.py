@@ -7,7 +7,7 @@ import re
 import typing
 
 from ...building_blocks import UseCase
-from ..domain.model.report import ReportRules, SECTIONS, Topic
+from ..domain.model.report import SECTIONS, Topic
 from .shared.report_store import ReportStore
 
 #: A URL in a source's entry.
@@ -37,7 +37,7 @@ class CheckReportInputPort(UseCase[CheckReportCommand, ReportChecked], typing.Pr
     """Check a report."""
 
 
-class CheckReportUseCase:
+class CheckReportUseCase(CheckReportInputPort):
     """The report's sections in order, every citation a listed source, every source resolving — an excerpt under the
     topic's folder, a project file, or a URL with the date it was read —, every proposed body of work with intent,
     goal and metric, and the topic's `originals/` ignored by git."""
@@ -52,7 +52,7 @@ class CheckReportUseCase:
         if report is None:
             return ReportChecked(False, f"no {path} — `factory-discover {topic.value}` writes it")
         folder = path.rsplit("/", 1)[0]
-        problems = [p.value for p in ReportRules.sections(report)]
+        problems = [p.value for p in report.section_problems()]
         for sid, entry in report.sources.items():
             if URL.search(entry.value):
                 if not READ_ON.search(entry.value):
@@ -66,7 +66,7 @@ class CheckReportUseCase:
             for name in paths:
                 if not self._reports.resolves(topic, name):
                     problems.append(f"{sid.value}: {name} is not there — an excerpt lives under {folder}/sources/")
-        problems += [p.value for p in ReportRules.proposals(report)]
+        problems += [p.value for p in report.proposal_problems()]
         if not self._reports.ignores_originals(topic):
             problems.append(f"{folder}/.gitignore does not ignore `originals/` — the handed-over originals stay out "
                             "of git")

@@ -10,6 +10,9 @@ their own.
 
 from __future__ import annotations
 
+from ....domain.model.stage import Role
+from ..pipeline.stage_rows import stage_of
+
 import argparse
 import contextlib
 import glob
@@ -63,6 +66,8 @@ from ....application.requests.work_request import RequestWorked
 from ....application.shared.requests import Request
 from ....application.shared.story_integration import Lost
 from ....application.delivery.pipeline_rules import decides
+from ....application.shared.backlog_worker import Child
+from .....sharedkernel.application.profile_source import ProfileSource
 
 
 # --- the run: what `factory.sh run` starts once its checks before the first stage passed -------------------------
@@ -114,7 +119,7 @@ class RunCases(typing.Protocol):
         """What every stage is told, for a session that works no stage (`ShowEveryStageUseCase`)."""
 
 
-class Run:
+class Run(ProfileSource):
     """One runner process: the story or the backlog it runs, and what it keeps between stages. The use cases a step
     starts are the composition root's (`cases`)."""
 
@@ -406,6 +411,27 @@ class Run:
         dirs = [".agents/factory", self.evidence_rel(), *TOOL_SKILL_DIRS, ".agents/skills"]
         return [d if os.path.isabs(d) or re.match(r"^[A-Za-z]:", d) else f"{self.home}/{d}" for d in dirs]
 
+    def skill_reach(self) -> typing.List[str]:
+        """Where the skills a run reads really are (WP-184): a linked skill folder's target and the plugins the tool
+        loads its method skills from — outside the project, so a run that reads only inside its working folders is
+        given them to read, and never to edit."""
+        found: typing.List[str] = []
+        for folder in (*TOOL_SKILL_DIRS, ".agents/skills"):
+            base = f"{self.home}/{folder}"
+            entries = sorted(os.listdir(base)) if os.path.isdir(base) else []
+            for name in entries:
+                path = os.path.join(base, name)
+                if os.path.islink(path) and os.path.isdir(path):
+                    found.append(os.path.realpath(path))
+            if os.path.islink(base) and os.path.isdir(base):
+                found.append(os.path.realpath(base))
+        for tool in TOOLS:
+            plugins = os.path.join(os.path.expanduser("~"), tool.plugin_home) if tool.plugin_home else ""
+            if plugins and os.path.isdir(plugins):
+                found.append(os.path.realpath(plugins))
+        inside = os.path.realpath(self.home) + os.sep
+        return list(dict.fromkeys(f for f in found if not (f + os.sep).startswith(inside)))
+
     def invoke(self, tool: str, prompt: str, raw: str, stage: str, story: typing.Optional[str],
                count: bool = True) -> int:
         """One stage's tool process (`ToolProcesses.invoke`), counted against `--max-stages` where `count`."""
@@ -428,7 +454,7 @@ class Run:
         self.profile()
         path = os.path.join(place("runs"), story, stage_files()[stage] if stage else "judge.md")
         if stage:
-            return "test" if os.path.isfile(path) and back_in(read_text(path)) == "test" else ""
+            return stage_of(Role.TESTS) if os.path.isfile(path) and back_in(read_text(path)) == stage_of(Role.TESTS) else ""
         return back_in(read_text(path)) if os.path.isfile(path) else "build"
 
     def start_stage(self, story: str) -> str:
@@ -553,14 +579,19 @@ class Run:
         return f" This story's own worktree: {self.pwd}; the main checkout: {home}." if home else ""
 
     def guard_sentence(self) -> str:
+        """The skills a stage that writes production code applies to every file: the guard, and the frontend craft
+        for the files of a page."""
         guard = first_word(self.profile().get("carrier.guard", ""))
-        return f" The guard (the profile's carrier.guard): the {guard} skill." if guard else ""
+        frontend = first_word(self.profile().get("carrier.frontend", ""))
+        return ((f" The guard (the profile's carrier.guard): the {guard} skill." if guard else "")
+                + (f" The frontend craft for every page, template, stylesheet and client script (the profile's "
+                   f"carrier.frontend): the {frontend} skill." if frontend else ""))
 
     def briefs(self, story: str, stages: typing.Sequence[str],
                dry: bool = False) -> typing.Tuple[str, typing.List[str]]:
         """What <stages> are told for <story>, written into its evidence folder (named only, in a dry run): what every
         stage is told once, each stage's own brief beside it — the files as the prompt names them."""
-        folder = brief_dir(self.runs, story)
+        folder = brief_dir(self.runs, story).replace(os.sep, "/")   # a prompt names places with `/`, on Windows too
         every = f"{folder}/{EVERY_STAGE}"
         own = [f"{folder}/{stage}.md" for stage in stages]
         if dry:
@@ -588,11 +619,11 @@ class Run:
         later = self.later_refusals(story, stage, "this stage")
         if later and stage == self.start_stage(story):
             repeat += later
-        if stage == "test" and self.back_to(story, "build") == "test":
+        if stage == stage_of(Role.TESTS) and self.back_to(story, stage_of(Role.BUILDS)) == stage_of(Role.TESTS):
             repeat += f" The build stage sent the story back: {self.runs}/{story}/build.md."
-        if stage == "test":
+        if stage == stage_of(Role.TESTS):
             repeat += self.red_stale_sentence(story)
-        if stage == "judge" and os.path.isfile(f"{self.runs}/{story}/.judge-previous.md"):
+        if stage == stage_of(Role.JUDGES) and os.path.isfile(f"{self.runs}/{story}/.judge-previous.md"):
             repeat = f" This is a repeat round; the previous verdict: {self.runs}/{story}/.judge-previous.md."
         guard = self.guard_sentence() if stage in stage_named() and stage_named()[stage].guarded else ""
         return (f"{self.opening(stage, story, dry)}{self.worktree_sentence()} "
@@ -699,9 +730,9 @@ class Run:
                   f"`{self.py} {self.cli_rel()} --files-skeleton {story} <stage>`, "
                   f"`{self.py} {self.cli_rel()} --plan-skeleton {story}`. {self.where_things_are(tool, story)}")
         prompt += self.guard_sentence()
-        if self.back_to(story, "build") == "test":
+        if self.back_to(story, stage_of(Role.BUILDS)) == stage_of(Role.TESTS):
             prompt += f" The build stage sent the story back: {self.runs}/{story}/build.md."
-        if "test" in stages:
+        if stage_of(Role.TESTS) in stages:
             prompt += self.red_stale_sentence(story)
         for earlier in stages:
             if os.path.isfile(f"{self.runs}/{story}/.gate-{earlier}.txt"):
@@ -741,7 +772,7 @@ class Run:
         folder = f"{self.runs}/{story}/reviews"
         print(f"   reviews: {', '.join(names)} — one process each, at once; the judge converges from "
               "reviews/<perspective>.md")
-        every = self.briefs(story, ["judge"], dry)[0]
+        every = self.briefs(story, [stage_of(Role.JUDGES)], dry)[0]
         prompts = [(f"Review the change of backlog story {story} from the {name} perspective: apply the `{carrier}` "
                     f"skill to the diff {self.evidence(story)}/story.diff, as *A review the runner started* in "
                     f"{every} says. Its input beside the diff: the story and its epic (epic.md "
@@ -795,7 +826,7 @@ class Run:
         from the builder is the point of the split. The tool's exit, 0 in a dry run."""
         tool = self.tools.tool_for("verifier", tool)
         document = (f" The skeleton: `{self.py} {self.cli_rel()} --document-skeleton {story}`; the document gate: "
-                    f"`{self.py} {self.gate_rel} --story {story} --stage document --brief`.") if "document" in stages else ""
+                    f"`{self.py} {self.gate_rel} --story {story} --stage document --brief`.") if stage_of(Role.DELIVERS) in stages else ""
         prompt = (f"Carry out these stages of the delivery pipeline for backlog story {story}, one after another, in "
                   f"this one session: {', '.join(stages)}. {self.window_briefs(story, stages, dry)}{document} "
                   f"{self.where_things_are(tool, story)}")
@@ -878,7 +909,7 @@ class Run:
             return 4
         stage_started = utc()
         # The previous verdict is an input to the next one, not something to overwrite.
-        if stage == "judge" and os.path.isfile(f"{self.runs}/{story}/judge.md"):
+        if stage == stage_of(Role.JUDGES) and os.path.isfile(f"{self.runs}/{story}/judge.md"):
             os.replace(f"{self.runs}/{story}/judge.md", f"{self.runs}/{story}/.judge-previous.md")
         self.gates.record("--record-base", story)
         artefact = self.artefact(story, stage)
@@ -1236,7 +1267,7 @@ class Run:
 TOOL_SKILL_DIRS = tuple(tool.skills for tool in TOOLS)
 
 
-class ChildProcess:
+class ChildProcess(Child):
     """A story's or a request's process beside a parallel run, its lines pumped to the runner's."""
 
     def __init__(self, process: "subprocess.Popen[bytes]", pump: threading.Thread) -> None:

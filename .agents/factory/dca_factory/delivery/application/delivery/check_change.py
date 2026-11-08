@@ -10,12 +10,13 @@ from ....building_blocks import UseCase
 from ...domain.model.stage_story import CommandKey, Count, Presence
 from ...domain.model.story_state import Detail
 from ...domain.model.verdict import CheckName, FindingState
-from ...domain.service.change_checks import CHANGE_CHECKS, ChangeChecks
+from ...domain.model import change
+from ...domain.model.change import BACKLOG_ALONE, CHANGE_CHECKS, CheckKeys, NO_TEST
 from ..shared.change_index import ChangeIndex
 from ..shared.stage_runs import StageRuns
 from .check_stage import Verdict
 from .pipeline_rules import decides
-from .process_checks import judge_suite
+from .process_checks import judge_suite, requirement_of
 
 
 def names(text: typing.Any) -> typing.List[str]:
@@ -35,7 +36,7 @@ class CheckChangeInputPort(UseCase[CheckChangeCommand, Verdict], typing.Protocol
     """Check a change outside a story."""
 
 
-class CheckChangeUseCase:
+class CheckChangeUseCase(CheckChangeInputPort):
     """The profile declares the commands; its `required:` line declares which of them must hold. Without that line
     the check reports what it ran and what it skipped, and fails only on a red command. A commit of the backlog alone
     runs what `checks.backlog` names and nothing more."""
@@ -53,21 +54,20 @@ class CheckChangeUseCase:
     def execute(self, command: CheckChangeCommand) -> Verdict:
         result, profile = Verdict(), self._profile
         required = set(names(profile.get("required")))
-        strict = Presence.PRESENT if required else Presence.ABSENT
-        result.take(ChangeChecks.policy(frozenset(CommandKey(r) for r in required)))
+        result.take(CheckKeys(tuple(CommandKey(r) for r in sorted(required))).policy_findings())
         tree = None
         installs = self._index.pipeline_paths() if command.staged and not names(command.only) else None
         if installs:
-            result.take((ChangeChecks.pipeline_alone(Count(len(installs))),))
+            result.take((change.pipeline_alone(Count(len(installs))),))
             self._index.detach()
             return result
         paths = self._index.backlog_paths() if command.staged and not names(command.only) else None
         if command.staged:
             if paths and not names(profile.get("checks.backlog")):
-                result.take((ChangeChecks.backlog_alone(),))
+                result.take((BACKLOG_ALONE,))
             else:
                 index = self._index.snapshot()
-                found = ChangeChecks.snapshot(index)
+                found = index.finding()
                 result.take((found,))
                 if found.state is not FindingState.PASS:
                     return result
@@ -75,7 +75,7 @@ class CheckChangeUseCase:
             self._index.detach()
         else:
             head = self._index.head()
-            result.take((ChangeChecks.working_tree(Detail(head) if head is not None else None),))
+            result.take((change.working_tree(Detail(head) if head is not None else None),))
         scope = names(command.only) or list(CHANGE_CHECKS)
         declared = self._runs.test_keys()
         test_keys = declared + sorted(r for r in required if (r == "e2eTest" or r.startswith("test."))
@@ -86,47 +86,45 @@ class CheckChangeUseCase:
         test_scope = None
         if paths:
             named = names(profile.get("checks.backlog"))
-            result.take(ChangeChecks.backlog_scope(tuple(CommandKey(n) for n in named),
-                                                   tuple(CommandKey(k) for k in test_keys), Count(len(paths))))
+            result.take(CheckKeys(tuple(CommandKey(n) for n in named)).backlog_findings(
+                tuple(CommandKey(k) for k in test_keys), Count(len(paths))))
             test_scope = {n for n in named if n in test_keys}
             scope = [n for n in named if n in CHANGE_CHECKS and n != "test"] + (["test"] if test_scope else [])
         for check in CHANGE_CHECKS:
             if check == "test":
                 self._tests(result, scope, test_keys, test_scope, required)
                 continue
-            must = Presence.PRESENT if check in required else Presence.ABSENT
+            requirement = requirement_of(required, (check,))
             if check not in scope:
-                result.take((ChangeChecks.test_out_of_scope(CommandKey(check), must),))
+                result.take((change.test_out_of_scope(CommandKey(check), requirement),))
                 continue
             line = profile.get(check)
             if not line:
-                result.take((ChangeChecks.missing(CheckName(check), CommandKey(check), must),))
+                result.take((change.missing(CheckName(check), CommandKey(check), requirement),))
                 continue
-            result.take((ChangeChecks.command(CheckName(check), self._runs.command(line), must, strict),))
+            result.take((self._runs.command(line).verdict(CheckName(check), requirement),))
         if tree:
             after = self._index.tree()
             if after != tree:
-                result.take((ChangeChecks.index_changed(Detail(tree), Detail(after)),))
+                result.take((change.index_changed(Detail(tree), Detail(after)),))
         return result
 
     def _tests(self, result: Verdict, scope: typing.List[str], test_keys: typing.List[str],
                test_scope: typing.Optional[typing.Set[str]], required: typing.Set[str]) -> None:
         required_tests = [k for k in test_keys if k in required]
         if "test" not in scope:
-            result.take((ChangeChecks.out_of_scope(CheckName("test"), tuple(CommandKey(k) for k in required_tests)),))
+            result.take((change.out_of_scope(CheckName("test"), tuple(CommandKey(k) for k in required_tests)),))
             return
         commands: typing.Dict[str, typing.List[str]] = {}
         for key in test_keys:
             if test_scope is not None and key not in test_scope:
-                result.take((ChangeChecks.test_out_of_scope(
-                    CommandKey(key), Presence.PRESENT if key in required else Presence.ABSENT),))
+                result.take((change.test_out_of_scope(CommandKey(key), requirement_of(required, (key,))),))
                 continue
             if self._profile.get(key):
                 commands.setdefault(self._profile[key], []).append(key)
             elif key in required:
-                result.take((ChangeChecks.missing_test(CommandKey(key)),))
+                result.take((change.missing_test(CommandKey(key)),))
         if not commands and not required_tests:
-            result.take((ChangeChecks.no_test(),))
+            result.take((NO_TEST,))
         for line, keys in commands.items():
-            judge_suite(result, self._runs.suite("/".join(keys), line, None, {}),
-                        any(k in required for k in keys), bool(required))
+            judge_suite(result, self._runs.suite("/".join(keys), line, None, {}), requirement_of(required, keys))

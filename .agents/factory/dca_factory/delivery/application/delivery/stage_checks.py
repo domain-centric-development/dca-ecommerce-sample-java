@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import typing
 
-from ...domain.model.stage import Stage, StageName, StoryKind, TESTED_KINDS, Trait
+from ....building_blocks import DomainException
+from ...domain.model.stage import Role, Stage, StageName, StoryKind, TESTED_KINDS, Trait
 from ...domain.model.stage_story import ContractNumber, Count, HandOverName, MappedTest, Place, ScenarioKey, Selector, TestTable
 from ...domain.model.story import StoryId
 from ...domain.model.verdict import CheckName, Said
@@ -22,6 +23,8 @@ from ...domain.service.profile_checks import ProfileChecks
 from ...domain.service.spec_checks import SpecChecks
 from ...domain.service.story_checks import StoryChecks
 from ...domain.service.test_checks import TestChecks
+from ...domain.service.then_checks import ThenChecks
+from .apply_answer import ApplyAnswerCommand
 from .check_stage import check, Run
 from .pipeline_workflow import workflow
 
@@ -68,7 +71,7 @@ def mapped(run: Run) -> typing.Tuple[MappedTest, ...]:
 
 @check("story", rule="GATE-STORY")
 def _story(run: Run) -> None:
-    run.result.take(StoryChecks.context(run.story))
+    run.result.take(StoryChecks.context(run.story, run.evidence))
 
 
 @check("contract", rule=(
@@ -76,12 +79,13 @@ def _story(run: Run) -> None:
     "GATE-PROFILE",
 ))
 def _contract(run: Run) -> None:
-    run.result.take(ProfileChecks.contract(run.evidence))
+    run.result.take(run.evidence.gate().profile_findings(run.evidence.declared_contract(),
+                                                         run.evidence.unknown_keys()))
 
 
 @check("status", rule="GATE-APPROVED")
 def _status(run: Run) -> None:
-    run.result.take(StoryChecks.status(run.story))
+    run.result.take(StoryChecks.status(run.story, run.evidence))
 
 
 @check("epic", rule="GATE-EPIC")
@@ -113,8 +117,8 @@ def _owned(run: Run) -> None:
 def _brief(run: Run) -> None:
     for stage in workflow().briefed_at(StageName(run.stage.name), StoryKind(run.kind)):
         if stage.hand_over is not None:
-            run.result.take(StoryChecks.briefed(run.evidence.brief(StoryId(run.story_id), stage.name,
-                                                                   HandOverName(stage.hand_over.value))))
+            run.result.take(run.evidence.brief(StoryId(run.story_id), stage.name,
+                                               HandOverName(stage.hand_over.value)).findings())
 
 
 @check("spec-delta", stages=("test",), rule="GATE-SPEC-DELTA")
@@ -152,11 +156,11 @@ def read_table(run: Run) -> typing.Tuple[typing.Dict[str, typing.List[str]], typ
         return {}, {}
     table = TestTable(Place(path), tuple(ScenarioKey(key) for key in mapping),
                       Count(sum(len(selectors) for selectors in mapping.values())))
-    run.result.take(TestChecks.mapped(run.story.criteria, table))
+    run.result.take(TestChecks.mapped(run.story, table))
     if not mapping:
         return mapping, {}
     located, looked = run.tests.locate(mapping)
-    run.result.take(TestChecks.exist(looked))
+    run.result.take(tuple(t.finding() for t in looked))
     return mapping, located
 
 
@@ -202,6 +206,11 @@ def _tests_real(run: Run) -> None:
         run.result.take(DesignChecks.tests_real(run.story, mapped(run), run.evidence))
 
 
+@check("tests-assert-then", stages=("test",), kinds=frozenset((StoryKind.STORY,)), rule="GATE-TESTS-ASSERT-THEN")
+def _tests_assert_then(run: Run) -> None:
+    run.result.take(ThenChecks.asserted(run.story, mapped(run), run.evidence))
+
+
 @check("red-proof", stages=listing, kinds=TESTED_KINDS, rule="GATE-RED-PROOF")
 def _red_proof(run: Run) -> None:
     # the red proof compares digests, so it belongs here, before any process
@@ -219,11 +228,15 @@ def _suites(run: Run) -> None:
 @check("decisions", rule="GATE-DECISIONS")
 def _decisions(run: Run) -> None:
     """An answer applied is stamped in its record and becomes an `answered:` line of the story before it is said."""
-    checked = DecisionChecks.check(run.story, StageName(run.stage.name), run.evidence,
-                                   workflow().order(StoryKind.STORY))
+    checked = DecisionChecks.check(run.story, StageName(run.stage.name), run.evidence, workflow())
     for item in checked.items:
         if isinstance(item, Applying):
-            run.result.take((DecisionChecks.applied(item, run.stamps.apply(run.story, item)),))
+            try:
+                applied = run.answers.execute(ApplyAnswerCommand(run.story.id, item.record, item.stage, run.now()))
+            except DomainException as refused:
+                run.result.fail("decisions", str(refused))
+                continue
+            run.result.take((item.finding(applied.written),))
         else:
             run.result.take((item,))
 
@@ -245,12 +258,13 @@ def _plan_adopts(run: Run) -> None:
 def _plan(run: Run) -> None:
     run.result.take(StoryChecks.happy_path(run.story, run.contract, run.evidence))
     run.result.take(BacklogChecks.context_map(run.story, run.evidence))
-    run.result.take(ProfileChecks.instruction_size(run.evidence))
+    found = run.evidence.instruction_file()
+    run.result.take(found.size_findings() if found is not None else ())
     # the two mandatory parts of the project description — the description feature's check, said as the gate says
     # its checks
     for verdict in run.describe.execute(CheckDescriptionCommand()).verdicts:
         getattr(run.result, verdict.state)(verdict.part, verdict.said)
-    run.result.take(ProfileChecks.models(run.evidence, workflow().order(StoryKind.STORY)))
+    run.result.take(ProfileChecks.models(run.evidence, workflow()))
 
 
 @check("document", stages=("document",), rule=(
@@ -262,7 +276,7 @@ def _plan(run: Run) -> None:
     "GATE-JUDGE-PERSPECTIVE",
 ))
 def _document(run: Run) -> None:
-    passed = DeliveryChecks.story_pass(run.story, run.evidence, workflow().hand_over(StageName("judge")))
+    passed = DeliveryChecks.story_pass(run.story, run.evidence, workflow().hand_over(workflow().role(Role.JUDGES)))
     run.result.take(passed.findings)
     if passed.judge_passed is Presence.PRESENT:
         run.marks.judge_passed(run.story_id)

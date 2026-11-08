@@ -73,6 +73,8 @@ class Outcome(Value):
 
 
 class WorkflowRule(AggregateRoot[RuleId]):
+    # A root without a transition, like the workflow: a rule file is changed by a person, the factory reads it whole
+    # and holds its outcomes to the workflow's targets — one rule, one unit, through its repository.
     """One rule: its id, the code that binds it, when it applies, why, its outcomes — and the stages, kinds and
     report names that narrow it where it is narrower than the code that binds it. A retired rule keeps its id and
     says why, with no outcome."""
@@ -110,6 +112,17 @@ class WorkflowRule(AggregateRoot[RuleId]):
         self._see = see
         self._order = order
         self._title = title
+
+    @classmethod
+    def restore(cls, rule_id: RuleId, part: RulePart, when: RuleText, why: RuleText,
+                outcomes: typing.Sequence[Outcome] = (), reports: typing.Sequence[CheckName] = (),
+                stages: typing.Sequence[StageName] = (), kinds: typing.Sequence[StoryKind] = (),
+                retired: typing.Optional[RuleText] = None, written: typing.Optional[Written] = None,
+                told: typing.Optional[RuleText] = None, section: typing.Optional[RuleText] = None,
+                see: typing.Optional[Written] = None, order: typing.Optional[RuleOrder] = None,
+                title: typing.Optional[RuleText] = None) -> WorkflowRule:
+        """The workflow rule as it was kept — the one way a repository builds it."""
+        return cls(rule_id, part, when, why, outcomes, reports, stages, kinds, retired, written, told, section, see, order, title)
 
     @property
     def id(self) -> RuleId:

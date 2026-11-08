@@ -8,8 +8,9 @@ import typing
 from ....building_blocks import DomainService
 from ..gateway.stage_evidence import StageEvidence
 from ..model.stage import StoryKind
+from ..model.story import Story
 from ..model.stage_story import (
-    CommandKey, ContractNumber, HandOverName, MappedTest, ScenarioKey, StageStory, TestLocation, TestTable, TitleFound)
+    CommandKey, ContractNumber, HandOverName, MappedTest, TestTable, TitleFound)
 from ..model.verdict import CheckName, Findings, Said
 
 TESTS_MAPPED = CheckName("tests-mapped")
@@ -35,8 +36,9 @@ class TestChecks(DomainService):
     """The checks over the tests table and the tests it names."""
 
     @staticmethod
-    def mapped(criteria_of_story: typing.Tuple[ScenarioKey, ...], table: TestTable) -> Findings:
-        criteria = [key.value for key in criteria_of_story]
+    def mapped(story: Story, table: TestTable) -> Findings:
+        """Every criterion of the story has a test row, and every row names a criterion of the story."""
+        criteria = [key.value for key in story.content.criteria]
         mapped = {key.value for key in table.keys}
         where = table.place.value
         found = []
@@ -54,31 +56,10 @@ class TestChecks(DomainService):
         return tuple(found)
 
     @staticmethod
-    def exist(locations: typing.Tuple[TestLocation, ...]) -> Findings:
-        """A selector must point at a test that is actually there. Without this check a missing test looks exactly
-        like a red one, and the run would certify nothing."""
-        found = []
-        for test in locations:
-            selector, key = test.selector.value, test.key.value
-            cls, _sep, method = selector.partition("#")
-            if test.found is not None:
-                found.append(TESTS_EXIST.ok(Said(f"{selector} found in {test.found.value} ({key}, by "
-                                                 f"{test.shape.value})")))
-            elif test.candidate is not None:
-                found.append(TESTS_EXIST.fail(Said(
-                    f"{selector}: {test.candidate.value} has no {method} — criterion {key!r} has no test, only a row "
-                    f"in the table")))
-            else:
-                found.append(TESTS_EXIST.fail(Said(
-                    f"{selector}: no source file for {cls.rsplit('.', 1)[-1]} — criterion {key!r} has no test, and a "
-                    f"missing test is indistinguishable from a red one at the runner")))
-        return tuple(found)
-
-    @staticmethod
-    def plan_levels(story: StageStory, evidence: StageEvidence) -> Findings:
+    def plan_levels(story: Story, evidence: StageEvidence) -> Findings:
         """A plan line the pipeline's skeleton wrote and the stage never finished — a key with no level after it —
         is a plan that was not made: refused at the test gate, before any test is read against it."""
-        plan = evidence.plan_levels(story.story)
+        plan = evidence.plan_levels(story.id)
         if plan is None or not plan.unfinished:
             return ()
         keys = [key.value for key in plan.unfinished]
@@ -88,7 +69,7 @@ class TestChecks(DomainService):
               "`level: e2e | integration | browser-only (<why>)`")),)
 
     @staticmethod
-    def levels(story: StageStory, contract: ContractNumber, tests: typing.Tuple[MappedTest, ...],
+    def levels(story: Story, contract: ContractNumber, tests: typing.Tuple[MappedTest, ...],
                evidence: StageEvidence) -> Findings:
         """A scenario's test runs at the lowest level that observes its `Then`. A test the end-user command runs
         belongs to the happy path or to a scenario the plan gave `browser-only`; every other end-user test is a
@@ -96,8 +77,8 @@ class TestChecks(DomainService):
         if story.kind is not StoryKind.STORY or contract.value < LEVELS_CONTRACT.value or not tests \
                 or evidence.command(E2E) is None:
             return ()
-        plan = evidence.plan_levels(story.story)
-        allowed = set(story.happy_paths) | (plan.browser_only if plan else frozenset())
+        plan = evidence.plan_levels(story.id)
+        allowed = set(story.content.happy_paths) | (plan.browser_only if plan else frozenset())
         wrong = [f"{t.key.value} ({t.selector.value})" for t in sorted(tests, key=lambda t: t.key.value)
                  if t.place is not None and t.command == E2E and t.key not in allowed]
         if wrong:
@@ -108,7 +89,7 @@ class TestChecks(DomainService):
         return (LEVELS.ok(Said("every end-user test belongs to the happy path or a browser-only scenario")),)
 
     @staticmethod
-    def titles(story: StageStory, contract: ContractNumber, tests: typing.Tuple[MappedTest, ...],
+    def titles(story: Story, contract: ContractNumber, tests: typing.Tuple[MappedTest, ...],
                evidence: StageEvidence) -> Findings:
         """An end-user test carries its scenario's title verbatim, as its display name."""
         if story.kind is StoryKind.ADOPT or contract.value < LEVELS_CONTRACT.value or not tests \
@@ -126,11 +107,11 @@ class TestChecks(DomainService):
         return ()
 
     @staticmethod
-    def size(story: StageStory, names: typing.Tuple[HandOverName, ...], evidence: StageEvidence) -> Findings:
+    def size(story: Story, names: typing.Tuple[HandOverName, ...], evidence: StageEvidence) -> Findings:
         """A note when a hand-over is larger than what it has to say for a story of its criteria."""
-        count = len(story.criteria)
+        count = len(story.content.criteria)
         found = []
-        for hand_over in evidence.hand_over_sizes(story.story, names):
+        for hand_over in evidence.hand_over_sizes(story.id, names):
             name, size = hand_over.name.value, hand_over.size.value
             if name not in HANDOVER_BUDGET:
                 continue

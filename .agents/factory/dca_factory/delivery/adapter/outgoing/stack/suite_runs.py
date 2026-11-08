@@ -6,13 +6,16 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import time
 import typing
 
+from ..files.run_shots import collect_shots
+from ....domain.model.shot import Instant, RunOrigin, taken_since
 from ..files.hand_over_patterns import SELECTOR
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import read_text
 from .....sharedkernel.adapter.outgoing.profile.profile_files import evidence_dir, runs_top
 from ....domain.model.stage_story import CommandKey, CommandRun, Count, Presence, Retried, SuiteCommands, SuiteRun
-from ....domain.service.suite_checks import FLAKY_LIMIT, SuiteChecks
+from ....domain.model.suite import FLAKY_LIMIT, SuiteJudged
 from ....domain.model.story_state import Detail
 from ..files.delivery_files import SKIP_DIRS, TEST_FILE
 from ..files.design_files import locate_selector
@@ -120,7 +123,7 @@ def retry_outside(cwd: str, profile: Profile, command: str, code: int, ran: Ran,
     own_files = story_test_files(cwd, owner) if len(failed) <= FLAKY_LIMIT.value else None
     # A story whose own tests cannot be told apart counts every red test as its own.
     own = own_files is None or any(story_owns(cwd, owner, own_files, cls, method) for cls, method in failed)
-    if SuiteChecks.retries(Count(len(failed)), Presence.PRESENT if own else Presence.ABSENT) is Presence.ABSENT:
+    if SuiteJudged.retries(Count(len(failed)), Presence.PRESENT if own else Presence.ABSENT) is Presence.ABSENT:
         return code, ran, [], []
     flaky: typing.List[typing.Tuple[str, str, str]] = []
     still: typing.List[typing.Tuple[str, str, str]] = []
@@ -143,10 +146,16 @@ def suite_run(cwd: str, profile: Profile, key: str, command: str, owner: typing.
               already: typing.Optional[typing.Tuple[int, str, Ran]] = None, reused: str = "") -> SuiteRun:
     """The test command run whole — or the run the mapped tests were read from (`already`) — with a red test outside
     the story run again alone, once."""
+    started, origin = Instant(time.time()), RunOrigin.RAN
     if already is None:
         code, output, ran, reused = recorded_run(command, cwd, profile, with_reports=True)
     else:
         code, output, ran = already
+        origin = RunOrigin.REUSED           # the run the mapped tests were read from, made before this step
+    if owner and profile.get("screenshots"):
+        # what the end-user tests took a picture of goes to the story's place, whatever the stack (WP-184)
+        collect_shots(cwd, str(profile["screenshots"]), os.path.join(owner.runs, owner.story_id), key,
+                      taken_since(started, origin))
     code, ran, flaky, still = retry_outside(cwd, profile, command, code, ran, owner)
     return SuiteRun(Detail(key), CommandRun(Detail(command), Count(code), Detail(tail(output)), Detail(reused)),
                     Count(sum(1 for outcome in ran.values() if outcome != "skipped")),

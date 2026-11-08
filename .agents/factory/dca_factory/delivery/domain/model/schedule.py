@@ -6,16 +6,11 @@ import enum
 import typing
 
 from ....building_blocks import Value
+from .story_words import ContextName as ContextName
 from .epic import EpicId
 from .stage import StageName
 from .story import StoryId
 from .story_state import Detail, Standing
-
-
-class ContextName(Value):
-    """The bounded context a story changes, as its `context:` names it — "" where it names none."""
-
-    value: str
 
 
 class Liveness(enum.Enum):
@@ -42,13 +37,9 @@ class Holding(enum.Enum):
 
 
 class Entry(Value):
-    """One story as the schedule reads it."""
+    """What the schedule reads of one story's run beside the story: where it stands, what it holds, its open stage."""
 
-    story: StoryId
     standing: Standing
-    depends_on: typing.Tuple[StoryId, ...]
-    epic: EpicId
-    context: ContextName
     holds: typing.FrozenSet[Holding]
     running: typing.Optional[Running]
 

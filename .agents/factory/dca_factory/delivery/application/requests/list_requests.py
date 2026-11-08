@@ -7,7 +7,7 @@ import typing
 
 from ....building_blocks import UseCase
 from ..shared.requests import KINDS, MadeItems, operations_of, place_of, Request, RequestStore, STATES
-from ..status.actions import make_action
+from ..shared.actions import make_action
 
 #: The word on a request's button for each operation.
 OPERATION_LABELS = {"follow": "follow", "retry": "retry", "drop": "take back"}
@@ -27,7 +27,7 @@ class ListRequestsInputPort(UseCase[ListRequestsQuery, RequestList], typing.Prot
     """List the requests."""
 
 
-class ListRequestsUseCase:
+class ListRequestsUseCase(ListRequestsInputPort):
     """`factory.sh requests`, the page's request view: each request with what a person can do with it, and the trail of
     the wishes — one waiting, writing, asking back or failed, and one done until what it made is released or hidden."""
 
@@ -84,6 +84,7 @@ def wish_entry(request: Request, drafts: typing.List[typing.Dict[str, str]]) -> 
                 asked=str(request.get("asked") or ""), started=str(request.get("started") or ""), state=state,
                 tone={"done": "ok", "waiting": "ask", "failed": "bad"}.get(state, "wait"), text=text,
                 place=place_of(request["id"]), made=drafts, actions=release,
+                files=len(str(request.get("files") or "").split()),        # handed over beside the words (WP-184)
                 operations=[dict(name="hide", label="✕")] if state == "done"
                 else [dict(name=o, label=OPERATION_LABELS[o]) for o in operations_of(state) if o != "follow"])
 

@@ -4,13 +4,30 @@ no rule has, a stage no row has)."""
 
 from __future__ import annotations
 
+from ....domain.model.rule import KindName
+
 import argparse
 import os
 import sys
 import typing
 
-from .....infrastructure import rulebook as wiring
-from ....application.show_rulebook import ShowRulebookQuery
+from ....application.show_rulebook import ShowRulebookQuery, ShowRulebookInputPort
+
+
+class RulesRoot(typing.Protocol):
+    """What this command line takes from the composition root — given at start (`wire`), never imported."""
+
+    def show_rulebook(self, cwd: str) -> ShowRulebookInputPort: ...
+
+
+#: the composition root, given by `wire` before the command line runs
+wiring: RulesRoot
+
+
+def wire(root: RulesRoot) -> None:
+    """The composition root this command line builds its use cases from."""
+    global wiring
+    wiring = root
 from .rules_view import render
 
 
@@ -18,7 +35,8 @@ def main(argv: typing.Sequence[str]) -> int:
     parser = argparse.ArgumentParser(prog="factory-cli.py --rules", description="the factory's rules")
     parser.add_argument("--rules", action="store_true", required=True)
     parser.add_argument("--stage", help="only the rules that hold at this stage")
-    parser.add_argument("--kind", help="only the rules that hold for this story kind")
+    parser.add_argument("--kind", choices=[kind.value for kind in KindName],
+                        help="only the rules that hold for this story kind")
     parser.add_argument("--story", help="mark the rules that fired in the story's last gate runs")
     parser.add_argument("--format", choices=("md", "json", "svg", "mermaid"), default="md",
                         help="svg, mermaid: the flow of --kind (story when none) as a drawing")

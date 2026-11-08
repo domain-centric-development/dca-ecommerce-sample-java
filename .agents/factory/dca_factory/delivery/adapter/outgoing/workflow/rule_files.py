@@ -32,6 +32,7 @@ from ....domain.model.verdict import CheckName
 from ....domain.model.workflow_rule import (
     Outcome, OutcomeState, RuleOrder, RulePart, RuleText, WorkflowRule, Written)
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import read_front_matter
+from ....application.shared.workflow_rule_repository import WorkflowRuleRepository
 
 #: The rules beside the package: `scripts/workflow/rules` in the plugin, `.agents/factory/workflow/rules` installed.
 FOLDER = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "..",
@@ -73,8 +74,8 @@ def paragraph(body: str, label: str) -> str:
     return ""
 
 
-class RuleFiles:
-    """The rules' repository (`RuleRepository`) over a folder of Markdown files."""
+class RuleFiles(WorkflowRuleRepository):
+    """The rules' repository (`WorkflowRuleRepository`) over a folder of Markdown files."""
 
     def __init__(self, folder: str = FOLDER) -> None:
         self._folder = folder
@@ -125,13 +126,13 @@ class RuleFiles:
         retired = front.get("retired")
         if str(front.get("part") or "") == RulePart.TOLD.value:
             section, see, order = front.get("section"), front.get("see"), str(front.get("order") or "")
-            return WorkflowRule(
+            return WorkflowRule.restore(
                 rule_id, RulePart.TOLD, RuleText(""), RuleText(""), (), (),
                 [StageName(s) for s in listed(front.get("stages"))], [StoryKind(k) for k in listed(front.get("kinds"))],
                 RuleText(str(retired)) if retired else None, self._written(path), RuleText(told_of(body, rule_id)),
                 RuleText(str(section)) if section else None, Written(str(see)) if see else None,
                 RuleOrder(int(order)) if order.isdigit() else None)
-        return WorkflowRule(
+        return WorkflowRule.restore(
             rule_id, RulePart(str(front.get("part") or "decision")), RuleText(paragraph(body, WHEN)),
             RuleText(paragraph(body, WHY)), outcomes, [CheckName(n) for n in listed(front.get("reports"))],
             [StageName(s) for s in listed(front.get("stages"))], [StoryKind(k) for k in listed(front.get("kinds"))],
