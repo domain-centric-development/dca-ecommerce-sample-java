@@ -13,3 +13,4 @@
 2026-11-03T13:05:48Z	stream	builder.130052.out	process=builder	parts=2	denied=0	version=2	seq=13
 2026-11-03T13:05:48Z	stage-end	builder	exit=0	seq=14
 2026-11-03T13:05:49Z	wrote	plan.md	sha=61cb60b7acbf75e29fe5119a2a5efacf4c44c2e24e178d6383c4fc20e71313eb	seq=15
+2026-11-03T18:29:37Z	record	1	seq=16

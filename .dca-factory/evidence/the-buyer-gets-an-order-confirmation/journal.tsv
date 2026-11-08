@@ -101,3 +101,4 @@
 2026-10-28T20:38:19Z	gate	document	exit=0	by=session	seq=101
 2026-10-28T20:36:18.958Z	usage	decisions	tool=claude-session	model=	input=0	cache_read=0	cache_write=0	output=0	window=2026-10-28T20:36:18.367Z/2026-10-28T20:36:18.958Z	seq=102
 2026-10-29T22:22:55Z	record	1	seq=103
+2026-11-04T20:38:23Z	pruned	-	files=6	days=7	seq=104

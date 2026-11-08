@@ -97,3 +97,4 @@
 2026-11-03T14:08:21Z	step-start	integrate	by=runner	seq=97
 2026-11-03T14:13:21Z	gate	integrate	exit=0	by=runner	seq=98
 2026-11-03T14:13:21Z	step-end	integrate	exit=0	seq=99
+2026-11-03T18:29:37Z	record	1	seq=100

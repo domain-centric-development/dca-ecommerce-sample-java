@@ -61,3 +61,4 @@
 2026-10-30T03:46:49Z	step-start	integrate	by=runner	seq=61
 2026-10-30T03:52:18Z	gate	integrate	exit=0	by=runner	seq=62
 2026-10-30T03:52:18Z	step-end	integrate	exit=0	seq=63
+2026-11-06T03:52:22Z	pruned	-	files=11	days=7	seq=64
