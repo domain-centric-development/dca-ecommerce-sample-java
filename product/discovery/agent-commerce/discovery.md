@@ -77,7 +77,7 @@ shopper's complaint [S11].
 
 ### agents-buy-in-the-shop
 - intent: A shopper who hands their shopping to an agent cannot buy here — the agent can find products through the MCP server but nothing it can call fills a cart or completes a checkout
-- goal: An agent acting for a shopper with an account completes a checkout over the Universal Commerce Protocol's REST binding, discovered from the shop's published profile, without the shop's pages; payment ends at the stand-in or the configured provider; the .NET twin follows
+- goal: An agent completes a checkout for a shopper with an account, without the shop's pages
 - metric: CheckoutConfirmed (for a checkout an agent completed; no target)
 - domain_contact: shop-owner
 
