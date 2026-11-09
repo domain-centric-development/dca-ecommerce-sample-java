@@ -101,22 +101,21 @@ class RetainedDeliveryIntegrationTest {
               id,
               () -> {
                 switch (id) {
-                  case "delivery.rollback.no-publication" ->
-                      rollbackContainsAggregateAndPublicationButOutsidePublicationSurvives();
-                  case "delivery.startup.replays-committed-only" -> {
-                    rollbackContainsAggregateAndPublicationButOutsidePublicationSurvives();
-                    interruptedProcessingBecomesFailedAndUsesBoundedRecovery();
-                  }
-                  case "delivery.multi-consumer.partial-failure",
-                      "delivery.retry.same-key",
-                      "delivery.replay.snapshot",
-                      "delivery.retry.exhausted-inspectable",
-                      "delivery.manual-replay.failed-consumer-only" ->
-                      retryIsPerListenerBoundedAndManualReplayKeepsSnapshotAndIdentity();
-                  case "delivery.ack.provider-accepted-not-delivered",
-                      "delivery.provider-idempotency.same-key",
-                      "delivery.provider-no-idempotency.duplicate-possible" ->
-                      providerAcceptanceBeforeAcknowledgementHasOnlyProviderSupportedDeduplication();
+                  case "delivery.rollback.no-publication" -> rollbackLeavesNoPublication();
+                  case "delivery.startup.replays-committed-only" -> startupReplaysCommittedOnly();
+                  case "delivery.multi-consumer.partial-failure" ->
+                      partialFailureRetriesOnlyTheFailedConsumer();
+                  case "delivery.retry.same-key" -> retryKeepsTheSameKey();
+                  case "delivery.replay.snapshot" -> replayDeliversTheSnapshot();
+                  case "delivery.ack.provider-accepted-not-delivered" ->
+                      acceptanceWithoutAcknowledgementIsRetried();
+                  case "delivery.retry.exhausted-inspectable" -> exhaustedDeliveryIsInspectable();
+                  case "delivery.manual-replay.failed-consumer-only" ->
+                      manualReplayTouchesOnlyTheFailedConsumer();
+                  case "delivery.provider-idempotency.same-key" ->
+                      idempotentProviderMakesOneEffect();
+                  case "delivery.provider-no-idempotency.duplicate-possible" ->
+                      providerWithoutIdempotencyMayMakeTwoEffects();
                   default -> fail("Vector has no adapter: " + id);
                 }
               }));
@@ -124,8 +123,9 @@ class RetainedDeliveryIntegrationTest {
     return tests.stream();
   }
 
+  /** delivery.rollback.no-publication */
   @Test
-  void rollbackContainsAggregateAndPublicationButOutsidePublicationSurvives() {
+  void rollbackLeavesNoPublication() {
     UUID eventId = UUID.randomUUID();
     CartId cartId = CartId.generate();
     assertThrows(
@@ -159,49 +159,20 @@ class RetainedDeliveryIntegrationTest {
     assertEquals(2, rows(outside).size());
   }
 
+  /** delivery.startup.replays-committed-only */
   @Test
-  void retryIsPerListenerBoundedAndManualReplayKeepsSnapshotAndIdentity() throws Exception {
-    UUID id = UUID.randomUUID();
-    observed.poison.add(id);
-    publish(new Probe(id, Instant.now(), "captured", false, false));
-    await(() -> failed(id));
-    Thread.sleep(20);
-    recovery.retryDue();
-    await(() -> rows(id).stream().anyMatch(r -> r.attempts() == 2 && r.status().equals("FAILED")));
-    assertEquals(1, observed.first.get(id).get());
-    recovery.retryDue();
-    Thread.sleep(40);
-    assertEquals(2, observed.second.get(id).get());
-    Row failed =
-        rows(id).stream().filter(r -> r.status().equals("FAILED")).findFirst().orElseThrow();
-    observed.poison.remove(id);
-    recovery.replayFailed(failed.id());
-    await(() -> rows(id).stream().allMatch(r -> r.status().equals("COMPLETED")));
-    assertEquals(1, observed.first.get(id).get());
-    assertEquals(3, observed.second.get(id).get());
-    assertEquals(1, observed.keys.get(id).stream().distinct().count());
-    assertTrue(rows(id).stream().allMatch(r -> r.payload().contains("captured")));
-  }
-
-  @Test
-  void providerAcceptanceBeforeAcknowledgementHasOnlyProviderSupportedDeduplication()
-      throws Exception {
-    for (boolean supported : new boolean[] {true, false}) {
-      UUID id = UUID.randomUUID();
-      publish(new Probe(id, Instant.now(), "captured", true, supported));
-      await(() -> failed(id));
-      Thread.sleep(20);
-      recovery.retryDue();
-      await(() -> rows(id).stream().allMatch(r -> r.status().equals("COMPLETED")));
-      assertEquals(supported ? 1 : 2, observed.effects.get(id).get());
-      assertEquals(1, observed.first.get(id).get());
-      assertEquals(1, observed.keys.get(id).stream().distinct().count());
-      assertEquals(0, observed.inboxDeliveries.get());
-    }
-  }
-
-  @Test
-  void interruptedProcessingBecomesFailedAndUsesBoundedRecovery() throws Exception {
+  void startupReplaysCommittedOnly() throws Exception {
+    UUID rolledBack = UUID.randomUUID();
+    assertThrows(
+        IllegalStateException.class,
+        () ->
+            new TransactionTemplate(transactions)
+                .execute(
+                    status -> {
+                      publisher.publishEvent(
+                          new Probe(rolledBack, Instant.now(), "rolled-back", false, false));
+                      throw new IllegalStateException("rollback");
+                    }));
     UUID id = UUID.randomUUID();
     observed.poison.add(id);
     publish(new Probe(id, Instant.now(), "retained-after-interruption", false, false));
@@ -223,6 +194,137 @@ class RetainedDeliveryIntegrationTest {
     assertEquals(2, observed.second.get(id).get());
     assertTrue(
         rows(id).stream().allMatch(r -> r.payload().contains("retained-after-interruption")));
+    assertEquals(0, rows(rolledBack).size());
+    assertNull(observed.first.get(rolledBack));
+    assertNull(observed.second.get(rolledBack));
+  }
+
+  /** delivery.multi-consumer.partial-failure */
+  @Test
+  void partialFailureRetriesOnlyTheFailedConsumer() throws Exception {
+    UUID id = UUID.randomUUID();
+    observed.poison.add(id);
+    publish(new Probe(id, Instant.now(), "captured", false, false));
+    await(() -> failed(id));
+    await(() -> rows(id).stream().anyMatch(r -> r.status().equals("COMPLETED")));
+    assertEquals(1, observed.first.get(id).get());
+    assertEquals(1, observed.second.get(id).get());
+    observed.poison.remove(id);
+    Thread.sleep(20);
+    recovery.retryDue();
+    await(() -> rows(id).stream().allMatch(r -> r.status().equals("COMPLETED")));
+    assertEquals(1, observed.first.get(id).get());
+    assertEquals(2, observed.second.get(id).get());
+  }
+
+  /** delivery.retry.same-key */
+  @Test
+  void retryKeepsTheSameKey() throws Exception {
+    UUID id = UUID.randomUUID();
+    exhaust(id, "captured");
+    var keys = observed.keys.get(id);
+    assertEquals(2, keys.size());
+    assertEquals(
+        List.of(id + ":" + SecondListener.class.getName() + ":provider-effect"),
+        keys.stream().distinct().toList());
+  }
+
+  /** delivery.replay.snapshot */
+  @Test
+  void replayDeliversTheSnapshot() throws Exception {
+    UUID id = UUID.randomUUID();
+    observed.poison.add(id);
+    publish(new Probe(id, Instant.now(), "captured", false, false));
+    await(() -> failed(id));
+    observed.poison.remove(id);
+    Thread.sleep(20);
+    recovery.retryDue();
+    await(() -> rows(id).stream().allMatch(r -> r.status().equals("COMPLETED")));
+    assertEquals(List.of("captured", "captured"), observed.contents.get(id));
+    assertTrue(rows(id).stream().allMatch(r -> r.payload().contains("captured")));
+  }
+
+  /** delivery.ack.provider-accepted-not-delivered */
+  @Test
+  void acceptanceWithoutAcknowledgementIsRetried() throws Exception {
+    UUID id = UUID.randomUUID();
+    publish(new Probe(id, Instant.now(), "captured", true, true));
+    await(() -> failed(id));
+    assertEquals(1, observed.effects.get(id).get());
+    assertTrue(failed(id));
+    Thread.sleep(20);
+    recovery.retryDue();
+    await(() -> rows(id).stream().allMatch(r -> r.status().equals("COMPLETED")));
+    assertEquals(1, observed.first.get(id).get());
+    assertEquals(2, observed.second.get(id).get());
+    assertEquals(0, observed.inboxDeliveries.get());
+  }
+
+  /** delivery.retry.exhausted-inspectable */
+  @Test
+  void exhaustedDeliveryIsInspectable() throws Exception {
+    UUID id = UUID.randomUUID();
+    Row failed = exhaust(id, "captured");
+    assertEquals("FAILED", failed.status());
+    assertEquals(2, failed.attempts());
+    assertTrue(failed.payload().contains("captured"));
+    assertEquals(1, observed.first.get(id).get());
+    recovery.retryDue();
+    Thread.sleep(40);
+    assertEquals(2, observed.second.get(id).get());
+    assertTrue(rows(id).stream().anyMatch(r -> r.status().equals("FAILED") && r.attempts() == 2));
+  }
+
+  /** delivery.manual-replay.failed-consumer-only */
+  @Test
+  void manualReplayTouchesOnlyTheFailedConsumer() throws Exception {
+    UUID id = UUID.randomUUID();
+    Row failed = exhaust(id, "captured");
+    observed.poison.remove(id);
+    recovery.replayFailed(failed.id());
+    await(() -> rows(id).stream().allMatch(r -> r.status().equals("COMPLETED")));
+    assertEquals(1, observed.first.get(id).get());
+    assertEquals(3, observed.second.get(id).get());
+    assertEquals(1, observed.keys.get(id).stream().distinct().count());
+    assertTrue(rows(id).stream().allMatch(r -> r.payload().contains("captured")));
+  }
+
+  /** delivery.provider-idempotency.same-key */
+  @Test
+  void idempotentProviderMakesOneEffect() throws Exception {
+    UUID id = UUID.randomUUID();
+    acceptThenRetry(id, true);
+    assertEquals(1, observed.effects.get(id).get());
+    assertEquals(1, observed.keys.get(id).stream().distinct().count());
+  }
+
+  /** delivery.provider-no-idempotency.duplicate-possible */
+  @Test
+  void providerWithoutIdempotencyMayMakeTwoEffects() throws Exception {
+    UUID id = UUID.randomUUID();
+    acceptThenRetry(id, false);
+    assertEquals(2, observed.effects.get(id).get());
+    assertEquals(1, observed.keys.get(id).stream().distinct().count());
+  }
+
+  /** Lets the second listener fail until its bounded attempts are spent; returns the row. */
+  private Row exhaust(UUID id, String content) throws InterruptedException {
+    observed.poison.add(id);
+    publish(new Probe(id, Instant.now(), content, false, false));
+    await(() -> failed(id));
+    Thread.sleep(20);
+    recovery.retryDue();
+    await(() -> rows(id).stream().anyMatch(r -> r.attempts() == 2 && r.status().equals("FAILED")));
+    return rows(id).stream().filter(r -> r.status().equals("FAILED")).findFirst().orElseThrow();
+  }
+
+  /** The provider accepts, the listener crashes before acknowledging, one retry completes it. */
+  private void acceptThenRetry(UUID id, boolean providerIdempotency) throws InterruptedException {
+    publish(new Probe(id, Instant.now(), "captured", true, providerIdempotency));
+    await(() -> failed(id));
+    Thread.sleep(20);
+    recovery.retryDue();
+    await(() -> rows(id).stream().allMatch(r -> r.status().equals("COMPLETED")));
   }
 
   private void publish(Probe event) {
@@ -260,7 +362,8 @@ class RetainedDeliveryIntegrationTest {
     final ConcurrentMap<UUID, AtomicInteger> first = new ConcurrentHashMap<>(),
         second = new ConcurrentHashMap<>(),
         effects = new ConcurrentHashMap<>();
-    final ConcurrentMap<UUID, List<String>> keys = new ConcurrentHashMap<>();
+    final ConcurrentMap<UUID, List<String>> keys = new ConcurrentHashMap<>(),
+        contents = new ConcurrentHashMap<>();
     final Set<UUID> poison = ConcurrentHashMap.newKeySet();
     final Set<String> accepted = ConcurrentHashMap.newKeySet();
     final AtomicInteger inboxDeliveries = new AtomicInteger();
@@ -292,6 +395,10 @@ class RetainedDeliveryIntegrationTest {
           state.second.computeIfAbsent(event.eventId(), k -> new AtomicInteger()).incrementAndGet();
       String key = event.eventId() + ":" + SecondListener.class.getName() + ":provider-effect";
       state.keys.computeIfAbsent(event.eventId(), k -> new CopyOnWriteArrayList<>()).add(key);
+      state
+          .contents
+          .computeIfAbsent(event.eventId(), k -> new CopyOnWriteArrayList<>())
+          .add(event.content());
       if (state.poison.contains(event.eventId()))
         throw new IllegalStateException("provider unavailable");
       if (!event.providerIdempotency() || state.accepted.add(key))
