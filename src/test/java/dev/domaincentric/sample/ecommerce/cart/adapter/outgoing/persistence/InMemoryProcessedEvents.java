@@ -4,19 +4,11 @@ import dev.domaincentric.sample.ecommerce.cart.application.shared.ProcessedEvent
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 /**
- * In-memory implementation of {@link ProcessedEvents}, keyed by effect and event id — the stand-in
- * for a table with that composite key.
- *
- * <p>Thread-safe and process-local: the record lives as long as the application, like this
- * context's in-memory stores. A deployment that keeps its data across restarts keeps this record in
- * the same store and transaction as the effect it guards.
+ * In-memory fake of {@link ProcessedEvents} for tests without a database, keyed by effect and event
+ * id as the table is.
  */
-@Profile("inmemory")
-@Component("cartProcessedEvents")
 public class InMemoryProcessedEvents implements ProcessedEvents {
 
   private final Set<Key> processed = ConcurrentHashMap.newKeySet();

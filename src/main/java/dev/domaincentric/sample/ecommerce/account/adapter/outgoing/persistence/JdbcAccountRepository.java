@@ -17,7 +17,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -34,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>The roles live in their own table, each by its {@code Role#code()}, because a set has no
  * natural column. They are replaced wholesale on save, in the same transaction as the account row.
  */
-@Profile("!inmemory")
 @Repository
 public class JdbcAccountRepository implements AccountRepository {
 

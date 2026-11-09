@@ -9,17 +9,11 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Repository;
 
 /**
- * In-memory implementation of CheckoutSessionRepository.
- *
- * <p>This secondary adapter provides a thread-safe in-memory storage for checkout sessions using
- * ConcurrentHashMap. In a production system, this would be replaced with a database implementation.
+ * In-memory fake of {@link CheckoutSessionRepository} for tests without a database: sessions stored
+ * and handed out as copies, so a change survives only through {@code save}.
  */
-@Profile("inmemory")
-@Repository
 public class InMemoryCheckoutSessionRepository implements CheckoutSessionRepository {
 
   private final ConcurrentHashMap<CheckoutSessionId, CheckoutSession> sessions =
@@ -27,7 +21,7 @@ public class InMemoryCheckoutSessionRepository implements CheckoutSessionReposit
 
   @Override
   public Optional<CheckoutSession> findById(final CheckoutSessionId id) {
-    return Optional.ofNullable(sessions.get(id));
+    return Optional.ofNullable(sessions.get(id)).map(InMemoryCheckoutSessionRepository::copyOf);
   }
 
   @Override
@@ -40,7 +34,8 @@ public class InMemoryCheckoutSessionRepository implements CheckoutSessionReposit
   public Optional<CheckoutSession> findByCartId(final CartId cartId) {
     return sessions.values().stream()
         .filter(session -> session.cartId().equals(cartId))
-        .findFirst();
+        .findFirst()
+        .map(InMemoryCheckoutSessionRepository::copyOf);
   }
 
   @Override
@@ -48,7 +43,8 @@ public class InMemoryCheckoutSessionRepository implements CheckoutSessionReposit
     return sessions.values().stream()
         .filter(session -> session.cartId().equals(cartId))
         .filter(session -> session.status() == CheckoutSessionStatus.ACTIVE)
-        .findFirst();
+        .findFirst()
+        .map(InMemoryCheckoutSessionRepository::copyOf);
   }
 
   @Override
@@ -56,24 +52,26 @@ public class InMemoryCheckoutSessionRepository implements CheckoutSessionReposit
     return sessions.values().stream()
         .filter(session -> session.customerId().equals(customerId))
         .filter(session -> session.status() == CheckoutSessionStatus.ACTIVE)
-        .findFirst();
+        .findFirst()
+        .map(InMemoryCheckoutSessionRepository::copyOf);
   }
 
   @Override
   public List<CheckoutSession> findExpiredSessions() {
     return sessions.values().stream()
         .filter(session -> session.status() == CheckoutSessionStatus.EXPIRED)
+        .map(InMemoryCheckoutSessionRepository::copyOf)
         .toList();
   }
 
   @Override
   public List<CheckoutSession> findAll() {
-    return List.copyOf(sessions.values());
+    return sessions.values().stream().map(InMemoryCheckoutSessionRepository::copyOf).toList();
   }
 
   @Override
   public CheckoutSession save(final CheckoutSession session) {
-    sessions.put(session.id(), session);
+    sessions.put(session.id(), copyOf(session));
     return session;
   }
 
@@ -91,6 +89,23 @@ public class InMemoryCheckoutSessionRepository implements CheckoutSessionReposit
             session ->
                 session.status() == CheckoutSessionStatus.CONFIRMED
                     || session.status() == CheckoutSessionStatus.COMPLETED)
-        .findFirst();
+        .findFirst()
+        .map(InMemoryCheckoutSessionRepository::copyOf);
+  }
+
+  private static CheckoutSession copyOf(final CheckoutSession session) {
+    return CheckoutSession.reconstitute(
+        session.id(),
+        session.cartId(),
+        session.customerId(),
+        session.lineItems(),
+        session.totals(),
+        session.currentStep(),
+        session.status(),
+        session.buyerInfo(),
+        session.deliveryAddress(),
+        session.shippingOption(),
+        session.paymentSelection(),
+        session.orderReference());
   }
 }

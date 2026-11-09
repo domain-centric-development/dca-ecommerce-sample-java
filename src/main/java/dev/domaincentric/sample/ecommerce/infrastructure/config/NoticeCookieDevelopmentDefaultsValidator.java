@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 public class NoticeCookieDevelopmentDefaultsValidator implements InitializingBean {
 
   /** The profiles that mean "this is a development run" — the same expression as the others. */
-  public static final String DEVELOPMENT_PROFILES = "dev | inmemory";
+  public static final String DEVELOPMENT_PROFILES = "dev";
 
   private final NoticeCookieProperties properties;
   private final Environment environment;

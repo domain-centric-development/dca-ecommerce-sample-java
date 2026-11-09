@@ -3,7 +3,6 @@ package dev.domaincentric.sample.ecommerce.inventory.adapter.outgoing.persistenc
 import dev.domaincentric.sample.ecommerce.inventory.application.shared.ProcessedEvents;
 import java.util.UUID;
 import javax.sql.DataSource;
-import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +11,6 @@ import org.springframework.stereotype.Component;
  * the same database and transaction as the effect it guards — an effect and its record commit or
  * roll back together.
  */
-@Profile("!inmemory")
 @Component("inventoryProcessedEvents")
 public class JdbcProcessedEvents implements ProcessedEvents {
 

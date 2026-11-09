@@ -6,34 +6,17 @@ import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import dev.domaincentric.sample.ecommerce.sharedkernel.infrastructure.AsyncInitialize;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Repository;
 
 /**
- * In-memory implementation of ShoppingCartRepository.
+ * In-memory fake of {@link ShoppingCartRepository} for tests without a database.
  *
- * <p>This secondary adapter provides a thread-safe in-memory storage for shopping carts using
- * ConcurrentHashMap. In a production system, this would be replaced with a database implementation.
- *
- * <p><b>Async Initialization:</b> This repository uses {@link AsyncInitialize} to perform
- * non-blocking cache warmup. The {@code asyncInitialize()} method is invoked asynchronously after
- * bean initialization, allowing the application to start without waiting for initialization tasks.
- *
- * @see AsyncInitialize
+ * <p>It stores and hands out copies, so a change survives only through {@code save}, and claims a
+ * customer's one active cart the way the partial unique index does.
  */
-@org.springframework.context.annotation.Profile("inmemory")
-@Repository
-@AsyncInitialize(priority = 100, description = "Initialize shopping cart metrics")
 public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
-
-  private static final Logger logger =
-      LoggerFactory.getLogger(InMemoryShoppingCartRepository.class);
 
   private final ConcurrentHashMap<CartId, ShoppingCart> carts = new ConcurrentHashMap<>();
 
@@ -49,7 +32,7 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
 
   @Override
   public Optional<ShoppingCart> findById(final CartId id) {
-    return Optional.ofNullable(carts.get(id));
+    return Optional.ofNullable(carts.get(id)).map(InMemoryShoppingCartRepository::copyOf);
   }
 
   @Override
@@ -60,17 +43,22 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
 
   @Override
   public List<ShoppingCart> findByCustomerId(final CustomerId customerId) {
-    return carts.values().stream().filter(cart -> cart.customerId().equals(customerId)).toList();
+    return carts.values().stream()
+        .filter(cart -> cart.customerId().equals(customerId))
+        .map(InMemoryShoppingCartRepository::copyOf)
+        .toList();
   }
 
   @Override
   public Optional<ShoppingCart> findActiveCartByCustomerId(final CustomerId customerId) {
-    return Optional.ofNullable(activeCartByCustomer.get(customerId)).map(carts::get);
+    return Optional.ofNullable(activeCartByCustomer.get(customerId))
+        .map(carts::get)
+        .map(InMemoryShoppingCartRepository::copyOf);
   }
 
   @Override
   public List<ShoppingCart> findAll() {
-    return List.copyOf(carts.values());
+    return carts.values().stream().map(InMemoryShoppingCartRepository::copyOf).toList();
   }
 
   /**
@@ -84,7 +72,8 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
     // A relational store makes both visible at one commit; here the two writes are separate, so
     // publishing the claim first would let the request that lost the race read the winner's id out
     // of the index and find nothing behind it.
-    carts.put(cart.id(), cart);
+    final ShoppingCart stored = copyOf(cart);
+    carts.put(cart.id(), stored);
 
     // A cart an account took over is claimed by its new owner; the former owner's claim goes.
     activeCartByCustomer
@@ -96,7 +85,7 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
     if (cart.status() == CartStatus.ACTIVE) {
       final CartId claimed = activeCartByCustomer.putIfAbsent(cart.customerId(), cart.id());
       if (claimed != null && !claimed.equals(cart.id())) {
-        carts.remove(cart.id(), cart);
+        carts.remove(cart.id(), stored);
         throw new ActiveCartAlreadyExistsException(cart.customerId());
       }
     } else {
@@ -114,42 +103,20 @@ public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
     }
   }
 
-  /**
-   * Asynchronous initialization method triggered by {@link AsyncInitialize}.
-   *
-   * <p>This method is invoked after bean construction to initialize shopping cart metrics and
-   * perform background setup tasks. The {@code @Async} annotation ensures non-blocking execution,
-   * allowing the application to start immediately.
-   *
-   * <p><b>Pattern:</b> This demonstrates the {@code @AsyncInitialize} pattern with lower priority
-   * (100) than ProductRepository (50), ensuring products are initialized first.
-   *
-   * @see AsyncInitialize
-   * @see dev.domaincentric.sample.ecommerce.infrastructure.config.AsyncConfiguration
-   * @see dev.domaincentric.sample.ecommerce.infrastructure.support.AsyncInitializationProcessor
-   */
-  @Async
-  public void asyncInitialize() {
-    logger.info("Starting async initialization of ShoppingCartRepository...");
-
-    try {
-      // Simulate initialization delay
-      Thread.sleep(1500);
-
-      // In a real application, this would:
-      // - Initialize metrics collectors
-      // - Preload abandoned cart data
-      // - Set up monitoring dashboards
-      int cartCount = carts.size();
-
-      logger.info(
-          "ShoppingCartRepository initialization completed. Current cart count: {}", cartCount);
-
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      logger.error("ShoppingCartRepository async initialization interrupted", e);
-    } catch (Exception e) {
-      logger.error("Error during ShoppingCartRepository async initialization", e);
-    }
+  private static ShoppingCart copyOf(final ShoppingCart cart) {
+    return ShoppingCart.reconstitute(
+        cart.id(),
+        cart.customerId(),
+        cart.status(),
+        cart.items().stream()
+            .map(
+                item ->
+                    new ShoppingCart.StoredItem(
+                        item.id(),
+                        item.productId(),
+                        item.quantity(),
+                        item.priceAtAddition(),
+                        item.storedUnits()))
+            .toList());
   }
 }

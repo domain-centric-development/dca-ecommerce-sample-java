@@ -29,7 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
  * read into a {@link CartRow} plus the cart's stored lines and handed to {@code
  * ShoppingCart.reconstitute}, which restores the aggregate without raising domain events.
  */
-@org.springframework.context.annotation.Profile("!inmemory")
 @Repository
 public class JdbcShoppingCartRepository implements ShoppingCartRepository {
 

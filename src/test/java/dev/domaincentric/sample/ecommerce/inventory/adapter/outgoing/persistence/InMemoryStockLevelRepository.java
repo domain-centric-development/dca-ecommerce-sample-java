@@ -8,22 +8,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Repository;
 
 /**
- * In-memory implementation of StockLevelRepository.
- *
- * <p>This secondary adapter provides a thread-safe in-memory storage for stock levels using
- * ConcurrentHashMap. A secondary index on ProductId enables efficient lookups by product.
- *
- * <p>Stock levels are created via SampleDataInitializer which coordinates initialization across all
- * bounded contexts (Product, Pricing, Inventory).
- *
- * <p>In a production system, this would be replaced with a database implementation.
+ * In-memory fake of {@link StockLevelRepository} for tests without a database: one stock level per
+ * product, stored and handed out as copies, so a change survives only through {@code save}.
  */
-@Profile("inmemory")
-@Repository
 public class InMemoryStockLevelRepository implements StockLevelRepository {
 
   private final ConcurrentHashMap<StockLevelId, StockLevel> stockLevels = new ConcurrentHashMap<>();
@@ -32,7 +21,7 @@ public class InMemoryStockLevelRepository implements StockLevelRepository {
 
   @Override
   public Optional<StockLevel> findById(final StockLevelId id) {
-    return Optional.ofNullable(stockLevels.get(id));
+    return Optional.ofNullable(stockLevels.get(id)).map(InMemoryStockLevelRepository::copyOf);
   }
 
   @Override
@@ -51,17 +40,18 @@ public class InMemoryStockLevelRepository implements StockLevelRepository {
         .filter(stockLevelId -> stockLevelId != null)
         .map(stockLevels::get)
         .filter(stockLevel -> stockLevel != null)
+        .map(InMemoryStockLevelRepository::copyOf)
         .toList();
   }
 
   @Override
   public List<StockLevel> findAll() {
-    return List.copyOf(stockLevels.values());
+    return stockLevels.values().stream().map(InMemoryStockLevelRepository::copyOf).toList();
   }
 
   @Override
   public StockLevel save(final StockLevel stockLevel) {
-    stockLevels.put(stockLevel.id(), stockLevel);
+    stockLevels.put(stockLevel.id(), copyOf(stockLevel));
     productIdIndex.put(stockLevel.productId(), stockLevel.id());
     return stockLevel;
   }
@@ -72,5 +62,13 @@ public class InMemoryStockLevelRepository implements StockLevelRepository {
     if (stockLevel != null) {
       productIdIndex.remove(stockLevel.productId());
     }
+  }
+
+  private static StockLevel copyOf(final StockLevel stockLevel) {
+    return StockLevel.reconstitute(
+        stockLevel.id(),
+        stockLevel.productId(),
+        stockLevel.availableQuantity(),
+        stockLevel.reservedQuantity());
   }
 }

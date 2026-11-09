@@ -12,7 +12,6 @@ import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
 import javax.sql.DataSource;
-import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -21,7 +20,6 @@ import org.springframework.stereotype.Repository;
  * PostgreSQL/JDBC implementation of {@link ProductPriceRepository}: one row per product, read back
  * through {@link ProductPrice#reconstitute}, so every load hands out a fresh instance.
  */
-@Profile("!inmemory")
 @Repository
 public class JdbcProductPriceRepository implements ProductPriceRepository {
 

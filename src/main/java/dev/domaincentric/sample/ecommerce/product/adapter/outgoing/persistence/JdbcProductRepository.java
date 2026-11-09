@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import javax.sql.DataSource;
-import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -25,7 +24,6 @@ import org.springframework.stereotype.Repository;
  * instance and a change survives only through {@code save}. Listings are ordered by name in the
  * {@code "C"} collation — byte order, the ordinal comparison the port promises.
  */
-@Profile("!inmemory")
 @Repository
 public class JdbcProductRepository implements ProductRepository {
 

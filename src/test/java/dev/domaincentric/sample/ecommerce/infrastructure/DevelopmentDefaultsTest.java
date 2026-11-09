@@ -154,7 +154,7 @@ class DevelopmentDefaultsTest {
     @Test
     @DisplayName("the shipped values are what the sample is for")
     void acceptsTheShippedValues() {
-      for (final String profile : new String[] {"dev", "inmemory"}) {
+      for (final String profile : new String[] {"dev"}) {
         final var environment = new MockEnvironment();
         environment.setActiveProfiles(profile);
 

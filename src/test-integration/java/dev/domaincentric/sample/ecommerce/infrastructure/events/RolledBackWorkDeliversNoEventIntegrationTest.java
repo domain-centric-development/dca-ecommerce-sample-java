@@ -20,13 +20,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Work that rolls back leaves no trace of its integration event — in every profile, including
- * {@code inmemory}.
+ * Work that rolls back leaves no trace of its integration event.
  *
  * <p>Delivery itself is safe either way: an {@code @ApplicationModuleListener} fires after commit,
  * so a rolled-back publication is never handed to a listener in the same run. What is not safe is
@@ -34,7 +32,6 @@ import org.springframework.transaction.support.TransactionTemplate;
  * published the event, and a transaction manager that only pretends to open one lets that row
  * commit on its own. The work is gone, the row remains — and the next recovery run delivers it.
  */
-@ActiveProfiles("inmemory")
 @SpringBootTest(
     classes = {
       EcommerceSampleApplication.class,

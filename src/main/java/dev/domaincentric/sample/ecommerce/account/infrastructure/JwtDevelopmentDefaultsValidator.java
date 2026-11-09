@@ -27,7 +27,7 @@ public class JwtDevelopmentDefaultsValidator implements InitializingBean {
    * the shop is production unless it says otherwise (the .NET twin reads {@code
    * ASPNETCORE_ENVIRONMENT} for it).
    */
-  public static final String DEVELOPMENT_PROFILES = "dev | inmemory";
+  public static final String DEVELOPMENT_PROFILES = "dev";
 
   private final JwtProperties properties;
   private final Environment environment;

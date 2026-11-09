@@ -21,7 +21,7 @@ public class BackofficeDevelopmentDefaultsValidator implements InitializingBean 
    * another context's infrastructure to learn what development means. {@code
    * DevelopmentDefaultsTest} holds them to one answer.
    */
-  public static final String DEVELOPMENT_PROFILES = "dev | inmemory";
+  public static final String DEVELOPMENT_PROFILES = "dev";
 
   private static final String SESSION_COOKIE_SECURE = "server.servlet.session.cookie.secure";
 

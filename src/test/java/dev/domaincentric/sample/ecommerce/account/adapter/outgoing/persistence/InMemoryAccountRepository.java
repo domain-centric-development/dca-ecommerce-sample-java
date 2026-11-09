@@ -7,23 +7,14 @@ import dev.domaincentric.sample.ecommerce.account.domain.model.Email;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Repository;
 
 /**
- * In-memory implementation of AccountRepository, active under the {@code inmemory} profile.
+ * In-memory fake of {@link AccountRepository} for tests without a database.
  *
- * <p>{@link JdbcAccountRepository} is the default; this adapter exists to run the account context
- * without a database. Note that the {@code inmemory} profile is only partial today: the cart still
- * persists via JPA, so the application as a whole still needs its datasource.
- *
- * <p>It behaves as though a database were behind it (ADR-031): every account is copied on the way
- * in and on the way out, so callers never share an instance with the store. Handing out the stored
- * aggregate would let a use case that forgets to {@code save} appear to work here and fail against
- * any real persistence.
+ * <p>It behaves as the JDBC adapter does where callers can tell: it stores and hands out copies, so
+ * a change survives only through {@code save}, and it claims the email and the linked user id the
+ * way the {@code UNIQUE} columns do. {@code AccountRepositoryContractTest} holds both to that.
  */
-@Profile("inmemory")
-@Repository
 public class InMemoryAccountRepository implements AccountRepository {
 
   private final ConcurrentHashMap<AccountId, Account> accounts = new ConcurrentHashMap<>();

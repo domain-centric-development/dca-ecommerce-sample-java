@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import javax.sql.DataSource;
-import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -24,7 +23,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * holds every other one back until this transaction ends — across processes, where the
  * one-at-a-time of {@link StockLevelRepository#inStockLevels} reaches only this one.
  */
-@Profile("!inmemory")
 @Repository
 public class JdbcStockLevelRepository implements StockLevelRepository {
 
