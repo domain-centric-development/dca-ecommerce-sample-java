@@ -3,6 +3,8 @@ package dev.domaincentric.sample.ecommerce.product.adapter.incoming.bootstrap;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductCommand;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductInputPort;
 import dev.domaincentric.sample.ecommerce.product.application.createproduct.CreateProductResult;
+import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsInputPort;
+import dev.domaincentric.sample.ecommerce.product.application.getallproducts.GetAllProductsQuery;
 import java.math.BigDecimal;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -23,6 +25,9 @@ import org.springframework.stereotype.Component;
  * infrastructure}: there it would need the context's application layer, which the module exposes to
  * nobody. The .NET twin's {@code SampleDataSeeder} has the same place and shape.
  *
+ * <p>It seeds an empty catalog only: the database outlives the process, so a restarted shop — or a
+ * second one on the same database — finds the catalog it seeded before and leaves it as it is.
+ *
  * <p>Runs as an {@link ApplicationRunner} and manages no transaction of its own: each {@code
  * CreateProduct} call runs inside the use case's transaction boundary, which is where a transaction
  * belongs (DCA-LAY-004). An incoming adapter drives, it does not decide how far a unit of work
@@ -32,14 +37,19 @@ import org.springframework.stereotype.Component;
 public class SampleDataInitializer implements ApplicationRunner {
 
   private final CreateProductInputPort createProduct;
+  private final GetAllProductsInputPort getAllProducts;
 
-  public SampleDataInitializer(final CreateProductInputPort createProduct) {
+  public SampleDataInitializer(
+      final CreateProductInputPort createProduct, final GetAllProductsInputPort getAllProducts) {
     this.createProduct = createProduct;
+    this.getAllProducts = getAllProducts;
   }
 
   @Override
   public void run(final ApplicationArguments args) {
-    loadSampleProducts();
+    if (getAllProducts.execute(new GetAllProductsQuery()).products().isEmpty()) {
+      loadSampleProducts();
+    }
   }
 
   private void loadSampleProducts() {

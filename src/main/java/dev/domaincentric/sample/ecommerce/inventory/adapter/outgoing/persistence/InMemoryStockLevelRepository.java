@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Repository;
  *
  * <p>In a production system, this would be replaced with a database implementation.
  */
+@Profile("inmemory")
 @Repository
 public class InMemoryStockLevelRepository implements StockLevelRepository {
 

@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Repository;
 
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Repository;
  *
  * @see AsyncInitialize
  */
+@Profile("inmemory")
 @Repository
 @AsyncInitialize(priority = 60, description = "Initialize pricing data repository")
 public class InMemoryProductPriceRepository implements ProductPriceRepository {

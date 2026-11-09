@@ -4,6 +4,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shared.ProcessedEvent
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
  * context's in-memory stores. A deployment that keeps its data across restarts keeps this record in
  * the same store and transaction as the effect it guards.
  */
+@Profile("inmemory")
 @Component("cartProcessedEvents")
 public class InMemoryProcessedEvents implements ProcessedEvents {
 

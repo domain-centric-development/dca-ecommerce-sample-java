@@ -37,8 +37,8 @@ claims are database constraints. The schema comes from Flyway, one versioned scr
 under `db/migration/`, plain SQL with the same file names in both shops; the event publication
 table is Spring Modulith's. Tests and `./gradlew bootTestRun` start PostgreSQL in a container
 (Testcontainers, Docker or Podman); `./gradlew bootRun` and the container connect to the database
-`DATABASE_URL` names. Product, pricing, inventory and checkout still keep their aggregates in memory
-until their adapters follow.
+`DATABASE_URL` names. Checkout still keeps its sessions in memory until its adapter follows. The
+sample catalogue is seeded into an empty database only.
 
 ## Runtime
 

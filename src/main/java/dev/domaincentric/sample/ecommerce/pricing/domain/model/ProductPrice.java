@@ -64,6 +64,24 @@ public final class ProductPrice extends BaseAggregateRoot<ProductPrice, PriceId>
     return productPrice;
   }
 
+  /**
+   * Restores a stored price as it was saved, without raising a domain event: nothing happened, it
+   * was only read back.
+   *
+   * @param id the price's id
+   * @param productId the product it prices
+   * @param currentPrice the price in force
+   * @param effectiveFrom when that price took effect
+   * @return the reconstituted price, with no pending domain events
+   */
+  public static ProductPrice reconstitute(
+      final PriceId id,
+      final ProductId productId,
+      final Price currentPrice,
+      final Instant effectiveFrom) {
+    return new ProductPrice(id, productId, currentPrice, effectiveFrom);
+  }
+
   @Override
   public PriceId id() {
     return id;

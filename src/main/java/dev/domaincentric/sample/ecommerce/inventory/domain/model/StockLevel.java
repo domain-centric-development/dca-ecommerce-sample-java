@@ -78,6 +78,24 @@ public final class StockLevel extends BaseAggregateRoot<StockLevel, StockLevelId
     return stockLevel;
   }
 
+  /**
+   * Restores a stored stock level as it was saved, without raising a domain event: nothing
+   * happened, it was only read back.
+   *
+   * @param id the stock level's id
+   * @param productId the product it counts
+   * @param availableQuantity the units on hand
+   * @param reservedQuantity the units of those earmarked for pending orders
+   * @return the reconstituted stock level, with no pending domain events
+   */
+  public static StockLevel reconstitute(
+      final StockLevelId id,
+      final ProductId productId,
+      final StockQuantity availableQuantity,
+      final StockQuantity reservedQuantity) {
+    return new StockLevel(id, productId, availableQuantity, reservedQuantity);
+  }
+
   @Override
   public StockLevelId id() {
     return id;
