@@ -45,8 +45,9 @@ class CheckoutSessionTakeOverTest {
   @Test
   @DisplayName("refuses a session that is no longer active")
   void refusesASessionThatIsNoLongerActive() {
-    final CheckoutSession session = aGuestSessionOnTheDeliveryStep();
-    session.abandon();
+    final CheckoutSession session =
+        StoredCheckoutSessions.withStatus(
+            aGuestSessionOnTheDeliveryStep(), CheckoutSessionStatus.ABANDONED);
 
     assertThrows(CheckoutNotModifiableException.class, () -> session.takeOverBy(ACCOUNT));
     assertEquals(GUEST, session.customerId());

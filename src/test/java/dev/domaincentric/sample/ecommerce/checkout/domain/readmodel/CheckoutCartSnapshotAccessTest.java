@@ -7,6 +7,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItem;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutLineItemId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSession;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutSessionStatus;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CheckoutStep;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.DeliveryAddress;
@@ -14,6 +15,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentProviderI
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.PaymentSelection;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.ShippingOption;
 import dev.domaincentric.sample.ecommerce.checkout.domain.model.StepAccess;
+import dev.domaincentric.sample.ecommerce.checkout.domain.model.StoredCheckoutSessions;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 import java.math.BigDecimal;
@@ -274,21 +276,16 @@ class CheckoutCartSnapshotAccessTest {
   }
 
   private CheckoutSession createCompletedSession() {
-    CheckoutSession session = createConfirmedSession();
-    session.complete("ORD-123");
-    return session;
+    return StoredCheckoutSessions.completed(createConfirmedSession(), "ORD-123");
   }
 
   private CheckoutSession createAbandonedSession() {
-    CheckoutSession session = createActiveSession();
-    session.abandon();
-    return session;
+    return StoredCheckoutSessions.withStatus(
+        createActiveSession(), CheckoutSessionStatus.ABANDONED);
   }
 
   private CheckoutSession createExpiredSession() {
-    CheckoutSession session = createActiveSession();
-    session.expire();
-    return session;
+    return StoredCheckoutSessions.withStatus(createActiveSession(), CheckoutSessionStatus.EXPIRED);
   }
 
   private CheckoutLineItem createLineItem() {

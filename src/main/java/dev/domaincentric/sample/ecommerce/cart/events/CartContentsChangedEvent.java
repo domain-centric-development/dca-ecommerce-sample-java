@@ -9,9 +9,8 @@ import java.util.UUID;
  * Integration Event published when cart contents change.
  *
  * <p>Consolidates multiple internal cart domain events (CartItemAddedToCart,
- * ProductRemovedFromCart, CartItemQuantityChanged, CartCleared) into a single cross-module event.
- * The Checkout context consumes this event to sync checkout sessions instead of listening to
- * individual domain events.
+ * ProductRemovedFromCart, CartCleared) into a single cross-module event. The Checkout context
+ * consumes this event to sync checkout sessions instead of listening to individual domain events.
  */
 @IntegrationEventType(name = "cart-contents-changed", version = 1)
 public record CartContentsChangedEvent(

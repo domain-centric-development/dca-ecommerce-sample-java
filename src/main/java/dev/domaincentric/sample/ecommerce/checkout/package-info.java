@@ -11,7 +11,7 @@
     context = "product",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
     via = Upstream.Consumes.API,
-    rationale = "Product data is translated into checkout's own article and product info types")
+    rationale = "Product data is translated into checkout's own article types")
 @Upstream(
     context = "pricing",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
@@ -40,26 +40,17 @@
     via = Upstream.Consumes.EVENTS,
     rationale =
         "CheckoutConfirmedEvent implements cart's consumer-defined CartCompletionTrigger contract"
-            + " as-is; cart change events are consumed directly")
+            + " as-is; cart's CartContentsChangedEvent is consumed as published")
 @ExternalUpstream(
     name = "Payment Service Provider",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
     interaction = ExternalUpstream.Interaction.OUTBOUND,
     protocol = "REST",
-    exchanges = "payment request (amount, currency) and its answer (authorized, refused)",
+    exchanges = "payment operations (initiate, confirm, cancel)",
     rationale =
-        "Behind the caller-owned PaymentProvider port; a REST adapter translates the provider's"
-            + " answers where its address is configured, a stand-in takes payments otherwise")
-@ExternalUpstream(
-    name = "Payment Service Provider",
-    translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
-    interaction = ExternalUpstream.Interaction.INBOUND,
-    status = Upstream.Status.PLANNED,
-    protocol = "webhook",
-    exchanges = "payment confirmation (payment id, status)",
-    rationale =
-        "Will trigger order fulfillment; the payload is the provider's contract, to be translated"
-            + " into a local command at the incoming adapter — no webhook adapter exists yet")
+        "Behind a caller-owned port per provider and a registry that chooses one; a REST adapter"
+            + " translates the provider's answers where its address is configured, a stand-in takes"
+            + " payments otherwise")
 @ExternalUpstream(
     name = "Mail Provider",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,

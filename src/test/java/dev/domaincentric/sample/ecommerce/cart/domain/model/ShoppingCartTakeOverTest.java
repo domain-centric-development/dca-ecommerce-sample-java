@@ -47,8 +47,7 @@ class ShoppingCartTakeOverTest {
   @Test
   @DisplayName("refuses a cart that is no longer active")
   void refusesACartThatIsNoLongerActive() {
-    final ShoppingCart cart = aGuestCart();
-    cart.abandon();
+    final ShoppingCart cart = StoredCarts.withStatus(aGuestCart(), CartStatus.ABANDONED);
 
     assertThrows(CartNotModifiableException.class, () -> cart.takeOverBy(ACCOUNT));
     assertEquals(GUEST, cart.customerId());

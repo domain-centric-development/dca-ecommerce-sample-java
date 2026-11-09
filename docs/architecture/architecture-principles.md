@@ -2189,7 +2189,7 @@ Both lines refuse, and they are not the same kind of refusal. A negative amount 
 the caller, stated as an argument contract. A quantity the warehouse does not have is a legitimate request with a
 business answer, and it carries the facts the rule compared so the caller can say what happened.
 
-**The cut:** would a domain expert have a word for this failure? `InsufficientStock`, `CartAlreadyCompleted`,
+**The cut:** would a domain expert have a word for this failure? `InsufficientStock`, `CartNotModifiable`,
 `PasswordTooWeak` — yes, so each is a domain exception with that word in its name. "Must not be null", "must be
 positive", "must not exceed 255 characters" — no, so those stay `IllegalArgumentException`.
 

@@ -24,12 +24,7 @@ authentication, roles, and the lifecycle (active, suspended, closed).
 **Related terms:** `Email`, `Owner`, `HashedPassword`, `AccountStatus`, `UserId`,
 `PasswordHasher`, `Role`.
 
-**Operations:** `register` (the account comes into existence, linked to the caller's `UserId`),
-`reconstitute` (restores a stored account; no rule re-evaluated, no event), `checkPassword` (a
-question; changes nothing), `recordLogin`, `changePassword`, `changeEmail`,
-`changeOwnerDateOfBirth`, `suspend` (kept with status suspended; `reactivate` undoes it),
-`reactivate`, `close` (kept with status closed, for good — the account is not deleted), `addRole` /
-`removeRole` (a role goes into or out of the account's role set; no event).
+**Operations:** `register` (the account comes into existence, linked to the caller's `UserId`), `reconstitute` (restores a stored account; no rule re-evaluated, no event), `checkPassword` (a question; changes nothing), `recordLogin`, `changePassword`, `changeEmail`, `changeOwnerDateOfBirth`.
 
 **Notes:** The account belongs to an **`Owner`**, whose **name is fixed at registration**: no
 operation on the aggregate accepts an `Owner` or mentions a name, so the only way a name enters the
@@ -51,7 +46,7 @@ login credential.
 
 **Type:** Value Object
 
-**Operations:** `of`, `localPart`, `domain`.
+**Operations:** `localPart`, `domain`.
 
 ### Owner
 
@@ -65,8 +60,7 @@ Its **full name** is the first and the last name joined by one space, as the pro
 
 **Type:** Value Object
 
-**Operations:** `of`, `withDateOfBirth`, `fullName` (first and last name joined by one space; the
-profile page shows it).
+**Operations:** `withDateOfBirth`, `fullName` (first and last name joined by one space; the profile page shows it).
 
 **Notes:** Names are trimmed but never otherwise normalized — capitalization, particles and spelling
 of a person's own name are not the account's to correct — and are limited to 100 characters. A date
@@ -85,8 +79,7 @@ the actual cryptographic operation to the `PasswordHasher` domain gateway.
 
 **Related terms:** `PasswordHasher` (Domain Gateway in `account.domain.gateway`).
 
-**Operations:** `fromPlaintext` (from input: the strength rules run, the gateway hashes), `fromHash`
-(from storage: the stored hash taken as given), `matches`, `validatePasswordStrength`.
+**Operations:** `matches`, `validatePasswordStrength`.
 
 **Notes:** `toString()` is deliberately masked. The rules themselves are named below as **Password
 Policy**; change them there and here together.
@@ -133,8 +126,6 @@ has exactly one `AccountId` and is linked to exactly one `UserId`.
 
 **Type:** Value Object (ID)
 
-**Operations:** `of`, `generate`.
-
 ### AccountStatus
 
 **Definition:** Lifecycle status of an account: `ACTIVE` (can log in), `SUSPENDED` (temporarily
@@ -162,8 +153,7 @@ instances, and an account's roles are a set of them. It lives in the shared kern
 contexts (the product and cart APIs) guard on it through the identity that carries the roles; a code no role
 carries is dropped when a token is read.
 
-**Operations:** `code` (the role's fixed spelling in the token's `roles` claim and in the stored role set:
-`CUSTOMER`, `STAFF`), `fromCode` (the role a code names; an unknown code is refused).
+**Operations:** `code` (the role's fixed spelling in the token's `roles` claim and in the stored role set: `CUSTOMER`, `STAFF`), `fromCode` (the role a code names; an unknown code is refused).
 
 **Synonyms (avoid):** raw `String` role.
 
@@ -247,24 +237,6 @@ deliberately no counterpart for the owner's name, because no operation changes i
 
 **Related terms:** `Account`, `Owner`.
 
-### AccountSuspended
-
-**Definition:** An account has been temporarily blocked and can no longer log in.
-
-**Type:** Domain Event
-
-### AccountReactivated
-
-**Definition:** A previously suspended account has been re-enabled.
-
-**Type:** Domain Event
-
-### AccountClosed
-
-**Definition:** An account has been permanently closed; terminal state of the lifecycle.
-
-**Type:** Domain Event
-
 ---
 
 ## Domain Gateways
@@ -330,14 +302,6 @@ Named refusals of the account model, plus the two the registration use case owns
 **Definition:** An account whose status does not allow signing in would record a login.
 
 **Type:** Domain failure (`DomainException`) · **Related terms:** `Account.recordLogin`, `AccountStatus`
-
----
-
-### AccountNotSuspended
-
-**Definition:** An account that is not suspended would be reactivated.
-
-**Type:** Domain failure (`DomainException`) · **Related terms:** `Account.reactivate`
 
 ---
 

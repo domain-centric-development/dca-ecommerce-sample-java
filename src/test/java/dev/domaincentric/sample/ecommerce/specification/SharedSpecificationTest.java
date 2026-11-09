@@ -96,16 +96,45 @@ class SharedSpecificationTest {
     }
   }
 
+  /**
+   * The cart with its first line's quantity set, as a stored cart would come back after the change.
+   */
+  static ShoppingCart withFirstLineSetTo(ShoppingCart cart, int quantity) {
+    var items = cart.items();
+    return ShoppingCart.reconstitute(
+        cart.id(),
+        cart.customerId(),
+        cart.status(),
+        java.util.stream.IntStream.range(0, items.size())
+            .mapToObj(
+                index -> {
+                  var i = items.get(index);
+                  return index == 0
+                      ? new ShoppingCart.StoredItem(
+                          i.id(),
+                          i.productId(),
+                          Quantity.of(quantity),
+                          i.priceAtAddition(),
+                          PositionUnits.parse(i.storedUnits()).resize(quantity).serialize())
+                      : new ShoppingCart.StoredItem(
+                          i.id(),
+                          i.productId(),
+                          i.quantity(),
+                          i.priceAtAddition(),
+                          i.storedUnits());
+                })
+            .toList());
+  }
+
   static void reconciliation(JsonNode v) {
-    var cart = ShoppingCart.create(CartId.generate(), CustomerId.of("specification"));
+    ShoppingCart cart = ShoppingCart.create(CartId.generate(), CustomerId.of("specification"));
     var product = ProductId.generate();
     var price = Price.of(Money.euro(10));
     cart.addItem(product, Quantity.of(v.path("initial").asInt()), price);
     String snapshot = cart.items().get(0).positionSnapshot();
     for (JsonNode edit : v.path("edits")) {
       if (edit.has("add")) cart.addItem(product, Quantity.of(edit.path("add").asInt()), price);
-      else if (edit.has("set"))
-        cart.updateItemQuantity(cart.items().get(0).id(), Quantity.of(edit.path("set").asInt()));
+      else if (edit.has("set")) cart = withFirstLineSetTo(cart, edit.path("set").asInt());
       else if (edit.has("remove")) cart.removeItemByProductId(product);
       else if (edit.has("other"))
         cart.addItem(ProductId.generate(), Quantity.of(edit.path("other").asInt()), price);
@@ -143,11 +172,14 @@ class SharedSpecificationTest {
         () -> {
           var product =
               new dev.domaincentric.sample.ecommerce.product.domain.model.ProductFactory()
-                  .createBasicProduct(
+                  .createProduct(
                       dev.domaincentric.sample.ecommerce.product.domain.model.SKU.of("SPEC-1"),
                       dev.domaincentric.sample.ecommerce.product.domain.model.ProductName.of(
                           "Specification product"),
+                      dev.domaincentric.sample.ecommerce.product.domain.model.ProductDescription
+                          .empty(),
                       dev.domaincentric.sample.ecommerce.product.domain.model.Category.of("Test"),
+                      dev.domaincentric.sample.ecommerce.product.domain.model.ImageUrl.empty(),
                       Price.of(Money.euro(1)),
                       v.path("stock").asInt());
           assertEquals(1, product.domainEvents().size());

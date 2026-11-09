@@ -1,22 +1,24 @@
 /**
  * Product Catalog Bounded Context.
  *
- * <p>Responsible for product management, catalog browsing, and inventory tracking.
+ * <p>Responsible for product management and catalog browsing.
  */
 @NullMarked
-@BoundedContext(
-    name = "Product Catalog",
-    description = "Product management, catalog browsing, and inventory tracking")
+@BoundedContext(name = "Product Catalog", description = "Product management and catalog browsing")
 @Upstream(
     context = "pricing",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
     via = Upstream.Consumes.API,
-    rationale = "Prices are translated into the catalog's own product presentation data")
+    rationale =
+        "The catalog shows a price but does not own it; the pricing model is translated into the"
+            + " catalog's own article view")
 @Upstream(
     context = "inventory",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
     via = Upstream.Consumes.API,
-    rationale = "Stock levels are translated into the catalog's own availability data")
+    rationale =
+        "Availability is an inventory statement; the catalog translates it into its own article"
+            + " view")
 @Upstream(
     context = "pricing",
     translation = Upstream.Translation.CONFORMIST,

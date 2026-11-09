@@ -24,12 +24,10 @@ open orders, and ensures that reservations never exceed the available quantity.
 **Identity:** `StockLevelId`
 
 **Related terms:** `StockQuantity`, `ProductId`, `StockLevelCreated`,
-`StockIncreased`, `StockDecreased`, `StockReserved`, `StockReleased`,
-`StockChanged`
+`StockDecreased`, `StockReserved`, `StockReleased`, `StockChanged`
 
 **Operations:**
 - `create(productId, initialQuantity)` — Create a new stock-keeping unit: the stock level comes into existence for one product, nothing reserved
-- `increaseStock(amount)` — Record incoming goods: the available quantity grows by the amount
 - `decreaseStock(amount)` — Record outgoing goods (e.g. shipment): the available quantity shrinks by the amount. It does not consume a reservation — a reservation above the new figure is only capped to it; there is no separate operation that turns reserved stock into shipped stock
 - `reserve(amount)` — Reserve stock for an order: the amount is earmarked out of the unreserved stock and stays in the available quantity
 - `release(amount)` — Release previously reserved stock: the reservation shrinks, the available quantity is unchanged
@@ -99,17 +97,6 @@ object.
 **Related terms:** `StockLevel.create`
 
 **Notes:** Payload: `stockLevelId`, `productId`, `initialQuantity`.
-
----
-
-### StockIncreased
-
-**Definition:** Available stock was increased by a specific amount
-(typical trigger: incoming goods).
-
-**Type:** Domain Event
-
-**Related terms:** `StockLevel.increaseStock`
 
 ---
 
@@ -335,7 +322,7 @@ business before the model is consolidated:
    events such as:
    - `StockReconciled` (stocktake)
    - or a clean separation via `StockReserved` / `StockReleased` /
-     `StockIncreased` / `StockDecreased`, which already exist anyway.
+     `StockDecreased`, which already exist anyway.
 
 3. **Arithmetic on `StockQuantity`** is currently done in the aggregate.
    Candidate for moving addition and subtraction into the value object.

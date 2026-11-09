@@ -3,10 +3,7 @@ package dev.domaincentric.sample.ecommerce.checkout.domain.model;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.Owned;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.BuyerInfoSubmitted;
-import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutAbandoned;
-import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutCompleted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutConfirmed;
-import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutExpired;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.CheckoutSessionStarted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.DeliverySubmitted;
 import dev.domaincentric.sample.ecommerce.checkout.domain.event.PaymentSubmitted;
@@ -42,9 +39,6 @@ import org.jspecify.annotations.Nullable;
  *   <li>{@link DeliverySubmitted} - when delivery step is completed
  *   <li>{@link PaymentSubmitted} - when the provider authorized the payment at the review
  *   <li>{@link CheckoutConfirmed} - when order is confirmed at review
- *   <li>{@link CheckoutCompleted} - when checkout is fully processed
- *   <li>{@link CheckoutAbandoned} - when customer abandons checkout
- *   <li>{@link CheckoutExpired} - when session expires due to inactivity
  * </ul>
  */
 public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, CheckoutSessionId>
@@ -503,82 +497,6 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
     registerEvent(
         CheckoutConfirmed.now(
             this.id, this.cartId, this.customerId, this.totals.total(), this.lineItems));
-  }
-
-  /**
-   * Completes the checkout after successful payment processing.
-   *
-   * <p>Raises a {@link CheckoutCompleted} domain event.
-   *
-   * @param orderReference optional order reference from order system
-   * @throws CheckoutNotConfirmedException if the session was never confirmed
-   */
-  public void complete(@Nullable final String orderReference) {
-    if (!status.canComplete()) {
-      throw new CheckoutNotConfirmedException(this.id, status);
-    }
-
-    this.orderReference = orderReference;
-    this.status = CheckoutSessionStatus.COMPLETED;
-
-    registerEvent(CheckoutCompleted.now(this.id, this.totals.total(), orderReference));
-  }
-
-  /**
-   * Abandons the checkout session.
-   *
-   * <p>Raises a {@link CheckoutAbandoned} domain event.
-   *
-   * @throws CheckoutNotModifiableException if the session is already in a terminal state
-   */
-  public void abandon() {
-    if (!status.isModifiable()) {
-      throw new CheckoutNotModifiableException(this.id, status);
-    }
-
-    final CheckoutStep abandonedAt = this.currentStep;
-    this.status = CheckoutSessionStatus.ABANDONED;
-
-    registerEvent(CheckoutAbandoned.now(this.id, abandonedAt));
-  }
-
-  /**
-   * Expires the checkout session due to inactivity.
-   *
-   * <p>Raises a {@link CheckoutExpired} domain event.
-   *
-   * @throws CheckoutNotModifiableException if the session is already in a terminal state
-   */
-  public void expire() {
-    if (!status.isModifiable()) {
-      throw new CheckoutNotModifiableException(this.id, status);
-    }
-
-    final CheckoutStep expiredAt = this.currentStep;
-    this.status = CheckoutSessionStatus.EXPIRED;
-
-    registerEvent(CheckoutExpired.now(this.id, expiredAt));
-  }
-
-  /**
-   * Navigates back to a previous step.
-   *
-   * @param step the step to navigate back to
-   * @throws CheckoutNotModifiableException if the session no longer takes changes
-   * @throws CheckoutStepNotNavigableException if the confirmation step is asked for
-   * @throws CheckoutStepOutOfOrderException if the step is ahead of the current one
-   */
-  public void goBackTo(final CheckoutStep step) {
-    ensureModifiable();
-
-    if (step == CheckoutStep.CONFIRMATION) {
-      throw new CheckoutStepNotNavigableException(this.id, step);
-    }
-    if (step.isAfter(currentStep)) {
-      throw new CheckoutStepOutOfOrderException(this.id, step, currentStep);
-    }
-
-    this.currentStep = step;
   }
 
   /**

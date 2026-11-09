@@ -40,8 +40,8 @@ class CheckoutSessionAssertReadyForConfirmationTest {
   @Test
   @DisplayName("refuses a session that does not stand at the review")
   void refusesASessionThatDoesNotStandAtTheReview() {
-    final CheckoutSession session = sessionAtTheReview();
-    session.goBackTo(CheckoutStep.PAYMENT);
+    final CheckoutSession session =
+        StoredCheckoutSessions.atStep(sessionAtTheReview(), CheckoutStep.PAYMENT);
 
     assertThrows(
         CheckoutStepOutOfOrderException.class,

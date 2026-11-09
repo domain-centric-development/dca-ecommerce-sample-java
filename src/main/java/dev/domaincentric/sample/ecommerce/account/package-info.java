@@ -6,7 +6,7 @@
 @NullMarked
 @BoundedContext(
     name = "Account",
-    description = "User account management, authentication, and profile handling")
+    description = "Registered accounts, credentials, profile and authenticated sessions")
 @ApplicationModule(allowedDependencies = {"sharedkernel", "infrastructure"})
 package dev.domaincentric.sample.ecommerce.account;
 

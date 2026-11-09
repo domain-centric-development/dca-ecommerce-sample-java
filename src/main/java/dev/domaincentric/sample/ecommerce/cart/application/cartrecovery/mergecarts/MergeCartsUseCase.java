@@ -3,7 +3,6 @@ package dev.domaincentric.sample.ecommerce.cart.application.cartrecovery.mergeca
 import dev.domaincentric.dca.buildingblocks.hexagonal.port.out.DomainEventPublisher;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
-import dev.domaincentric.sample.ecommerce.cart.domain.model.CartItem;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import java.util.Optional;
@@ -98,11 +97,8 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
     if (anonymousCartOpt.isPresent()) {
       final ShoppingCart anonymousCart = anonymousCartOpt.get();
 
-      // Add all items from anonymous cart to account cart
-      for (final CartItem item : anonymousCart.items()) {
-        accountCart.addItem(item.productId(), item.quantity(), item.priceAtAddition());
-        itemsFromAnonymous++;
-      }
+      // The cart decides how another cart's lines join its own
+      itemsFromAnonymous = accountCart.merge(anonymousCart);
 
       // Save merged cart
       shoppingCartRepository.save(accountCart);
@@ -141,17 +137,14 @@ public class MergeCartsUseCase implements MergeCartsInputPort {
 
     if (anonymousCartOpt.isPresent()) {
       final ShoppingCart anonymousCart = anonymousCartOpt.get();
-      itemsFromAnonymous = anonymousCart.itemCount();
 
       // Clear account cart
       if (!accountCart.isEmpty()) {
         accountCart.clear();
       }
 
-      // Copy items from anonymous cart to account cart
-      for (final CartItem item : anonymousCart.items()) {
-        accountCart.addItem(item.productId(), item.quantity(), item.priceAtAddition());
-      }
+      // The cart takes over the other cart's lines
+      itemsFromAnonymous = accountCart.merge(anonymousCart);
 
       // Save account cart
       shoppingCartRepository.save(accountCart);

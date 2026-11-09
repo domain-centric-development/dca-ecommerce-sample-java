@@ -7,9 +7,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ShoppingCartRepository;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,8 +47,7 @@ class ActiveCartClaimIntegrationTest {
     final ShoppingCart first = ShoppingCart.create(CartId.generate(), customer);
     carts.save(first);
 
-    first.complete();
-    carts.save(first);
+    carts.save(ShoppingCart.reconstitute(first.id(), customer, CartStatus.COMPLETED, List.of()));
 
     assertThatCode(() -> carts.save(ShoppingCart.create(CartId.generate(), customer)))
         .doesNotThrowAnyException();

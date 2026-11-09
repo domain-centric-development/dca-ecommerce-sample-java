@@ -46,7 +46,7 @@ This project showcases best practices for structuring a Spring Boot application 
 - **Value Objects**: ProductId, SKU, Price, Money, Quantity, Category, BuyerInfo, DeliveryAddress, Email, HashedPassword, etc.
 - **Repositories**: Interfaces in application layer, implementations in adapters
 - **Domain Services**: CartPricing, CheckoutPricing
-- **Domain Events**: ProductCreated, CartItemAddedToCart, CartItemQuantityChanged, ProductRemovedFromCart, CartCleared, CheckoutSessionStarted, CheckoutConfirmed, AccountRegistered, PriceChanged, StockChanged, etc.
+- **Domain Events**: ProductCreated, CartItemAddedToCart, ProductRemovedFromCart, CartCleared, CheckoutSessionStarted, CheckoutConfirmed, AccountRegistered, PriceChanged, StockChanged, etc.
 - **Factories**: ProductFactory, EnrichedCartFactory, CheckoutCartFactory
 - **Specifications**: CartSpecification (with Visitor pattern: ActiveCart, HasMinTotal, HasAnyAvailableItem, LastUpdatedBefore, CustomerAllowsMarketing); StockLevelSpecification (AvailableQuantityBelow, visited by StockLevelSpecificationVisitor)
 
@@ -212,11 +212,9 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   └── CartPricing.java        # Prices and checks a cart against article facts
 │   │   └── event/                        # Domain events
 │   │       ├── CartItemAddedToCart.java
-│   │       ├── CartItemQuantityChanged.java
 │   │       ├── ProductRemovedFromCart.java
 │   │       ├── CartCleared.java
-│   │       ├── CartCompleted.java
-│   │       └── CartAbandoned.java
+│   │       └── CartCompleted.java
 │   ├── application/                      # Application layer — use cases grouped by feature
 │   │   ├── shopping/                     # Feature: filling and reading the shopping cart
 │   │   │   ├── createcart/               # Use case: Create Cart
@@ -359,10 +357,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── BuyerInfoSubmitted.java
 │   │       ├── DeliverySubmitted.java
 │   │       ├── PaymentSubmitted.java
-│   │       ├── CheckoutConfirmed.java
-│   │       ├── CheckoutCompleted.java
-│   │       ├── CheckoutAbandoned.java
-│   │       └── CheckoutExpired.java
+│   │       └── CheckoutConfirmed.java
 │   ├── application/                      # Application layer — use cases grouped by feature
 │   │   ├── session/                      # Feature: starting and reading checkout sessions
 │   │   │   ├── startcheckout/            # Use case: Start Checkout
@@ -513,10 +508,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │       ├── AccountLoggedIn.java
 │   │       ├── AccountPasswordChanged.java
 │   │       ├── AccountEmailChanged.java
-│   │       ├── AccountOwnerDateOfBirthChanged.java
-│   │       ├── AccountSuspended.java
-│   │       ├── AccountReactivated.java
-│   │       └── AccountClosed.java
+│   │       └── AccountOwnerDateOfBirthChanged.java
 │   ├── application/                      # Application layer
 │   │   ├── registeraccount/              # Use case: Register Account
 │   │   │   ├── RegisterAccountInputPort.java
@@ -612,7 +604,6 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   └── event/                        # Domain events
 │   │       ├── StockLevelCreated.java
 │   │       ├── StockChanged.java
-│   │       ├── StockIncreased.java
 │   │       ├── StockDecreased.java
 │   │       ├── StockReserved.java
 │   │       └── StockReleased.java

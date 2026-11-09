@@ -45,8 +45,8 @@ class CheckoutSessionAuthorizePaymentTest {
   @Test
   @DisplayName("a session that does not stand at the review takes no authorized payment")
   void aSessionNotAtTheReviewTakesNoAuthorizedPayment() {
-    final CheckoutSession session = sessionAtTheReview();
-    session.goBackTo(CheckoutStep.PAYMENT);
+    final CheckoutSession session =
+        StoredCheckoutSessions.atStep(sessionAtTheReview(), CheckoutStep.PAYMENT);
 
     assertThrows(
         CheckoutStepOutOfOrderException.class,
@@ -56,8 +56,8 @@ class CheckoutSessionAuthorizePaymentTest {
   @Test
   @DisplayName("a session that no longer takes changes takes no authorized payment")
   void aSessionThatNoLongerTakesChangesTakesNoAuthorizedPayment() {
-    final CheckoutSession session = sessionAtTheReview();
-    session.abandon();
+    final CheckoutSession session =
+        StoredCheckoutSessions.withStatus(sessionAtTheReview(), CheckoutSessionStatus.ABANDONED);
 
     assertThrows(
         CheckoutNotModifiableException.class,

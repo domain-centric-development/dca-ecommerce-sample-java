@@ -12,6 +12,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlre
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartCommand;
 import dev.domaincentric.sample.ecommerce.cart.application.shopping.getorcreateactivecart.GetOrCreateActiveCartUseCase;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import java.util.List;
@@ -59,8 +60,7 @@ class ActiveCartUniquenessTest {
     final ShoppingCart first = ShoppingCart.create(CartId.generate(), customer);
     carts.save(first);
 
-    first.complete();
-    carts.save(first);
+    carts.save(ShoppingCart.reconstitute(first.id(), customer, CartStatus.COMPLETED, List.of()));
 
     final ShoppingCart second = ShoppingCart.create(CartId.generate(), customer);
     carts.save(second);

@@ -1,15 +1,12 @@
 package dev.domaincentric.sample.ecommerce.account.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
-import dev.domaincentric.sample.ecommerce.account.domain.event.AccountClosed;
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountEmailChanged;
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountLinkedToIdentity;
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountLoggedIn;
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountOwnerDateOfBirthChanged;
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountPasswordChanged;
-import dev.domaincentric.sample.ecommerce.account.domain.event.AccountReactivated;
 import dev.domaincentric.sample.ecommerce.account.domain.event.AccountRegistered;
-import dev.domaincentric.sample.ecommerce.account.domain.event.AccountSuspended;
 import dev.domaincentric.sample.ecommerce.account.domain.gateway.PasswordHasher;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
@@ -55,9 +52,6 @@ import java.util.Set;
  *   <li>{@link AccountPasswordChanged} - when password is changed
  *   <li>{@link AccountEmailChanged} - when the email address is changed
  *   <li>{@link AccountOwnerDateOfBirthChanged} - when the owner's date of birth is corrected
- *   <li>{@link AccountSuspended} - when account is suspended
- *   <li>{@link AccountReactivated} - when account is reactivated
- *   <li>{@link AccountClosed} - when account is permanently closed
  * </ul>
  */
 public final class Account extends BaseAggregateRoot<Account, AccountId> {
@@ -307,62 +301,5 @@ public final class Account extends BaseAggregateRoot<Account, AccountId> {
     final LocalDate previousDateOfBirth = owner.dateOfBirth();
     this.owner = owner.withDateOfBirth(newDateOfBirth);
     registerEvent(AccountOwnerDateOfBirthChanged.now(this.id, previousDateOfBirth, newDateOfBirth));
-  }
-
-  /**
-   * Suspends the account.
-   *
-   * @throws AccountClosedException if the account is already closed
-   */
-  public void suspend() {
-    if (status.isTerminal()) {
-      throw new AccountClosedException(this.id);
-    }
-    this.status = AccountStatus.SUSPENDED;
-    registerEvent(AccountSuspended.now(this.id));
-  }
-
-  /**
-   * Reactivates a suspended account.
-   *
-   * @throws AccountNotSuspendedException if the account is not suspended
-   */
-  public void reactivate() {
-    if (status != AccountStatus.SUSPENDED) {
-      throw new AccountNotSuspendedException(this.id, status);
-    }
-    this.status = AccountStatus.ACTIVE;
-    registerEvent(AccountReactivated.now(this.id));
-  }
-
-  /**
-   * Closes the account permanently.
-   *
-   * @throws AccountClosedException if the account is already closed
-   */
-  public void close() {
-    if (status.isTerminal()) {
-      throw new AccountClosedException(this.id);
-    }
-    this.status = AccountStatus.CLOSED;
-    registerEvent(AccountClosed.now(this.id));
-  }
-
-  /**
-   * Adds a role to the account.
-   *
-   * @param role the role to add
-   */
-  public void addRole(final Role role) {
-    this.roles.add(role);
-  }
-
-  /**
-   * Removes a role from the account.
-   *
-   * @param role the role to remove
-   */
-  public void removeRole(final Role role) {
-    this.roles.remove(role);
   }
 }

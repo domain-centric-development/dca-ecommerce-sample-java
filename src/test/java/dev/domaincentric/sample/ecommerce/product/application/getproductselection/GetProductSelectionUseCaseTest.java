@@ -114,10 +114,12 @@ class GetProductSelectionUseCaseTest {
     final List<Product> products = new ArrayList<>();
     for (int i = 0; i < count; i++) {
       final Product product =
-          FACTORY.createBasicProduct(
+          FACTORY.createProduct(
               SKU.of("SKU-" + i),
               ProductName.of(String.format("Product %02d", i)),
+              dev.domaincentric.sample.ecommerce.product.domain.model.ProductDescription.empty(),
               Category.of("Books"),
+              dev.domaincentric.sample.ecommerce.product.domain.model.ImageUrl.empty(),
               Price.of(Money.euro(1)),
               1);
       repository.save(product);

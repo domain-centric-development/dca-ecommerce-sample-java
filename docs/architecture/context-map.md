@@ -17,14 +17,14 @@ modules and the shared kernel are intentionally not part of this map.
 
 | Module | Name | Description | Published interfaces |
 |---|---|---|---|
-| account | Account | User account management, authentication, and profile handling | — |
+| account | Account | Registered accounts, credentials, profile and authenticated sessions | — |
 | backoffice | Backoffice | Operating this application: event publication log, dashboards, operator views | — |
 | cart | Shopping Cart | Cart management, item additions/removals, and cart lifecycle | api, events |
 | checkout | Checkout | Checkout process, order placement, and payment orchestration | events |
-| inventory | Inventory | Stock level management and inventory tracking | api, events |
+| inventory | Inventory | Stock level management and availability tracking | api, events |
 | portal | Portal | Web portal, user interface composition, and cross-context views | — |
 | pricing | Pricing | Product pricing management and price change tracking | api, events |
-| product | Product Catalog | Product management, catalog browsing, and inventory tracking | api, events |
+| product | Product Catalog | Product management and catalog browsing | api, events |
 
 ## Diagram
 
@@ -55,7 +55,6 @@ graph LR
   ext_mail_provider[["Mail Provider"]]
   ext_payment_service_provider[["Payment Service Provider"]]
   checkout -->|"ACL / REST"| ext_mail_provider
-  checkout -.->|"ACL / webhook / planned"| ext_payment_service_provider
   checkout -->|"ACL / REST"| ext_payment_service_provider
   cart ---|"Partnership"| checkout
   checkout ---|"Partnership"| inventory
@@ -74,17 +73,17 @@ Edges labeled `planned` are declared intent without a code dependency yet.
 | Downstream | Upstream | Channel | Translation | Status | Rationale |
 |---|---|---|---|---|---|
 | cart | inventory | api | ACL | implemented | Stock availability is translated into the cart's own article data |
-| cart | pricing | api | ACL | implemented | Price lookups are translated into the cart's own price representation |
+| cart | pricing | api | ACL | implemented | Price lookups are translated into the cart's own article data |
 | cart | product | api | ACL | implemented | Cart works with its own article snapshot; the catalog model must not leak into cart invariants |
 | checkout | cart | api | ACL | implemented | Cart snapshots are translated into checkout's own CartData |
-| checkout | cart | events | Conformist | implemented | CheckoutConfirmedEvent implements cart's consumer-defined CartCompletionTrigger contract as-is; cart change events are consumed directly |
+| checkout | cart | events | Conformist | implemented | CheckoutConfirmedEvent implements cart's consumer-defined CartCompletionTrigger contract as-is; cart's CartContentsChangedEvent is consumed as published |
 | checkout | inventory | api | ACL | implemented | Stock availability is translated into checkout's own article data |
 | checkout | inventory | events | Conformist | implemented | CheckoutConfirmedEvent implements inventory's consumer-defined StockReductionTrigger contract as-is |
 | checkout | pricing | api | ACL | implemented | Prices are translated into checkout's own line item amounts |
-| checkout | product | api | ACL | implemented | Product data is translated into checkout's own article and product info types |
-| product | inventory | api | ACL | implemented | Stock levels are translated into the catalog's own availability data |
+| checkout | product | api | ACL | implemented | Product data is translated into checkout's own article types |
+| product | inventory | api | ACL | implemented | Availability is an inventory statement; the catalog translates it into its own article view |
 | product | inventory | events | Conformist | implemented | ProductCreatedEvent implements inventory's consumer-defined StockInitializationTrigger contract as-is |
-| product | pricing | api | ACL | implemented | Prices are translated into the catalog's own product presentation data |
+| product | pricing | api | ACL | implemented | The catalog shows a price but does not own it; the pricing model is translated into the catalog's own article view |
 | product | pricing | events | Conformist | implemented | ProductCreatedEvent implements pricing's consumer-defined PriceInitializationTrigger contract as-is |
 
 ## External systems
@@ -92,8 +91,7 @@ Edges labeled `planned` are declared intent without a code dependency yet.
 | Consumer | External system | Interaction | Protocol | Exchanges | Translation | Status | Rationale |
 |---|---|---|---|---|---|---|---|
 | checkout | Mail Provider | outbound | REST | order confirmation mail (recipient, template, idempotency key, total) and its answer (accepted, unavailable) | ACL | implemented | Behind the caller-owned OrderConfirmationMailer port; a REST adapter translates the provider's answers where its address is configured, a stand-in accepts every mail and sends nothing otherwise |
-| checkout | Payment Service Provider | inbound | webhook | payment confirmation (payment id, status) | ACL | planned | Will trigger order fulfillment; the payload is the provider's contract, to be translated into a local command at the incoming adapter — no webhook adapter exists yet |
-| checkout | Payment Service Provider | outbound | REST | payment request (amount, currency) and its answer (authorized, refused) | ACL | implemented | Behind the caller-owned PaymentProvider port; a REST adapter translates the provider's answers where its address is configured, a stand-in takes payments otherwise |
+| checkout | Payment Service Provider | outbound | REST | payment operations (initiate, confirm, cancel) | ACL | implemented | Behind a caller-owned port per provider and a registry that chooses one; a REST adapter translates the provider's answers where its address is configured, a stand-in takes payments otherwise |
 
 ## Partnerships
 
@@ -101,5 +99,5 @@ Edges labeled `planned` are declared intent without a code dependency yet.
 |---|---|
 | cart ↔ checkout | Cart owns the consumer-defined CartCompletionTrigger contract that checkout events implement; both contexts evolve it together — Checkout implements cart's consumer-defined CartCompletionTrigger contract; both contexts evolve it together |
 | checkout ↔ inventory | Checkout implements inventory's consumer-defined StockReductionTrigger contract; both contexts evolve it together — Inventory owns the consumer-defined StockReductionTrigger contract that checkout events implement; both contexts evolve it together |
-| inventory ↔ product | Inventory owns the consumer-defined StockInitializationTrigger contract that the catalog's events implement; both contexts evolve it together — The catalog implements inventory's consumer-defined StockInitializationTrigger contract; both contexts evolve it together |
-| pricing ↔ product | Pricing owns the consumer-defined PriceInitializationTrigger contract that the catalog's events implement; both contexts evolve it together — The catalog implements pricing's consumer-defined PriceInitializationTrigger contract; both contexts evolve it together |
+| inventory ↔ product | Inventory owns the consumer-defined StockInitializationTrigger contract that catalog events implement; both contexts evolve it together — The catalog implements inventory's consumer-defined StockInitializationTrigger contract; both contexts evolve it together |
+| pricing ↔ product | Pricing owns the consumer-defined PriceInitializationTrigger contract that catalog events implement; both contexts evolve it together — The catalog implements pricing's consumer-defined PriceInitializationTrigger contract; both contexts evolve it together |

@@ -86,14 +86,4 @@ public final class CartItem implements Entity<CartItem, CartItemId> {
     this.units = units.resize(newQuantity.value());
     this.quantity = newQuantity;
   }
-
-  /** Package-private - only ShoppingCart aggregate can increase quantity. */
-  void increaseQuantity() {
-    updateQuantity(this.quantity.increase());
-  }
-
-  /** Package-private - only ShoppingCart aggregate can decrease quantity. */
-  void decreaseQuantity() {
-    updateQuantity(this.quantity.decrease());
-  }
 }

@@ -7,9 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlreadyExistsException;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
+import dev.domaincentric.sample.ecommerce.cart.domain.model.CartStatus;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
 import dev.domaincentric.sample.ecommerce.infrastructure.database.PostgresTestDatabase;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -71,8 +73,7 @@ class JdbcActiveCartUniquenessTest {
     final ShoppingCart first = ShoppingCart.create(CartId.generate(), customer);
     carts.save(first);
 
-    first.complete();
-    carts.save(first);
+    carts.save(ShoppingCart.reconstitute(first.id(), customer, CartStatus.COMPLETED, List.of()));
 
     assertDoesNotThrow(() -> carts.save(ShoppingCart.create(CartId.generate(), customer)));
   }

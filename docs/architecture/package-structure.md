@@ -124,7 +124,7 @@ dev.domaincentric.sample.ecommerce
 │   │   ├── service/                # Domain Services
 │   │   │   └── CartTotalCalculator
 │   │   └── event/                  # Domain Events
-│   │       ├── CartItemAddedToCart, CartItemQuantityChanged
+│   │       ├── CartItemAddedToCart
 │   │       ├── ProductRemovedFromCart
 │   │       └── CartCleared
 │   ├── application/                # Application Layer
@@ -218,8 +218,7 @@ dev.domaincentric.sample.ecommerce
 │   │   └── event/                  # Domain Events
 │   │       ├── CheckoutSessionStarted, BuyerInfoSubmitted
 │   │       ├── DeliverySubmitted, PaymentSubmitted
-│   │       ├── CheckoutConfirmed, CheckoutCompleted
-│   │       └── CheckoutAbandoned, CheckoutExpired
+│   │       └── CheckoutConfirmed
 │   ├── application/                # Application Layer
 │   │   ├── startcheckout/
 │   │   │   ├── StartCheckoutInputPort, StartCheckoutUseCase
@@ -371,7 +370,7 @@ dev.domaincentric.sample.ecommerce
 │   │   │   └── AvailableQuantityBelow
 │   │   └── event/
 │   │       ├── StockLevelCreated, StockChanged
-│   │       ├── StockIncreased, StockDecreased
+│   │       ├── StockDecreased
 │   │       └── StockReserved, StockReleased
 │   ├── application/
 │   │   ├── provisioninitialstock/

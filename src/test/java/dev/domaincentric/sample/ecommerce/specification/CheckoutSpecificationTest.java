@@ -88,16 +88,20 @@ class CheckoutSpecificationTest {
       }
       case "checkout.abandon.preserves-cart" -> {
         String snapshot = f.cart.items().get(0).positionSnapshot();
-        session.abandon();
+        var abandoned = StoredCheckoutSessions.withStatus(session, CheckoutSessionStatus.ABANDONED);
+        f.repository.save(abandoned);
         assertEquals(snapshot, f.cart.items().get(0).positionSnapshot());
-        assertNotEquals(session.id(), f.start().id());
-        assertEquals(CheckoutSessionStatus.ABANDONED, session.status());
+        assertNotEquals(abandoned.id(), f.start().id());
+        assertEquals(CheckoutSessionStatus.ABANDONED, abandoned.status());
       }
       case "checkout.completed.not-superseded" -> {
         f.confirm(session);
-        session.complete("order");
+        var completed = StoredCheckoutSessions.completed(session, "order");
+        f.repository.save(completed);
         f.start();
-        assertEquals(CheckoutSessionStatus.COMPLETED, session.status());
+        assertEquals(
+            CheckoutSessionStatus.COMPLETED,
+            f.repository.findById(completed.id()).orElseThrow().status());
       }
       case "checkout.confirm.price-changed" -> {
         var totals = session.totals();

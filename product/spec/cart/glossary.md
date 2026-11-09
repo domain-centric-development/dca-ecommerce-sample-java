@@ -51,13 +51,10 @@ An editable collection of stable positions. Checkout copies a snapshot through t
 - what the cart holds of a product (`quantityOf`) — the quantity of the product's position, 0 when the cart holds none; read, changes nothing
 - remove a line (`removeItem`) — one `CartItem`, named by its `CartItemId`, is gone from the cart, whatever its quantity; the cart page's "Remove" reaches it through `RemoveCartItem`
 - `removeItemByProductId` — the position holding a product is gone from the cart; the API reaches it through `RemoveItemFromCart`
-- `updateItemQuantity` — sets a position's quantity; `increaseItemQuantity` / `decreaseItemQuantity` change it by one
 - `merge` — the positions of another cart are added to this one; the source cart is left untouched
 - taking over the guest cart (`RecoverCart`) — when the account's cart holds nothing, the guest cart itself — same id, same positions — becomes the account's (`takeOverBy`; an empty account cart is deleted; no event); otherwise the guest cart's lines move into the account's cart; it runs when the form of the page after the login is sent (by the browser's script, or with "Continue"), never when a page is only opened
 - `clear` — every position is gone; the cart itself stays, active
 - `reconcileCheckout` — the units a checkout bought are taken out of their positions, positions left without units are gone; the cart stays active and editable
-- `abandon` — the cart is kept with status abandoned and rejects edits; it is not deleted
-- `complete` — the whole cart is kept with status completed; no use case calls it, checkout completion goes through `reconcileCheckout`
 
 ### CartItem
 
@@ -74,8 +71,7 @@ product, the desired quantity, and the price captured at the time it was added
 **Related terms:** `Quantity`, `ProductId`, `Price` (Shared Kernel),
 `priceAtAddition`
 
-**Operations:** Package-internal only, via `ShoppingCart`: `updateQuantity`,
-`increaseQuantity`, `decreaseQuantity`
+**Operations:** Package-internal only, via `ShoppingCart`: `updateQuantity`
 
 **Notes:** Exists only within a `ShoppingCart` aggregate; no dedicated
 repository. A repository restoring a stored cart passes `ShoppingCart.StoredItem`
@@ -191,13 +187,6 @@ related items deleted).
 a duplicate in the DCA review. If item-level removal is to be modeled
 separately, clarify with the domain expert.
 
-### CartItemQuantityChanged
-
-**Definition:** The quantity of an existing cart item was changed (increased
-or decreased). Carries the old and new quantity.
-
-**Type:** Domain Event
-
 ### CartCleared
 
 **Definition:** All items were removed from the shopping cart at once (e.g.,
@@ -209,12 +198,17 @@ via "clear cart").
 
 Legacy event name retained for the cart reconciliation notification. The current completion handler removes only captured units; it does not change an active cart to Completed. Replays with no intersection emit nothing. The handler, `CartCompletionEventConsumer`, hands the `eventId` of the `CartCompletionTrigger` (an `IntegrationEvent`) to `CompleteCartUseCase`, which skips an event `ProcessedEvents` has already recorded for its effect, `complete-cart`, and records it in the same transaction.
 
-### CartAbandoned
 
-**Definition:** The shopping cart was abandoned by the customer (e.g., after
-an inactivity threshold). Final state.
+## Integration Events
 
-**Type:** Domain Event
+### CartContentsChangedEvent
+
+**Definition:** Published when what a cart holds changed — a line added, a line removed, the cart cleared. Checkout
+reads it to keep an open session in step with its cart.
+
+**Type:** Integration Event
+
+**Related terms:** `CartItemAddedToCart`, `ProductRemovedFromCart`, `CartCleared` (the domain events it is made of)
 
 ## Domain Services
 
@@ -369,14 +363,6 @@ use case or by the store that sees every cart of a customer.
 **Definition:** A cart that is no longer active would be changed.
 
 **Type:** Domain failure (`DomainException`) · **Related terms:** `CartStatus`, `ShoppingCart.addItem`, merge
-
----
-
-### CartAlreadyCompleted / AbandonedCartCannotBeCompleted
-
-**Definition:** Completion was asked for twice, or asked for on a cart the customer abandoned.
-
-**Type:** Domain failure (`DomainException`) · **Related terms:** `ShoppingCart.complete`, `CartCompleted`
 
 ---
 

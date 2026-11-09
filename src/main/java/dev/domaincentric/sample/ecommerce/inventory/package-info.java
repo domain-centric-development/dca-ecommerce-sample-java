@@ -1,10 +1,12 @@
 /**
  * Inventory Bounded Context.
  *
- * <p>Responsible for managing stock levels and inventory tracking.
+ * <p>Responsible for managing stock levels and availability tracking.
  */
 @NullMarked
-@BoundedContext(name = "Inventory", description = "Stock level management and inventory tracking")
+@BoundedContext(
+    name = "Inventory",
+    description = "Stock level management and availability tracking")
 @Partnership(
     context = "checkout",
     rationale =
@@ -13,7 +15,7 @@
 @Partnership(
     context = "product",
     rationale =
-        "Inventory owns the consumer-defined StockInitializationTrigger contract that the catalog's"
+        "Inventory owns the consumer-defined StockInitializationTrigger contract that catalog"
             + " events implement; both contexts evolve it together")
 @ApplicationModule(allowedDependencies = {"sharedkernel", "infrastructure"})
 package dev.domaincentric.sample.ecommerce.inventory;

@@ -107,7 +107,13 @@ abstract class ProductRepositoryContractTest {
   }
 
   private Product product(final String sku, final String name, final String category) {
-    return factory.createBasicProduct(
-        SKU.of(sku), ProductName.of(name), Category.of(category), Price.of(Money.euro(1)), 1);
+    return factory.createProduct(
+        SKU.of(sku),
+        ProductName.of(name),
+        dev.domaincentric.sample.ecommerce.product.domain.model.ProductDescription.empty(),
+        Category.of(category),
+        dev.domaincentric.sample.ecommerce.product.domain.model.ImageUrl.empty(),
+        Price.of(Money.euro(1)),
+        1);
   }
 }

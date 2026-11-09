@@ -52,11 +52,13 @@ class RetainedDeliveryIntegrationTest {
     schema.path("required").forEach(n -> expected.add(n.asText()));
     var product =
         new dev.domaincentric.sample.ecommerce.product.domain.model.ProductFactory()
-            .createBasicProduct(
+            .createProduct(
                 dev.domaincentric.sample.ecommerce.product.domain.model.SKU.of("WIRE-SPEC"),
                 dev.domaincentric.sample.ecommerce.product.domain.model.ProductName.of(
                     "Wire specification"),
+                dev.domaincentric.sample.ecommerce.product.domain.model.ProductDescription.empty(),
                 dev.domaincentric.sample.ecommerce.product.domain.model.Category.of("Test"),
+                dev.domaincentric.sample.ecommerce.product.domain.model.ImageUrl.empty(),
                 dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price.of(
                     dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money.euro(1)),
                 0);

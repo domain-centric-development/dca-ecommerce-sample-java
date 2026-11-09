@@ -27,9 +27,8 @@ class CheckoutSessionOrderPlacedTest {
   @Test
   @DisplayName("an order stays placed after the session is completed")
   void anOrderStaysPlacedAfterTheSessionIsCompleted() {
-    final CheckoutSession session = aConfirmedSession();
-
-    session.complete("order-1");
+    final CheckoutSession session =
+        StoredCheckoutSessions.completed(aConfirmedSession(), "order-1");
 
     assertTrue(session.isOrderPlaced());
   }

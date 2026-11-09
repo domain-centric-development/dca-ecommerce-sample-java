@@ -53,9 +53,7 @@ a business identifier)
 - `isCompleted()` — has the delivery to this listener been made?
 - `shortEventType()` — type name of the event without its package
 - `failed()` — has the delivery used up its attempts (see `Failed`)?
-- Retry failed listener (`replayFailed`) — delivers a failed entry's event once more
-  to that entry's listener alone; the other listeners' entries stay as they were
-  (use case `ReplayFailedPublication`); the event log offers it only on a `Failed` entry
+- Retry failed listener (`replayFailed`) — delivers a failed entry's event once more to that entry's listener alone; the other listeners' entries stay as they were (use case `ReplayFailedPublication`); the event log offers it only on a `Failed` entry
 
 **Notes:** Belongs to the Store as its **read schema** and is deliberately
 decoupled from the use-case API (see `EventPublicationSummary`).

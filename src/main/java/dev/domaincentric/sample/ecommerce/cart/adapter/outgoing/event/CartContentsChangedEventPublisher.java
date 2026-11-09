@@ -2,7 +2,6 @@ package dev.domaincentric.sample.ecommerce.cart.adapter.outgoing.event;
 
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCleared;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartItemAddedToCart;
-import dev.domaincentric.sample.ecommerce.cart.domain.event.CartItemQuantityChanged;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.ProductRemovedFromCart;
 import dev.domaincentric.sample.ecommerce.cart.events.CartContentsChangedEvent;
 import dev.domaincentric.sample.ecommerce.cart.events.CartContentsChangedEvent.ChangeType;
@@ -17,9 +16,8 @@ import org.springframework.stereotype.Component;
  * Outgoing event adapter that translates internal cart domain events into a consolidated {@link
  * CartContentsChangedEvent} integration event for cross-context consumption.
  *
- * <p>Listens to CartItemAddedToCart, ProductRemovedFromCart, CartItemQuantityChanged, and
- * CartCleared domain events and publishes a single integration event type that other modules can
- * consume.
+ * <p>Listens to the CartItemAddedToCart, ProductRemovedFromCart and CartCleared domain events and
+ * publishes a single integration event type that other modules can consume.
  */
 @Component
 public class CartContentsChangedEventPublisher {
@@ -41,11 +39,6 @@ public class CartContentsChangedEventPublisher {
   @EventListener
   public void onItemRemoved(final ProductRemovedFromCart event) {
     publish(UUID.fromString(event.cartId().value()), ChangeType.ITEM_REMOVED);
-  }
-
-  @EventListener
-  public void onQuantityChanged(final CartItemQuantityChanged event) {
-    publish(UUID.fromString(event.cartId().value()), ChangeType.QUANTITY_CHANGED);
   }
 
   @EventListener

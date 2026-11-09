@@ -3,7 +3,6 @@ package dev.domaincentric.sample.ecommerce.inventory.domain.model;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
 import dev.domaincentric.sample.ecommerce.inventory.domain.event.StockChanged;
 import dev.domaincentric.sample.ecommerce.inventory.domain.event.StockDecreased;
-import dev.domaincentric.sample.ecommerce.inventory.domain.event.StockIncreased;
 import dev.domaincentric.sample.ecommerce.inventory.domain.event.StockLevelCreated;
 import dev.domaincentric.sample.ecommerce.inventory.domain.event.StockReleased;
 import dev.domaincentric.sample.ecommerce.inventory.domain.event.StockReserved;
@@ -29,7 +28,6 @@ import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
  *
  * <ul>
  *   <li>{@link StockLevelCreated} - when a new stock level is created
- *   <li>{@link StockIncreased} - when stock is increased
  *   <li>{@link StockDecreased} - when stock is decreased
  *   <li>{@link StockReserved} - when stock is reserved
  *   <li>{@link StockReleased} - when reserved stock is released
@@ -111,26 +109,6 @@ public final class StockLevel extends BaseAggregateRoot<StockLevel, StockLevelId
 
   public StockQuantity reservedQuantity() {
     return reservedQuantity;
-  }
-
-  /**
-   * Increases the available stock quantity.
-   *
-   * <p>Use this when receiving new stock into inventory.
-   *
-   * @param amount the amount to add to available stock
-   * @throws IllegalArgumentException if amount is negative
-   */
-  public void increaseStock(final int amount) {
-    if (amount < 0) {
-      throw new IllegalArgumentException("Amount cannot be negative");
-    }
-
-    final StockQuantity addedQuantity = StockQuantity.of(amount);
-    this.availableQuantity = StockQuantity.of(this.availableQuantity.value() + amount);
-
-    registerEvent(
-        StockIncreased.now(this.id, this.productId, addedQuantity, this.availableQuantity));
   }
 
   /**

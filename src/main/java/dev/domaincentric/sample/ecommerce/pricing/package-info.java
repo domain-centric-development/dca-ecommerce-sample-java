@@ -11,7 +11,7 @@
 @Partnership(
     context = "product",
     rationale =
-        "Pricing owns the consumer-defined PriceInitializationTrigger contract that the catalog's"
+        "Pricing owns the consumer-defined PriceInitializationTrigger contract that catalog"
             + " events implement; both contexts evolve it together")
 @ApplicationModule(allowedDependencies = {"sharedkernel", "infrastructure"})
 package dev.domaincentric.sample.ecommerce.pricing;

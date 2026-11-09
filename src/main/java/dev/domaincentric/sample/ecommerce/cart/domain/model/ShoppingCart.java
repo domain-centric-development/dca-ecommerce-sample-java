@@ -2,11 +2,9 @@ package dev.domaincentric.sample.ecommerce.cart.domain.model;
 
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.BaseAggregateRoot;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.Owned;
-import dev.domaincentric.sample.ecommerce.cart.domain.event.CartAbandoned;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCleared;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartCompleted;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.CartItemAddedToCart;
-import dev.domaincentric.sample.ecommerce.cart.domain.event.CartItemQuantityChanged;
 import dev.domaincentric.sample.ecommerce.cart.domain.event.ProductRemovedFromCart;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Money;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
@@ -36,10 +34,8 @@ import java.util.Optional;
  * <ul>
  *   <li>{@link CartItemAddedToCart} - when an item is added to the cart
  *   <li>{@link ProductRemovedFromCart} - when a product is removed from the cart
- *   <li>{@link CartItemQuantityChanged} - when an item's quantity is updated
  *   <li>{@link CartCleared} - when all items are removed from the cart
- *   <li>{@link CartAbandoned} - when the cart is abandoned
- *   <li>{@link CartCompleted} - when the cart is completed after checkout confirmation
+ *   <li>{@link CartCompleted} - when a checkout's purchased units are reconciled out of the cart
  * </ul>
  */
 public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId>
@@ -249,72 +245,6 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId>
   }
 
   /**
-   * Updates the quantity of a cart item.
-   *
-   * <p>Raises a {@link CartItemQuantityChanged} domain event.
-   *
-   * @param itemId the item ID
-   * @param newQuantity the new quantity
-   * @throws CartNotModifiableException if the cart is no longer active
-   * @throws CartItemNotFoundException if the position is not in the cart
-   */
-  public void updateItemQuantity(final CartItemId itemId, final Quantity newQuantity) {
-    ensureCartIsActive();
-
-    final CartItem item =
-        findItemById(itemId).orElseThrow(() -> CartItemNotFoundException.forItem(itemId));
-
-    final Quantity oldQuantity = item.quantity();
-    item.updateQuantity(newQuantity);
-
-    // Raise domain event
-    registerEvent(
-        CartItemQuantityChanged.now(this.id, itemId, item.productId(), oldQuantity, newQuantity));
-  }
-
-  /**
-   * Increases the quantity of a cart item by 1.
-   *
-   * @param itemId the item ID
-   * @throws CartNotModifiableException if the cart is no longer active
-   */
-  public void increaseItemQuantity(final CartItemId itemId) {
-    ensureCartIsActive();
-
-    final CartItem item =
-        findItemById(itemId).orElseThrow(() -> CartItemNotFoundException.forItem(itemId));
-
-    final Quantity oldQuantity = item.quantity();
-    item.increaseQuantity();
-
-    // Raise domain event
-    registerEvent(
-        CartItemQuantityChanged.now(
-            this.id, itemId, item.productId(), oldQuantity, item.quantity()));
-  }
-
-  /**
-   * Decreases the quantity of a cart item by 1.
-   *
-   * @param itemId the item ID
-   * @throws CartNotModifiableException if the cart is no longer active
-   */
-  public void decreaseItemQuantity(final CartItemId itemId) {
-    ensureCartIsActive();
-
-    final CartItem item =
-        findItemById(itemId).orElseThrow(() -> CartItemNotFoundException.forItem(itemId));
-
-    final Quantity oldQuantity = item.quantity();
-    item.decreaseQuantity();
-
-    // Raise domain event
-    registerEvent(
-        CartItemQuantityChanged.now(
-            this.id, itemId, item.productId(), oldQuantity, item.quantity()));
-  }
-
-  /**
    * Clears all items from the cart.
    *
    * <p>Raises a {@link CartCleared} domain event.
@@ -328,38 +258,6 @@ public final class ShoppingCart extends BaseAggregateRoot<ShoppingCart, CartId>
 
     // Raise domain event
     registerEvent(CartCleared.now(this.id, itemsCount));
-  }
-
-  /**
-   * Marks the cart as abandoned.
-   *
-   * <p>Raises a {@link CartAbandoned} domain event.
-   */
-  public void abandon() {
-    this.status = CartStatus.ABANDONED;
-    registerEvent(CartAbandoned.now(this.id));
-  }
-
-  /**
-   * Marks the cart as completed after checkout confirmation.
-   *
-   * <p>This method is called when the checkout process has been fully confirmed (customer has
-   * completed payment/review steps). The cart is completed from ACTIVE status.
-   *
-   * <p>Raises a {@link CartCompleted} domain event.
-   *
-   * @throws CartAlreadyCompletedException if the cart is already completed
-   * @throws AbandonedCartCannotBeCompletedException if the cart was abandoned
-   */
-  public void complete() {
-    if (status == CartStatus.COMPLETED) {
-      throw new CartAlreadyCompletedException(this.id);
-    }
-    if (status == CartStatus.ABANDONED) {
-      throw new AbandonedCartCannotBeCompletedException(this.id);
-    }
-    this.status = CartStatus.COMPLETED;
-    registerEvent(CartCompleted.now(this.id));
   }
 
   /**

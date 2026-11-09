@@ -3,7 +3,6 @@ package dev.domaincentric.sample.ecommerce.product.domain.model;
 import dev.domaincentric.dca.buildingblocks.ddd.tactical.Factory;
 import dev.domaincentric.sample.ecommerce.product.domain.event.ProductCreated;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Price;
-import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.ProductId;
 
 /**
  * Factory for creating Product aggregates.
@@ -42,57 +41,5 @@ public final class ProductFactory implements Factory {
       final int initialStock) {
 
     return Product.create(sku, name, description, category, imageUrl, initialPrice, initialStock);
-  }
-
-  /**
-   * Creates a new product with specified ID.
-   *
-   * <p>Note: This method does NOT raise a ProductCreated event. Use this for reconstituting
-   * products from persistence or for testing purposes only.
-   *
-   * @param id the product ID
-   * @param sku the SKU
-   * @param name the product name
-   * @param description the product description
-   * @param category the product category
-   * @param imageUrl the product image URL
-   * @return a new Product aggregate
-   */
-  public Product createProductWithId(
-      final ProductId id,
-      final SKU sku,
-      final ProductName name,
-      final ProductDescription description,
-      final Category category,
-      final ImageUrl imageUrl) {
-
-    return Product.reconstitute(id, sku, name, description, category, imageUrl);
-  }
-
-  /**
-   * Creates a new product with default empty description.
-   *
-   * @param sku the SKU
-   * @param name the product name
-   * @param category the product category
-   * @param initialPrice the initial price (for Pricing context synchronization)
-   * @param initialStock the initial stock quantity (for Inventory context synchronization)
-   * @return a new Product aggregate
-   */
-  public Product createBasicProduct(
-      final SKU sku,
-      final ProductName name,
-      final Category category,
-      final Price initialPrice,
-      final int initialStock) {
-
-    return createProduct(
-        sku,
-        name,
-        ProductDescription.empty(),
-        category,
-        ImageUrl.empty(),
-        initialPrice,
-        initialStock);
   }
 }

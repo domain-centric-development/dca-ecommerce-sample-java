@@ -18,7 +18,7 @@
     context = "pricing",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
     via = Upstream.Consumes.API,
-    rationale = "Price lookups are translated into the cart's own price representation")
+    rationale = "Price lookups are translated into the cart's own article data")
 @Upstream(
     context = "inventory",
     translation = Upstream.Translation.ANTI_CORRUPTION_LAYER,
