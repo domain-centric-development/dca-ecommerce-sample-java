@@ -113,8 +113,9 @@ dependencies {
   implementation 'org.springframework.modulith:spring-modulith-starter-core'
   implementation 'org.springframework.modulith:spring-modulith-starter-jdbc'
 
-  // Inspect the retained registry state machine in the recovery integration test.
-  testIntegrationImplementation "org.springframework.modulith:spring-modulith-events-core"
+  // The registry itself: the start-up waits on it (StartupEventDelivery), the recovery
+  // integration test inspects its retained state machine
+  implementation "org.springframework.modulith:spring-modulith-events-core"
 
   // Test dependencies are configured in test-common.gradle
 }
