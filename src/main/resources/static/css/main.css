@@ -3862,8 +3862,10 @@ ul, ol {
     transition-duration: 0.01ms !important;
   }
 
-  /* `*` above matches no view-transition pseudo-element; the groups would still morph */
+  /* The universal rule above does not reach view-transition parts; still each of them,
+     so the groups no longer glide from one page's place to the next. */
   ::view-transition-group(*),
+  ::view-transition-image-pair(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;

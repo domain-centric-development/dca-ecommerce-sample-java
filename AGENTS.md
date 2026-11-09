@@ -100,8 +100,9 @@ The .NET sample spells the same as `EventListener<T>` and `TransactionalEventLis
 **One markup for both shops.** The .NET sample (`../dca-ecommerce-sample-dotnet/`) renders the same pages: the
 same routes, CSS classes, `data-test` attributes and `main.css`, so either browser suite runs against either shop.
 A page change the .NET sample delivered first is taken over from there — its views under
-`src/DcaShop.Web/Views/` and its `src/DcaShop.Web/wwwroot/css/main.css` — not named anew; a change delivered here
-first is the one the .NET sample takes over.
+`src/DcaShop.Web/Views/` — not named anew; a change delivered here first is the one the .NET sample takes over. The
+stylesheet and images under `src/main/resources/static/` are the source of both shops' assets: the .NET sample holds
+a byte-for-byte copy, and `../scripts/check-shop-assets.py` (root `check.sh`) fails on any difference.
 
 ## Development Workflow
 

@@ -64,6 +64,13 @@ element differently from the twin (another mechanism, another split, another nam
 answers three questions, "none" included: does the knowledge catalog need a node, could a rule check it, would
 a marker make it checkable. The difference is closed at that source before it is closed in the code.
 
+**The pages are one contract.** Both shops send the browser the same HTML: the same BEM blocks, elements and
+modifiers, the same component shapes and states (a state as an attribute or a modifier, never a style of its own),
+the same `data-test` attributes, which only the tests read and no style selects. Styles use the design tokens on
+`:root`, never a raw value where a token exists. The one deliberate difference is the corner ribbon's modifier.
+The stylesheet and the images under `src/main/resources/static/` are the source of both shops' assets; the twin holds
+a byte-for-byte copy, and a cross-checkout check fails when the two differ. A change to them is made here and copied.
+
 ## Integrations
 
 A payment provider over REST, outbound. A payment is `POST /payments` with the body
