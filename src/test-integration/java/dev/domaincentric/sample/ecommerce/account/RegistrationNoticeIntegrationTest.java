@@ -26,11 +26,7 @@ import org.springframework.web.util.HtmlUtils;
  * The sentence the page a registration leads to shows, rendered by the wired application: the
  * registration's redirect carries the notice, the page it leads to words it.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own, where the address it registers is still free.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=registration_notice_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Registration notice")
 class RegistrationNoticeIntegrationTest {

@@ -16,11 +16,9 @@ dev.domaincentric.sample.ecommerce
 │   │   │   └── DomainEvent, IntegrationEvent
 │   │   ├── strategic/             # DDD Strategic Patterns
 │   │   │   └── BoundedContext, SharedKernel, OpenHostService
-│   │   ├── port/                  # Port Markers
-│   │   │   ├── in/                # Input Ports (InputPort, UseCase)
-│   │   │   └── out/               # Output Port Markers (OutputPort, Repository, DomainEventPublisher)
-│   │   └── infrastructure/        # Infrastructure Markers
-│   │       └── AsyncInitialize
+│   │   └── port/                  # Port Markers
+│   │       ├── in/                # Input Ports (InputPort, UseCase)
+│   │       └── out/               # Output Port Markers (OutputPort, Repository, DomainEventPublisher)
 │   ├── application/
 │   │   └── shared/                # App-specific ports shared by several contexts (IdentityProvider)
 │   ├── domain/
@@ -97,7 +95,7 @@ dev.domaincentric.sample.ecommerce
 │       │       └── ProductEventConsumer
 │       └── outgoing/               # Outgoing Adapters (Secondary)
 │           ├── persistence/
-│           │   └── InMemoryProductRepository
+│           │   └── JdbcProductRepository
 │           ├── pricing/
 │           │   └── PricingDataAdapter
 │           └── inventory/
@@ -189,13 +187,9 @@ dev.domaincentric.sample.ecommerce
 │           ├── product/
 │           │   └── CompositeArticleDataAdapter
 │           └── persistence/
-│               ├── InMemoryShoppingCartRepository
-│               ├── InMemoryProcessedEvents
 │               ├── JdbcShoppingCartRepository
-│               ├── jpa/
-│               │   ├── JpaShoppingCartRepository, CartJpaRepository
-│               │   ├── CartEntity, CartItemEntity
-│               │   └── CartSpecToJpa
+│               ├── JdbcProcessedEvents
+│               ├── ActiveCartClaim, CartStatusColumn
 │               └── jdbc/
 │                   └── CartSpecToJdbc
 │
@@ -289,7 +283,7 @@ dev.domaincentric.sample.ecommerce
 │       │       └── OrderConfirmationEventConsumer
 │       └── outgoing/
 │           ├── persistence/
-│           │   └── InMemoryCheckoutSessionRepository
+│           │   └── JdbcCheckoutSessionRepository, CheckoutColumns
 │           ├── cart/
 │           │   └── CartDataAdapter
 │           ├── product/
@@ -358,8 +352,7 @@ dev.domaincentric.sample.ecommerce
 │       │       └── AccountNavigation
 │       └── outgoing/
 │           ├── persistence/
-│           │   ├── JdbcAccountRepository      # default (ADR-031)
-│           │   └── InMemoryAccountRepository  # "inmemory" profile
+│           │   └── JdbcAccountRepository
 │           └── security/                  # output-port implementations only
 │               └── SpringSecurityPasswordHasher, SpringSecurityIdentityProvider
 │
@@ -409,8 +402,8 @@ dev.domaincentric.sample.ecommerce
 │       │       └── StockInitializationEventConsumer
 │       └── outgoing/
 │           └── persistence/
-│               ├── InMemoryStockLevelRepository
-│               └── InMemoryProcessedEvents
+│               ├── JdbcStockLevelRepository
+│               └── JdbcProcessedEvents
 │
 ├── pricing/                         # Pricing Bounded Context
 │   ├── api/                         # @NamedInterface("api") — Open Host Service
@@ -448,8 +441,8 @@ dev.domaincentric.sample.ecommerce
 │       │       └── PriceInitializationEventConsumer
 │       └── outgoing/
 │           └── persistence/
-│               ├── InMemoryProductPriceRepository
-│               └── InMemoryProcessedEvents
+│               ├── JdbcProductPriceRepository
+│               └── JdbcProcessedEvents
 │
 ├── portal/                          # Portal Bounded Context
 │   └── adapter/
@@ -474,23 +467,20 @@ dev.domaincentric.sample.ecommerce
 │       │       └── EventPublicationPageViewModel
 │       └── outgoing/
 │           └── persistence/
-│               └── JdbcEventPublicationLogRepository
+│               ├── JdbcEventPublicationLogStore
+│               └── RegistryEventPublicationRecoveryAdapter
 │
 └── infrastructure/                  # Infrastructure (cross-cutting)
     ├── EcommerceSampleApplication
     ├── config/                    # Spring @Configuration classes
-    │   ├── SecurityConfiguration
-    │   ├── AsyncConfiguration, DomainConfiguration
+    │   ├── NoticeCookieConfiguration, NoticeCookieProperties
+    │   ├── NoticeCookieDevelopmentDefaultsValidator
     │   └── Pug4jConfiguration
-    ├── support/
-    │   └── AsyncInitializationProcessor
-    └── security/
-        ├── SpringSecurityIdentityProvider
-        ├── JwtIdentity, JwtIdentityType
-        └── jwt/
-            ├── JwtTokenService, JwtIdentitySession
-            ├── JwtProperties
-            └── JwtAuthenticationFilter
+    ├── events/
+    │   ├── IntegrationEventRecovery
+    │   └── StartupEventDelivery   # the start waits until its own events are delivered
+    └── support/
+        └── CookieFlashMapManager, CsrfTokenModelAdvice
 ```
 
 ## Bounded Context Organization
@@ -629,7 +619,7 @@ def "Repository Implementations must reside in adapter.outgoing package"() {
 | Factory | `{context}.domain.model/` | `ProductFactory.java` |
 | Repository interface | `{context}.application.shared/` | `ProductRepository.java` |
 | Output port | `{context}.application.shared/` | `PricingDataPort.java` |
-| Repository impl | `{context}.adapter.outgoing.persistence/` | `InMemoryProductRepository.java` |
+| Repository impl | `{context}.adapter.outgoing.persistence/` | `JdbcProductRepository.java` |
 | Use case | `{context}.application.{name}/` | `createproduct/CreateProductUseCase.java` |
 | Command/Query | `{context}.application.{name}/` | `createproduct/CreateProductCommand.java` |
 | Result | `{context}.application.{name}/` | `createproduct/CreateProductResult.java` |

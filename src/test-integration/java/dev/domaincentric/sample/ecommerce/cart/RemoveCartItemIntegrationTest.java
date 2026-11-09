@@ -25,11 +25,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * Taking a line out of the cart with the "Remove" the cart page offers on it, through the wired
  * application and its store: each browser is its own cookie jar, carried from request to request.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=remove_cart_item_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Remove a cart line")
 class RemoveCartItemIntegrationTest {

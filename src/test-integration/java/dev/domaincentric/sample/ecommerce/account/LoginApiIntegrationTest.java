@@ -19,11 +19,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 /**
  * How the login and logout endpoints of the JSON API answer: a refused password is a 401, and
  * logging out — the client discarding its token — is acknowledged without content. Runs against the
- * wired application with a database of its own.
+ * wired application.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=login_api_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 class LoginApiIntegrationTest {
 

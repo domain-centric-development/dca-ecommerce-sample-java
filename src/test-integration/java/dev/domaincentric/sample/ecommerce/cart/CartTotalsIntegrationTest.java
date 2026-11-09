@@ -25,9 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * The amounts the cart reports below its lines, read through the input port in the wired
  * application: the subtotal at today's prices and the VAT contained in it at 19 %.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart_totals")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @DisplayName("Cart totals")
 class CartTotalsIntegrationTest {
 

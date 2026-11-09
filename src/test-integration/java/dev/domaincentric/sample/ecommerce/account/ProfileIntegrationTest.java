@@ -20,11 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * "My Profile" rendered by the wired application: the fixed name and the details it shows, a save
  * of the customer's own address, and the login it asks a visitor for.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=profile_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Profile")
 class ProfileIntegrationTest {
@@ -32,9 +28,6 @@ class ProfileIntegrationTest {
   private static final String EMAIL = "anna.schmidt@example.com";
   private static final String PASSWORD = "Secret123";
   private static final String PROFILE = "/account/profile";
-
-  /** The class shares one database, so the account is registered once for all its tests. */
-  private static boolean accountRegistered;
 
   @Autowired private MockMvc mockMvc;
 
@@ -159,13 +152,9 @@ class ProfileIntegrationTest {
     return customer;
   }
 
-  /** Registers the scenario's account as Anna Schmidt, born 1990-05-17, once for this database. */
+  /** Registers the scenario's account as Anna Schmidt, born 1990-05-17. */
   private void registerTheAccount() throws Exception {
-    if (accountRegistered) {
-      return;
-    }
     new Visitor(mockMvc).register(EMAIL, PASSWORD);
-    accountRegistered = true;
   }
 
   /** The profile form's two fields, as the browser submits them. */

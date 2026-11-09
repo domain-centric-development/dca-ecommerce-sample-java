@@ -28,11 +28,7 @@ import org.springframework.web.util.HtmlUtils;
  * A form post that did not come from the shop's own page: the browser holds the shop's cookies, the
  * post lacks the form token the page carries, and the wired application refuses it (ADR-035).
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=form_token_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Form token")
 class FormTokenIntegrationTest {

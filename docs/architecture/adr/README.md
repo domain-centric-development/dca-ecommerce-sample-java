@@ -37,7 +37,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-028](adr-028-immutable-owner-name.md) | The Account Owner's Name Is Immutable by Type, Not by Rule | ✅ Accepted |
 | [ADR-029](adr-029-expiry-is-not-logout.md) | Session Expiry Ends the Session, Not the Identity | ✅ Accepted |
 | [ADR-030](adr-030-three-cookie-session-design.md) | Separate Cookies for Identity, Session and Renewal | ✅ Accepted (partially implemented) |
-| [ADR-031](adr-031-persistence-adapters-as-the-default.md) | A Repository Hands Out Copies — Real Persistence Is the Default | ✅ Accepted (account and cart converted) |
+| [ADR-031](adr-031-persistence-adapters-as-the-default.md) | A Repository Hands Out Copies — Real Persistence Is the Default | ✅ Accepted (scope and `inmemory` profile superseded by ADR-048) |
 | [ADR-032](adr-032-executable-context-map.md) | The Context Map Is Declared in Code and Enforced | ✅ Accepted |
 | [ADR-033](adr-033-adopt-dca-java-libraries.md) | Adopt the dca-java Libraries for Markers and Architecture Rules | ✅ Accepted |
 | [ADR-034](adr-034-transaction-boundary-and-remote-ports.md) | Transaction boundary — `@Transactional` for local use cases, `TransactionBoundary` when remote ports are involved | ✅ Accepted (amended 2026-11-07: a returned refusal rolls back) |
@@ -57,6 +57,7 @@ Architecture Decision Records capture important architectural decisions with con
 | [ADR-045](adr-045-the-active-cart-claim-reaches-the-relational-store.md) | The active-cart claim reaches the relational store | Accepted |
 | [ADR-046](adr-046-a-step-page-takes-the-checkout-over.md) | A step page takes the checkout over | Accepted |
 | [ADR-047](adr-047-expected-refusals-are-sealed-use-case-results.md) | Expected refusals are cases of a closed use-case result | Accepted |
+| [ADR-048](adr-048-postgresql-for-every-store.md) | Every store on PostgreSQL — in-memory repositories are test fakes | Accepted |
 
 ### Proposed 🟡
 

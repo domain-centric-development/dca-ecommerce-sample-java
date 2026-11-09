@@ -22,9 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * Pricing is {@link OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest}'s.
  */
 // A context of its own: the arranged review must not reach any other test class.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=review_takes_todays_prices_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @Import(ArrangedReview.Configuration.class)
 @DisplayName("The review takes today's prices")

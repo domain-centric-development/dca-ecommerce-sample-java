@@ -21,9 +21,7 @@ import org.springframework.web.util.HtmlUtils;
  * the sample catalogue the shop seeds at start-up: what the page shows and where it leads.
  */
 // A context of its own, like the catalogue page's test: the seeded products stay as seeded.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=product_page_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Product page")
 class ProductDetailPageIntegrationTest {

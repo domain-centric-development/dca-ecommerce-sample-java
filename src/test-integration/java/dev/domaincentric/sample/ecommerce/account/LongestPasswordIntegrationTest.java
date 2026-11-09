@@ -17,11 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * The longest password the policy accepts, set on the change-password page of the wired
  * application: 72 bytes in UTF-8, however few characters they are.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own, in which the password is changed.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=longest_password_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Longest password")
 class LongestPasswordIntegrationTest {

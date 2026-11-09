@@ -16,11 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * The password policy as the change-password page words it, in the wired application: a new
  * password that breaks a rule is refused with that rule's sentence.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own. No test here changes the password.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=password_policy_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Password policy on the change-password page")
 class PasswordPolicyIntegrationTest {
@@ -28,9 +24,6 @@ class PasswordPolicyIntegrationTest {
   private static final String EMAIL = "anna.schmidt@example.com";
   private static final String PASSWORD = "Secret123";
   private static final String CHANGE_PASSWORD = "/account/change-password";
-
-  /** The class shares one database, so the account is registered once for all its tests. */
-  private static boolean accountRegistered;
 
   @Autowired private MockMvc mockMvc;
 
@@ -92,10 +85,7 @@ class PasswordPolicyIntegrationTest {
 
   /** A browser of its own in which the scenario's customer has logged in. */
   private Visitor loggedInCustomer() throws Exception {
-    if (!accountRegistered) {
-      new Visitor(mockMvc).register(EMAIL, PASSWORD);
-      accountRegistered = true;
-    }
+    new Visitor(mockMvc).register(EMAIL, PASSWORD);
     final Visitor customer = new Visitor(mockMvc);
     customer.logIn("/login", EMAIL, PASSWORD);
     return customer;

@@ -32,10 +32,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * highest price, no stock at all — and its card on the catalogue page as a visitor opens it. Price
  * and stock reach the catalogue by event, so the card is awaited.
  */
-// A database of its own: the products created here must not reach a catalogue other tests count.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=product_price_stock_limits_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("A product's price and stock at their limits")
 class ProductPriceAndStockAtTheirLimitsIntegrationTest {

@@ -25,11 +25,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * The header of a back-office page, rendered by the wired application with both real security
  * chains, for a browser that is logged in to the shop and to the back office at once.
  */
-// The shopper registers an address of their own, so the class gets a database of its own: no other
-// test can have registered the same address first.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=backoffice_header_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Backoffice header")
 class BackofficeHeaderIntegrationTest {

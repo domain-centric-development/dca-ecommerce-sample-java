@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,11 +34,11 @@ import org.springframework.test.web.servlet.MockMvc;
  * {@code 202} accepted, anything else or no answer within 2 seconds unavailable). The provider is a
  * stub on a free port; the shop's mail provider address points at it.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties = "test.database=order_confirmation")
+    properties = "dca.events.retry.enabled=true")
+// The scheduled redelivery of this context would resubmit what other tests leave failed
+@DirtiesContext
 @AutoConfigureMockMvc
 @DisplayName("The buyer gets an order confirmation")
 class OrderConfirmationIntegrationTest {

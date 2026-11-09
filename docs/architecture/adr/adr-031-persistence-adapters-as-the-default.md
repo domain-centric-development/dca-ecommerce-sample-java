@@ -1,7 +1,7 @@
 # ADR-031: A Repository Hands Out Copies — Real Persistence Is the Default
 
 **Date**: August 13, 2026
-**Status**: ✅ Accepted (account and cart converted — see *Scope*)
+**Status**: ✅ Accepted — *Scope* and the `inmemory` profile superseded by [ADR-048](adr-048-postgresql-for-every-store.md) (2026-11-09)
 **Deciders**: Architecture Team
 
 ---

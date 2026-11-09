@@ -26,11 +26,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * Starting a checkout from a cart id the visitor sends, in the wired application — two visitors,
  * each with the cookies of their own browser.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=strangers_cart_checkout_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("A visitor never reaches another visitor's checkout")
 class StrangersCartCheckoutIntegrationTest {

@@ -31,9 +31,7 @@ import org.springframework.test.web.servlet.ResultActions;
  * reaches for a cart that is not theirs. Runs against the wired application with a database of its
  * own; every test registers a customer of its own, who has no cart yet.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=shopping_cart_api_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 class ShoppingCartApiIntegrationTest {
 

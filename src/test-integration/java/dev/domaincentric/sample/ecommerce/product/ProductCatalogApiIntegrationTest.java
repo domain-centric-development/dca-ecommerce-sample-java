@@ -22,9 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
  */
 // A context of its own: another test class that adds a product to a shared context would change
 // the seeded range this class reads.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=catalogue_api_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Product catalogue API")
 class ProductCatalogApiIntegrationTest {

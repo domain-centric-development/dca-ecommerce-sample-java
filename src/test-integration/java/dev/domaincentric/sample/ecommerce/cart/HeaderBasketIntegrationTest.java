@@ -25,11 +25,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * The cart entry in the header every shop page shares, rendered by the wired application — the
  * visitor's cookies carried from request to request, as a browser would.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=header_basket_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Header basket")
 class HeaderBasketIntegrationTest {

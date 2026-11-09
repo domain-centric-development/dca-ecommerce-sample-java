@@ -27,8 +27,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 // the seeded range this class reads.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = "test.database=catalogue_mcp_test")
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DisplayName("Product catalogue tools")
 class ProductCatalogMcpIntegrationTest {
 

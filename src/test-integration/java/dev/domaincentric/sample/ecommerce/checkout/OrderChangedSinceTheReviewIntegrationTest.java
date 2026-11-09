@@ -33,9 +33,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * session and the review.
  */
 // A context of its own: the arranged ports must not reach any other test class.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=order_changed_since_the_review_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @Import({
   ArrangedReview.Configuration.class,

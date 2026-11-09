@@ -16,11 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * A login form sent from a browser that is logged in already, rendered by the wired application:
  * the page it answers with, and the two accounts' carts afterwards.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=login_while_logged_in_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Login while logged in")
 class LoginWhileLoggedInIntegrationTest {

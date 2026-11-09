@@ -28,11 +28,7 @@ import org.springframework.web.util.HtmlUtils;
  * shop customer is not let in, an operator login always lands on the event log, and a logout closes
  * the back office again.
  */
-// The customer registers an address of their own, so the class gets a database of its own: no
-// other test can have registered the same address first.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=backoffice_access_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Backoffice access")
 class BackofficeAccessIntegrationTest {

@@ -23,10 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * Who may not create a product over the REST API, and how the wired application says so: a stranger
  * is challenged, a customer is forbidden, each as a problem document.
  */
-// A database of its own: the catalogue is asserted to hold exactly the 21 seeded products.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=product_creation_refusal_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Creating a product is refused")
 class ProductCreationRefusalIntegrationTest {

@@ -26,9 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * recovery is held against the store the application actually wires, rather than against the
  * in-memory one where the claim costs no transaction.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart_active_race")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 class ActiveCartRaceIntegrationTest {
 
   @Autowired private GetOrCreateActiveCartInputPort getOrCreateActiveCart;

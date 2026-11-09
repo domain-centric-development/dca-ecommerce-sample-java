@@ -25,11 +25,7 @@ import org.springframework.web.util.HtmlUtils;
  * The login page a visitor without cookies opens, rendered by the wired application: the way to it
  * from the header, the form it shows, where a login leads, and the page a logout ends on.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=login_page_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Login page")
 class LoginPageIntegrationTest {
@@ -45,9 +41,6 @@ class LoginPageIntegrationTest {
   private static final Pattern CSRF_FIELD = Pattern.compile("name=\"_csrf\" value=\"([^\"]+)\"");
   private static final Pattern RETURN_URL_FIELD =
       Pattern.compile("name=\"returnUrl\" value=\"([^\"]*)\"");
-
-  /** The class shares one database, so the account is registered once for all its tests. */
-  private static boolean accountRegistered;
 
   @Autowired private MockMvc mockMvc;
 
@@ -157,11 +150,8 @@ class LoginPageIntegrationTest {
     assertThat(loginPage).doesNotContain("data-test=\"user-greeting\"");
   }
 
-  /** Registers the scenario's account from a browser of its own, once for this database. */
+  /** Registers the scenario's account from a browser of its own. */
   private void registerTheAccount() throws Exception {
-    if (accountRegistered) {
-      return;
-    }
     final Map<String, Cookie> cookies = new LinkedHashMap<>();
     final String form = page("/register", cookies);
     mockMvc
@@ -176,7 +166,6 @@ class LoginPageIntegrationTest {
                 .param("password", PASSWORD)
                 .param("confirmPassword", PASSWORD))
         .andExpect(status().is3xxRedirection());
-    accountRegistered = true;
   }
 
   /**

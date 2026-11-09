@@ -30,10 +30,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * how the wired application says so: a bad request, as a problem document titled "Unacceptable
  * value" — naming the refused field where the request itself refuses it.
  */
-// A database of its own: the catalogue is asserted to hold exactly the 21 seeded products.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=product_price_stock_refusal_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("A product's price and stock are refused")
 class ProductPriceAndStockRefusalIntegrationTest {

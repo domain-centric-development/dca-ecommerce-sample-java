@@ -1,2 +1,4 @@
 org.springframework.context.ApplicationContextInitializer=\
 dev.domaincentric.sample.ecommerce.infrastructure.database.PostgresTestDatabaseInitializer
+org.springframework.test.context.TestExecutionListener=\
+dev.domaincentric.sample.ecommerce.infrastructure.database.DatabaseReset

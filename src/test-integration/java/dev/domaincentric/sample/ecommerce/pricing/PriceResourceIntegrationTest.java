@@ -35,9 +35,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * leave stored is {@link PriceChangeRefusalIntegrationTest}'s.
  */
 // A context of its own: the recorded price change must not reach any other test class.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=price_resource_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @Import(PriceResourceIntegrationTest.PriceChangeRecordedByTheTest.class)
 @DisplayName("Price address of the staff API")

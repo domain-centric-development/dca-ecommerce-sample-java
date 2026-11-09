@@ -46,8 +46,7 @@ patterns themselves are the guide's, this file is how they look in *this* code b
 
 ```
 dev.domaincentric.sample.ecommerce
-├── sharedkernel/             # Shared Kernel (cross-context)
-│   ├── infrastructure/       # Sample-specific marker (AsyncInitialize); DCA markers come from dca-building-blocks
+├── sharedkernel/             # Shared Kernel (cross-context); DCA markers come from dca-building-blocks
 │   ├── domain/               # Shared value objects and specifications
 │   └── application/shared/   # IdentityProvider (the DomainEventPublisher/TransactionBoundary impls come from dca-spring)
 ├── {boundedcontext}/         # Each bounded context (product, cart, checkout, account, portal, inventory, pricing, backoffice)

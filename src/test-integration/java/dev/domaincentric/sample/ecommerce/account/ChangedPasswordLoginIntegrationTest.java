@@ -16,11 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * The login after a customer changed their password on the change-password page, in the wired
  * application: from then on only the new password logs in.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own, in which the password is changed once for all its tests.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=changed_password_login_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Login after a password change")
 class ChangedPasswordLoginIntegrationTest {
@@ -28,9 +24,6 @@ class ChangedPasswordLoginIntegrationTest {
   private static final String EMAIL = "anna.schmidt@example.com";
   private static final String OLD_PASSWORD = "Secret123";
   private static final String NEW_PASSWORD = "Better456";
-
-  /** The class shares one database, so the password is changed once for all its tests. */
-  private static boolean passwordChanged;
 
   @Autowired private MockMvc mockMvc;
 
@@ -61,12 +54,9 @@ class ChangedPasswordLoginIntegrationTest {
 
   /**
    * Registers the scenario's account and changes its password on the change-password page, from a
-   * browser of its own, once for this database.
+   * browser of its own.
    */
   private void changeThePassword() throws Exception {
-    if (passwordChanged) {
-      return;
-    }
     new Visitor(mockMvc).register(EMAIL, OLD_PASSWORD);
     final Visitor customer = new Visitor(mockMvc);
     customer.logIn("/login", EMAIL, OLD_PASSWORD);
@@ -76,6 +66,5 @@ class ChangedPasswordLoginIntegrationTest {
             "currentPassword", OLD_PASSWORD,
             "newPassword", NEW_PASSWORD,
             "confirmPassword", NEW_PASSWORD));
-    passwordChanged = true;
   }
 }

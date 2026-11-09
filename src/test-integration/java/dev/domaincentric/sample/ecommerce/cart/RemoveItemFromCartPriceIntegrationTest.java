@@ -26,12 +26,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * Removing a product from a cart after a price changed, through the input port in the wired
- * application with the cart's real store and the real price list. Its own database, so the changed
- * price reaches no other test.
+ * application with the cart's real store and the real price list.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=remove_item_from_cart_price")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @DisplayName("Removing a product answers at today's prices")
 class RemoveItemFromCartPriceIntegrationTest {
 

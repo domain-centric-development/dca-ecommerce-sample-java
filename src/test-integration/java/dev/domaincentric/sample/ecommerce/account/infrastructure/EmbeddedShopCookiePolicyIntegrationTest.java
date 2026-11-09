@@ -21,11 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {
-      "test.database=cookie_policy_embedded",
-      "app.security.jwt.same-site=None",
-      "app.security.jwt.secure-cookies=true"
-    })
+    properties = {"app.security.jwt.same-site=None", "app.security.jwt.secure-cookies=true"})
 class EmbeddedShopCookiePolicyIntegrationTest extends CookiePolicyTestBase {
 
   @Test

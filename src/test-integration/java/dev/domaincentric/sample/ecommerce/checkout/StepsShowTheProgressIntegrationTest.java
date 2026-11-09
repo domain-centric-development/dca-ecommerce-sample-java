@@ -26,11 +26,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * The checkout's progress bar and the order of its steps, rendered by the wired application — the
  * visitor's cookies carried from request to request, as a browser would.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=steps_show_the_progress_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("The steps show the progress and are taken in order")
 class StepsShowTheProgressIntegrationTest {

@@ -271,7 +271,7 @@ returns a *new* object on every read, so the same code loses the change silently
 behaves like the map hides the bug until the day it is replaced.
 
 Every adapter therefore maps back through the aggregate's `reconstitute` factory — the JDBC one
-because a row leaves it no choice, the in-memory one on purpose:
+because a row leaves it no choice, the in-memory test fake on purpose:
 
 ```java
 // JdbcAccountRepository — a row becomes a fresh aggregate
@@ -279,7 +279,7 @@ private Account toDomain(final AccountRow row) {
     return Account.reconstitute(row.id(), row.email(), row.owner(), /* ... */);
 }
 
-// InMemoryAccountRepository — copies on the way in and on the way out,
+// InMemoryAccountRepository (test fake in src/test) — copies on the way in and on the way out,
 // so that it fails wherever a database would fail
 @Override
 public Optional<Account> findById(final AccountId id) {
@@ -287,7 +287,7 @@ public Optional<Account> findById(final AccountId id) {
 }
 ```
 
-Both adapters run the same `AccountRepositoryContractTest`: the contract belongs to the port, and
+The JDBC adapter and the fake run the same `AccountRepositoryContractTest`: the contract belongs to the port, and
 an implementation that cannot satisfy it does not implement the port.
 
 **Rules:**
@@ -310,7 +310,7 @@ an implementation that cannot satisfy it does not implement the port.
 **Implementation:**
 - Base Interface: `dev.domaincentric.dca.buildingblocks.hexagonal.port.out.Repository`
 - Domain Interfaces: `ProductRepository`, `ShoppingCartRepository`
-- Implementations: `InMemoryProductRepository`, `JpaShoppingCartRepository` (in `adapter.outgoing.persistence`)
+- Implementations: `JdbcProductRepository`, `JdbcShoppingCartRepository` (in `adapter.outgoing.persistence`), on PostgreSQL
 
 #### Store
 
@@ -499,8 +499,8 @@ eventPublisher.publishAndClearEvents(product);
 **Every use case that saves an aggregate must publish — unconditionally.** Not only where an event
 is expected: whether an action raised one is the aggregate's business, and a use case that publishes
 "only when needed" breaks silently the day that action starts raising an event. An aggregate saved
-while still holding its events loses them; worse, with the in-memory repository the same instance
-stays in the map, so a later use case can publish them out of context. A repository must not clear
+while still holding its events loses them; worse, a repository that handed out the stored instance would keep
+it with its events, so a later use case could publish them out of context. A repository must not clear
 events either — on the load path it would swallow what a use case still owes.
 Enforced by `UseCasePatternsArchUnitTest` → *"Use cases that save an aggregate must publish its
 domain events"*.
@@ -763,8 +763,8 @@ public CompleteCartResult execute(final CompleteCartCommand input) {   // @Trans
 ```
 
 Delivery is at least once, so every effect of an event happens exactly once. Each consuming context
-keeps a `ProcessedEvents` store (`application/shared`, implemented by `InMemoryProcessedEvents` in
-`adapter/outgoing/persistence`) keyed by the effect and the event id: two effects of one context may
+keeps a `ProcessedEvents` store (`application/shared`, implemented by `JdbcProcessedEvents` in
+`adapter/outgoing/persistence`, a table written in the same transaction as the effect) keyed by the effect and the event id: two effects of one context may
 react to the same event, and each runs. The consumer only translates the trigger into a command that
 carries `eventId()`; the use case checks and marks inside its transaction, the mark after the effect,
 so a redelivery changes nothing and a failed attempt leaves no mark and is retried. A command without
@@ -1172,108 +1172,6 @@ See [dto-vs-viewmodel-analysis.md](dto-vs-viewmodel-analysis.md) for detailed pa
 - Checkout: `dev.domaincentric.sample.ecommerce.checkout.domain.readmodel.CheckoutCartSnapshot`
 - Checkout ViewModels: `BuyerInfoPageViewModel`, `DeliveryPageViewModel`, `PaymentPageViewModel`, `ReviewPageViewModel`, `ConfirmationPageViewModel`
 
-
-#### Custom Annotations (Shared Kernel Common Layer)
-
-Custom framework-agnostic annotations belong in the Shared Kernel when they represent cross-cutting technical concerns used across multiple bounded contexts.
-
-**Example: @AsyncInitialize Annotation**
-
-The `@AsyncInitialize` annotation marks components for asynchronous initialization after bean construction, enabling non-blocking startup of services that require heavy initialization tasks.
-
-**Annotation Definition (Shared Kernel):**
-
-```java
-// sharedkernel/common/annotation/AsyncInitialize.java
-package dev.domaincentric.sample.ecommerce.sharedkernel.common.annotation;
-
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-public @interface AsyncInitialize {
-  int priority() default 100;
-  String description() default "";
-}
-```
-
-**Processor Implementation (Infrastructure):**
-
-```java
-// infrastructure/support/AsyncInitializationProcessor.java
-@Component
-public class AsyncInitializationProcessor implements BeanPostProcessor, Ordered {
-
-  @Override
-  public Object postProcessAfterInitialization(Object bean, String beanName) {
-    AsyncInitialize annotation =
-        AnnotationUtils.findAnnotation(bean.getClass(), AsyncInitialize.class);
-
-    if (annotation != null) {
-      Method initMethod = bean.getClass().getMethod("asyncInitialize");
-      initMethod.invoke(bean);
-    }
-    return bean;
-  }
-
-  @Override
-  public int getOrder() {
-    return Ordered.LOWEST_PRECEDENCE;
-  }
-}
-```
-
-**Usage Example (Adapter):**
-
-```java
-// product/adapter/outgoing/persistence/InMemoryProductRepository.java
-@Repository
-@AsyncInitialize(priority = 50, description = "Warm up product cache")
-public class InMemoryProductRepository implements ProductRepository {
-
-  @Async
-  public void asyncInitialize() {
-    logger.info("Starting async initialization of ProductRepository cache...");
-    // Preload frequently accessed products
-    // Build search indexes
-    // Warm up caches
-    logger.info("ProductRepository cache warmup completed.");
-  }
-}
-
-// cart/adapter/outgoing/persistence/InMemoryShoppingCartRepository.java
-@Repository
-@AsyncInitialize(priority = 100, description = "Initialize shopping cart metrics")
-public class InMemoryShoppingCartRepository implements ShoppingCartRepository {
-
-  @Async
-  public void asyncInitialize() {
-    logger.info("Starting async initialization of ShoppingCartRepository...");
-    // Initialize metrics collectors
-    // Preload abandoned cart data
-    logger.info("ShoppingCartRepository initialization completed.");
-  }
-}
-```
-
-**Rules:**
-1. Annotation definition in `sharedkernel.infrastructure` (framework-agnostic)
-2. Processor implementation in `infrastructure.support` (framework-specific)
-3. Pure Java annotation with no Spring dependencies
-4. Method name convention: `asyncInitialize()` annotated with `@Async`
-5. Priority determines initialization order (lower values first)
-
-**Benefits:**
-- Framework-independent annotation (pure Java metadata)
-- Application layer can use it without depending on infrastructure
-- Easy to test and mock
-- Separation of concerns: annotation vs. processing logic
-- Follows Dependency Inversion Principle
-
-**Implementation:**
-- Annotation: `dev.domaincentric.sample.ecommerce.sharedkernel.infrastructure.AsyncInitialize`
-- Processor: `dev.domaincentric.sample.ecommerce.infrastructure.support.AsyncInitializationProcessor`
-- Configuration: `dev.domaincentric.sample.ecommerce.infrastructure.config.AsyncConfiguration`
-- Examples: `InMemoryProductRepository`, `InMemoryShoppingCartRepository`
 
 ---
 
@@ -1765,18 +1663,23 @@ Adapters are implementations that connect external systems to the ports.
 5. **Secondary Adapter (Repository Implementation)** persists data
    ```java
    @Repository
-   public class InMemoryProductRepository implements ProductRepository {
-       private final ConcurrentHashMap<ProductId, Product> products = new ConcurrentHashMap<>();
+   public class JdbcProductRepository implements ProductRepository {
+       private final JdbcTemplate jdbcTemplate;
 
        @Override
        public Product save(Product product) {
-           products.put(product.id(), product);
+           jdbcTemplate.update("""
+               INSERT INTO products (id, sku, name, description, category, image_url)
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT (id) DO UPDATE SET /* ... */
+               """, /* the product's values */);
            return product;
        }
 
        @Override
        public Optional<Product> findById(ProductId id) {
-           return Optional.ofNullable(products.get(id));
+           return jdbcTemplate.query(SELECT_PRODUCT + " WHERE id = ?", rowMapper(), id.value())
+               .stream().findFirst();   // the row mapper calls Product.reconstitute
        }
    }
    ```

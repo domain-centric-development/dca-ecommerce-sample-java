@@ -26,11 +26,7 @@ import org.springframework.web.util.HtmlUtils;
  * The registration page a visitor without cookies opens, rendered by the wired application: the way
  * to it from the header, the form it shows, and where a registration leads.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=registration_page_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Registration page")
 class RegistrationPageIntegrationTest {

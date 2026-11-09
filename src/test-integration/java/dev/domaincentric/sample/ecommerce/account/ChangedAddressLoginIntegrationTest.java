@@ -15,11 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * The login of the wired application after a customer changed their address on "My Profile": the
  * new address logs in, the old one no longer does.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=changed_address_login_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Login after an address change")
 class ChangedAddressLoginIntegrationTest {
@@ -27,9 +23,6 @@ class ChangedAddressLoginIntegrationTest {
   private static final String OLD_EMAIL = "anna.schmidt@example.com";
   private static final String NEW_EMAIL = "anna.meyer@example.com";
   private static final String PASSWORD = "Secret123";
-
-  /** The class shares one database, so the address is changed once for all its tests. */
-  private static boolean addressChanged;
 
   @Autowired private MockMvc mockMvc;
 
@@ -58,15 +51,11 @@ class ChangedAddressLoginIntegrationTest {
         .isEqualTo("Invalid email or password");
   }
 
-  /** Registers the account and changes its address on the profile page, once for this database. */
+  /** Registers the account and changes its address on the profile page. */
   private void changeTheAddress() throws Exception {
-    if (addressChanged) {
-      return;
-    }
     final Visitor customer = new Visitor(mockMvc);
     // Registering signs the visitor in.
     customer.register(OLD_EMAIL, PASSWORD);
     customer.saveProfile(NEW_EMAIL, "1990-05-17");
-    addressChanged = true;
   }
 }

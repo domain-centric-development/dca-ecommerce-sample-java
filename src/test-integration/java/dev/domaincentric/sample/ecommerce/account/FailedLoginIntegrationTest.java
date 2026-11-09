@@ -15,10 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * A login the wired application refuses: whatever was wrong, the refusal says the same, so the
  * login gives nothing away about which addresses have an account.
  */
-// The shared H2 database outlives the Spring context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=failed_login_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @DisplayName("Failed login")
 class FailedLoginIntegrationTest {
 

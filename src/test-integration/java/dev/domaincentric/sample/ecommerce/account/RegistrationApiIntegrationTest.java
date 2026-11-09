@@ -23,11 +23,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 /**
  * How the registration endpoint of the JSON API answers a refusal: a problem document whose status
  * names the kind of failure, whose title names the failure and whose detail is the adapter's own
- * sentence. Runs against the wired application with a database of its own.
+ * sentence. Runs against the wired application.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=registration_api_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 class RegistrationApiIntegrationTest {
 

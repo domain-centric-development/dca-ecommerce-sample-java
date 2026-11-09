@@ -112,10 +112,12 @@ REST Controller (no transaction)
 3. **Events After Commit** - Use `@TransactionalEventListener(phase = AFTER_COMMIT)`
 4. **One Transaction Per Use Case** - Each public method is one transaction
 5. **Domain Layer Never Transactional** - Domain objects remain framework-independent
-6. **One Transaction Manager, Every Profile** - the `inmemory` profile runs on the same manager as the others.
-   A stand-in that opens nothing is not a cheaper variant of a transaction: the event publication registry writes
+6. **One Transaction Manager, Every Profile** - every profile and every test runs on the framework's manager over
+   PostgreSQL. A stand-in that opens nothing is not a cheaper variant of a transaction: the event publication registry writes
    its rows under the caller's transaction, so with a stand-in those rows commit on their own and a rolled-back
    unit of work leaves a publication the next recovery run delivers (ADR-034)
+7. **Check-then-Change Under a Row Lock** - a stock level, and a checkout session read by its cart, are read
+   `FOR UPDATE` inside the transaction, so one change at a time holds across processes too (ADR-048)
 
 ## Anti-Patterns to Avoid
 
@@ -145,7 +147,7 @@ public void onProductCreated(ProductCreated event) { }
 
 ❌ **A Placeholder Transaction Manager:**
 ```java
-@Profile("inmemory")
+@Profile("test")
 public class TransactionConfiguration {
   @Bean
   public PlatformTransactionManager transactionManager() {
@@ -167,3 +169,4 @@ public class Product { }
 - [Architecture Principles](architecture-principles.md) - Application Service patterns
 - [ADR-002: Framework-Independent Domain](adr/adr-002-framework-independent-domain.md)
 - [ADR-034: Transaction Boundary and Remote Ports](adr/adr-034-transaction-boundary-and-remote-ports.md)
+- [ADR-048: Every Store on PostgreSQL](adr/adr-048-postgresql-for-every-store.md)

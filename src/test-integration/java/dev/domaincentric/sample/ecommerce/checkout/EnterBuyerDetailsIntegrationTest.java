@@ -27,11 +27,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * from request to request, as a browser would, and the buyer form sent without the browser's own
  * checks.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=enter_buyer_details_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Enter the buyer details")
 class EnterBuyerDetailsIntegrationTest {

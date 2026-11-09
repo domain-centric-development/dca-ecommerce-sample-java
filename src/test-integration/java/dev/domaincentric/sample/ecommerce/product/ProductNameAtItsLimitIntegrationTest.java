@@ -22,10 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 /** A product whose name is exactly as long as a name may be is created over the REST API. */
-// A database of its own: the product created here must not reach a catalogue other tests count.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=product_name_limit_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("A product name at its limit")
 class ProductNameAtItsLimitIntegrationTest {

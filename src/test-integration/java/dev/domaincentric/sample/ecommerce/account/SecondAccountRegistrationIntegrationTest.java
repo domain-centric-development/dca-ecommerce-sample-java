@@ -25,9 +25,7 @@ import org.springframework.web.util.HtmlUtils;
  * application renders.
  */
 // The scenario registers Anna, so it gets a store of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=second_account_registration_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Registration of a second account")
 class SecondAccountRegistrationIntegrationTest {

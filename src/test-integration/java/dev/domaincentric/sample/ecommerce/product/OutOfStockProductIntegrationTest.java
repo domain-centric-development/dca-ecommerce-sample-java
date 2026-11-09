@@ -25,9 +25,7 @@ import org.springframework.web.util.HtmlUtils;
  */
 // A context of its own: the stock taken away here must not reach the classes asserting the seeded
 // stock.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=out_of_stock_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Out of stock product")
 class OutOfStockProductIntegrationTest {

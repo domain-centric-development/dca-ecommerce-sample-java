@@ -40,11 +40,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * /payments}: {@code 201} authorized, {@code 402} refused, no answer within 2 seconds unavailable).
  * The provider is a stub on a free port; the shop's provider address points at it.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=provider_payment")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 class ProviderPaymentIntegrationTest {
 

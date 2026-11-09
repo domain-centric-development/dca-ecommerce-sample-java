@@ -19,8 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = "test.database=cookie_policy_default")
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CookiePolicyIntegrationTest extends CookiePolicyTestBase {
 
   @Test

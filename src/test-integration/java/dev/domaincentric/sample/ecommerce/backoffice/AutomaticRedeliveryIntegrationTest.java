@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.modulith.events.ApplicationModuleListener;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -30,7 +31,10 @@ import org.springframework.transaction.support.TransactionTemplate;
     classes = {
       EcommerceSampleApplication.class,
       AutomaticRedeliveryIntegrationTest.Listeners.class
-    })
+    },
+    properties = "dca.events.retry.enabled=true")
+// The scheduled redelivery of this context would resubmit what other tests leave failed
+@DirtiesContext
 @DisplayName("Automatic redelivery")
 class AutomaticRedeliveryIntegrationTest {
 

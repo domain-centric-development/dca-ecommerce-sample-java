@@ -24,9 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * Integration tests for the JDBC ShoppingCartRepository: specification pushdown and paging against
  * PostgreSQL.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart-repository-jdbc")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 class ShoppingCartRepositoryJdbcIntegrationTest {
 
   @Autowired private JdbcShoppingCartRepository shoppingCartRepository;

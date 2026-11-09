@@ -32,9 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * forbidden: {@code 403}, because no token of theirs will open that route (ADR-036). Both samples
  * answer alike; this is where the Java half is held to it.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=api_authz_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 class ApiAuthorizationIntegrationTest {
 

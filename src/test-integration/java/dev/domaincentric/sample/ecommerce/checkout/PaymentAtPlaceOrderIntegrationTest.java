@@ -62,11 +62,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * The payment step chooses how to pay, and Place Order requests the payment: the use cases through
  * their input ports, the shop wired to a payment provider that is a stub on a free port.
  */
-// The shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring context — so this class gets a
-// database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=payment_at_place_order")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 class PaymentAtPlaceOrderIntegrationTest {
 
   private static final String PROVIDER_ID = "provider";

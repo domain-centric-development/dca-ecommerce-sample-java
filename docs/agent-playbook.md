@@ -311,7 +311,7 @@ Superseded confirmation has no completion effect. Abandonment/expiry closes only
 
 Cart reconciliation intersects purchased unit intervals with the current stable position id. Later additions (also of
 the same product), removed/re-added positions and other contents survive. Replay and overlapping completed snapshots
-cannot remove a unit twice. JDBC/JPA cart persistence preserves the interval allocation watermark; in-memory persistence
+cannot remove a unit twice. JDBC cart persistence preserves the interval allocation watermark; the in-memory test fake
 retains the same domain state. The legacy Completed cart status remains readable, but snapshot checkout leaves
 an active cart editable and never completes the whole cart.
 
@@ -319,5 +319,5 @@ Confirmation retrieves current price/availability/stock facts before its local t
 immutable line/fact snapshots. The review shows the session's lines at today's prices and changes nothing; "Place
 Order" carries the review fingerprint of what the customer was shown. A shortage, or a review that is no longer the one
 shown, refuses the order and leaves state, totals and events unchanged; the review then shows the order as it is today.
-Success orders the reviewed lines and stores and publishes the reviewed total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
+Success orders the reviewed lines and stores and publishes the reviewed total; there is no no-argument confirmation path. Local row locking is not a
 claim of durable distributed transactions or universal rollback of unenlisted resources.

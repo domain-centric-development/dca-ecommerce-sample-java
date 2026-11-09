@@ -36,8 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
     classes = {
       EcommerceSampleApplication.class,
       RolledBackWorkDeliversNoEventIntegrationTest.Listener.class
-    },
-    properties = "test.database=rollback_events")
+    })
 class RolledBackWorkDeliversNoEventIntegrationTest {
 
   @Autowired private ApplicationEventPublisher publisher;

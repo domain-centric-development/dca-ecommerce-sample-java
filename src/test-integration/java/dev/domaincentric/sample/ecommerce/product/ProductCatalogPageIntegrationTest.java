@@ -25,9 +25,7 @@ import org.springframework.web.util.HtmlUtils;
  */
 // A context of its own: another test class that adds a product to a shared context would change
 // the seeded range this class asserts.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=catalogue_page_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Product catalogue page")
 class ProductCatalogPageIntegrationTest {

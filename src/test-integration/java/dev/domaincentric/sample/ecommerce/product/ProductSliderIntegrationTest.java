@@ -38,9 +38,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * runs against the seeded shop.
  */
 // A context of its own: the replaced Pricing answer must not reach any other test class.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=product_slider_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @Import(ProductSliderIntegrationTest.PricingChosenByTheTest.class)
 @DisplayName("Product slider on the homepage")

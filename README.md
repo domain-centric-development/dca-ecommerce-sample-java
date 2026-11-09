@@ -27,8 +27,8 @@ This project showcases best practices for structuring a Spring Boot application 
 - **Framework-Independent Domain** layer (no Spring/JPA in core)
 - **Multi-step Checkout Flow** with 5 steps and session management
 - **Specification Pattern with Visitor** for database-agnostic cart filtering
-- **Multiple Persistence Strategies** (InMemory, JPA, JDBC) — cart via JPA, account via JDBC, both
-  against H2; every adapter hands out copies, never the stored instance (ADR-031)
+- **PostgreSQL for every store** — one JDBC adapter per repository, SQL written by hand, the schema from Flyway;
+  every repository hands out copies, never the stored instance (ADR-031, ADR-048)
 
 ## Architecture Patterns
 
@@ -63,7 +63,7 @@ This project showcases best practices for structuring a Spring Boot application 
 - **Input Ports**: Use case interfaces (defined in application layer)
 - **Output Ports**: Repository and service interfaces (defined in application/shared)
 - **Incoming Adapters** (Primary): REST Controllers, MCP Server, Web MVC, Event Consumers, Open Host Services
-- **Outgoing Adapters** (Secondary): In-memory, JPA, and JDBC repository implementations
+- **Outgoing Adapters** (Secondary): JDBC repository implementations on PostgreSQL
 
 ### Onion Architecture
 
@@ -81,8 +81,6 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 ├── sharedkernel/                         # Shared Kernel (cross-context)
 │   │                                     # (architectural markers come from dev.domaincentric:dca-building-blocks —
 │   │                                     #  ddd.tactical, ddd.strategic[.relationships], hexagonal.port.in/out)
-│   ├── infrastructure/
-│   │   └── AsyncInitialize.java          # Sample-specific framework marker (not a DCA building block)
 │   ├── application/
 │   │   └── shared/                       # App-specific ports shared by several contexts
 │   │       └── IdentityProvider.java     # Current caller's identity (not a generic marker)
@@ -174,7 +172,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           ├── event/
 │           │   └── ProductCreatedEventPublisher.java
 │           ├── persistence/
-│           │   └── InMemoryProductRepository.java
+│           │   └── JdbcProductRepository.java
 │           ├── pricing/
 │           │   └── PricingDataAdapter.java    # Adapter to Pricing context
 │           └── inventory/
@@ -319,14 +317,10 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           ├── product/
 │           │   └── CompositeArticleDataAdapter.java  # Composite adapter for article data
 │           └── persistence/
-│               ├── InMemoryShoppingCartRepository.java
 │               ├── JdbcShoppingCartRepository.java
-│               ├── jpa/                  # JPA persistence alternative
-│               │   ├── JpaShoppingCartRepository.java
-│               │   ├── CartJpaRepository.java
-│               │   ├── CartEntity.java
-│               │   ├── CartItemEntity.java
-│               │   └── CartSpecToJpa.java    # Specification visitor for JPA
+│               ├── JdbcProcessedEvents.java
+│               ├── ActiveCartClaim.java
+│               ├── CartStatusColumn.java
 │               └── jdbc/
 │                   └── CartSpecToJdbc.java   # Specification visitor for JDBC
 │
@@ -479,7 +473,8 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │           ├── event/
 │           │   └── CheckoutConfirmedEventPublisher.java
 │           ├── persistence/
-│           │   └── InMemoryCheckoutSessionRepository.java
+│           │   ├── JdbcCheckoutSessionRepository.java
+│           │   └── CheckoutColumns.java
 │           ├── cart/
 │           │   └── CartDataAdapter.java
 │           ├── product/
@@ -598,8 +593,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │       └── AccountNavigation.java
 │       └── outgoing/                     # Outgoing adapters
 │           ├── persistence/
-│           │   ├── JdbcAccountRepository.java     # default (ADR-031)
-│           │   └── InMemoryAccountRepository.java # "inmemory" profile
+│           │   └── JdbcAccountRepository.java
 │           └── security/                 # Implementations of output ports only
 │               ├── SpringSecurityPasswordHasher.java
 │               └── SpringSecurityIdentityProvider.java
@@ -657,7 +651,8 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │       └── StockInitializationEventConsumer.java
 │       └── outgoing/                     # Outgoing adapters
 │           └── persistence/
-│               └── InMemoryStockLevelRepository.java
+│               ├── JdbcStockLevelRepository.java
+│               └── JdbcProcessedEvents.java
 │
 ├── pricing/                              # Pricing bounded context
 │   ├── api/                              # Spring Modulith @NamedInterface API
@@ -700,7 +695,8 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │       └── PriceInitializationEventConsumer.java
 │       └── outgoing/                     # Outgoing adapters
 │           └── persistence/
-│               └── InMemoryProductPriceRepository.java
+│               ├── JdbcProductPriceRepository.java
+│               └── JdbcProcessedEvents.java
 │
 ├── portal/                               # Portal bounded context
 │   └── adapter/                          # Adapters
@@ -741,15 +737,14 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 └── infrastructure/                       # Infrastructure (cross-cutting)
     ├── EcommerceSampleApplication.java    # Spring Boot main class
     ├── config/                           # Spring @Configuration classes
-    │   ├── AsyncConfiguration.java
     │   ├── NoticeCookieConfiguration.java
     │   ├── NoticeCookieProperties.java
     │   ├── NoticeCookieDevelopmentDefaultsValidator.java
     │   └── Pug4jConfiguration.java
     ├── events/
-    │   └── IntegrationEventRecovery.java
+    │   ├── IntegrationEventRecovery.java
+    │   └── StartupEventDelivery.java     # the start waits until its own events are delivered
     └── support/                          # Framework support components
-        ├── AsyncInitializationProcessor.java
         ├── CookieFlashMapManager.java
         └── CsrfTokenModelAdvice.java
 ```
@@ -768,6 +763,8 @@ a page waits for a human's acceptance before it counts as delivered.
 ### Prerequisites
 - Java 25
 - Gradle 9.3.1 or higher
+- Docker or Podman — the integration and browser tests and `bootTestRun` start PostgreSQL in a container
+  (Testcontainers)
 
 ### Running the Application
 
@@ -775,11 +772,18 @@ a page waits for a human's acceptance before it counts as delivered.
 # Build the project
 ./gradlew build
 
-# Run the application
+# Run the application with a PostgreSQL container of its own
+./gradlew bootTestRun
+
+# Run the application against a running PostgreSQL
+docker compose up -d postgres
 ./gradlew bootRun
 ```
 
-The application will start on `http://localhost:8080`
+The application will start on `http://localhost:8080`. `bootRun` and the image connect to the database
+`DATABASE_URL` names (default `jdbc:postgresql://localhost:5432/shop`, user and password `shop` —
+`DATABASE_USERNAME`, `DATABASE_PASSWORD`); Flyway migrates the schema at start. The data outlives the process: a
+restarted shop finds what it stored before.
 
 Payments go to a stand-in inside the shop that authorizes every payment. To pay through a payment
 provider instead, give its address; the shop then sends `POST /payments` there and treats no answer
@@ -827,7 +831,7 @@ NOTICE_COOKIE_KEY=$(openssl rand -base64 32)   # the same value on every instanc
 ```
 
 The key in `application.yml` is committed and therefore public; like the other development defaults (ADR-043) the
-shop refuses it outside the `dev` and `inmemory` profiles.
+shop refuses it outside the `dev` profile.
 
 ### Health Check
 
@@ -970,7 +974,7 @@ AI assistants will automatically discover and connect to the MCP server.
 
 ## Sample Data
 
-The shop sells what this architecture is made of. The application initializes with 21 sample
+The shop sells what this architecture is made of. On an empty catalogue the application seeds 21 sample
 products across five categories:
 - **Books** (8): the sources the architecture was synthesized from — Evans, Martin, Vernon (twice),
   Cockburn/Garrido de Paz, Khononov, Fowler, Skelton/Pais
@@ -991,7 +995,7 @@ For comprehensive architecture documentation, see:
 ### Quick Reference
 
 **Domain Layer** (per bounded context) - Framework-independent business logic
-- No Spring/JPA annotations in domain models
+- No Spring or persistence annotations in domain models
 - All business rules in domain objects
 - Organized into: domain.model, domain.service, domain.event, domain.specification
 - Dependencies point inward toward domain
@@ -1011,7 +1015,7 @@ For comprehensive architecture documentation, see:
   - `adapter.incoming.event.acl` - Anti-corruption layer event translators
   - `adapter.incoming.security` - Request-side security: the JWT filter, tokens, session cookies, refusals
 - Outgoing Adapters (Secondary):
-  - `adapter.outgoing.persistence` - Repository implementations (InMemory, JPA, JDBC)
+  - `adapter.outgoing.persistence` - Repository implementations (JDBC on PostgreSQL)
   - `adapter.outgoing.event` - Integration event publishers
   - `adapter.outgoing.cart`, `adapter.outgoing.product` - Cross-context data adapters
   - `adapter.outgoing.payment` - Payment provider adapters
@@ -1033,7 +1037,6 @@ For comprehensive architecture documentation, see:
   `ddd.tactical` (Entity, Value, AggregateRoot, DomainEvent, …), `ddd.strategic` (BoundedContext),
   `ddd.strategic.relationships` (SharedKernel, OpenHostService, Upstream, ExternalUpstream, Partnership),
   `hexagonal.port.in` (InputPort, UseCase), `hexagonal.port.out` (OutputPort, Repository, Store, DomainEventPublisher, IntegrationEventPublisher)
-- `sharedkernel.infrastructure` - Sample-specific framework marker (AsyncInitialize)
 - `sharedkernel.application.shared` - Application-specific ports shared across contexts (IdentityProvider) — not part of the generic marker set
 - `sharedkernel.domain.model` - Shared value objects (Money, Price, ProductId, UserId, PageResult, PagingRequest)
 - `sharedkernel.domain.specification` - Composable specification pattern
@@ -1068,6 +1071,16 @@ Architecture rules are **actively enforced**: the rules come from the library `d
 ### Unit Tests
 ```bash
 ./gradlew test
+```
+
+### Integration Tests
+
+`src/test-integration` runs the wired shop against PostgreSQL in a container (Testcontainers, Docker or Podman): one
+container per test JVM, one database for every Spring context in it, and `DatabaseReset` restores the seeded
+catalogue before each test, so the suite shares its contexts instead of starting one per class:
+
+```bash
+./gradlew test-integration
 ```
 
 ### End-to-End Tests
@@ -1106,8 +1119,8 @@ Because the markup is the same as the .NET sample's, either suite runs against e
 
 ## Key Design Decisions
 
-1. **Persistence**: The cart is stored through JPA, the account through JDBC, both against H2 (ADR-031); product,
-   checkout, inventory and pricing keep their state in memory
+1. **Persistence**: Every store runs on PostgreSQL through a JDBC adapter with SQL written by hand, the schema
+   migrated by Flyway (ADR-048); in-memory repositories exist only as test fakes
 2. **Security**: Pages run on a session cookie with CSRF protection; `/api/**` takes only a bearer token, and each
    resource states who may call it — anyone, the cart's owner, or the staff role (ADR-035, ADR-036)
 3. **Price Snapshot**: Cart items store price at time of addition (common e-commerce pattern)
@@ -1118,8 +1131,8 @@ Because the markup is the same as the .NET sample's, either suite runs against e
 8. **Shared Kernel**: Cross-context value objects shared between bounded contexts
 9. **Multi-step Checkout Flow**: 5 steps (Buyer Info → Delivery → Payment → Review → Confirmation) with session management
 10. **Specification Pattern with Visitor**: Database-agnostic filtering via CartSpecification and CartSpecificationVisitor
-11. **Multiple Persistence Strategies**: JPA (the one in use), JDBC (profile `jdbc`) and in-memory (profile
-    `inmemory`) implementations of the shopping cart repository
+11. **Row Locks for Check-then-Change**: Stock levels, and checkout sessions read by their cart, are read
+    `FOR UPDATE` inside a transaction (ADR-048)
 12. **OpenHost Service Pattern**: Cross-context APIs via Spring Modulith `@NamedInterface` API packages
 13. **UserId Continuity on Registration**: When a user registers, their anonymous UserId is preserved
 14. **Spring Modulith Integration Events**: Cross-module communication via dedicated `events` packages, separate from internal domain events
@@ -1210,7 +1223,7 @@ Confirmation retrieves current price/availability/stock facts before its local t
 immutable line/fact snapshots. The review shows the lines at today's prices and changes nothing; "Place Order" carries
 a fingerprint of what the review showed. A shortage, or a review that is no longer the one shown, refuses the order and
 leaves state, totals and events unchanged, and the review shows the order as it is today. Success orders the reviewed
-lines and stores and publishes the reviewed total; there is no no-argument confirmation path. Local in-memory repository serialization is not a
+lines and stores and publishes the reviewed total; there is no no-argument confirmation path. Local row locking is not a
 claim of durable distributed transactions or universal rollback of unenlisted resources.
 
 The language-neutral specification is an independently owned, currently unpublished repository. It is **not part of the

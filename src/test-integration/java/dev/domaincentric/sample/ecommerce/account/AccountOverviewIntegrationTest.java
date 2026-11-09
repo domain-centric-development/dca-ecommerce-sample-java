@@ -20,11 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * The account overview a logged-in customer opens, rendered by the wired application: the way to it
  * from the header, the account navigation it shows, and the login it asks a visitor for.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=account_overview_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Account overview")
 class AccountOverviewIntegrationTest {
@@ -34,9 +30,6 @@ class AccountOverviewIntegrationTest {
 
   private static final Pattern NAV_ITEM =
       Pattern.compile("<(a|span)([^>]*\\bdata-test=\"account-nav-[^\"]*\"[^>]*)>([^<]*)<");
-
-  /** The class shares one database, so the account is registered once for all its tests. */
-  private static boolean accountRegistered;
 
   @Autowired private MockMvc mockMvc;
 
@@ -112,13 +105,9 @@ class AccountOverviewIntegrationTest {
     return customer;
   }
 
-  /** Registers the scenario's account from a browser of its own, once for this database. */
+  /** Registers the scenario's account from a browser of its own. */
   private void registerTheAccount() throws Exception {
-    if (accountRegistered) {
-      return;
-    }
     new Visitor(mockMvc).register(EMAIL, PASSWORD);
-    accountRegistered = true;
   }
 
   private static List<Element> navigationItems(final String page) {

@@ -1,6 +1,6 @@
 # ADR-045: The Active-Cart Claim Reaches the Relational Store
 
-**Date**: 2026-09-21 · **Status**: Accepted
+**Date**: 2026-09-21 · **Status**: Accepted — on PostgreSQL the generated column became a partial unique index ([ADR-048](adr-048-postgresql-for-every-store.md), 2026-11-09)
 
 ## Context
 

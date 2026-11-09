@@ -22,12 +22,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * The staff's list of every cart, read through its input port in the wired application, while one
- * cart holds a product the catalogue no longer knows. The application context is this test's own
- * (its own database name), so the product it takes out of the catalogue is missing nowhere else.
+ * cart holds a product the catalogue no longer knows. The database goes back to the seeded
+ * catalogue after the test, so the product it takes out is missing nowhere else.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart_lost_product")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @DisplayName("A cart with a product the catalogue lost")
 class CartWithALostProductIntegrationTest {
 

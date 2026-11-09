@@ -27,11 +27,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * cookies carried from request to request, as a browser would. The order reaches the cart as an
  * event after it is placed, so the cart page is read again until it changed, for up to 15 seconds.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart_after_the_order_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("After the order the cart keeps only what was not bought")
 class CartAfterTheOrderIntegrationTest {

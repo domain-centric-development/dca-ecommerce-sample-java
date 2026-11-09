@@ -23,9 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * gets. All three report the same failure, which is what lets {@code GetOrCreateActiveCartUseCase}
  * handle a lost race without knowing its store (ADR-045).
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart_active_claim")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 class ActiveCartClaimIntegrationTest {
 
   @Autowired private ShoppingCartRepository carts;

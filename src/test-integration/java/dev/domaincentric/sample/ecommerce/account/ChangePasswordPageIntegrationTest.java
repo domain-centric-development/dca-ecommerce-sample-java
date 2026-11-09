@@ -22,11 +22,7 @@ import org.springframework.web.util.HtmlUtils;
  * The change-password page of the account area, rendered by the wired application: the form it
  * shows, a change that keeps the password, and the login it asks a visitor for.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own. No test here changes the password to another one.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=change_password_page_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Change password page")
 class ChangePasswordPageIntegrationTest {
@@ -42,9 +38,6 @@ class ChangePasswordPageIntegrationTest {
   private static final Pattern NEW_PASSWORD_HINT =
       Pattern.compile(
           "data-test=\"change-password-new-password-input\"[^>]*>\\s*<p class=\"form__hint\">([^<]*)</p>");
-
-  /** The class shares one database, so the account is registered once for all its tests. */
-  private static boolean accountRegistered;
 
   @Autowired private MockMvc mockMvc;
 
@@ -125,12 +118,8 @@ class ChangePasswordPageIntegrationTest {
     return customer;
   }
 
-  /** Registers the scenario's account from a browser of its own, once for this database. */
+  /** Registers the scenario's account from a browser of its own. */
   private void registerTheAccount() throws Exception {
-    if (accountRegistered) {
-      return;
-    }
     new Visitor(mockMvc).register(EMAIL, PASSWORD);
-    accountRegistered = true;
   }
 }

@@ -29,10 +29,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * blank or overlong name, an overlong description or image URL — and how the wired application says
  * so: a bad request, as a problem document whose title names the refusal.
  */
-// A database of its own: the catalogue is asserted to hold exactly the 21 seeded products.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=product_value_refusal_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("A product's values are refused")
 class ProductValueRefusalIntegrationTest {

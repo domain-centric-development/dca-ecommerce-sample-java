@@ -45,9 +45,12 @@ Conversational replies to the user may follow the user's language preference, bu
 ./gradlew test -Pfilter=Cart                 # Filter tests by name substring
 ./gradlew test-architecture                  # Run ArchUnit architecture tests
 ./gradlew test-architecture --tests "*ArchitectureRulesTest*"  # DCA rule catalog only
+./gradlew test-integration                   # Integration tests against PostgreSQL (Testcontainers)
 
 # Run Application
-./gradlew bootRun                            # Start app (JDWP debug on port 5005)
+./gradlew bootTestRun                        # Start app with a PostgreSQL container of its own
+./gradlew bootRun                            # Start app against DATABASE_URL (JDWP debug on port 5005)
+docker compose up -d postgres                # The database bootRun expects (localhost:5432/shop)
 docker compose up --build                    # Same shop in a container, http://localhost:8080
 docker compose run --rm test                 # Tests without a local JDK
 ./gradlew -Plog-debug bootRun                # Start with debug logging
@@ -56,6 +59,9 @@ docker compose run --rm test                 # Tests without a local JDK
 ./gradlew -Plog-debug test                   # Tests with verbose output
 ./gradlew -Plog-debug test-architecture      # Arch tests with verbose output
 ```
+
+Docker or Podman must run for `test-integration`, `test-e2e` and `bootTestRun` — they start PostgreSQL in a
+container.
 
 **Test Reports:**
 - Unit tests: `build/reports/test/`

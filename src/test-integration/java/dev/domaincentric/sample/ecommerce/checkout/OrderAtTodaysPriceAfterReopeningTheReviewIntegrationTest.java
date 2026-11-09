@@ -63,10 +63,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * placed again from the review as it now is, the order takes today's price and the payment provider
  * — a stub on a free port — authorizes the total that review shows.
  */
-// A database of its own: the changed price must not reach the catalogue other test classes read.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=order_at_todays_price_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @DisplayName("Place Order against the review it was sent from")
 class OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest {
 

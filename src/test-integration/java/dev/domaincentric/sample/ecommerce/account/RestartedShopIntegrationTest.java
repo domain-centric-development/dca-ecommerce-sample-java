@@ -21,10 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * The shop after a restart, rendered by the wired application: it keeps nothing, so its store holds
  * none of the accounts it had, while a browser still carries the session the shop signed before.
  */
-// A database of its own, in which no account was ever stored — the store as a restart leaves it.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=restarted_shop_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Restarted shop")
 class RestartedShopIntegrationTest {

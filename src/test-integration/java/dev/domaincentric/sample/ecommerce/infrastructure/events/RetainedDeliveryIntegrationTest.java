@@ -22,8 +22,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-// A development run with a real database. Without "dev" the shop refuses the
-// committed secret and the non-Secure cookies (JwtDevelopmentDefaultsValidator).
 @ActiveProfiles("dev")
 @SpringBootTest(
     classes = {EcommerceSampleApplication.class, RetainedDeliveryIntegrationTest.Listeners.class},

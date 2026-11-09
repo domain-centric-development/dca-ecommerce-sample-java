@@ -15,11 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * The account overview of an account that has never logged in, rendered by the wired application
  * right after the registration signed the visitor in.
  */
-// The account must not have logged in before, so the class gets a database of its own: no other
-// test can log the same address in first.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=new_account_overview_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Account overview of a new account")
 class NewAccountOverviewIntegrationTest {

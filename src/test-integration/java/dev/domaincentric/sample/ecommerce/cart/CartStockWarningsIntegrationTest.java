@@ -29,9 +29,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  */
 // A context of its own: the stock taken away here must not reach the classes asserting the seeded
 // stock.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart_stock_warnings_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Stock warnings in the cart")
 class CartStockWarningsIntegrationTest {

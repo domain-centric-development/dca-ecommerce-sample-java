@@ -17,11 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {
-      "test.database=cookie_policy_hardened",
-      "app.security.jwt.allow-framing=false",
-      "app.security.jwt.secure-cookies=true"
-    })
+    properties = {"app.security.jwt.allow-framing=false", "app.security.jwt.secure-cookies=true"})
 class HardenedShopCookiePolicyIntegrationTest extends CookiePolicyTestBase {
 
   @Test

@@ -18,9 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * shop runs: the refusal is answered, and the product page still shows the price as it was.
  */
 // A context of its own: a price change that slipped through must not reach any other test class.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=price_change_refusal_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("A refused price change leaves the price")
 class PriceChangeRefusalIntegrationTest {

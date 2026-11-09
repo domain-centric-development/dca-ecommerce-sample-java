@@ -32,11 +32,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * cookies carried from request to request. The stock changes shortly after the order, so the pages
  * are read again until they show it, for at most fifteen seconds.
  */
-// MockMvc requests commit, and the stock bought here must not reach the classes asserting the
-// seeded stock — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=stock_goes_down_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Stock goes down by what was bought")
 class StockGoesDownByWhatWasBoughtIntegrationTest {

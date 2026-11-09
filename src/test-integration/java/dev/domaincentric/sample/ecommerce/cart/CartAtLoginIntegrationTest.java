@@ -28,11 +28,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * the login leads from the checkout. Each browser keeps its own cookies from request to request,
  * and a redirect's message is carried to the page it leads to, as a browser would.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart_at_login_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Logging in brings the guest cart along")
 class CartAtLoginIntegrationTest {

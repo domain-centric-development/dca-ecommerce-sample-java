@@ -16,10 +16,9 @@ import org.awaitility.Awaitility;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -30,12 +29,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * port in the wired application, the page read as a visitor opens it. Its price and stock reach the
  * catalogue by event, so the card is awaited.
  */
-// A database of its own: the page is asserted to hold the 21 seeded products and this one.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=created_product_catalogue_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("A created product on the catalogue page")
 class CreatedProductOnTheCatalogueIntegrationTest {
 
@@ -45,7 +40,7 @@ class CreatedProductOnTheCatalogueIntegrationTest {
 
   @Autowired private CreateProductInputPort createProduct;
 
-  @BeforeAll
+  @BeforeEach
   void staffCreatedTheAggregateMugWithoutAnImage() {
     assertInstanceOf(
         CreateProductResult.Created.class,

@@ -35,10 +35,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * What staff leave out when they create a product, and what a visitor then sees: the request read
  * by the REST resource of the wired application, the product page rendered from what was stored.
  */
-// A database of its own: the products created here never reach a test that counts the seeded range.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=product_creation_api_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Creating a product")
 class ProductCreationApiIntegrationTest {

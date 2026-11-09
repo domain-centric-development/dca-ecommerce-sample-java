@@ -28,11 +28,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * address — the visitor's cookies carried from request to request, as a browser would, and the
  * payment form sent without the browser's own checks.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=choose_how_to_pay_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Choose how to pay")
 class ChooseHowToPayIntegrationTest {

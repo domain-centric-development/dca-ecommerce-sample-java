@@ -39,9 +39,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * therefore lives in the use case: every step asks the repository a question scoped to the caller,
  * so a session that is not theirs is indistinguishable from one that does not exist.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=checkout_ownership")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 class CheckoutOwnershipIntegrationTest {
 
   @Autowired private GetOrCreateActiveCartInputPort getOrCreateActiveCart;

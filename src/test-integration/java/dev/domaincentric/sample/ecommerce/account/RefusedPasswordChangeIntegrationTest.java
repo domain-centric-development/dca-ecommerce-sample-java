@@ -16,11 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * Password changes the change-password page refuses, in the wired application: which refusal wins,
  * and that the old password still logs in afterwards.
  */
-// MockMvc requests commit, and the shared H2 database outlives the Spring context — so this class
-// gets a database of its own. No test here changes the password.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=refused_password_change_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Refused password change")
 class RefusedPasswordChangeIntegrationTest {
@@ -29,9 +25,6 @@ class RefusedPasswordChangeIntegrationTest {
   private static final String PASSWORD = "Secret123";
   private static final String WRONG_PASSWORD = "Wrong999";
   private static final String CHANGE_PASSWORD = "/account/change-password";
-
-  /** The class shares one database, so the account is registered once for all its tests. */
-  private static boolean accountRegistered;
 
   @Autowired private MockMvc mockMvc;
 
@@ -98,12 +91,8 @@ class RefusedPasswordChangeIntegrationTest {
     return customer;
   }
 
-  /** Registers the scenario's account from a browser of its own, once for this database. */
+  /** Registers the scenario's account from a browser of its own. */
   private void registerTheAccount() throws Exception {
-    if (accountRegistered) {
-      return;
-    }
     new Visitor(mockMvc).register(EMAIL, PASSWORD);
-    accountRegistered = true;
   }
 }

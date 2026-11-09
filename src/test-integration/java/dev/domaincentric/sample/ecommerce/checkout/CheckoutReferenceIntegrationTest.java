@@ -60,11 +60,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * what the test arranges. The requests are counted from the moment the checkouts stand at the
  * review.
  */
-// The shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring context — so this class gets a
-// database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=checkout_reference")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 class CheckoutReferenceIntegrationTest {
 
   private static final String PROVIDER_ID = "provider";

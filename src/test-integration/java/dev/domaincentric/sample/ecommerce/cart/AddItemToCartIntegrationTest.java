@@ -24,9 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * Adding a product to a guest's cart through the input port, in the wired application with the
  * cart's real store: a product holds one line, and adding it again raises that line's quantity.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=add_item_to_cart")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @DisplayName("Adding a product to the cart")
 class AddItemToCartIntegrationTest {
 

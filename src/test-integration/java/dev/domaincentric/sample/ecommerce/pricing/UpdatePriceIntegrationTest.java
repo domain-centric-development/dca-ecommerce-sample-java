@@ -21,9 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * the price store the shop runs, and read back from the product page a visitor opens.
  */
 // A context of its own: the changed price must not reach the classes that read the seeded one.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=update_price_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("A product's price changes")
 class UpdatePriceIntegrationTest {

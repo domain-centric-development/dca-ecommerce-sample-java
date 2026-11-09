@@ -33,11 +33,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
  * redirect's message carried to the page it leads to, as a browser would. The other visitor's order
  * lowers the stock shortly after it is placed, so each test waits for the product page to show it.
  */
-// MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
-// context — so this class gets a database of its own.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=order_checked_against_stock_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 @DisplayName("Starting and placing check the cart against what can still be sold")
 class OrderCheckedAgainstStockIntegrationTest {

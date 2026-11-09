@@ -31,9 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * adapter: the checkout case below is reached through the web form, where no discipline in the REST
  * resource would have helped.
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=cart_ownership")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 class CartOwnershipIntegrationTest {
 
   @Autowired private GetOrCreateActiveCartInputPort getOrCreateActiveCart;

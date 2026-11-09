@@ -32,9 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * a malformed one is a bad request, and both come out of the same endpoint that used to answer
  * {@code 400} with an empty body for either (ADR-037).
  */
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties = "test.database=api_problem_test")
+@SpringBootTest(classes = EcommerceSampleApplication.class)
 @AutoConfigureMockMvc
 class ApiProblemDetailIntegrationTest {
 
