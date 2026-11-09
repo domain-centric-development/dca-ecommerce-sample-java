@@ -20,8 +20,7 @@ import org.springframework.test.web.servlet.MvcResult;
 // A context of its own: a price change that slipped through must not reach any other test class.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:price_change_refusal_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=price_change_refusal_test")
 @AutoConfigureMockMvc
 @DisplayName("A refused price change leaves the price")
 class PriceChangeRefusalIntegrationTest {

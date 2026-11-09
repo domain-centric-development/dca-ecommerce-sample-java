@@ -33,8 +33,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
  *       cookie + {@code _csrf} form field). {@code /api/**} and {@code /mcp/**} are exempt because
  *       {@link JwtAuthenticationFilter} authenticates them by Bearer header only — cookies are
  *       never read there, so a cross-site request cannot borrow the browser's session (ADR-035).
- *       The H2 console is exempt as a development tool. {@code SameSite=Lax} on the identity cookie
- *       is defence in depth, not the CSRF strategy.
+ *       {@code SameSite=Lax} on the identity cookie is defence in depth, not the CSRF strategy.
  * </ul>
  *
  * <p><b>Authentication Flow:</b>
@@ -94,7 +93,7 @@ public class SecurityConfiguration {
         .csrf(
             csrf ->
                 csrf.csrfTokenRepository(csrfTokenRepository())
-                    .ignoringRequestMatchers("/api/**", "/mcp/**", "/h2-console/**"))
+                    .ignoringRequestMatchers("/api/**", "/mcp/**"))
 
         // Configure authorization rules
         .authorizeHttpRequests(
@@ -110,10 +109,6 @@ public class SecurityConfiguration {
                     .requestMatchers("/auth/**")
                     .permitAll()
                     .requestMatchers("/login", "/register", "/logout")
-                    .permitAll()
-
-                    // H2 console (development only)
-                    .requestMatchers("/h2-console/**")
                     .permitAll()
 
                     // Actuator health endpoint

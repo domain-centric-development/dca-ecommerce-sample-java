@@ -21,8 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 // gets a database of its own, in which the password is changed.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:longest_password_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=longest_password_test")
 @AutoConfigureMockMvc
 @DisplayName("Longest password")
 class LongestPasswordIntegrationTest {

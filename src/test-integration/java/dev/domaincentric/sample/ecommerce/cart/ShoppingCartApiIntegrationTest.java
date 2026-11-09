@@ -33,8 +33,7 @@ import org.springframework.test.web.servlet.ResultActions;
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:shopping_cart_api_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=shopping_cart_api_test")
 @AutoConfigureMockMvc
 class ShoppingCartApiIntegrationTest {
 

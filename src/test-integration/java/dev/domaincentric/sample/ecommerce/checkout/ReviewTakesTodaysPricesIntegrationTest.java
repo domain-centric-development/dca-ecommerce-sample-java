@@ -24,8 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 // A context of its own: the arranged review must not reach any other test class.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:review_takes_todays_prices_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=review_takes_todays_prices_test")
 @AutoConfigureMockMvc
 @Import(ArrangedReview.Configuration.class)
 @DisplayName("The review takes today's prices")

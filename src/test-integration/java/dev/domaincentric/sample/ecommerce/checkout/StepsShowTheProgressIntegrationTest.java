@@ -30,8 +30,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 // context — so this class gets a database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:steps_show_the_progress_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=steps_show_the_progress_test")
 @AutoConfigureMockMvc
 @DisplayName("The steps show the progress and are taken in order")
 class StepsShowTheProgressIntegrationTest {

@@ -19,18 +19,14 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 /**
- * Integration tests for the JDBC ShoppingCartRepository implementation using the "jdbc" profile.
- *
- * <p>Mirrors the scenarios covered by the JPA-based test to ensure specification pushdown and
- * paging work equivalently in the JDBC adapter.
+ * Integration tests for the JDBC ShoppingCartRepository: specification pushdown and paging against
+ * PostgreSQL.
  */
-// A development run with a real database. Without "dev" the shop refuses the
-// committed secret and the non-Secure cookies (JwtDevelopmentDefaultsValidator).
-@ActiveProfiles({"dev", "jdbc"})
-@SpringBootTest(classes = EcommerceSampleApplication.class)
+@SpringBootTest(
+    classes = EcommerceSampleApplication.class,
+    properties = "test.database=cart-repository-jdbc")
 class ShoppingCartRepositoryJdbcIntegrationTest {
 
   @Autowired private JdbcShoppingCartRepository shoppingCartRepository;

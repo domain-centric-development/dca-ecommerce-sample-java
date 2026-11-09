@@ -64,8 +64,7 @@ import org.springframework.test.context.DynamicPropertySource;
 // database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:checkout_reference;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=checkout_reference")
 class CheckoutReferenceIntegrationTest {
 
   private static final String PROVIDER_ID = "provider";

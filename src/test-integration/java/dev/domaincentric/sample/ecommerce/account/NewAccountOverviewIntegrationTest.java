@@ -19,8 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 // test can log the same address in first.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:new_account_overview_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=new_account_overview_test")
 @AutoConfigureMockMvc
 @DisplayName("Account overview of a new account")
 class NewAccountOverviewIntegrationTest {

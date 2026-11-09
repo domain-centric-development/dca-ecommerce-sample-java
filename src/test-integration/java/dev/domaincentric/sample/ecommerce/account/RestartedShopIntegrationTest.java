@@ -24,8 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 // A database of its own, in which no account was ever stored — the store as a restart leaves it.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:restarted_shop_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=restarted_shop_test")
 @AutoConfigureMockMvc
 @DisplayName("Restarted shop")
 class RestartedShopIntegrationTest {

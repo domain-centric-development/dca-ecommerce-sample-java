@@ -34,8 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:api_problem_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=api_problem_test")
 @AutoConfigureMockMvc
 class ApiProblemDetailIntegrationTest {
 

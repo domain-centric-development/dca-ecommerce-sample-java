@@ -31,8 +31,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 // context — so this class gets a database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:go_back_to_an_earlier_step_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=go_back_to_an_earlier_step_test")
 @AutoConfigureMockMvc
 @DisplayName("Go back to an earlier step and change it")
 class GoBackToAnEarlierStepIntegrationTest {

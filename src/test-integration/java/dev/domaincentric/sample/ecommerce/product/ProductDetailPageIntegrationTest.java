@@ -23,8 +23,7 @@ import org.springframework.web.util.HtmlUtils;
 // A context of its own, like the catalogue page's test: the seeded products stay as seeded.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:product_page_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=product_page_test")
 @AutoConfigureMockMvc
 @DisplayName("Product page")
 class ProductDetailPageIntegrationTest {

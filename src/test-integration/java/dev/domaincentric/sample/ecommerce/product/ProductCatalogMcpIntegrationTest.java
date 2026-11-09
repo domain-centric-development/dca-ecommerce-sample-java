@@ -28,8 +28,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:catalogue_mcp_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=catalogue_mcp_test")
 @DisplayName("Product catalogue tools")
 class ProductCatalogMcpIntegrationTest {
 

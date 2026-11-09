@@ -22,7 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
     classes = EcommerceSampleApplication.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
-      "spring.datasource.url=jdbc:h2:mem:cookie_policy_embedded;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+      "test.database=cookie_policy_embedded",
       "app.security.jwt.same-site=None",
       "app.security.jwt.secure-cookies=true"
     })

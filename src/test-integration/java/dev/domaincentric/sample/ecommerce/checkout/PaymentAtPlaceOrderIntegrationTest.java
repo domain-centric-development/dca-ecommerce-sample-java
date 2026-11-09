@@ -66,8 +66,7 @@ import org.springframework.test.context.DynamicPropertySource;
 // database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:payment_at_place_order;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=payment_at_place_order")
 class PaymentAtPlaceOrderIntegrationTest {
 
   private static final String PROVIDER_ID = "provider";

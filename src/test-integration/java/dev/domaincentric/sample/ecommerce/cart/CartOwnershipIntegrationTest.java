@@ -33,8 +33,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:cart_ownership;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=cart_ownership")
 class CartOwnershipIntegrationTest {
 
   @Autowired private GetOrCreateActiveCartInputPort getOrCreateActiveCart;

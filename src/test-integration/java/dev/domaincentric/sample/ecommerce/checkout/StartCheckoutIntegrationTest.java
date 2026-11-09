@@ -29,8 +29,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 // context — so this class gets a database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:start_checkout_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=start_checkout_test")
 @AutoConfigureMockMvc
 @DisplayName("Start the checkout")
 class StartCheckoutIntegrationTest {

@@ -38,8 +38,7 @@ import org.springframework.test.web.servlet.MvcResult;
 // A database of its own: the products created here never reach a test that counts the seeded range.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:product_creation_api_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=product_creation_api_test")
 @AutoConfigureMockMvc
 @DisplayName("Creating a product")
 class ProductCreationApiIntegrationTest {

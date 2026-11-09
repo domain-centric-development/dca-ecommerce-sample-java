@@ -20,8 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:cookie_policy_default;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=cookie_policy_default")
 class CookiePolicyIntegrationTest extends CookiePolicyTestBase {
 
   @Test

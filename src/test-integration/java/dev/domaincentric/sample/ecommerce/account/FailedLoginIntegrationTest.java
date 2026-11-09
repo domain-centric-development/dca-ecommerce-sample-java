@@ -18,8 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 // The shared H2 database outlives the Spring context — so this class gets a database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:failed_login_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=failed_login_test")
 @DisplayName("Failed login")
 class FailedLoginIntegrationTest {
 

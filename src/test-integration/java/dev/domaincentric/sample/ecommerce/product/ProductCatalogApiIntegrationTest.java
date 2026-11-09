@@ -24,8 +24,7 @@ import org.springframework.test.web.servlet.MvcResult;
 // the seeded range this class reads.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:catalogue_api_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=catalogue_api_test")
 @AutoConfigureMockMvc
 @DisplayName("Product catalogue API")
 class ProductCatalogApiIntegrationTest {

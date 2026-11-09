@@ -36,8 +36,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 // seeded stock — so this class gets a database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:stock_goes_down_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=stock_goes_down_test")
 @AutoConfigureMockMvc
 @DisplayName("Stock goes down by what was bought")
 class StockGoesDownByWhatWasBoughtIntegrationTest {

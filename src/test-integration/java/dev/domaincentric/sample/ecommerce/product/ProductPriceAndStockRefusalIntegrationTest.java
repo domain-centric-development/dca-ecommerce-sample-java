@@ -33,8 +33,7 @@ import org.springframework.test.web.servlet.MvcResult;
 // A database of its own: the catalogue is asserted to hold exactly the 21 seeded products.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:product_price_stock_refusal_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=product_price_stock_refusal_test")
 @AutoConfigureMockMvc
 @DisplayName("A product's price and stock are refused")
 class ProductPriceAndStockRefusalIntegrationTest {

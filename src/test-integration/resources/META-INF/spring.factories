@@ -1,0 +1,2 @@
+org.springframework.context.ApplicationContextInitializer=\
+dev.domaincentric.sample.ecommerce.infrastructure.database.PostgresTestDatabaseInitializer

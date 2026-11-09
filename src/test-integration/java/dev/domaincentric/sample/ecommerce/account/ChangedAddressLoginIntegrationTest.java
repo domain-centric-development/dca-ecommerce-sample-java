@@ -19,8 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 // gets a database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:changed_address_login_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=changed_address_login_test")
 @AutoConfigureMockMvc
 @DisplayName("Login after an address change")
 class ChangedAddressLoginIntegrationTest {

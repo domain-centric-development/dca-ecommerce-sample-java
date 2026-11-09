@@ -9,7 +9,7 @@ import dev.domaincentric.sample.ecommerce.cart.application.shared.ActiveCartAlre
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CartId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.CustomerId;
 import dev.domaincentric.sample.ecommerce.cart.domain.model.ShoppingCart;
-import java.sql.SQLException;
+import dev.domaincentric.sample.ecommerce.infrastructure.database.PostgresTestDatabase;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -19,39 +19,25 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 /**
  * The claim on a customer's open cart, held by the database rather than by a check before the
  * write.
  *
  * <p>"At most one active cart per customer" is uniqueness over a subset of the rows, which the
- * production schema expresses as a unique index over a generated column (ADR-045). The in-memory
- * adapter emulates the same refusal; this is where the relational one is held to it, so a use case
- * written against either reads the same.
+ * production schema expresses as a partial unique index (ADR-045). The in-memory adapter emulates
+ * the same refusal; this is where the relational one is held to it, so a use case written against
+ * either reads the same.
  */
 @DisplayName("JdbcShoppingCartRepository — the active cart is claimed in the store")
 class JdbcActiveCartUniquenessTest {
 
-  private static final String URL =
-      "jdbc:h2:mem:cart-active-claim;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
-
-  private DataSource dataSource;
+  private static final DataSource DATA_SOURCE = PostgresTestDatabase.migrated("cart-active-claim");
 
   @BeforeEach
-  void prepareSchema() {
-    dataSource = new DriverManagerDataSource(URL, "sa", "");
-    try (var connection = dataSource.getConnection()) {
-      ScriptUtils.executeSqlScript(connection, new ClassPathResource("schema.sql"));
-    } catch (final SQLException e) {
-      throw new IllegalStateException("Could not prepare the cart schema", e);
-    }
-    final JdbcTemplate setup = new JdbcTemplate(dataSource);
-    setup.execute("DELETE FROM cart_items");
-    setup.execute("DELETE FROM carts");
+  void emptyTables() {
+    new JdbcTemplate(DATA_SOURCE).execute("TRUNCATE cart_items, carts");
   }
 
   @Test
@@ -127,6 +113,6 @@ class JdbcActiveCartUniquenessTest {
   }
 
   private JdbcShoppingCartRepository repository() {
-    return new JdbcShoppingCartRepository(dataSource, null);
+    return new JdbcShoppingCartRepository(DATA_SOURCE, null);
   }
 }

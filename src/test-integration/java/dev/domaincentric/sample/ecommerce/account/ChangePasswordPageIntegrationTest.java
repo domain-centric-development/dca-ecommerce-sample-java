@@ -26,8 +26,7 @@ import org.springframework.web.util.HtmlUtils;
 // gets a database of its own. No test here changes the password to another one.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:change_password_page_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=change_password_page_test")
 @AutoConfigureMockMvc
 @DisplayName("Change password page")
 class ChangePasswordPageIntegrationTest {

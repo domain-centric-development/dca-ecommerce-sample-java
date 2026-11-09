@@ -31,8 +31,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 // stock.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:cart_stock_warnings_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=cart_stock_warnings_test")
 @AutoConfigureMockMvc
 @DisplayName("Stock warnings in the cart")
 class CartStockWarningsIntegrationTest {

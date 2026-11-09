@@ -40,8 +40,7 @@ import org.springframework.transaction.support.TransactionTemplate;
       EcommerceSampleApplication.class,
       RolledBackWorkDeliversNoEventIntegrationTest.Listener.class
     },
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:rollback_events;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=rollback_events")
 class RolledBackWorkDeliversNoEventIntegrationTest {
 
   @Autowired private ApplicationEventPublisher publisher;

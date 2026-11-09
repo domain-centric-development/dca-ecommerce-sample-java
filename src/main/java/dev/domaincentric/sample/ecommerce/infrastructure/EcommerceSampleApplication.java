@@ -17,10 +17,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * portal) and shared kernel components.
  */
 @SpringBootApplication(scanBasePackages = "dev.domaincentric.sample.ecommerce")
-@org.springframework.data.jpa.repository.config.EnableJpaRepositories(
-    basePackages = "dev.domaincentric.sample.ecommerce")
-@org.springframework.boot.persistence.autoconfigure.EntityScan(
-    basePackages = "dev.domaincentric.sample.ecommerce")
 public class EcommerceSampleApplication {
 
   public static void main(final String[] args) {

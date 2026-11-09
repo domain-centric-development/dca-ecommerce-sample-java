@@ -29,8 +29,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 // test can have registered the same address first.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:backoffice_header_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=backoffice_header_test")
 @AutoConfigureMockMvc
 @DisplayName("Backoffice header")
 class BackofficeHeaderIntegrationTest {

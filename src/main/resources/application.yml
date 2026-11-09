@@ -7,27 +7,16 @@ spring:
   # Pug4j debug error page (development only - shows template source on errors)
   pug4j:
     debug-error-page: true
+  # PostgreSQL. A started shop reads its database from the environment; `./gradlew bootTestRun`
+  # starts one in a container and connects to it, and the tests do the same (Testcontainers).
   datasource:
-    url: jdbc:h2:mem:aiarch;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
-  sql:
-    init:
-      mode: embedded
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: none
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-    defer-datasource-initialization: true
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/shop}
+    username: ${DATABASE_USERNAME:shop}
+    password: ${DATABASE_PASSWORD:shop}
+  # One versioned script per context under db/migration; the event publication table is Spring
+  # Modulith's own (schema-initialization below)
+  flyway:
+    locations: classpath:db/migration
   modulith:
     events:
       jdbc:

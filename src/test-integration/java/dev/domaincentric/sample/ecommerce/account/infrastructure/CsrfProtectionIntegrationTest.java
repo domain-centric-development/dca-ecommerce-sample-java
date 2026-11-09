@@ -27,10 +27,7 @@ import org.springframework.test.web.servlet.MvcResult;
  */
 // MockMvc requests commit, and the shared H2 database (DB_CLOSE_DELAY=-1) outlives the Spring
 // context — so this class gets a database of its own instead of polluting the repository tests.
-@SpringBootTest(
-    classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:csrf_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+@SpringBootTest(classes = EcommerceSampleApplication.class, properties = "test.database=csrf_test")
 @AutoConfigureMockMvc
 class CsrfProtectionIntegrationTest {
 

@@ -18,8 +18,7 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:inmemory_tx_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=inmemory_tx_test")
 @ActiveProfiles("inmemory")
 class InMemoryProfileTransactionManagerIntegrationTest {
 

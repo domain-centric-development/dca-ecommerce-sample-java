@@ -27,8 +27,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:cart_lost_product;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=cart_lost_product")
 @DisplayName("A cart with a product the catalogue lost")
 class CartWithALostProductIntegrationTest {
 

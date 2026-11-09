@@ -24,6 +24,6 @@ COPY --from=build /workspace/app.jar ./app.jar
 EXPOSE 8080
 # The image carries no profile, so it is a production run: the shop refuses the committed signing
 # secret, the committed operator credentials and non-Secure cookies, and says which variable fixes
-# each. SPRING_PROFILES_ACTIVE=dev runs it as the demo compose does; dev,jdbc adds the JDBC
-# persistence profile (H2 in memory) to that development run.
+# each. SPRING_PROFILES_ACTIVE=dev runs it as the demo compose does. The database comes from
+# DATABASE_URL, DATABASE_USERNAME and DATABASE_PASSWORD (PostgreSQL; compose starts one).
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

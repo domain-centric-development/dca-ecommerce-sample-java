@@ -23,13 +23,13 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * H2/JDBC implementation of ShoppingCartRepository.
+ * PostgreSQL/JDBC implementation of ShoppingCartRepository.
  *
- * <p>This adapter persists carts and items to an in-memory H2 database using Spring JDBC. Rows are
+ * <p>This adapter persists carts and items using Spring JDBC with SQL written by hand. Rows are
  * read into a {@link CartRow} plus the cart's stored lines and handed to {@code
  * ShoppingCart.reconstitute}, which restores the aggregate without raising domain events.
  */
-@org.springframework.context.annotation.Profile("jdbc")
+@org.springframework.context.annotation.Profile("!inmemory")
 @Repository
 public class JdbcShoppingCartRepository implements ShoppingCartRepository {
 
@@ -93,9 +93,8 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
 
   /**
    * @throws ActiveCartAlreadyExistsException if the cart is active and the customer already has a
-   *     different active cart — the unique index over the generated {@code active_customer_id}
-   *     column refuses the row, and the caller is told the same thing the in-memory adapter tells
-   *     it (ADR-042, ADR-045)
+   *     different active cart — the partial unique index over the active carts refuses the row, and
+   *     the caller is told the same thing the in-memory adapter tells it (ADR-042, ADR-045)
    */
   @Override
   @Transactional
@@ -103,7 +102,12 @@ public class JdbcShoppingCartRepository implements ShoppingCartRepository {
     // Upsert cart
     try {
       jdbcTemplate.update(
-          "MERGE INTO carts (id, customer_id, status, updated_at) KEY(id) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+          """
+          INSERT INTO carts (id, customer_id, status, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT (id) DO UPDATE SET
+            customer_id = EXCLUDED.customer_id, status = EXCLUDED.status,
+            updated_at = EXCLUDED.updated_at
+          """,
           cart.id().value(),
           cart.customerId().value(),
           CartStatusColumn.valueOf(cart.status()));

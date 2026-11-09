@@ -24,7 +24,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * H2/JDBC implementation of {@link AccountRepository} and the default account persistence.
+ * PostgreSQL/JDBC implementation of {@link AccountRepository} and the default account persistence.
  *
  * <p>Loading an account maps its row back through {@link Account#reconstitute} and therefore hands
  * out a fresh instance every time (ADR-031). A caller that mutates the aggregate and forgets to
@@ -71,9 +71,15 @@ public class JdbcAccountRepository implements AccountRepository {
   public Account save(final Account account) {
     jdbcTemplate.update(
         """
-        MERGE INTO accounts (id, email, first_name, last_name, date_of_birth, linked_user_id,
-                             password_hash, status, created_at, last_login_at)
-        KEY(id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO accounts (id, email, first_name, last_name, date_of_birth, linked_user_id,
+                              password_hash, status, created_at, last_login_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (id) DO UPDATE SET
+          email = EXCLUDED.email, first_name = EXCLUDED.first_name,
+          last_name = EXCLUDED.last_name, date_of_birth = EXCLUDED.date_of_birth,
+          linked_user_id = EXCLUDED.linked_user_id, password_hash = EXCLUDED.password_hash,
+          status = EXCLUDED.status, created_at = EXCLUDED.created_at,
+          last_login_at = EXCLUDED.last_login_at
         """,
         account.id().value(),
         account.email().value(),

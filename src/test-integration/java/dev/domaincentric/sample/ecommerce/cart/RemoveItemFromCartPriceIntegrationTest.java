@@ -31,8 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:remove_item_from_cart_price;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=remove_item_from_cart_price")
 @DisplayName("Removing a product answers at today's prices")
 class RemoveItemFromCartPriceIntegrationTest {
 

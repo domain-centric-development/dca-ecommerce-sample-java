@@ -31,9 +31,14 @@ gap is a story through the factory, not a side change.
 
 ## Persistence
 
-In-process only: in-memory repositories, with the cart on JPA and the account on JDBC against an
-embedded H2 database, to show that the persistence choice stays behind the ports. No external
-database, no second store beside these.
+PostgreSQL, the same database the .NET shop runs on. Each repository is a JDBC adapter with SQL
+written by hand and the mapping in the adapter, through the aggregate's `reconstitute`; uniqueness
+claims are database constraints. The schema comes from Flyway, one versioned script per context
+under `db/migration/`, plain SQL with the same file names in both shops; the event publication
+table is Spring Modulith's. Tests and `./gradlew bootTestRun` start PostgreSQL in a container
+(Testcontainers, Docker or Podman); `./gradlew bootRun` and the container connect to the database
+`DATABASE_URL` names. Product, pricing, inventory and checkout still keep their aggregates in memory
+until their adapters follow.
 
 ## Runtime
 

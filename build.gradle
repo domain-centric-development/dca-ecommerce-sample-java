@@ -75,9 +75,11 @@ dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-validation'
   implementation 'org.springframework.boot:spring-boot-starter-security'
   implementation 'org.springframework:spring-tx'
-  // Persistence: Spring Data JPA + H2 in-memory database
-  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-  runtimeOnly 'com.h2database:h2'
+  // Persistence: PostgreSQL through Spring JDBC (SQL by hand, mapping in the adapters), schema by Flyway
+  implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+  implementation 'org.springframework.boot:spring-boot-starter-flyway'
+  runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+  runtimeOnly 'org.postgresql:postgresql'
   compileOnly 'org.springframework.boot:spring-boot-configuration-processor'
 
   // JWT
@@ -131,7 +133,9 @@ jar {
   enabled = false
 }
 
-bootRun {
+// `bootRun` connects to the PostgreSQL named by DATABASE_URL (default localhost:5432/shop, as the
+// compose `postgres` service provides it); `bootTestRun` starts one in a container itself.
+tasks.matching { it.name in ['bootRun', 'bootTestRun'] }.configureEach {
   jvmArgs "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
   if (project.hasProperty('log-debug')) {
     args '--debug'
@@ -142,12 +146,14 @@ bootRun {
     k.toString().startsWith('spring.') || k.toString().startsWith('e2e.')
   }
   // Running from a checkout is a development run, and the shop refuses its committed defaults
-  // anywhere else (JwtDevelopmentDefaultsValidator). Naming a profile yourself takes precedence —
-  // including `-Dspring.profiles.active=dev,jdbc`, which is how a real database is added to a
-  // development run.
+  // anywhere else (JwtDevelopmentDefaultsValidator). Naming a profile yourself takes precedence.
   if (!System.getProperty('spring.profiles.active') && !System.getenv('SPRING_PROFILES_ACTIVE')) {
     systemProperty 'spring.profiles.active', 'dev'
   }
+}
+
+tasks.named('bootTestRun') {
+  mainClass = 'dev.domaincentric.sample.ecommerce.infrastructure.LocalShopApplication'
 }
 
 // IntelliJ IDEA module configuration (Gradle 9+ compatible)

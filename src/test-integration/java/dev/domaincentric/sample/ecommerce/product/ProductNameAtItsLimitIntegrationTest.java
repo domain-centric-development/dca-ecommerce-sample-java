@@ -25,8 +25,7 @@ import org.springframework.test.web.servlet.MvcResult;
 // A database of its own: the product created here must not reach a catalogue other tests count.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:product_name_limit_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=product_name_limit_test")
 @AutoConfigureMockMvc
 @DisplayName("A product name at its limit")
 class ProductNameAtItsLimitIntegrationTest {

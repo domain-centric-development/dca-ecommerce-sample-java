@@ -27,8 +27,7 @@ import org.springframework.web.util.HtmlUtils;
 // stock.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:out_of_stock_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=out_of_stock_test")
 @AutoConfigureMockMvc
 @DisplayName("Out of stock product")
 class OutOfStockProductIntegrationTest {

@@ -10,6 +10,9 @@ ext.addCommonTestDependencies = { configurationName ->
     "${configurationName}"("org.springframework.boot:spring-boot-starter-test:${springBootVersion}") {
       exclude(module: 'commons-logging')
     }
+    // Every store is PostgreSQL; a test that needs one starts it in a container (Docker or Podman)
+    "${configurationName}"("org.springframework.boot:spring-boot-testcontainers:${springBootVersion}")
+    "${configurationName}"('org.testcontainers:testcontainers-postgresql')
   }
 }
 

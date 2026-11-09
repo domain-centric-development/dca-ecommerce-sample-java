@@ -66,8 +66,7 @@ import org.springframework.test.context.DynamicPropertySource;
 // A database of its own: the changed price must not reach the catalogue other test classes read.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:order_at_todays_price_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=order_at_todays_price_test")
 @DisplayName("Place Order against the review it was sent from")
 class OrderAtTodaysPriceAfterReopeningTheReviewIntegrationTest {
 

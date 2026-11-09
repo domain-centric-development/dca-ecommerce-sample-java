@@ -31,8 +31,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 // context — so this class gets a database of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:cart_after_the_order_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=cart_after_the_order_test")
 @AutoConfigureMockMvc
 @DisplayName("After the order the cart keeps only what was not bought")
 class CartAfterTheOrderIntegrationTest {

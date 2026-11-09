@@ -33,8 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 // A database of its own: the page is asserted to hold the 21 seeded products and this one.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:created_product_catalogue_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=created_product_catalogue_test")
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("A created product on the catalogue page")

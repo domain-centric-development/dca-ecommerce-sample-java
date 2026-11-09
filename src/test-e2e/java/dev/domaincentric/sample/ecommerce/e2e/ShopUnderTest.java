@@ -10,6 +10,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import dev.domaincentric.sample.ecommerce.account.adapter.incoming.security.TokenService;
 import dev.domaincentric.sample.ecommerce.infrastructure.EcommerceSampleApplication;
+import dev.domaincentric.sample.ecommerce.infrastructure.database.PostgresTestDatabase;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.Role;
 import dev.domaincentric.sample.ecommerce.sharedkernel.domain.model.UserId;
 import java.net.URI;
@@ -27,9 +28,9 @@ import org.springframework.context.ConfigurableApplicationContext;
  *
  * <p>With {@code -De2e.baseUrl=<url>} the suite drives a shop started elsewhere instead (the
  * compose {@code e2e} service does that); without it, nothing has to run beforehand and every
- * dependency the shop needs in its default profile starts with it — the payment provider included:
- * a stub on a free port that authorizes every payment until a test arranges another answer — and
- * the mail provider: a stub on a free port that accepts every mail.
+ * dependency the shop needs in its default profile starts with it — its PostgreSQL in a container,
+ * the payment provider included: a stub on a free port that authorizes every payment until a test
+ * arranges another answer — and the mail provider: a stub on a free port that accepts every mail.
  */
 public final class ShopUnderTest {
 
@@ -51,6 +52,9 @@ public final class ShopUnderTest {
           SpringApplication.run(
               EcommerceSampleApplication.class,
               "--server.port=0",
+              "--spring.datasource.url=" + PostgresTestDatabase.urlOf("e2e"),
+              "--spring.datasource.username=" + PostgresTestDatabase.username(),
+              "--spring.datasource.password=" + PostgresTestDatabase.password(),
               "--checkout.payment-provider.base-url=" + paymentProvider.baseUrl(),
               "--checkout.mail-provider.base-url=" + mailProvider.baseUrl());
       Runtime.getRuntime().addShutdownHook(new Thread(shop::close));
@@ -62,23 +66,22 @@ public final class ShopUnderTest {
 
   /**
    * A second shop, started in this process on a free port with settings of its own — for a scenario
-   * about how the shop was started rather than what it does. Its own in-memory database, so it
-   * shares no rows with the shop the suite drives; the caller closes it.
+   * about how the shop was started rather than what it does. Its own database, so it shares no rows
+   * with the shop the suite drives; the caller closes it.
    *
-   * @param database the name of its in-memory database
+   * @param database the name of its database
    * @param settings the settings it starts with, as {@code key=value}
    * @return the started shop
    */
   public static ConfigurableApplicationContext startedWith(
       final String database, final String... settings) {
-    final String[] arguments = new String[settings.length + 2];
+    final String[] arguments = new String[settings.length + 4];
     arguments[0] = "--server.port=0";
-    arguments[1] =
-        "--spring.datasource.url=jdbc:h2:mem:"
-            + database
-            + ";DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
+    arguments[1] = "--spring.datasource.url=" + PostgresTestDatabase.urlOf(database);
+    arguments[2] = "--spring.datasource.username=" + PostgresTestDatabase.username();
+    arguments[3] = "--spring.datasource.password=" + PostgresTestDatabase.password();
     for (int i = 0; i < settings.length; i++) {
-      arguments[i + 2] = "--" + settings[i];
+      arguments[i + 4] = "--" + settings[i];
     }
     return SpringApplication.run(EcommerceSampleApplication.class, arguments);
   }

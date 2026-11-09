@@ -23,8 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 // A context of its own: the changed price must not reach the classes that read the seeded one.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:update_price_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=update_price_test")
 @AutoConfigureMockMvc
 @DisplayName("A product's price changes")
 class UpdatePriceIntegrationTest {

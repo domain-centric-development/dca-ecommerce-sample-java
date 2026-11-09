@@ -27,8 +27,7 @@ import org.springframework.web.util.HtmlUtils;
 // The scenario registers Anna, so it gets a store of its own.
 @SpringBootTest(
     classes = EcommerceSampleApplication.class,
-    properties =
-        "spring.datasource.url=jdbc:h2:mem:taken_address_registration_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+    properties = "test.database=taken_address_registration_test")
 @AutoConfigureMockMvc
 @DisplayName("Registration of a taken address")
 class TakenAddressRegistrationIntegrationTest {

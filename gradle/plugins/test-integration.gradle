@@ -7,8 +7,8 @@ sourceSets {
     // Do not reference non-resolvable configurations directly.
     // Gradle will create and wire compile/runtime classpaths for this source set.
     // We only need to add main outputs so ITs can see production classes.
-    compileClasspath += sourceSets.main.output
-    runtimeClasspath += sourceSets.main.output
+    compileClasspath += sourceSets.main.output + sourceSets.test.output
+    runtimeClasspath += sourceSets.main.output + sourceSets.test.output
   }
 }
 
