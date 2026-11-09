@@ -3,14 +3,14 @@
 New work is written as markdown with front matter, one file per item:
 
 ```
-project/epics/<epic>/epic.md                  intent, goal, metric (an outcome event), domain_contact, depends_on
-project/epics/<epic>/<story>/story.md         status, context, acceptance criteria with named keys, assumptions
-project/epics/<epic>/<story>/decisions/       the questions a run asked and the answers, the acceptances
+product/epics/<epic>/epic.md                  intent, goal, metric (an outcome event), domain_contact, depends_on
+product/epics/<epic>/<story>/story.md         status, context, acceptance criteria with named keys, assumptions
+product/epics/<epic>/<story>/decisions/       the questions a run asked and the answers, the acceptances
 ```
 
 The contract and the field meanings live with the pipeline, in the `factory-run` skill's
 `reference/backlog-contract.md`. The story gate refuses a story whose epic is incomplete, whose
-context is not on the designed map (`project/domain.md`), or which is still `status: draft`.
+context is not on the designed map (`product/domain.md`), or which is still `status: draft`.
 
 ## The delivered work stays where it is
 
@@ -22,17 +22,13 @@ brownfield rule the pipeline states for any project it enters.
 
 ## The shop's behaviour, described once
 
-What the shop does today is described in the current contract elsewhere: the shared specification
-carries a **replay backlog** — 11 epics and 62 stories that, delivered in order on an empty project in
-any language, produce the shop as it behaves now. It is not a migration of the PRDs above. It was
-written from the shop's tests, pages and interfaces, and every epic's intent, goal, metric and contact
-was stated by the product owner when it was written, not reconstructed from a ticket.
-
-In this shop those stories are not built again. They are taken over as **adopted** (`status: adopted`):
-the pipeline maps each scenario to a test that exists here and is green, writes a characterization test
-where none does — shown to work by a break that turns it red — and a fresh judge reads every test against
-its scenario. Adoption is incremental: the replay's epics come into this folder as the next new story
-needs them. `browse-catalogue` is the first, adopted whole — CAT-01 to CAT-05.
+Behaviour the shop already had is described by **adopted** stories (`status: adopted`), taken from the
+shared specification's replay backlog — not a migration of the PRDs above: written from the shop's tests, pages and
+interfaces, with every epic's intent, goal, metric and contact stated by the product owner, not reconstructed from a
+ticket. An adopted story is not built again: the pipeline maps each scenario to a test that exists here and is green, writes a characterization test
+where none does — shown to work by a break that turns it red — and a fresh judge reads every test against its
+scenario; the adopt gate then delivers it, and it reads `status: delivered` like a built story. Every epic of the
+replay backlog is in this folder, together with the stories built since.
 
 The one story that never shipped, `US-146` ("Decide the Anti-Corruption Layer's fate"), is not a
 story either: it asks a question rather than describing behaviour a user can observe. It belongs to

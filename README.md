@@ -21,8 +21,8 @@ This project showcases best practices for structuring a Spring Boot application 
 
 - **AI-Accessible Product Catalog** via MCP server (Spring AI 2.0.0-M2)
 - **Spring Modulith** for framework-enforced module boundaries and event-driven cross-module communication
-- **Complete Architecture Testing** with ArchUnit (10 test suites) and Spring Modulith verification
-- **31 Architecture Decision Records** documenting design choices
+- **Complete Architecture Testing** with the DCA rule catalog (`dca-archunit`) and Spring Modulith verification
+- **Architecture Decision Records** documenting design choices ([docs/architecture/adr/](docs/architecture/adr/))
 - **Shared Kernel** pattern for cross-context value objects
 - **Framework-Independent Domain** layer (no Spring/JPA in core)
 - **Multi-step Checkout Flow** with 5 steps and session management
@@ -45,7 +45,7 @@ This project showcases best practices for structuring a Spring Boot application 
 - **Entities**: CartItem, CheckoutLineItem
 - **Value Objects**: ProductId, SKU, Price, Money, Quantity, Category, BuyerInfo, DeliveryAddress, Email, HashedPassword, etc.
 - **Repositories**: Interfaces in application layer, implementations in adapters
-- **Domain Services**: CartTotalCalculator, CheckoutStepValidator
+- **Domain Services**: CartPricing, CheckoutPricing
 - **Domain Events**: ProductCreated, CartItemAddedToCart, CartItemQuantityChanged, ProductRemovedFromCart, CartCleared, CheckoutSessionStarted, CheckoutConfirmed, AccountRegistered, PriceChanged, StockChanged, etc.
 - **Factories**: ProductFactory, EnrichedCartFactory, CheckoutCartFactory
 - **Specifications**: CartSpecification (with Visitor pattern: ActiveCart, HasMinTotal, HasAnyAvailableItem, LastUpdatedBefore, CustomerAllowsMarketing); StockLevelSpecification (AvailableQuantityBelow, visited by StockLevelSpecificationVisitor)
@@ -211,7 +211,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── LastUpdatedBefore.java
 │   │   │   └── CustomerAllowsMarketing.java
 │   │   ├── service/                      # Domain services
-│   │   │   └── CartTotalCalculator.java
+│   │   │   └── CartPricing.java        # Prices and checks a cart against article facts
 │   │   └── event/                        # Domain events
 │   │       ├── CartItemAddedToCart.java
 │   │       ├── CartItemQuantityChanged.java
@@ -359,7 +359,7 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── CheckoutCartSnapshot.java # Cart snapshot for display
 │   │   │   └── LineItemSnapshot.java     # Line item snapshot for display
 │   │   ├── service/                      # Domain services
-│   │   │   └── CheckoutStepValidator.java
+│   │   │   └── CheckoutPricing.java    # Prices and checks checkout lines against article facts
 │   │   └── event/                        # Domain events
 │   │       ├── CheckoutSessionStarted.java
 │   │       ├── BuyerInfoSubmitted.java
@@ -714,12 +714,20 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │   │   │   ├── GetEventPublicationsInputPort.java
 │   │   │   ├── GetEventPublicationsUseCase.java
 │   │   │   ├── GetEventPublicationsQuery.java
-│   │   │   └── GetEventPublicationsResult.java
+│   │   │   ├── GetEventPublicationsResult.java
+│   │   │   └── EventPublicationSummary.java
+│   │   ├── replayfailedpublication/      # Use case: Replay Failed Publication
+│   │   │   ├── ReplayFailedPublicationInputPort.java
+│   │   │   ├── ReplayFailedPublicationUseCase.java
+│   │   │   ├── ReplayFailedPublicationCommand.java
+│   │   │   ├── ReplayFailedPublicationResult.java
+│   │   │   └── EventPublicationRecoveryPort.java
 │   │   └── shared/                       # Shared output ports
-│   │       └── EventPublicationLogRepository.java
+│   │       └── EventPublicationLogStore.java
 │   ├── infrastructure/                   # Per-context infrastructure
 │   │   ├── BackofficeSecurityConfiguration.java
-│   │   └── BackofficeSecurityProperties.java
+│   │   ├── BackofficeSecurityProperties.java
+│   │   └── BackofficeDevelopmentDefaultsValidator.java
 │   └── adapter/                          # Adapters
 │       ├── incoming/                     # Incoming adapters
 │       │   └── web/
@@ -727,16 +735,23 @@ src/main/java/dev/domaincentric/sample/ecommerce/
 │       │       └── EventPublicationPageViewModel.java
 │       └── outgoing/                     # Outgoing adapters
 │           └── persistence/
-│               └── JdbcEventPublicationLogRepository.java
+│               ├── JdbcEventPublicationLogStore.java
+│               └── RegistryEventPublicationRecoveryAdapter.java
 │
 └── infrastructure/                       # Infrastructure (cross-cutting)
     ├── EcommerceSampleApplication.java    # Spring Boot main class
     ├── config/                           # Spring @Configuration classes
-    │   ├── TransactionConfiguration.java
     │   ├── AsyncConfiguration.java
+    │   ├── NoticeCookieConfiguration.java
+    │   ├── NoticeCookieProperties.java
+    │   ├── NoticeCookieDevelopmentDefaultsValidator.java
     │   └── Pug4jConfiguration.java
+    ├── events/
+    │   └── IntegrationEventRecovery.java
     └── support/                          # Framework support components
-        └── AsyncInitializationProcessor.java
+        ├── AsyncInitializationProcessor.java
+        ├── CookieFlashMapManager.java
+        └── CsrfTokenModelAdvice.java
 ```
 
 ## What is built, and how it is delivered
@@ -930,15 +945,6 @@ The product catalog is accessible via MCP server for AI assistants like Claude. 
 - Returns all products in the catalog with complete details
 - No parameters required
 
-**product-by-sku**
-- Find product by SKU (e.g., "BOOK-001")
-- Parameters: `sku` (String) - must contain uppercase letters, numbers, hyphens only
-
-**product-by-category**
-- Find all products in a category
-- Parameters: `categoryName` (String)
-- Valid categories: Books, Modeling, Apparel, Desk & Office, Stickers & Pins
-
 **product-by-id**
 - Get product by internal UUID
 - Parameters: `id` (String) - UUID format
@@ -1041,38 +1047,23 @@ For comprehensive architecture documentation, see:
 
 ### Architecture Tests
 
-Architecture rules are **actively enforced** using ArchUnit (10 test suites) and Spring Modulith (module boundary verification):
+Architecture rules are **actively enforced**: the rules come from the library `dev.domaincentric:dca-archunit`, and
+`src/test-architecture` only runs them, together with Spring Modulith's module boundary verification:
 
 ```bash
 ./gradlew test-architecture
 ```
 
-**ArchUnit Test Suites:**
-- **DddTacticalPatternsArchUnitTest** - Aggregate, Entity, Value Object, Repository patterns
-- **DddAdvancedPatternsArchUnitTest** - Domain Events, Services, Factories, Specifications
-- **DddStrategicPatternsArchUnitTest** - Bounded Context isolation
-- **HexagonalArchitectureArchUnitTest** - Ports and Adapters rules
-- **OnionArchitectureArchUnitTest** - Dependency flow rules
-- **LayeredArchitectureArchUnitTest** - Layer access rules
-- **NamingConventionsArchUnitTest** - Naming standards
-- **PackageCyclesArchUnitTest** - Circular dependency detection
-- **UseCasePatternsArchUnitTest** - Application service patterns
+- **ArchitectureRulesTest** - extends `DcaArchitectureTest`: one test per rule of the DCA catalog, grouped by rule
+  set (layers, onion, hexagonal, tactical and strategic DDD, context map, use cases, naming, cycles); its
+  `additionalSelection()` is where a rule would be switched off, with a reason
+- **EcommerceLayout** - the base package and `DcaLayout` the tests share
+- **ContextMapDocumentationTest** - renders [docs/architecture/context-map.md](docs/architecture/context-map.md) from
+  the code and fails when the committed file is stale
+- **SpringModulithVerificationTest** - module boundaries and cycles, a `DcaSpringModulithTest` subclass from
+  `dca-archunit-spring-modulith`
 
-**Spring Modulith Verification:**
-- **SpringModulithVerificationTest** - Module boundary and cycle verification, a `DcaSpringModulithTest` subclass from `dca-archunit-spring-modulith`
-
-**Shared Infrastructure:**
-- **BaseArchUnitTest** - Common test constants and helpers
-
-These tests verify:
-- Domain layer has no framework dependencies
-- Aggregates only reference other aggregates by ID
-- Value objects are immutable records
-- Repository interfaces live in application/shared
-- No circular package dependencies
-- Naming conventions are followed
-- Bounded contexts are properly isolated
-- Spring Modulith module boundaries are respected
+`src/test-architecture/resources/dca-archunit.properties` switches the experimental rules on as well.
 
 ### Unit Tests
 ```bash
@@ -1115,8 +1106,10 @@ Because the markup is the same as the .NET sample's, either suite runs against e
 
 ## Key Design Decisions
 
-1. **In-Memory Storage**: Uses ConcurrentHashMap for simplicity; production would use JPA/database
-2. **Security**: Permits all requests for demo purposes
+1. **Persistence**: The cart is stored through JPA, the account through JDBC, both against H2 (ADR-031); product,
+   checkout, inventory and pricing keep their state in memory
+2. **Security**: Pages run on a session cookie with CSRF protection; `/api/**` takes only a bearer token, and each
+   resource states who may call it — anyone, the cart's owner, or the staff role (ADR-035, ADR-036)
 3. **Price Snapshot**: Cart items store price at time of addition (common e-commerce pattern)
 4. **Package-Private Constructors**: CartItem can only be created through ShoppingCart
 5. **Immutable Value Objects**: All value objects are Java records
@@ -1125,13 +1118,14 @@ Because the markup is the same as the .NET sample's, either suite runs against e
 8. **Shared Kernel**: Cross-context value objects shared between bounded contexts
 9. **Multi-step Checkout Flow**: 5 steps (Buyer Info → Delivery → Payment → Review → Confirmation) with session management
 10. **Specification Pattern with Visitor**: Database-agnostic filtering via CartSpecification and CartSpecificationVisitor
-11. **Multiple Persistence Strategies**: InMemory (default), JPA, and JDBC implementations for shopping cart
+11. **Multiple Persistence Strategies**: JPA (the one in use), JDBC (profile `jdbc`) and in-memory (profile
+    `inmemory`) implementations of the shopping cart repository
 12. **OpenHost Service Pattern**: Cross-context APIs via Spring Modulith `@NamedInterface` API packages
 13. **UserId Continuity on Registration**: When a user registers, their anonymous UserId is preserved
 14. **Spring Modulith Integration Events**: Cross-module communication via dedicated `events` packages, separate from internal domain events
 15. **Interface Inversion for Event Listeners**: Event consumers listen on integration events published by source context (ADR-024)
 
-**Architecture Decision Records:** See [docs/architecture/adr/README.md](docs/architecture/adr/README.md) for 24 documented architectural decisions.
+**Architecture Decision Records:** See [docs/architecture/adr/README.md](docs/architecture/adr/README.md) for the index.
 
 ## Business Rules Demonstrated
 
@@ -1192,25 +1186,25 @@ product.
 Contributions are accepted under the MIT licence, and the copyright holder may additionally publish
 them under other licences (for example a documentation licence for prose).
 
-Event delivery (2026-09-09): committed capture is recovered independently of wakeup; completion is per listener/consumer. Automatic retry is bounded (five attempts, 200 ms exponential base), terminal failures remain inspectable, and Backoffice offers authenticated, CSRF-protected manual replay of failed work. Original payload/identity and acknowledged consumers are preserved. Provider idempotency is needed to suppress an external duplicate after acceptance-before-ack; local keys alone do not suffice. See the event-delivery ADR for storage limits and replay behavior.
+## Event delivery
 
-## Shared business specification (review batch 2026-09-09)
+A committed event publication is recovered independently of the process that published it, and completion is
+recorded per listener. Automatic retry is bounded (five attempts, 200 ms exponential backoff); a publication that
+used them up stays inspectable, and the Backoffice replays it on an authenticated, CSRF-protected request with its
+original payload and identity, leaving listeners that already completed untouched. Suppressing an external duplicate
+after the provider accepted but before the acknowledgement needs the provider's idempotency; local keys alone do not
+suffice. Storage limits and replay behaviour: ADR-026.
+
+## Shared business specification
 
 Money uses ISO 4217 codes, non-negative amounts, two decimals half-up, and an upper bound of 999999999999.99.
-Product creation and Pricing use strictly positive Price. Product-created v1 is the six-field notification described
-in the local payload ADR. Invalid default quantities are rejected at entry/reconstitution; account role observations
-are immutable snapshots. Aggregate creation owns event registration.
+Product creation and Pricing use a strictly positive Price. Product-created v1 is the six-field notification of
+ADR-038. Invalid default quantities are rejected at entry and on reconstitution; account role observations are
+immutable snapshots. Aggregate creation owns event registration (ADR-039).
 
-An explicit checkout action captures immutable positions, quantities and prices into a session. Cart edits do not
-create or mutate sessions. A new action supersedes the previous OPEN/Active session; confirmed/completed orders remain.
-Confirmation and replacement serialize through the same repository operation, including transaction completion.
-Superseded confirmation has no completion effect. Abandonment/expiry closes only an open session and leaves cart contents.
-
-Cart reconciliation intersects purchased unit intervals with the current stable position id. Later additions (also of
-the same product), removed/re-added positions and other contents survive. Replay and overlapping completed snapshots
-cannot remove a unit twice. JDBC/JPA cart persistence preserves the interval allocation watermark; in-memory persistence
-retains the same domain state. The legacy Completed cart status remains readable, but snapshot checkout leaves
-an active cart editable and never completes the whole cart.
+An explicit checkout action captures immutable positions, quantities and prices into a session; cart edits and cart
+reconciliation after an order follow ADR-040. Snapshot checkout leaves an active cart editable and never completes the
+whole cart.
 
 Confirmation retrieves current price/availability/stock facts before its local transaction. Pure domain services consume
 immutable line/fact snapshots. The review shows the lines at today's prices and changes nothing; "Place Order" carries

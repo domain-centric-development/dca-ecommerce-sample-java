@@ -1,6 +1,6 @@
 # Architecture Documentation
 
-Comprehensive architectural documentation for the AI Architecture Sample Project.
+Comprehensive architectural documentation for the DCA e-commerce sample (Java).
 
 ## Core Documentation
 
@@ -25,7 +25,8 @@ Comprehensive architectural documentation for the AI Architecture Sample Project
 
 **Package Structure:**
 
-Each bounded context (product, cart, checkout, account, inventory, pricing, portal) follows the same structure:
+Each bounded context (product, cart, checkout, account, inventory, pricing, portal, backoffice) follows the same
+structure, with the layers it needs:
 ```
 {context}/
 ├── domain/             # Domain layer (innermost)
@@ -60,7 +61,8 @@ Use Case → Result(Snapshot) → Controller → ViewModel → Template
 - ViewModels use primitives only (String, BigDecimal, int) - no domain objects
 - See [dto-vs-viewmodel-analysis.md](dto-vs-viewmodel-analysis.md) for details
 
-**Shared Kernel:** Cross-context value objects and DDD marker interfaces in `sharedkernel/`
+**Shared Kernel:** Cross-context value objects and the specification base in `sharedkernel/`; the DDD and hexagonal
+marker interfaces come from the library `dev.domaincentric:dca-building-blocks`
 
 **Full structure:** See [package-structure.md](package-structure.md) for complete details
 
