@@ -1,5 +1,5 @@
 plugin: dca-factory
-version: 0.147.0
+version: 0.151.0
 contract: 27
 files: story-gate.py factory-cli.py observe.py factory.sh dca_factory/ workflow/
-sha256: 6e730c032bd67307b408e90bf5bd884bb7a20bbd8b62c0d745ecdfca0f17c9c8
+sha256: 45a424b598d97f57b3d5d48d0a33e406b25e9e300859e0c626ad394897537337

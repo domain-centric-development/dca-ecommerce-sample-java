@@ -34,6 +34,7 @@ from ....domain.model.stage_story import (
     ScenarioClauses, Selector, ContextMapFacts, HandOverName, HandOverSize, PlanLevels, DecisionsFacts, HandOverAsk, ContractNumber, EpicFacts, EpicField, EventName, GateRelease, InstructionFile,
     Metric, ModelKey, OwnedFacts, OwnedPart, Place, ProfileKey, ProfileText, RoundsRecord, RowId, RowState,
     ScenarioKey, StoryContent, TestSource, UnknownKey)
+from ....domain.gateway.stage_evidence import StageEvidence
 from ....domain.model.story import StoryId
 from ....domain.model.story_state import Detail, HandOverText, Rounds, StatusWord
 from ....domain.service.backlog_checks import EPIC_FIELDS, normal_name
@@ -62,7 +63,7 @@ from .test_files import locate_tests, plan_levels, stage_bytes, unfinished_level
 from .....spec.api import delta_problems, derived, placement_problems, read_delta, rule_problems, story_entries, touches
 from ..spec.story_spec_files import adopt_rows, moved_tests, spec_backing, story_spec
 from ....domain.model.verdict import FindingState
-from ..git.repository import git, git_blob
+from ..git.repository import git, git_blob, head_blobs
 from .decision_record_files import answered_decisions, records_of
 from .kept_files import (
     assertions_kept, glossary_names, renames_in, changed_tests_in_plan, committed_by_a_stage, human_line, meaningful_lines, read_red_digests,
@@ -214,7 +215,7 @@ def spec_front(story: Story) -> typing.Dict[str, typing.Any]:
             "kind": story.kind.value if story.kind in (StoryKind.JOURNEY, StoryKind.TASK) else ""}
 
 
-class StageEvidenceFiles:
+class StageEvidenceFiles(StageEvidence):
     """The evidence of the project <cwd> with its run folder <runs>, its epics under <epics> and its profile, read
     once."""
 
@@ -502,10 +503,9 @@ class StageEvidenceFiles:
         base_file = os.path.join(evidence_dir(runs, story_id), "base-tree")
         recorded = read_text(base_file).strip() if os.path.isfile(base_file) else ""
         base = recorded if recorded and recorded != "none" else None
-        for line in read_text(path).splitlines():
-            if "  " not in line:
-                continue
-            blob, rel = line.split("  ", 1)
+        listed = [line.split("  ", 1) for line in read_text(path).splitlines() if "  " in line]
+        at_head = head_blobs(cwd, [rel for _blob, rel in listed])
+        for blob, rel in listed:
             full = os.path.join(cwd, rel)
             if not os.path.isfile(full):
                 changed.append(ChangedTest(Place(rel), TestChange.REMOVED))
@@ -514,10 +514,10 @@ class StageEvidenceFiles:
             # story. The story is held to its own changes — against what is committed now. Not in a story's
             # worktree: every commit on its branch is the runner's, holding the story's own change, and what the
             # main line brought in is in the baseline already (`rebase_tests_baseline`).
-            head_code, head_blob = git(cwd, "rev-parse", f"HEAD:{rel}")
-            if not head_code and not in_worktree(cwd) and head_blob.strip() and head_blob.strip() != blob \
+            head_blob = at_head.get(rel, "")
+            if head_blob and not in_worktree(cwd) and head_blob != blob \
                     and not git(cwd, "cat-file", "-e", blob)[0] and not committed_by_a_stage(cwd, runs, story_id, rel):
-                blob = head_blob.strip()
+                blob = head_blob
             code, before = git_blob(cwd, blob)
             if code:
                 lost.append(Place(rel))
