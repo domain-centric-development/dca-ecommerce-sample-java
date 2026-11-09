@@ -114,6 +114,50 @@ public final class CheckoutSession extends BaseAggregateRoot<CheckoutSession, Ch
   }
 
   /**
+   * Restores a stored checkout session as it was saved, without raising a domain event: nothing
+   * happened, it was only read back. The step data is null where the step was not completed yet.
+   *
+   * @param id the session's id
+   * @param cartId the cart it originates from
+   * @param customerId the customer it belongs to
+   * @param lineItems the line items
+   * @param totals the totals
+   * @param currentStep the step the session stands at
+   * @param status the session's status
+   * @param buyerInfo the buyer, or null
+   * @param deliveryAddress the delivery address, or null
+   * @param shippingOption the shipping option, or null
+   * @param paymentSelection the payment, or null
+   * @param orderReference the order reference after completion, or null
+   * @return the reconstituted session, with no pending domain events
+   */
+  public static CheckoutSession reconstitute(
+      final CheckoutSessionId id,
+      final CartId cartId,
+      final CustomerId customerId,
+      final List<CheckoutLineItem> lineItems,
+      final CheckoutTotals totals,
+      final CheckoutStep currentStep,
+      final CheckoutSessionStatus status,
+      @Nullable final BuyerInfo buyerInfo,
+      @Nullable final DeliveryAddress deliveryAddress,
+      @Nullable final ShippingOption shippingOption,
+      @Nullable final PaymentSelection paymentSelection,
+      @Nullable final String orderReference) {
+    final CheckoutSession session =
+        new CheckoutSession(id, cartId, customerId, lineItems, totals.subtotal());
+    session.totals = totals;
+    session.currentStep = currentStep;
+    session.status = status;
+    session.buyerInfo = buyerInfo;
+    session.deliveryAddress = deliveryAddress;
+    session.shippingOption = shippingOption;
+    session.paymentSelection = paymentSelection;
+    session.orderReference = orderReference;
+    return session;
+  }
+
+  /**
    * The customer takes the session over: the same session, at the same step, with the same line
    * items, is theirs now. The caller states that this customer owns the session's cart; the session
    * does not check it.

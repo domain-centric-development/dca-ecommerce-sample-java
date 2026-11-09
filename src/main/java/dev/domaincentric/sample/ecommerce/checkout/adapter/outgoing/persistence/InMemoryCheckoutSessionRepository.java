@@ -9,6 +9,7 @@ import dev.domaincentric.sample.ecommerce.checkout.domain.model.CustomerId;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -16,10 +17,8 @@ import org.springframework.stereotype.Repository;
  *
  * <p>This secondary adapter provides a thread-safe in-memory storage for checkout sessions using
  * ConcurrentHashMap. In a production system, this would be replaced with a database implementation.
- *
- * <p>Note: No profile restriction - this is the default implementation until JPA/JDBC
- * implementations are added for the checkout bounded context.
  */
+@Profile("inmemory")
 @Repository
 public class InMemoryCheckoutSessionRepository implements CheckoutSessionRepository {
 
