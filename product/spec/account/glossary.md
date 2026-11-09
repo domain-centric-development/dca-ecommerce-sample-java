@@ -303,9 +303,8 @@ because it is consumed by domain code and expressed in domain language.
   decide authoritatively which identity is referenced in which context.
 - **`Account.reconstitute` bypasses the immutable-name rule** — it is public and accepts an
   arbitrary `Owner`, so application code could rebuild an account under its existing `AccountId`
-  with a different name and save it. No production code calls it today (the in-memory repository
-  stores the aggregate itself), so this is theoretical until the first mapping persistence adapter
-  lands. **To discuss:** static rule restricting the callers, narrower visibility, or accept it as a
+  with a different name and save it. The persistence adapter calls it to restore a stored account,
+  and nothing else should. **To discuss:** static rule restricting the callers, narrower visibility, or accept it as a
   documented convention. Recorded as the open question in `ADR-028: The Account Owner's Name Is
   Immutable by Type, Not by Rule`.
 - **Password policy** should be extracted as a standalone domain specification rather than
