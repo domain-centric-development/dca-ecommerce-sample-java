@@ -11,7 +11,7 @@ from ....domain.model.rule import (
     Words)
 from ....domain.model.rule import Moment
 from ....domain.model.rulebook import GateTime, KindOrder, OrderPlace, StageRow
-from ....domain.model.runs import CheckNaming, GateHand, JournalLine, JournalLineKind, StoryJournal
+from ....domain.model.runs import GateHand, JournalLine, JournalLineKind, StoryJournal
 from ..skills.skill_files import plain
 from ....application.shared.decided_rules import DecidedRules
 from ....application.shared.gate_findings import GateFindings
@@ -27,7 +27,8 @@ def told(published: typing.Mapping[str, typing.Any]) -> Rule:
     where = " — ".join(w for w in (stages, published["section"]) if w)
     return Rule(
         RuleId(published["id"]), Part.INSTRUCTION, tuple(StageName(s) for s in published["stages"]),
-        tuple(KindName(k) for k in published["kinds"]), Words(where), (), Words(""), Words(plain(published["told"])),
+        tuple(KindName(k) for k in published["kinds"]), Words(where), (), Words(published.get("why", "")),
+        Words(plain(published["told"])),
         (), Source(published["source"]), RuleState.RETIRED if published["retired"] else RuleState.ACTIVE,
         Source(published["placed"]), restart=restart_of(published))
 
@@ -110,7 +111,7 @@ def run_event(line: typing.Mapping[str, typing.Any]) -> typing.Optional[JournalL
         return JournalLine(JournalLineKind.GATE, at, StageName(line["name"]),
                         state=OutcomeState.FAIL if refused else OutcomeState.PASS,
                         hand=GateHand.RUNNER if fields.get("by", "runner") == "runner" else GateHand.STAGE,
-                        checks=checks, naming=CheckNaming.NAMED if not refused or checks else CheckNaming.UNNAMED)
+                        checks=checks)
     if kind == "jump":
         return JournalLine(JournalLineKind.JUMP, at, StageName(line["name"]), source=StageName(fields.get("from", "")),
                         rule=Words(fields.get("rule", "")))

@@ -433,9 +433,11 @@ function recordCard(r, o = {}) {
     + words.map(a => ui.part(accept ? "or correct it" : options.length ? "or in your words" : "your answer", act(a))).join("")
     + (first ? "" : full)
     + ui.id(`${r.story ? `${ui.story(r.story, r.story)} · ` : ""}${esc(r.path)}`, {block: true, html: true});
-  return ui.record({accept, about: o.about || `${accept ? "acceptance" : "question"} · ${r.id}${r.story ? ` · ${r.stage}` : ""}`, text: inline(r.text), body});
+  return ui.record({accept, about: o.about || `${recordKind(r)} · ${r.id}${r.story ? ` · ${r.stage}` : ""}`, text: inline(r.text), body});
 }
 
+// a record's kind in words: an acceptance, a question, or a lesson — what repeats across the stories (WP-185)
+const recordKind = r => r.kind === "acceptance" ? "acceptance" : r.kind === "lesson" ? "lesson" : "question";
 const plain = text => String(text || "").replace(/[`*_]/g, "");
 function decide(st) {
   const records = ((S.decisions || {}).records || []).filter(r => (r.actions || []).length && (r.place || "decide") === "decide");
@@ -464,9 +466,11 @@ function decide(st) {
     const on = records.find(r => r.id === S.record) || records[0];
     const items = records.map(r => ({mark: r.kind === "acceptance" ? "look" : "question", on: r.id === on.id,
       press: {label: plain(r.text), attrs: {"data-record": r.id}},
-      what: ui.id(`${r.kind === "acceptance" ? "acceptance" : "question"} · ${r.id}${r.story ? ` · ${r.story} · ${r.stage}` : ""}`, {block: true})}));
+      what: ui.id(`${recordKind(r)} · ${r.id}${r.story ? ` · ${r.story} · ${r.stage}` : ""}`, {block: true})}));
+    const lessons = records.filter(r => r.kind === "lesson").length;
     return ui.master({label: "the record", bare: true, detail: recordCard(on),
-      list: ui.card("Questions and results", `${records.length} to answer or to accept — open one`, ui.list(items)) + also});
+      list: ui.card(lessons ? "Questions, results and lessons" : "Questions and results",
+        `${records.length} to answer or to accept — open one` + (lessons ? `; ${lessons} lesson${lessons === 1 ? "" : "s"} — where a repeated correction belongs, holding no story back` : ""), ui.list(items)) + also});
   }
   return records.length ? ui.split({main: records.map(recordCard).join(""), side: also}) : also;
 }
@@ -482,7 +486,7 @@ function curveCard(st) {
 // quality: the signals the factory counts per story, summed — shown as counted, never rated
 const sum = o => Object.values(o || {}).reduce((n, v) => n + v, 0);
 const domainWords = o => Object.entries(o || {}).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${n} ${c.replace(/^domain-/, "")}`).join(" · ");
-function qualityCard(q) {
+function qualityCard(q, lessons) {
   if (!q || !q.stories) return "";
   const domain = sum(q.domain), corrected = sum(q.corrections);
   const tiles = [
@@ -496,8 +500,13 @@ function qualityCard(q) {
   // the rules a broken implementation was tried against: one tile, the count by kind on hover
   const counted = `killed ${q.killed} · red ${q.red} · survived ${q.survived} · no-break ${q["no-break"]} — of ${q.stories} stories: ${q.measured} measured, ${q.not_measured} tested before rules were recorded, ${q.without_test || 0} without a test stage, ${q.open || 0} not delivered`;
   const ruleTile = ui.tile(q.named ? `${q.killed}/${q.named}` : "–", "rules caught when broken", {said: `${q.measured} of ${q.stories} stories measured`, bad: !!q.survived, title: counted});
+  // the step from these signals to a place for their correction: what repeats becomes a lesson in decide (WP-185)
+  const l = lessons || {};
+  const lessonTile = ui.tile(`${l.waiting || 0}`, `lessons for the ${l.role || "loop keeper"}`,
+    {said: `${l.answered || 0} answered — what these figures repeat across stories, counted; answered in decide by ${l.who || ""}`, bad: !!l.waiting,
+     title: "a question of the same tag, a finding of the same rule, a correction of the same code, an assumption answered the same way, a term flagged — in several stories"});
   return ui.card("Quality", "what the stages asked, what the judge confirmed, what a person corrected — counted over every story, never rated",
-    ui.tiles(tiles + ruleTile, {many: true})
+    ui.tiles(tiles + ruleTile + lessonTile, {many: true})
     + (found.length ? ui.part("Findings the judge confirmed, by perspective", ui.bars(found.map(([name, n]) => [name, n, Math.round(100 * n / most)]))) : ""));
 }
 // the same figures in one line, for an epic
@@ -526,7 +535,7 @@ function delivered(st) {
   // the deliveries by day on the width; beside them the sums with their curve, above the quality they came with (WP-183)
   const byDay = ui.card("By day", "each delivery with the outcome event its epic is measured by", days.length ? ui.days(days) : ui.empty("Nothing delivered yet."));
   const sums = ui.card("Delivered", "what is delivered, and what it cost as it summed up", ui.tiles(tiles) + curveCard(st));
-  return ui.split({main: byDay, side: sums + qualityCard(st.signals), sideFirst: true});
+  return ui.split({main: byDay, side: sums + qualityCard(st.signals, st.lessons), sideFirst: true});
 }
 
 // --- 6 the rules: the factory's rulebook — a stage read, the checks against the stages, a story's run ----------------

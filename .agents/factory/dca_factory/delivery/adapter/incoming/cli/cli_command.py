@@ -10,6 +10,9 @@ what they say.
     factory-cli.py --status --brief [--session-start]   two lines for a session's start
     factory-cli.py --help-view [--format text|md|json]  the factory explained, with this project's place in it
     factory-cli.py --list-decisions [--story <id>]      the decision inbox, one line per record
+    factory-cli.py --lessons [--format text|json]       what repeats across the stories: the lesson candidates
+    factory-cli.py --lessons --write                    each candidate nobody was asked yet, as a lesson record in decide
+    factory-cli.py --lessons --issue <lesson>           the anonymised issue text of a lesson that goes up; a person sends it
     factory-cli.py --discover-list [--format text|md|json]  every discovery topic, its proposals and which are epics
     factory-cli.py --schedule                           every story's state and the next one to run
     factory-cli.py --story <id> --start | --kind        where a run begins | `story`, `journey` or `adopt`
@@ -60,7 +63,7 @@ from ....application.status.show_status import ShowStatusQuery
 from ....application.status.show_story import ShowStoryQuery, UnknownStory
 from ....application.status.show_epic import ShowEpicQuery, UnknownEpic
 from ....application.status.show_help import ShowHelpQuery
-from ....application.status.texts import stamp_text
+from ....application.status.texts import stamp_text, took_text
 from ....application.decisions.list_decisions import ListDecisionsQuery
 from ....application.requests.list_requests import ListRequestsQuery
 from ....application.requests.pending_requests import PendingRequestsQuery
@@ -71,6 +74,11 @@ from ....application.status.show_journal_story import ShowJournalStoryQuery
 from ....application.cost.show_spent import ShowSpentQuery
 from ....application.shared.usage_ledger import Spent
 from ....application.status.list_findings import ListFindingsQuery
+from ....application.lessons.show_lessons import ShowLessonsQuery
+from ....application.lessons.write_lessons import WriteLessonsCommand
+from ....application.lessons.write_issue import IssueWritten, WriteIssueCommand
+from ....domain.model.decision_record import RecordId
+from ....domain.model.moment import Moment
 from ....application.delivery.show_brief import ShowBriefQuery
 from ....application.delivery.show_story_kind import ShowStoryKindQuery
 from .brief_view import brief_model, markdown as brief_markdown
@@ -265,7 +273,34 @@ def usage_report(runs: str, story_filter: typing.Optional[str] = None, total_onl
     headers, rows, kinds, right = token_rows(model)
     caption = "Tokens" + ("" if model["priced"] or not model["measured"] else " — no price in a session log")
     print("\n".join(section(caption, colour) + table_text(headers, rows, right, total=True, colour=colour) + [""]))
+    accepted = acceptance_rows(model)
+    if accepted:
+        print("\n".join(section("Acceptance — waited, outcome, rework within 14 days", colour)
+                        + table_text(["epic / story", "waited", "outcome", "corrections", "rework"], accepted,
+                                     {1, 3, 4}, colour=colour) + [""]))
     return 0
+
+
+def acceptance_rows(model: typing.Mapping[str, typing.Any]) -> typing.List[typing.List[str]]:
+    """WP-190 D: per epic, each story a person was asked to accept or that another story reworked — how long the
+    acceptance waited, how it came out, how many corrections, how many of its files another story changed again within
+    14 days; empty where no story has any of it."""
+    rows: typing.List[typing.List[str]] = []
+    for epic in (e for e in model["epics"] if e["rows"]):
+        own = []
+        for row in epic["rows"]:
+            signals = row.get("signals") or {}
+            accepted = signals.get("acceptance")
+            if not accepted and not signals.get("rework"):
+                continue
+            own.append(["  ↳ " + row["story"],
+                        took_text(accepted["waited"]) if accepted and accepted["waited"] is not None else "—",
+                        accepted["outcome"] if accepted else "—", str(accepted["corrections"]) if accepted else "—",
+                        str(signals.get("rework") or 0)])
+        if own:
+            rows.append([epic["epic"] or "(no epic)", "", "", "", ""])
+            rows += own
+    return rows
 
 
 def status_model(cwd: str, epics: str, runs: str, live: bool = False) -> Model:
@@ -572,6 +607,13 @@ def main(argv: typing.Sequence[str]) -> int:
                         help="let the story journals into git: the .gitignore line that ignores the pipeline's folder "
                              "becomes lines that keep everything but the journals out (`factory.sh setup`/`update`)")
     parser.add_argument("--lines", type=int, default=30, help="with --follow --once: how many lines (0: all)")
+    parser.add_argument("--lessons", action="store_true",
+                        help="the lesson candidates: what repeats across the stories at its threshold, with its evidence")
+    parser.add_argument("--issue", metavar="LESSON",
+                        help="with --lessons: the anonymised issue text of a lesson answered factory, rule-library or "
+                             "knowledge-catalog, under the factory's folder — a person sends it, nothing leaves by itself")
+    parser.add_argument("--write", action="store_true",
+                        help="with --lessons: write each candidate nobody was asked yet as an open lesson record")
     parser.add_argument("--list-decisions", action="store_true",
                         help="print the decision inbox (all stories, or --story's) and exit")
     parser.add_argument("--claim", metavar="OWNER", help="take the checkout for one worker (exit 3: held by another)")
@@ -782,6 +824,24 @@ def main(argv: typing.Sequence[str]) -> int:
                       args.request)
     if args.list_decisions:
         return list_decisions(cwd, args.story, args.format, args.color)
+    if args.lessons and args.issue:
+        issued = root.wiring.write_issue(cwd).execute(WriteIssueCommand(RecordId(args.issue)))
+        if not isinstance(issued, IssueWritten):
+            print(f"factory: {issued.why}", file=sys.stderr)
+            return 1
+        print(issued.text)
+        print(f"factory: the issue text is {issued.path} — it names no project, no story and no file; send it to the "
+              "maintainers yourself, the factory sends nothing")
+        return 0
+    if args.lessons and args.write:
+        written = root.wiring.write_lessons(cwd).execute(WriteLessonsCommand(Moment(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))))["written"]
+        for one in written:
+            print(f"{one['id']}\t{one['kind']}\t{one['path']}")
+        print(f"factory: {len(written)} lesson record(s) written — they wait in decide beside the stories; none holds "
+              "a story back")
+        return 0
+    if args.lessons:
+        return lessons(root.wiring.show_lessons(cwd, args.epics).execute(ShowLessonsQuery()), args.format)
     if args.discover_list:
         return discovery_list(cwd, args.epics, args.format, args.color)
     if args.stage_brief:
@@ -886,3 +946,20 @@ def main(argv: typing.Sequence[str]) -> int:
     if args.usage:
         return usage_report(args.runs, args.story, args.total, cwd, args.epics, args.format)
     parser.error("nothing asked — --status, --schedule, --usage, --list-decisions, … (a stage's gate is story-gate.py's)")
+
+
+def lessons(model: typing.Dict[str, typing.Any], form: str) -> int:
+    """The lesson candidates: one block per candidate — its kind, key and stories, the evidence, the places offered."""
+    if form == "json":
+        print(json.dumps(model, ensure_ascii=False, indent=2))
+        return 0
+    counted = ", ".join(f"{n} {kind}" for kind, n in model["signals"].items())
+    limits = ", ".join(f"{kind} {n}" for kind, n in model["thresholds"].items())
+    print(f"factory: signals counted — {counted}; a candidate from its kind's count of stories — {limits}")
+    for c in model["candidates"]:
+        print(f"\n{c['id']}\t{c['kind']}\t{c['key']}\t{c['stories']} stories")
+        print("  evidence: " + ", ".join(e["source"] for e in c["evidence"]))
+        print("  places: " + ", ".join(p["place"] + (" (recommended)" if p["place"] == c["recommended"] else "")
+                                       for p in c["places"]))
+    print(f"\nfactory: {len(model['candidates'])} lesson candidate(s) not yet asked")
+    return 0

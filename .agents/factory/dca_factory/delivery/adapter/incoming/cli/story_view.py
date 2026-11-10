@@ -145,6 +145,21 @@ def story_header(model: typing.Mapping[str, typing.Any]) -> typing.Tuple[str, ty
         facts.append(("Findings", ", ".join(f"{n} {p}" for p, n in sorted(signals["findings"].items()))
                       + (" · domain " + ", ".join(f"{n} {c[7:]}" for c, n in sorted(signals["domain"].items()))
                          if signals.get("domain") else "")))
+    if signals.get("fresh") or signals.get("repeated"):
+        facts.append(("Rounds", f"{signals.get('fresh') or 0} fresh restart(s) after a repeated refusal · "
+                                f"{signals.get('repeated') or 0} stop(s) by repetition"))
+    accepted = signals.get("acceptance")
+    if accepted:
+        waited = f", waited {took_text(accepted['waited'])}" if accepted.get("waited") else ""
+        facts.append(("Acceptance", f"{accepted['outcome']}{waited} · {accepted['corrections']} correction(s)"
+                      + (f" · rework {signals['rework']} file(s) within 14 days" if signals.get("rework") else "")))
+    if signals.get("mutation"):
+        said = signals["mutation"]
+        facts.append(("Mutation", f"{said} % of the mutants killed — a measure, never a gate"
+                      if said not in ("skipped", "no score") else f"{said} — the tests' strength is not measured"))
+    if signals.get("contradictions"):
+        facts.append(("Contradictions", f"{signals['contradictions']} stop(s) on a specification that contradicts "
+                                        f"itself — counted apart from failures"))
     if signals.get("corrections"):
         facts.append(("Corrections", ", ".join(f"{n} {code}" for code, n in sorted(signals["corrections"].items()))))
     return title, facts

@@ -8,7 +8,9 @@ import typing
 
 from ....building_blocks import AggregateRoot, DomainEvent, DomainException, Id, Value
 from .moment import Moment
+from .lesson import LessonPlace, Owner
 from .person import Person
+from .question_tag import QuestionTag
 from .stage import StageName
 from .story import StoryId
 from .story_words import Detail
@@ -105,10 +107,13 @@ class Asker(enum.Enum):
 
 
 class RecordKind(enum.Enum):
-    """A question with options, or an acceptance — a look at a delivered story, answered `accepted` or corrected."""
+    """A question with options; an acceptance — a look at a delivered story, answered `accepted` or corrected; or a
+    lesson — what repeats across the stories, answered with the place its correction goes. A lesson holds no story
+    back."""
 
     QUESTION = "question"
     ACCEPTANCE = "acceptance"
+    LESSON = "lesson"
 
 
 class Given(Value):
@@ -158,6 +163,15 @@ class CorrectionAsked(DomainEvent):
 
     record: RecordId
     story: typing.Optional[StoryId]
+    by: Person
+    given: Given
+    at: Moment
+
+
+class LessonAnswered(DomainEvent):
+    """A person decided where a lesson's correction goes — a place, `not now` or `never`."""
+
+    record: RecordId
     by: Person
     given: Given
     at: Moment
@@ -239,6 +253,12 @@ class RecordContent(Value):
     missing: typing.Tuple[AnswerField, ...]
     #: the options with their first lines, as the record's `## Options` offers them
     option_lines: typing.Tuple[OptionLine, ...] = ()
+    #: the kind of question as the asking stage wrote it (`tag:`), "" where it wrote none
+    tag: Detail = Detail("")
+
+    def known_tag(self) -> typing.Optional[QuestionTag]:
+        """The tag the record names, when it is one of the factory's list; None otherwise."""
+        return QuestionTag.written(self.tag)
 
 
 class DecisionRecord(AggregateRoot[RecordId]):
@@ -366,7 +386,7 @@ class DecisionRecord(AggregateRoot[RecordId]):
         an acceptance that accepted."""
         if self._kind is RecordKind.ACCEPTANCE:
             return self.corrects()
-        return self._state.answered
+        return self._kind is RecordKind.QUESTION and self._state.answered
 
     def answer(self, answer: Answer) -> None:
         """The person's answer, once: a record answered or applied takes no second one."""
@@ -376,6 +396,8 @@ class DecisionRecord(AggregateRoot[RecordId]):
         self._state = DecisionState.ANSWERED
         if self._kind is RecordKind.QUESTION:
             self.register_event(QuestionAnswered(self._id, self._story, answer.by, answer.given, answer.at))
+        elif self._kind is RecordKind.LESSON:
+            self.register_event(LessonAnswered(self._id, answer.by, answer.given, answer.at))
         elif answer.given.accepts():
             self.register_event(DeliveryAccepted(self._id, self._story, answer.by, answer.given, answer.at))
         else:
@@ -388,6 +410,20 @@ class DecisionRecord(AggregateRoot[RecordId]):
         self._state = DecisionState.APPLIED
         self._applied = Applied(stage, at)
         self.register_event(AnswerApplied(self._id, self._story, stage, at))
+
+    def option_line(self, option: OptionKey) -> typing.Optional[Detail]:
+        """The first line of the option the record offers under this key, None where it offers none."""
+        return next((o.line for o in self._content.option_lines if o.key.value.lower() == option.value.lower()), None)
+
+    def settles_alone(self, option: OptionKey) -> bool:
+        """An option the factory writes as the answer without a skill: any of a request's own question — the request
+        that asked applies it —, and a lesson's place that nobody writes (`not now`, `never`). A stage's question, an
+        acceptance and a lesson's place a skill writes go through the decisions skill."""
+        if self._asker is Asker.REQUEST and self._kind is RecordKind.QUESTION:
+            return True
+        line = self.option_line(option)
+        place = LessonPlace.named(line) if self._kind is RecordKind.LESSON and line is not None else None
+        return place is not None and place.owner is Owner.NOBODY
 
     def choose(self, option: OptionKey, by: Person, at: Moment) -> None:
         """A person's choice among the options of an open record — the option is the whole answer."""

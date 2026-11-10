@@ -16,7 +16,6 @@ from ..pipeline.stage_rows import stage_of
 import argparse
 import contextlib
 import glob
-import hashlib
 import io
 import os
 import re
@@ -42,6 +41,7 @@ from ..tools.streams import tokens_of
 from .....infrastructure.schedule import start_of
 from ..claims.remote_claims import claim_config_here
 from ..claims.checkout_claim import claim
+from ..git.checkout import Checkouts
 from ..files.windows import freeze_all
 from ..files.usage_files import journal_usage
 from ..files.run_marks import back_in, run_stories, step_open
@@ -51,20 +51,29 @@ from ..stack.commands import run as run_command
 from ..git.integration import integration_target, lost_text
 from ....application.profile.profile_rules import first_word, perspectives_of
 from ..tools.agents import TOOL, TOOLS
-from .gate_process import file_sha, GateProcess, hashing
+from .gate_process import GateProcess, hashing
+from ..files.guarded_files import announced_changes, guarded_set, present_files
+from ..files.round_files import clear_fresh, fresh_stage, ROUNDS_RECORD
+from ..files.pipeline_digest import GATE_FILES, PIPELINE_FILES, STAMP, pipeline_digest
+from ..files.snapshots import Edge
 from ..tools.tool_choice import ToolChoice
 from ..tools.tool_processes import err, exit_field, flush, ToolProcesses, utc
 from ....application.shared.run_stop import Stopped
 from ....domain.model.stage import StageText, Window
-from ....domain.model.stage_story import Place
+from ....domain.model.story_words import Place
+from ....domain.model.reach import Reach
+from ....domain.model.story import StorySource
+from ..files.stage_evidence_files import source_of
+from ..files.status_facts import changed_production
+from ..stack.mutation_runs import mutation_command, run_mutation, score_of
 from ....domain.service.stage_brief import Brief, written
 from ..files.brief_files import brief_dir, EVERY_STAGE, write_brief, write_every_stage, write_told_everywhere
 from ..files.request_files import default_by, REQUEST_JOURNAL, requests_dir
 from ....application.requests.list_requests import target_text
-from ..files.run_readers import needs_human_lines, open_decision_files, verdict_of_story
+from ..files.run_readers import contradiction_in, needs_human_lines, open_decision_files, verdict_of_story
 from ....application.requests.request_queue import RequestQueue
 from ....application.requests.work_request import RequestWorked
-from ....application.shared.requests import Request
+from ....application.shared.requests import RequestFacts
 from ....application.shared.story_integration import Lost
 from ....application.delivery.pipeline_rules import decides
 from ....application.shared.backlog_worker import Child
@@ -131,8 +140,11 @@ class Run(ProfileSource):
     starts are the composition root's (`cases`)."""
 
     def __init__(self, options: argparse.Namespace, home: str, runs: str, worker: typing.Optional[str] = None,
-                 cases: typing.Optional[RunCases] = None) -> None:
+                 cases: typing.Optional[RunCases] = None, checkouts: typing.Optional[Checkouts] = None) -> None:
         self._cases = cases
+        #: the checkouts this run stands in — the main one and a story's worktree — each asked of git once for the
+        #: run (WP-202), given by the composition root
+        self.checkouts = checkouts if checkouts is not None else Checkouts()
         self.py = os.environ.get("FACTORY_RUNNER_PYTHON") or "python3"   # the name the prompts and the list carry
         self.scripts = scripts_dir()
         self.cli_path = os.path.join(self.scripts, "factory-cli.py")
@@ -311,23 +323,7 @@ class Run(ProfileSource):
     def pipeline_hash(self, folder: typing.Optional[str] = None,
                       names: typing.Sequence[str] = ()) -> typing.Optional[str]:
         """One SHA-256 over the installed files' digests — the stamp's `sha256:` line (or over <names> alone)."""
-        if not hashing():
-            return None
-        folder = folder or os.path.join(self.home, ".agents", "factory")
-        listing = ""
-        for name in names or PIPELINE_FILES:
-            path = os.path.join(folder, name)
-            if name.endswith("/"):
-                if not os.path.isdir(path):
-                    listing += f"missing  {name}\n"
-                    continue
-                for module in package_modules(path):
-                    listing += f"{file_sha(os.path.join(path, module))}  {name}{module}\n"
-            elif os.path.isfile(path):
-                listing += f"{file_sha(path)}  {name}\n"
-            else:
-                listing += f"missing  {name}\n"
-        return hashlib.sha256(listing.encode("utf-8")).hexdigest()
+        return pipeline_digest(folder or os.path.join(self.home, ".agents", "factory"), names or PIPELINE_FILES)
 
     def runs_the_gate(self, gate_path: str) -> bool:
         """The gate at <gate_path> is this process's own package — its modules, its workflow and its entry point the
@@ -427,7 +423,7 @@ class Run(ProfileSource):
         self.profile()
         freeze_all(place("runs"))
         try:
-            return claim(os.getcwd(), self.worker, say)
+            return claim(os.getcwd(), self.worker, say, self.checkouts)
         except (OSError, ValueError):
             return 1
 
@@ -479,6 +475,21 @@ class Run(ProfileSource):
     def protected_dirs(self) -> typing.List[str]:
         dirs = [".agents/factory", self.evidence_rel(), *TOOL_SKILL_DIRS, ".agents/skills"]
         return [d if os.path.isabs(d) or re.match(r"^[A-Za-z]:", d) else f"{self.home}/{d}" for d in dirs]
+
+    def guarded_walls(self, story: typing.Optional[str]) -> typing.List[str]:
+        """What judges a stage of <story>, absolute, for the tool to refuse every edit to: the stack profile — the
+        main checkout's and the copy where the stage works — and the profile's `guarded:` globs where the stage
+        works, but for the paths the story's plan announces under `## Guarded changes`."""
+        guarded = guarded_set(self.profile())
+        announced = (announced_changes(self.runs, story) or ()) if story else ()
+        here = os.getcwd()
+        walls: typing.List[str] = []
+        for wall in guarded.walled(announced, present_files(here, guarded.opened(announced))):
+            if wall.value == PROFILE_FILE:
+                walls += [f"{self.home}/{PROFILE_FILE}", f"{here}/{PROFILE_FILE}"]
+            else:
+                walls.append(f"{here}/{wall.value}")
+        return list(dict.fromkeys(w.replace(os.sep, "/") for w in walls))
 
     def skill_reach(self) -> typing.List[str]:
         """Where the skills a run reads really are (WP-184): a linked skill folder's target and the plugins the tool
@@ -542,6 +553,38 @@ class Run(ProfileSource):
         except GateError:
             return False
 
+    def measure_mutation(self, story: str) -> None:
+        """After the judge passed <story>: the profile's `mutation:` over the production files it changed, its score
+        journaled (`mutation` with `score=`) and said — informational, never a refusal. Without the key, or without a
+        changed production file, skipped and named."""
+        profile = self.profile()
+        command = str(profile.get("mutation") or "").strip()
+        files = changed_production(place("runs"), story)
+        if not command or not files:
+            why = "the profile names no `mutation:`" if not command else "the story changed no production file"
+            print(f"factory: mutation — skipped: {why}; the tests' strength is not measured.")
+            self.journal_line(story, f"{utc()}\tmutation\t-\tskipped={'no-key' if not command else 'no-files'}")
+            return
+        run = mutation_command(command, files)
+        print(f"── mutation  (informational — {len(files)} production file(s))")
+        code, output = run_mutation(run, os.getcwd(), self.timeout)
+        score = score_of(output)
+        said = f"{score} % of the mutants killed" if score is not None else "no score in its output"
+        print(f"factory: mutation — {said} (exit {code}); a measure to read, never a gate.")
+        self.journal_line(story, f"{utc()}\tmutation\t-\texit={code}" + (f"\tscore={score}" if score is not None else ""))
+
+    def stage_reach(self, story: typing.Optional[str]) -> Reach:
+        """What a stage of <story> may reach: a stage's, or — for a story whose text did not come from a person
+        (`source:`) — an untrusted stage's: offline, no web, no secret in its environment."""
+        if not story:
+            return Reach.stage()
+        self.profile()
+        try:
+            source = source_of(read_front_matter(find_story(place("epics"), story))[0])
+        except GateError:
+            return Reach.stage()
+        return Reach.stage() if source is StorySource.PERSON else Reach.untrusted_stage()
+
     def kind_of(self, story: str) -> str:
         """`story`, `journey`, `adopt` or `task` — `story` for one that cannot be read."""
         self.profile()
@@ -557,6 +600,11 @@ class Run(ProfileSource):
         self.profile()
         rows = [line.split("\t") for line in needs_human_lines(artefact, story) or [] if line.strip()]
         ids = [row[0] for row in rows]
+        said = contradiction_in(artefact)
+        if said is not None:
+            # a specification that contradicts itself is counted apart from a failure (WP-190 F)
+            self.journal_line(story, f"{utc()}\tcontradiction\t{stage}" + (f"\tdecision={','.join(ids)}" if ids else ""))
+            err(f"factory:   the stage found the specification contradicting itself: {said}")
         if not ids:
             err("factory:   the section names no 'decision: <id>' — the stage has to write the question as")
             err("factory:   <story>/decisions/<nn>.md in the story's folder; the next gate refuses a question nobody was asked.")
@@ -681,7 +729,29 @@ class Run(ProfileSource):
         return (f"Carry out the {stage} stage of the delivery pipeline for backlog story {story}. Its brief: {own}; "
                 f"what every stage is told: {every} — read both whole, then work by them.")
 
+    def fresh_sentence(self, story: str, stages: typing.Sequence[str], dry: bool) -> typing.Optional[str]:
+        """What a fresh restart (RUN-ROUNDS-3) is told in place of the earlier attempt's account: where it works from.
+        None where no fresh restart waits for one of <stages>; the mark goes once a real run took it."""
+        self.profile()
+        fresh = fresh_stage(place("runs"), story)
+        if fresh is None or fresh not in stages:
+            return None
+        if not dry:
+            clear_fresh(place("runs"), story)
+        report = f"{self.runs}/{story}/.gate-{fresh}.txt"
+        plan = f"{self.runs}/{story}/{self.stage_file(stage_of(Role.PLANS))}"
+        return (f" This is a fresh restart of the {fresh} stage: the round before was refused exactly as the one before "
+                f"it. Work from the story, the plan ({plan}), the gate's report ({report}) and the round record "
+                f"({self.evidence(story)}/{ROUNDS_RECORD}) alone — the earlier attempt's hand-over is set aside and its "
+                f"account is not yours to continue. The working tree is as that attempt left it; the round record "
+                f"names what it changed, and part of it may be right.")
+
     def prompt_for(self, stage: str, story: str, dry: bool = False) -> str:
+        fresh = self.fresh_sentence(story, [stage], dry)
+        if fresh is not None:
+            guard = self.guard_sentence() if stage in stage_named() and stage_named()[stage].guarded else ""
+            return (f"{self.opening(stage, story, dry)}{self.worktree_sentence()} "
+                    f"{self.where_things_are(self.tool_in_flight, story)}{guard}{fresh}")
         repeat = ""
         if os.path.isfile(f"{self.runs}/{story}/.gate-{stage}.txt"):
             repeat = f" The gate refused this stage before: {self.runs}/{story}/.gate-{stage}.txt."
@@ -760,8 +830,7 @@ class Run(ProfileSource):
         """One shared process — the builder or the verifier — from its snapshot to its usage line; the tool's exit
         code, or 7 when a person's file changed in it."""
         raw = f"{self.evidence(story)}/{window}.{utc('%H%M%S')}.out"
-        self.gates.record("--record-base", story)
-        self.gates.snapshot(story, f"before-{window}")
+        self.gates.observe(story, Edge.START, window)
         self.gates.owned("start", window, story)
         tool = self.tools.tool_for(window, tool)
         self.journal_line(story, f"{utc()}\tstage-start\t{window}\ttool={tool}{self.tools.effort_field(tool, window)}"
@@ -772,7 +841,7 @@ class Run(ProfileSource):
         self.journal_line(story, f"{utc()}\tstage-end\t{window}\texit={exit_field(invoked)}")
         # What the window changed is recorded however it ended: a file a stage made before the tool failed or a signal
         # stopped it is the story's all the same, and only `stages-made.txt` takes an untracked file into its commit.
-        self.gates.snapshot(story, f"after-{window}")
+        self.gates.observe(story, Edge.END, window)
         self.gates.record("--record-changes", story, window)
         # The window closes before a signal that arrived ends the run: the person may change the story before the next.
         if self.gates.owned("end", window, story, invoked) != 0:
@@ -799,15 +868,19 @@ class Run(ProfileSource):
                   f"`{self.py} {self.cli_rel()} --files-skeleton {story} <stage>`, "
                   f"`{self.py} {self.cli_rel()} --plan-skeleton {story}`. {self.where_things_are(tool, story)}")
         prompt += self.guard_sentence()
-        if self.back_to(story, stage_of(Role.BUILDS)) == stage_of(Role.TESTS):
+        fresh = self.fresh_sentence(story, stages, dry)
+        if fresh is not None:
+            prompt += fresh
+        elif self.back_to(story, stage_of(Role.BUILDS)) == stage_of(Role.TESTS):
             prompt += f" The build stage sent the story back: {self.runs}/{story}/build.md."
         if stage_of(Role.TESTS) in stages:
             prompt += self.red_stale_sentence(story)
-        for earlier in stages:
+        for earlier in stages if fresh is None else ():
             if os.path.isfile(f"{self.runs}/{story}/.gate-{earlier}.txt"):
                 prompt += f" The gate refused stage {earlier} before: {self.runs}/{story}/.gate-{earlier}.txt."
-        prompt += self.later_refusals(story, stages[-1], f"stage {start}")
-        if os.path.isfile(f"{self.runs}/{story}/judge.md") and self.verdict_of(story) == "changes-requested":
+        prompt += self.later_refusals(story, stages[-1], f"stage {start}") if fresh is None else ""
+        if fresh is None and os.path.isfile(f"{self.runs}/{story}/judge.md") \
+                and self.verdict_of(story) == "changes-requested":
             prompt += f" The judge asked for changes: {self.runs}/{story}/judge.md."
         print(f"── stage {'+'.join(stages)}  (tool: {tool}, one shared context)")
         if dry:
@@ -980,7 +1053,6 @@ class Run(ProfileSource):
         # The previous verdict is an input to the next one, not something to overwrite.
         if stage == stage_of(Role.JUDGES) and os.path.isfile(f"{self.runs}/{story}/judge.md"):
             os.replace(f"{self.runs}/{story}/judge.md", f"{self.runs}/{story}/.judge-previous.md")
-        self.gates.record("--record-base", story)
         artefact = self.artefact(story, stage)
         evidence = self.evidence(story)
         had_file = os.path.isfile(artefact)
@@ -994,7 +1066,7 @@ class Run(ProfileSource):
         if not had_file and skeleton and os.path.isfile(artefact):
             os.makedirs(evidence, exist_ok=True)
             shutil.copy(artefact, f"{evidence}/{stage}.skeleton")
-        self.gates.snapshot(story, f"before-{stage}")
+        self.gates.observe(story, Edge.START, stage)
         tool = self.tools.tool_for(stage, tool)
         flags, note = self.tools.model_choice(tool, stage)
         requested = self.tools.model_key(tool, stage)
@@ -1010,7 +1082,7 @@ class Run(ProfileSource):
         invoked = self.owned_invoke(story, stage, lambda: self.invoke(tool, self.prompt_for(stage, story), raw, stage, story))
         self.processes.record_usage(story, stage, tool, raw, int(time.time() - began))
         # recorded however the stage ended, as a shared window's: the files it made reach the story's commit
-        self.gates.snapshot(story, f"after-{stage}")
+        self.gates.observe(story, Edge.END, stage)
         self.gates.record("--record-changes", story, stage)
         if self.gates.owned("end", stage, story, invoked) != 0:
             self.journal_line(story, f"{utc()}\tstage-end\t{stage}\texit=owned")
@@ -1128,8 +1200,8 @@ class Run(ProfileSource):
         with self.step(story, "merge") if resumed else contextlib.nullcontext():
             self.take_lock()
             try:
-                _, out = self.as_home(lambda home, story: worktree_prepare(home, place("runs"), story), story,
-                                      capture="out")
+                _, out = self.as_home(lambda home, story: worktree_prepare(home, place("runs"), story,
+                                                                           self.checkouts), story, capture="out")
             finally:
                 self.drop_lock()
         wt = out.split("\n")[-1] if out else ""
@@ -1148,6 +1220,7 @@ class Run(ProfileSource):
                           if os.path.isdir(f"{self.home}/{linked}")]
         os.chdir(wt)
         self.pwd = wt
+        self.checkouts.enter(wt)                 # the story's worktree: a checkout of its own, asked as it is entered
         os.environ["FACTORY_HOME"] = self.home
         self.runs = f"{self.home}/{self.runs_rel}"
         try:
@@ -1173,6 +1246,7 @@ class Run(ProfileSource):
                 self.as_home(worktree_remove, story, capture="none")
             finally:
                 self.drop_lock()
+            self.checkouts.leave(wt)
         return code
 
     # --- requests (WP-91) --------------------------------------------------------------------------------------
@@ -1183,7 +1257,7 @@ class Run(ProfileSource):
         """The requests as this runner works them (`RequestQueue`), read where the profile puts them."""
         return self.cases.queue(self)
 
-    def request_argv(self, request: Request, tool: str) -> typing.List[str]:
+    def request_argv(self, request: RequestFacts, tool: str) -> typing.List[str]:
         argv = [sys.executable, self.cli_path, "--work-request", request["id"], "--tool", tool]
         return argv
 
@@ -1246,7 +1320,7 @@ class Run(ProfileSource):
         self.profile()
         return self.cases.work_request(self, request_id, tool)
 
-    def press(self, kind_name: str, fields: typing.Mapping[str, str], words: str, by: str) -> Request:
+    def press(self, kind_name: str, fields: typing.Mapping[str, str], words: str, by: str) -> RequestFacts:
         """A press as the request it would write: its fields, an id of now, the person who pressed."""
         return dict(fields, id=f"{utc('%Y%m%dT%H%M%S')}-{kind_name}", kind=kind_name, words=words,
                     by=" ".join((by or default_by(self.home)).split()), path=None)
@@ -1292,7 +1366,7 @@ class Run(ProfileSource):
             return 2
         return self.cases.run_backlog(self, tool, slots, watch, interval, dry)
 
-    def start_request_child(self, request: Request, tool: str) -> ChildProcess:
+    def start_request_child(self, request: RequestFacts, tool: str) -> ChildProcess:
         """A request's process beside the stories of a parallel run, its lines named with the request's id."""
         print(f"══ request {request['id']}  ({request['kind']} {target_text(request)}, by {request.get('by', '?')})")
         flush()
@@ -1351,25 +1425,6 @@ class ChildProcess(Child):
 
 
 # --- the run's start ---------------------------------------------------------------------------------------------
-STAMP = ".agents/factory/gate.installed"
-#: The files the install puts into .agents/factory/, in the stamp's order; a name ending in `/` is the package.
-PIPELINE_FILES = ("story-gate.py", "factory-cli.py", "observe.py", "factory.sh", "dca_factory/", "workflow/")
-#: What the gate runs on: alike by content in the runner's folder and the gate's, the gate may run in the runner.
-GATE_FILES = ("story-gate.py", "dca_factory/", "workflow/")
-
-
-def package_modules(folder: str) -> typing.List[str]:
-    """Every module of the package under <folder>, its subpackages' too — and every file of the workflow beside it —
-    by its path below the folder with `/`, in the order the install's hash lists them (the C locale's, as Python
-    sorts)."""
-    found: typing.List[str] = []
-    for top, dirs, files in os.walk(folder):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        below = os.path.relpath(top, folder).replace(os.sep, "/")
-        found += [name if below == "." else f"{below}/{name}" for name in files if name.endswith((".py", ".md"))]
-    return sorted(found)
-
-
 def read_bytes(path: str) -> bytes:
     with open(path, "rb") as handle:
         return handle.read()

@@ -255,6 +255,8 @@ PROFILE_KEYS = frozenset((
     "filterFlag", "filterFormat", "filterJoin", "testReport", "testEvidence",
     # what the project has, and what must hold
     "required", "checks.backlog", "browser", "screenshots", "integration", "http.stub", "adopt.breakProof", "acceptance", "run",
+    # who answers the lessons — the loop keeper (WP-185); unnamed, whoever answers the decisions
+    "lessons",
     # whether only a released story is delivered — a draft, or a story without `status:`, never (WP-192)
     "release",
     # where things are (DEFAULTS), the generated map and the glossary; `backlog` is the older layout's, named by
@@ -266,6 +268,12 @@ PROFILE_KEYS = frozenset((
     "evidence.keepDays",
     # `model` alone is refused by the model check, which names the right form
     "model",
+    # what judges a stage beside the profile itself — the globs a stage may change only where its plan announces it
+    "guarded",
+    # the told-rule groups every brief leaves out — a bench's ablation switch, `<stage>:<section>, …`
+    "ablate",
+    # how strong a story's tests are, measured after the judge — informational, never a gate
+    "mutation",
 ))
 
 #: Key families: `<prefix><name>`, with an open list of names — a test command (`test.integration`), what a

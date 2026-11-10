@@ -28,6 +28,9 @@ class Verdict:
         self.entries: typing.List[Entry] = []
         self.written: typing.List[str] = []
         self.flaky: typing.List[str] = []
+        #: the mapped tests a refused test check names, each once — what the journal keeps of a refusal beside its
+        #: checks, so a repeated refusal is told from another after the reports are pruned
+        self.failing_tests: typing.List[str] = []
         self.closed = False
 
     def ok(self, check: str, message: str) -> None:
@@ -99,7 +102,7 @@ CHECKS: typing.List[Check] = []
 
 #: The order the checks run in, whichever module registers them: the story and the profile first, then what the
 #: stage left, the tests last.
-ORDER = ("story", "contract", "status", "epic", "outcome", "rounds", "suites", "decisions", "plan", "plan-adopts", "document",
+ORDER = ("story", "contract", "status", "epic", "outcome", "rounds", "suites", "decisions", "plan", "guarded", "plan-adopts", "document",
          "pipeline", "owned", "brief", "adopt", "integrate", "tests-mapped", "files-listed", "test-design", "spec-delta",
          "spec-tests", "tests-committed", "tests-real", "tests-assert-then", "plan-files", "size", "red-proof", "tests", "invariant-breaks",
          "red-reproof", "commands")

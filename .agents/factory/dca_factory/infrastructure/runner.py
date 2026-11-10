@@ -12,9 +12,10 @@ import typing
 from ..delivery.application.requests.check_request import CheckRequestCommand
 from ..delivery.application.requests.settle_request import SettleRequestCommand
 from ..delivery.application.requests.work_request import RequestWorked
-from ..delivery.application.shared.requests import KIND, Request
+from ..delivery.application.shared.requests import KIND, RequestFacts
 from ..delivery.adapter.incoming.runner.usage import book_request_usage
 from ..delivery.adapter.outgoing.process.console_lines import ConsoleLines
+from ..delivery.adapter.outgoing.files.request_files import stamp_utc
 from ..delivery.application.backlog.run_backlog import RunBacklogCommand, RunBacklogUseCase
 # the rules a refused gate routes by: the modules of checks register them, as in the gate's composition root
 from ..delivery.application.delivery import pass_actions, process_checks, stage_checks  # noqa: F401
@@ -30,6 +31,7 @@ from ..delivery.domain.service.stage_brief import Brief
 from ..delivery.adapter.outgoing.process.runner_ports import (
     RunnerBacklog, RunnerIntegration, RunnerRequestSkill, RunnerStages)
 from ..delivery.adapter.outgoing.process.runner_process import Run
+from ..delivery.adapter.outgoing.git.checkout import Checkouts
 from ..sharedkernel.adapter.outgoing.profile.profile_files import (
     place,
     read_profile,
@@ -46,7 +48,10 @@ load_workflow()
 
 class RunnerCases:
     """The use cases a step of a run starts, tied to the run's adapters here — the run calls them, never builds them
-    (`RunCases`)."""
+    (`RunCases`); the gate it calls in its process stands in the run's checkouts."""
+
+    def __init__(self, checkouts: typing.Optional[Checkouts] = None) -> None:
+        self._checkouts = checkouts if checkouts is not None else Checkouts()
 
     def run_story(self, run: Run, tool: str, story: str, start: typing.Optional[str], dry: bool, gate_first: bool,
                   shared: typing.FrozenSet[Window]) -> int:
@@ -63,7 +68,8 @@ class RunnerCases:
 
     def run_backlog(self, run: Run, tool: str, slots: int, watch: bool, interval: int, dry: bool) -> int:
         backlog = RunnerBacklog(run, tool)
-        return RunBacklogUseCase(backlog, backlog, backlog, self.queue(run), ConsoleLines()).execute(
+        return RunBacklogUseCase(backlog, backlog, backlog, self.queue(run), ConsoleLines(),
+                                 delivery.lesson_proposals(run.home), stamp_utc).execute(
             RunBacklogCommand(slots, watch, interval, dry, run.keep_going, run.stay, run.lane))
 
     def queue(self, run: Run) -> RequestQueue:
@@ -91,7 +97,7 @@ class RunnerCases:
         # what a gate's process starts without: the tools it found missing, the suite record of its last call
         commands.MISSING_TOOLS.clear()
         commands.SUITES_RECORD = None
-        return gate.main(list(argv))
+        return gate.main(list(argv), self._checkouts)
 
     @staticmethod
     def _integration(run: Run, tool: str) -> IntegrateStoryUseCase:
@@ -107,25 +113,32 @@ def placed(cwd: str) -> None:
     set_places(read_profile(resolve_profile(os.environ.get("FACTORY_PROFILE") or None, cwd)))
 
 
+def wired_run(options: argparse.Namespace, home: str, worker: typing.Optional[str]) -> Run:
+    """A run and its use cases over one set of checkouts — built here, once for the run, and dropped with it: the
+    claim renewed before every stage, a window's observation and the gate the run calls in its process ask git where
+    a checkout is once (WP-202)."""
+    checkouts = Checkouts()
+    return Run(options, home, place("runs"), worker=worker, cases=RunnerCases(checkouts), checkouts=checkouts)
+
+
 def run_for(options: argparse.Namespace) -> Run:
     """The run in the checkout it is started in — or, as a story's child, under its parent's worker."""
     cwd = os.getcwd()
     home = os.environ.get("FACTORY_HOME") or os.path.realpath(cwd)
     placed(cwd)
     worker = os.environ.get("FACTORY_RUNNER_WORKER") if options.child else None
-    return Run(options, home, place("runs"), worker=worker, cases=RunnerCases())
+    return wired_run(options, home, worker)
 
 
 def request_run_for(options: argparse.Namespace, worker: typing.Optional[str]) -> Run:
     """The run a request's own process works under: the runner's claim (`worker`), else one of its own."""
     cwd = os.getcwd()
     placed(cwd)
-    return Run(options, os.path.realpath(cwd), place("runs"), worker=worker,
-               cases=RunnerCases())
+    return wired_run(options, os.path.realpath(cwd), worker)
 
 
 def settle(cwd: str, kind_name: str, fields: typing.Mapping[str, str], words: str, by: str,
-           options: argparse.Namespace) -> typing.Tuple[Request, typing.Optional[RequestWorked]]:
+           options: argparse.Namespace) -> typing.Tuple[RequestFacts, typing.Optional[RequestWorked]]:
     """A press settled at once where the factory can: the request as it would be written, and what settling it said
     — None where a skill must work it. The settle and its commit hold the checkout's commit lock, as the factory's
     own requests do, whether a factory is up or not."""
@@ -133,8 +146,7 @@ def settle(cwd: str, kind_name: str, fields: typing.Mapping[str, str], words: st
     checked = delivery.check_request(cwd).execute(CheckRequestCommand(kind_name, dict(fields), words,
                                                                       against_waiting=True))
     worker = os.environ.get("FACTORY_RUNNER_WORKER")
-    run = Run(options, os.path.realpath(cwd), place("runs"), worker=worker,
-              cases=RunnerCases())
+    run = wired_run(options, os.path.realpath(cwd), worker)
     request = run.press(kind_name, checked.fields, checked.words, by)
     return request, requests.settle_request(run.home, run.runs_rel, run.profile, run.locked).execute(
         SettleRequestCommand(request, KIND[kind_name]))

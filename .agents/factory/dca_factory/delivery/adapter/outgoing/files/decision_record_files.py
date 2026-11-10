@@ -23,8 +23,7 @@ from ....domain.model.stage import StageName
 from ....domain.model.story_words import Detail
 from ....domain.model.story_state import AcceptanceVerdict
 from ....domain.model.story import StoryId
-from ....domain.model.stage_story import Presence
-from ....domain.model.acceptance import AcceptanceMode, acceptance_verdict
+from ....domain.model.acceptance import AcceptanceMode, acceptance_verdict, changed_story_verdict
 from ....application.delivery.pipeline_workflow import workflow
 from ....application.shared.decision_inbox import DecisionInbox
 from ....application.shared.decision_record_repository import DecisionRecordRepository
@@ -405,16 +404,17 @@ def acceptance_state(cwd: str, story_id: str,
     story changed since — a correction written in — is asked again once it has run."""
     records = acceptance_records(cwd, story_id, story_path)
     if not records:
-        return acceptance_verdict(None, Presence.ABSENT).value, None
+        return acceptance_verdict(None).value, None
     rid, front, state, answer, body = records[-1]
-    same = Presence.PRESENT if str(front.get("digest", "")).strip() == story_digest(story_path or "") else Presence.ABSENT
-    return acceptance_verdict(record_of(rid, front, body, state, answer), same).value, rid
+    record = record_of(rid, front, body, state, answer)
+    same = str(front.get("digest", "")).strip() == story_digest(story_path or "")
+    return (acceptance_verdict(record) if same else changed_story_verdict(record)).value, rid
 
 
 def latest_verdict(records: Records) -> AcceptanceVerdict:
     """What the latest of a story's acceptance records says, the story's digest left aside."""
     rid, front, state, answer, body = records[-1]
-    return acceptance_verdict(record_of(rid, front, body, state, answer), Presence.PRESENT)
+    return acceptance_verdict(record_of(rid, front, body, state, answer))
 
 
 def record_sections(body: str) -> typing.List[typing.Dict[str, str]]:
@@ -440,7 +440,8 @@ class DecisionInboxFiles(DecisionInbox):
             acceptance = is_acceptance(front)
             options = [] if acceptance else decision_options(body)
             found.append(dict(name=name, error=None, path=shown(path), id=str(front.get("id", name)).strip(),
-                              state=state, kind="acceptance" if acceptance else "question",
+                              state=state, kind="acceptance" if acceptance else "lesson" if is_lesson(front)
+                              else "question",
                               story=str(front.get("story", "")).strip(), stage=str(front.get("stage", "?")).strip(),
                               asked=str(front.get("asked", "")), request=str(front.get("request", "")).strip(),
                               title=(body.strip().splitlines() or ["(no title)"])[0].lstrip("# ").strip(),
@@ -469,13 +470,22 @@ class RequestRecordFiles(RequestRecords):
         mark_questioned(self._cwd, place("runs"), paths, request)
 
 
+#: A lesson record names its kind in its front matter: `kind: lesson` (WP-185).
+LESSON_KIND = "lesson"
+
+
+def is_lesson(front: Front) -> bool:
+    """A lesson record: `kind: lesson` — the project's own, beside the epics, holding no story back."""
+    return str(front.get("kind", "")).strip().lower() == LESSON_KIND
+
+
 def record_of(name: str, front: Front, body: str, state: str, answer: typing.Mapping[str, typing.Any]) -> DecisionRecord:
     """The record in a file named <name>, read off its front matter, its body, its state and its `## Answer`."""
     story = str(front.get("story", "")).strip()
     stage = str(front.get("stage", "")).strip() if DecisionState(state).waits else resume_stage(front, answer)
     return DecisionRecord.restore(
         RecordId(str(front.get("id", name)).strip()),
-        RecordKind.ACCEPTANCE if is_acceptance(front) else RecordKind.QUESTION,
+        RecordKind.ACCEPTANCE if is_acceptance(front) else RecordKind.LESSON if is_lesson(front) else RecordKind.QUESTION,
         Asker.REQUEST if str(front.get("request", "")).strip() else Asker.STAGE,
         DecisionState(state),
         [OptionKey(option["key"]) for option in decision_options(body)],
@@ -485,4 +495,5 @@ def record_of(name: str, front: Front, body: str, state: str, answer: typing.Map
             StageName(stage) if stage else None,
             Detail(str(answer.get("answer"))), Detail(str(answer.get("by"))),
             tuple(AnswerField(f) for f in ANSWER_FIELDS if not answer.get(f)),
-            tuple(OptionLine(OptionKey(option["key"]), Detail(option["line"])) for option in decision_options(body))))
+            tuple(OptionLine(OptionKey(option["key"]), Detail(option["line"])) for option in decision_options(body)),
+            Detail(str(front.get("tag", "") or "").strip())))

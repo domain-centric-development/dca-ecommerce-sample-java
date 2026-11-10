@@ -26,16 +26,27 @@ from ....domain.model.epic import EpicId
 from ....domain.model.schedule import ContextName
 from ....domain.model.stage import StageName, StoryKind
 from ....domain.model.story import Story
-from ....domain.model.stage_story import (
-    AssertionAt, AdoptRow, BriefFacts, ChangedTest, PlanAdoption, Rename, RenamedTest, SymbolName, DocumentFacts, Integration, MainTestLines, MainTests, MappedTest, OutcomeEventPlaces, OutcomeFacts, PassGap,
-    PipelineFacts, PlannedDigest, ProposalFacts, ReviewFacts, StoryPass, SpecDelta, SpecTests, StoryCommit, DecidedRecord, KeptTests, PlannedTestChange, RedProof, StageChanges,
-    TestChange, TestDiff, TestEdit, Unobserved, AssertionFact, ByteSize, Clause, ClauseRow, CommandKey, Count,
-    ElementName, ElementRules, FileChange, InvariantFacts, InvariantRow, PlannedFile, PortName, Presence, Rule,
-    ScenarioClauses, Selector, ContextMapFacts, HandOverName, HandOverSize, PlanLevels, DecisionsFacts, HandOverAsk, ContractNumber, EpicFacts, EpicField, EventName, GateRelease, InstructionFile,
-    Metric, ModelKey, OwnedFacts, OwnedPart, Place, ProfileKey, ProfileText, RoundsRecord, RowId, RowState,
-    ScenarioKey, StoryContent, TestSource, UnknownKey)
+from ....domain.model.backlog_facts import (
+    DecidedRecord, DecisionsFacts, EpicFacts, EpicField, HandOverAsk, Metric, OutcomeEventPlaces, OutcomeFacts,
+    ProposalFacts, RowState)
+from ....domain.model.brief_facts import BriefFacts, OwnedFacts, OwnedPart, RoundsRecord
+from ....domain.model.delivery_facts import (
+    DocumentFacts, Integration, MainTestLines, MainTests, PassGap, PipelineFacts, ReviewFacts, StageChanges,
+    StoryCommit, StoryPass, Unobserved)
+from ....domain.model.design_facts import (
+    ContextMapFacts, ElementName, ElementRules, InvariantFacts, InvariantRow, PortName, Rule)
+from ....domain.model.plan_facts import (
+    AdoptRow, FileChange, HandOverName, HandOverSize, PlanAdoption, PlanLevels, PlannedDigest, PlannedFile)
+from ....domain.model.profile_facts import (
+    ByteSize, ContractNumber, GateRelease, InstructionFile, ModelKey, ProfileKey, ProfileText, UnknownKey)
+from ....domain.model.story_words import (
+    Clause, Count, EventName, Place, RowId, ScenarioClauses, ScenarioKey, Selector)
+from ....domain.model.suite_run import CommandKey
+from ....domain.model.test_facts import (
+    AssertionAt, AssertionFact, ChangedTest, ClauseRow, KeptTests, MappedTest, PlannedTestChange, RedProof, Rename,
+    RenamedTest, SpecDelta, SpecTests, SymbolName, TestChange, TestDiff, TestEdit, TestSource)
 from ....domain.gateway.stage_evidence import StageEvidence
-from ....domain.model.story import StoryId
+from ....domain.model.story import StoryContent, StoryId, StorySource
 from ....domain.model.story_state import Detail, HandOverText, Rounds, StatusWord
 from ....domain.service.backlog_checks import EPIC_FIELDS, normal_name
 from .brief_files import given_digest, named_digest
@@ -70,7 +81,10 @@ from .kept_files import (
     red_tree, switched_off, TESTS_BASELINE, tidy_moves, unproven_tests)
 from .run_marks import last_ended, stage_open, window_open
 from .snapshots import git_tree, listed_files, snapshot_reason, tree_changes
+from ..git.checkout import Checkouts
 from .story_layout import file_digest
+from .guarded_files import announced_changes, guarded_set, story_changed
+from ....domain.model.guarded import GuardedFacts
 from .design_files import (
     adapter_shapes, asserts_at, locate_selector, MOCK_MARKERS, mocked_ports, PLAN_FILE_LINE, plan_domain_elements,
     plan_invariants, read_clause_rows, read_invariant_rows, scenario_actions, scenario_clauses)
@@ -204,7 +218,13 @@ def story_content(front: Front, body: str, criteria: typing.Sequence[typing.Tupl
               for key, clauses in scenario_clauses(body).items()),
         Count(sum(1 for line in section_of(body, "changed expectations") or []
                   if line.strip().startswith(("-", "*")) and human_line(line.strip()[1:].strip()))),
-        Detail(str(front.get("feature") or "").strip()))
+        Detail(str(front.get("feature") or "").strip()), source_of(front))
+
+
+def source_of(front: Front) -> typing.Optional[StorySource]:
+    """Where the story's text came from — a person's where it names none; None for a word nobody knows."""
+    word = str(front.get("source") or "").strip().lower() or StorySource.PERSON.value
+    return next((s for s in StorySource if s.value == word), None)
 
 
 def spec_front(story: Story) -> typing.Dict[str, typing.Any]:
@@ -219,11 +239,14 @@ class StageEvidenceFiles(StageEvidence):
     """The evidence of the project <cwd> with its run folder <runs>, its epics under <epics> and its profile, read
     once."""
 
-    def __init__(self, cwd: str, runs: str, epics: str, profile: Front) -> None:
+    def __init__(self, cwd: str, runs: str, epics: str, profile: Front,
+                 checkouts: typing.Optional[Checkouts] = None) -> None:
         self._cwd = cwd
         self._runs = runs
         self._epics = epics
         self._profile = profile
+        #: the gate call's checkouts — the run's where the runner calls the gate in its process (WP-202)
+        self._checkouts = checkouts if checkouts is not None else Checkouts()
 
     def gate(self) -> GateRelease:
         return GateRelease(ContractNumber(CONTRACT), Detail(VERSION))
@@ -395,10 +418,10 @@ class StageEvidenceFiles(StageEvidence):
     def assertion_at(self, file: Place, line: Count, among: typing.Tuple[Place, ...]) -> AssertionFact:
         path = os.path.join(self._cwd, file.value)
         own = {os.path.normpath(place.value) for place in among}
-        presence = Presence.PRESENT if os.path.normpath(path) in own else Presence.ABSENT
+        given = os.path.normpath(path) in own
         if not os.path.isfile(path):
-            return AssertionFact(AssertionAt.NO_FILE, presence)
-        return AssertionFact(AssertionAt.ASSERTS if asserts_at(path, line.value) else AssertionAt.NOTHING, presence)
+            return AssertionFact(AssertionAt.NO_FILE, given)
+        return AssertionFact(AssertionAt.ASSERTS if asserts_at(path, line.value) else AssertionAt.NOTHING, given)
 
     def doubles(self, test: Place) -> typing.Tuple[PortName, ...]:
         named = str(self._profile.get("mockMarkers", "")).strip()
@@ -431,7 +454,7 @@ class StageEvidenceFiles(StageEvidence):
             rel = match.group(1).strip()
             planned.append(PlannedFile(
                 Place(rel), FileChange(match.group(2).lower()),
-                Presence.PRESENT if os.path.lexists(os.path.join(self._cwd, rel)) else Presence.ABSENT))
+                os.path.lexists(os.path.join(self._cwd, rel))))
         return tuple(planned)
 
     def stage_changes(self, story: StoryId, stage: StageName,
@@ -451,7 +474,7 @@ class StageEvidenceFiles(StageEvidence):
             # story changed so far is the tree against its base: checked now, the builder can still list a file it
             # forgot — found only by the runner afterwards, it costs a round.
             base = read_text(base_file).strip()
-            now = git_tree(self._cwd) if base and base != "none" else None
+            now = git_tree(self._cwd, self._checkouts) if base and base != "none" else None
             rows = tree_changes(self._cwd, base, now, runs) if now else None
             if rows is not None:
                 record, handovers, changed_now = None, listing, [path for _kind, path in rows]
@@ -488,7 +511,7 @@ class StageEvidenceFiles(StageEvidence):
             return None
         found = locate_tests(self._cwd, {key: [selector] for key, selector in rows})[0] if rows else {}
         return PlanAdoption(tuple(AdoptRow(ScenarioKey(key), Selector(selector),
-                                           Presence.PRESENT if selector in found else Presence.ABSENT)
+                                           selector in found)
                                   for key, selector in rows))
 
     def kept_tests(self, story: StoryId) -> typing.Optional[KeptTests]:
@@ -536,13 +559,13 @@ class StageEvidenceFiles(StageEvidence):
                 # A name the story renamed, read from the tree: the test holds its assertions under the new name.
                 renames = renames_in(cwd, base, "\n".join(was), "\n".join(now), os.path.splitext(rel)[1])
                 held = bool(renames) and assertions_kept("\n".join(was), "\n".join(now), renames)
-            edit = TestDiff(*(Presence.PRESENT if fact else Presence.ABSENT for fact in (off, kept, held))).edit()
+            edit = TestDiff(off, kept, held).edit()
             if edit is TestEdit.SWITCHED_OFF:
                 changed.append(ChangedTest(Place(rel), TestChange.SWITCHED_OFF))
             elif edit is TestEdit.ARRANGED and renames:
                 renamed.append(RenamedTest(Place(rel), tuple(
                     Rename(SymbolName(old), SymbolName(new),
-                           Presence.PRESENT if glossary_names(cwd, new) else Presence.ABSENT)
+                           glossary_names(cwd, new))
                     for old, new in sorted(renames.items()))))
             elif edit is TestEdit.ARRANGED:
                 arranged.append(Place(rel))
@@ -583,10 +606,10 @@ class StageEvidenceFiles(StageEvidence):
         located = {t.selector.value: t.place.value for t in tests if t.place is not None}
         if stage.value == stage_of(Role.TIDIES) and red_tree(self._runs, story.value) \
                 and tidy_moves(self._cwd, self._runs, story.value, located):
-            return RedProof(Count(0), Count(0), (), Presence.PRESENT)
+            return RedProof(Count(0), Count(0), (), True)
         digests = read_red_digests(self._runs, story.value)
         return RedProof(Count(len(digests)), Count(sum(1 for d in digests.values() if d is None)),
-                        tuple(Detail(m) for m in unproven_tests(self._cwd, located, digests)), Presence.ABSENT)
+                        tuple(Detail(m) for m in unproven_tests(self._cwd, located, digests)), False)
 
     def _absent(self, cwd: str, wanted: typing.Mapping[str, typing.Sequence[str]]) -> typing.List[str]:
         """`<selector>: …` for each wanted test that is not there."""
@@ -656,7 +679,8 @@ class StageEvidenceFiles(StageEvidence):
         if not files:
             return None
         held = set(git(cwd, "ls-tree", "-r", "--name-only", "HEAD", "--", *files)[1].split("\n"))
-        prefix = git(cwd, "rev-parse", "--show-prefix")[1].strip()
+        checkout = self._checkouts.at(cwd)
+        prefix = checkout.prefix if checkout is not None else ""
         # `git` strips its answer, so the first line's leading status column may be gone: the path is what follows the
         # code
         dirty = {line.split(None, 1)[1].split(" -> ")[-1] for line in
@@ -678,7 +702,7 @@ class StageEvidenceFiles(StageEvidence):
         folder = os.path.join(runs, story_id)
         texts = current_stage_files(runs, story_id, order)
         gaps = tuple(PassGap(HandOverName(stage_files()[s]),
-                             Presence.PRESENT if os.path.isfile(os.path.join(folder, stage_files()[s])) else Presence.ABSENT)
+                             os.path.isfile(os.path.join(folder, stage_files()[s])))
                      for s in order if s not in texts)
         planned = os.path.join(evidence_dir(runs, story_id), STORY_DIGEST)
         digest = PlannedDigest.MISSING if not os.path.isfile(planned) else \
@@ -722,9 +746,9 @@ class StageEvidenceFiles(StageEvidence):
         try:
             text = read_text(path)
         except GateError as error:
-            return DocumentFacts(Place(path), Detail(str(error)), Presence.ABSENT, Count(0), (), ())
+            return DocumentFacts(Place(path), Detail(str(error)), False, Count(0), (), ())
         if needs_human_ids(text) is not None:
-            return DocumentFacts(Place(path), None, Presence.PRESENT, Count(0), (), ())
+            return DocumentFacts(Place(path), None, True, Count(0), (), ())
         section: typing.Optional[str] = None
         missing: typing.List[str] = []
         unsourced: typing.List[str] = []
@@ -757,7 +781,7 @@ class StageEvidenceFiles(StageEvidence):
             # from the project root or sends the reader nowhere.
             if ("/" in target or target != name) and not os.path.exists(os.path.join(self._cwd, target)):
                 missing.append(name)
-        return DocumentFacts(Place(path), None, Presence.ABSENT, Count(files), tuple(Detail(m) for m in missing),
+        return DocumentFacts(Place(path), None, False, Count(files), tuple(Detail(m) for m in missing),
                              tuple(Detail(u) for u in unsourced))
 
     def proposals(self, story: StoryId) -> typing.Optional[ProposalFacts]:
@@ -767,7 +791,7 @@ class StageEvidenceFiles(StageEvidence):
             return None
         files = glossary_files(self._cwd, self._profile)
         if not files:
-            return ProposalFacts(Count(len(proposals)), Presence.ABSENT, ())
+            return ProposalFacts(Count(len(proposals)), False, ())
         corpus = "\n".join(read_text(f).lower() for f in files)
         # a term is named open only under `## Not documented` of document.md — a row the pipeline pre-filled under
         # `## Glossary` names it, it does not account for it
@@ -783,7 +807,7 @@ class StageEvidenceFiles(StageEvidence):
         missing = [term for term in proposals
                    if not any(word in corpus for word in proposal_words(term))
                    and not any(word in open_section for word in proposal_words(term))]
-        return ProposalFacts(Count(len(proposals)), Presence.PRESENT, tuple(Detail(m) for m in missing))
+        return ProposalFacts(Count(len(proposals)), True, tuple(Detail(m) for m in missing))
 
     def reviews(self, story: StoryId) -> ReviewFacts:
         folder = os.path.join(self._runs, story.value, "reviews")
@@ -816,18 +840,23 @@ class StageEvidenceFiles(StageEvidence):
                           if "\t" in line and line.split("\t", 1)[1].startswith(PIPELINE_DIR)})
         return PipelineFacts(Place(PIPELINE_DIR), tuple(Place(t) for t in touched))
 
+    def guarded(self, story: StoryId) -> GuardedFacts:
+        changed = story_changed(self._cwd, self._runs, story.value, self._checkouts)
+        return GuardedFacts(guarded_set(self._profile), announced_changes(self._runs, story.value),
+                            tuple(Place(p) for p in changed) if changed is not None else None)
+
     def integration(self, story: StoryId) -> Integration:
         cwd, runs, story_id = self._cwd, self._runs, story.value
         home = Detail(HOME_VARIABLE)
         if not in_worktree(cwd):
-            return Integration(Presence.ABSENT, home, Presence.ABSENT, Detail(""), (), (), Presence.ABSENT)
+            return Integration(False, home, False, Detail(""), (), (), False)
         if not integration_target(runs, story_id):
-            return Integration(Presence.PRESENT, home, Presence.ABSENT, Detail(""), (), (), Presence.ABSENT)
+            return Integration(True, home, False, Detail(""), (), (), False)
         target = merge_target(runs, story_id, cwd)
         _code, unmerged = git(cwd, "diff", "--name-only", "--diff-filter=U")
         if unmerged.strip():
-            return Integration(Presence.PRESENT, home, Presence.PRESENT, Detail(target),
-                               tuple(Place(p) for p in unmerged.split()), (), Presence.ABSENT)
+            return Integration(True, home, True, Detail(target),
+                               tuple(Place(p) for p in unmerged.split()), (), False)
         code, changed = git(cwd, "diff", "--name-only", f"{target}...HEAD")
         marked = []
         for rel in changed.split("\n") if code == 0 else []:
@@ -839,8 +868,8 @@ class StageEvidenceFiles(StageEvidence):
                             marked.append(Place(rel.strip()))
         tip = git(cwd, "rev-parse", target)[1].strip()
         parent = git(cwd, "rev-parse", "HEAD~1")[1].strip() if git(cwd, "rev-parse", "HEAD")[1].strip() != tip else tip
-        moved = Presence.PRESENT if tip and parent and tip != parent else Presence.ABSENT
-        return Integration(Presence.PRESENT, home, Presence.PRESENT, Detail(target), (), tuple(marked), moved)
+        moved = bool(tip and parent and tip != parent)
+        return Integration(True, home, True, Detail(target), (), tuple(marked), moved)
 
     def main_tests(self, story: StoryId) -> typing.Optional[MainTests]:
         cwd, runs, story_id = self._cwd, self._runs, story.value

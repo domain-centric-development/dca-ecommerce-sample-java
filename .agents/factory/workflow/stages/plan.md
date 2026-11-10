@@ -52,6 +52,7 @@ Output: `.dca-factory/runs/<story>/plan.md`, and nothing else. You write no test
 <!-- rule: STAGE-PLAN-10 -->
 <!-- rule: STAGE-PLAN-11 -->
 <!-- rule: STAGE-PLAN-12 -->
+<!-- rule: STAGE-PLAN-13 -->
 
 ## Task mode
 
@@ -76,7 +77,7 @@ your file. The rule in full: in what every stage is told.
 ## The plan file
 
 ```markdown
-# Plan — <story id>: <title>
+# Plan — <story id>: <title> · source: <the story's `source:` — person where it names none>
 
 ## Context
 <bounded context, and why this story belongs to it — two lines>
@@ -106,6 +107,10 @@ refusals: thrown | returned — <where it was read>   (only where a criterion re
                                        holds both, `plan-files`)
 - `<path>` — read: <why>              (the pattern to mirror, the fixture to reuse — what a later
                                        stage must read to understand the change; one line each)
+
+## Guarded changes                (omit the section when the story changes no guarded path)
+- `<path>` — <why the story changes what judges it>   (a path of the guarded set: the stack profile or a
+                                       glob of its `guarded:`; the gate checks both, `guarded`)
 
 ## Glossary proposals
 - <term>: <definition>            (omit the section when there are none)

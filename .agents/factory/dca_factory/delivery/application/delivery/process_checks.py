@@ -9,9 +9,10 @@ import typing
 
 from ...domain.model.stage import Stage, StageName, StoryKind, Trait
 from ...domain.model.story import Story
-from ...domain.model.stage_story import Requirement
-from ...domain.model.stage_story import (
-    CommandKey, ContractNumber, Expectation, MappedTest, Place, Presence, ScenarioKey, Selector, SELECTOR_FORM)
+from ...domain.model.profile_facts import ContractNumber
+from ...domain.model.story_words import Place, ScenarioKey, Selector, SELECTOR_FORM
+from ...domain.model.suite_run import CommandKey, Expectation, Requirement, TestOutcome
+from ...domain.model.test_facts import MappedTest
 from ...domain.model.story_state import Detail
 from ...domain.model.verdict import CheckName, Finding, FindingState, Findings, Said
 from ...domain.gateway.stage_evidence import StageEvidence
@@ -31,10 +32,6 @@ COMPILES = CheckName("compiles")
 ADOPTED_RULES_CONTRACT = ContractNumber(24)
 INVARIANT_BREAKS_CONTRACT = ContractNumber(25)
 OUTSIDE = "outside the table"
-
-
-def presence(held: bool) -> Presence:
-    return Presence.PRESENT if held else Presence.ABSENT
 
 
 def findings_of(probe: Verdict, check_name: str, about: typing.Optional[str] = None) -> Findings:
@@ -57,7 +54,8 @@ def test_state(result: Verdict, runs: StageRuns, profile: typing.Mapping[str, ty
         return {}
     test_run, whole_runs = runs.tests(mapping or {}, located, whole_for)
     ledger = runs.ledger(story, expected == "red", located)
-    judged = TestsJudged.of(Expectation(expected), presence(guard), test_run, ledger)
+    judged = TestsJudged.guarding(test_run, ledger) if guard and expected == "green" \
+        else TestsJudged.of(Expectation(expected), test_run, ledger)
     now_red, kept = {s.value for s in judged.now_red}, {}
     for item in judged.items:
         if not isinstance(item, BreakProof):
@@ -72,11 +70,17 @@ def test_state(result: Verdict, runs: StageRuns, profile: typing.Mapping[str, ty
             # The earlier proof stands for the version it was taken against; losing it would make the next run treat
             # this test as one never seen red, which no break can repair.
             kept[item.selector.value] = runs.digests(story).get(item.selector.value)
-    if test_run.command is Presence.ABSENT:
+    failed = [m for state, c, m in result.entries if state == FindingState.FAIL.value and c.startswith("tests-")]
+    for outcome in test_run.items:
+        selector = outcome.selector.value if isinstance(outcome, TestOutcome) else ""
+        if selector and selector not in result.failing_tests \
+                and any(m.startswith(selector + " ") or m.startswith(selector + ":") for m in failed):
+            result.failing_tests.append(selector)
+    if not test_run.has_command:
         return whole_runs
     if expected == "red":
         runs.write_ledger(story, now_red, located, kept)
-    elif ledger.present is Presence.PRESENT and red_proof is not None:
+    elif ledger.present and red_proof is not None:
         tests = tuple(MappedTest(ScenarioKey(""), Selector(selector), Place(path), None, None)
                       for selector, path in located.items() if path)
         result.take(KeptChecks.red_proof(red_proof[0], StageName(""), tests, red_proof[1]))
@@ -136,9 +140,7 @@ def invariant_breaks(result: Verdict, runs: StageRuns, profile: typing.Mapping[s
     test_state(probe, runs, profile, {keys[sel]: [sel] for sel in sorted(rules)}, "red", located)
     before = {sel: BreakResult.of(findings_of(probe, "tests-red", sel)) for sel in rules}
     seen = runs.rules_seen_red(story, located)
-    seen_red = {sel: presence(sel in seen) for sel in rules}
-    green = [sel for sel in sorted(rules)
-             if before[sel].outcome is BreakOutcome.GREEN and seen_red[sel] is Presence.ABSENT]
+    green = [sel for sel in sorted(rules) if before[sel].outcome is BreakOutcome.GREEN and sel not in seen]
     proofs = {}
 
     def prove(copied: typing.Tuple[str, str]) -> None:
@@ -147,7 +149,7 @@ def invariant_breaks(result: Verdict, runs: StageRuns, profile: typing.Mapping[s
             if sel in green:
                 patch = runs.patch(story, sel)
                 under = run_break(runs, profile, copied[0], copied[1], patch, sel, keys[sel], located) if patch else None
-            proofs[sel] = RuleProof.of(before[sel], under, seen_red[sel])
+            proofs[sel] = RuleProof.seen_red_before(before[sel]) if sel in seen else RuleProof.of(before[sel], under)
     if green:
         with runs.scratch() as copied:
             prove(copied)
@@ -198,8 +200,9 @@ def reproof(result: Verdict, runs: StageRuns, profile: typing.Mapping[str, typin
     proved = []
     for selector in moved:
         seen = tuple(f for f in findings_of(probe, "tests-red") if selector in f.said.value)
-        timed_out = presence(any(f.state is FindingState.NOTE for f in seen))
-        found = BreakResult.of(seen).reproof(Selector(selector), timed_out)
+        checked = BreakResult.of(seen)
+        found = checked.reproof_on_timeout(Selector(selector)) if any(f.state is FindingState.NOTE for f in seen) \
+            else checked.reproof(Selector(selector))
         result.take((found,))
         if found.state is FindingState.PASS:
             proved.append(selector)

@@ -8,7 +8,6 @@ import typing
 
 from ....building_blocks import Value
 from ..model.decision_record import DecisionRecord
-from ..model.stage_story import Presence
 from ..model.story import StoryId
 from ..model.story_state import Acceptance, AcceptanceVerdict, Detail
 from ..model.verdict import CheckName, Findings, Said
@@ -17,15 +16,31 @@ ACCEPTANCE = CheckName("acceptance")
 
 
 class Viewing(Value):
-    """What a person could look at in the story: whether the project runs a browser, and whether one of its criteria
-    is shown by a test the end-user command runs."""
+    """What a person could look at in the story: whether the project runs a browser, whether one of its criteria
+    is shown by a test the end-user command runs, and whether its plan announced a change to what judges it."""
 
-    browser: Presence
-    end_user_test: Presence
+    _has_browser: bool
+    _has_end_user_test: bool
+    _changes_what_judges: bool = False
+
+    @property
+    def changes_what_judges(self) -> bool:
+        """Whether the story's plan announced a guarded change — the stack profile, the rule selection, the hook."""
+        return self._changes_what_judges
+
+    @property
+    def has_browser(self) -> bool:
+        """Whether the project runs a browser."""
+        return self._has_browser
+
+    @property
+    def has_end_user_test(self) -> bool:
+        """Whether a criterion is shown by a test the end-user command runs."""
+        return self._has_end_user_test
 
     def shows_a_page(self) -> bool:
         """Something to look at in a browser."""
-        return self.browser is Presence.PRESENT and self.end_user_test is Presence.PRESENT
+        return self.has_browser and self.has_end_user_test
 
 
 class AcceptanceMode(enum.Enum):
@@ -38,7 +53,9 @@ class AcceptanceMode(enum.Enum):
 
     def asks(self, viewing: Viewing) -> bool:
         """Whether this story waits for a person before it is delivered. `pages`: it shows a page — something to look
-        at."""
+        at. A story that changed what judges it waits in every mode: its acceptance shows that change first."""
+        if viewing.changes_what_judges:
+            return True
         if self is AcceptanceMode.NONE:
             return False
         return self is AcceptanceMode.ALL or viewing.shows_a_page()
@@ -49,8 +66,18 @@ class AcceptanceStep(Value):
     the delivery goes on."""
 
     findings: Findings
-    ask: Presence
-    goes_on: Presence
+    _asks: bool
+    _goes_on: bool
+
+    @property
+    def asks(self) -> bool:
+        """Whether to ask a person now."""
+        return self._asks
+
+    @property
+    def goes_on(self) -> bool:
+        """Whether the delivery goes on."""
+        return self._goes_on
 
     @classmethod
     def at_delivery(cls, acceptance: Acceptance) -> AcceptanceStep:
@@ -59,16 +86,16 @@ class AcceptanceStep(Value):
         rid = acceptance.record.value if acceptance.record else "?"
         if acceptance.verdict is AcceptanceVerdict.ACCEPTED:
             return cls((ACCEPTANCE.ok(Said(f"{rid} accepted — the story is delivered")),),
-                                  Presence.ABSENT, Presence.PRESENT)
+                                  False, True)
         if acceptance.verdict is AcceptanceVerdict.OPEN:
             return cls((ACCEPTANCE.wait(Said(
                 f"{rid} waits for a human's look — answer it through /factory-decisions; the story holds the "
-                f"checkout until then")),), Presence.ABSENT, Presence.ABSENT)
+                f"checkout until then")),), False, False)
         if acceptance.verdict is AcceptanceVerdict.CORRECTION:
             return cls((ACCEPTANCE.fail(Said(
                 f"{rid} asked for a correction that is not in the story yet — write it in (criteria, an `answered:` "
-                f"line naming {rid}); the story then runs again from plan")),), Presence.ABSENT, Presence.ABSENT)
-        return cls((), Presence.PRESENT, Presence.ABSENT)
+                f"line naming {rid}); the story then runs again from plan")),), False, False)
+        return cls((), True, False)
 
 
 class FlakyFinding(Value):
@@ -99,14 +126,19 @@ class FlakyFinding(Value):
         return tuple(found)
 
 
-def acceptance_verdict(record: typing.Optional[DecisionRecord], same_story: Presence) -> AcceptanceVerdict:
-    """Where the story's acceptance stands, from its latest record: none asks for one; one waiting is open; an answer
-    holds only for the story it was given for — a story changed since (a correction written in) is asked again once it
-    has run —; it accepts or it asks for a correction. The record decides what its answer says."""
+def acceptance_verdict(record: typing.Optional[DecisionRecord]) -> AcceptanceVerdict:
+    """Where the acceptance of the story the latest record was given for stands: none asks for one; one waiting is
+    open; an answer accepts or asks for a correction. The record decides what its answer says."""
     if record is None:
         return AcceptanceVerdict.ASK
     if record.waits():
         return AcceptanceVerdict.OPEN
-    if same_story is Presence.ABSENT:
-        return AcceptanceVerdict.ASK
     return AcceptanceVerdict.ACCEPTED if record.accepts() else AcceptanceVerdict.CORRECTION
+
+
+def changed_story_verdict(record: typing.Optional[DecisionRecord]) -> AcceptanceVerdict:
+    """Where the acceptance of a story changed since its latest record stands: an answer holds only for the story it
+    was given for, so a changed story (a correction written in) is asked again once it has run; one waiting is open."""
+    if record is not None and record.waits():
+        return AcceptanceVerdict.OPEN
+    return AcceptanceVerdict.ASK

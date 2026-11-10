@@ -11,6 +11,7 @@ from ..delivery.adapter.outgoing.process.factory_process_files import FactoryPro
 from ..delivery.adapter.outgoing.tools.runner_table_files import RunnerTableFiles
 from ..delivery.adapter.outgoing.tools.tool_binary_files import ToolBinaryFiles
 from ..delivery.adapter.outgoing.claims.checkout_files import CheckoutFiles
+from ..delivery.adapter.outgoing.git.checkout import Checkouts
 from ..delivery.adapter.outgoing.files.project_upkeep_files import ProjectUpkeepFiles
 from ..delivery.adapter.outgoing.files.hand_over_skeleton_files import HandOverSkeletonFiles
 from ..delivery.adapter.outgoing.files.session_mark_files import SessionMarkFiles
@@ -42,7 +43,7 @@ from .profile import ask_profile as ask_profile
 from .questions import show_stage_table as show_stage_table
 from .schedule import schedule_data as schedule_data, start_of as start_of
 from ..delivery.adapter.outgoing.files.story_files import StoryFiles
-from ..sharedkernel.adapter.outgoing.profile.profile_files import ProfileFiles, resolve_profile
+from ..sharedkernel.adapter.outgoing.profile.profile_files import place, ProfileFiles, resolve_profile
 from ..delivery.adapter.outgoing.files.story_runs import StoryRunFiles
 from ..delivery.adapter.outgoing.spec.story_spec_files import StorySpecFiles
 from ..delivery.adapter.outgoing.spec.delivered_spec_files import DeliveredSpecFiles
@@ -76,6 +77,13 @@ from ..delivery.application.checkout.take_checkout import TakeCheckoutUseCase
 from ..delivery.application.checkout.give_checkout_back import GiveCheckoutBackUseCase
 from ..delivery.application.checkout.mark_listening import MarkListeningUseCase
 from ..delivery.application.status.list_findings import ListFindingsUseCase
+from ..delivery.application.lessons.show_lessons import ShowLessonsUseCase
+from ..delivery.application.lessons.write_lessons import WriteLessonsUseCase
+from ..delivery.application.lessons.write_issue import WriteIssueUseCase
+from ..delivery.adapter.outgoing.files.lesson_issue_files import LessonIssueFiles
+from ..delivery.application.shared.lesson_records import LessonProposals
+from ..delivery.adapter.outgoing.files.lesson_record_files import LessonRecordFiles
+from ..delivery.adapter.outgoing.files.lesson_signal_files import LessonSignalFiles
 from ..delivery.application.status.follow_output import FollowOutputUseCase
 from ..delivery.application.status.follow_factory_log import FollowFactoryLogUseCase
 from ..delivery.adapter.outgoing.files.factory_log_file import FactoryLogFile
@@ -121,8 +129,14 @@ def show_project_file(cwd: str) -> ShowProjectFileUseCase:
     return ShowProjectFileUseCase(ShownProjectFiles(cwd))
 
 
+def request_events() -> JournalEventPublisher:
+    """Where a request's events go: the factory's own journal — a request names no story's."""
+    return JournalEventPublisher(str(place("runs")))
+
+
 def write_request(cwd: str) -> WriteRequestUseCase:
-    return WriteRequestUseCase(request_check(cwd), RequestFiles(cwd), HandedFileFolder())
+    return WriteRequestUseCase(request_check(cwd), RequestFiles(cwd), HandedFileFolder(), request_events(),
+                               FileTransactions(), stamp_utc)
 
 
 def check_request(cwd: str) -> CheckRequestUseCase:
@@ -130,11 +144,13 @@ def check_request(cwd: str) -> CheckRequestUseCase:
 
 
 def take_back_request(cwd: str) -> TakeBackRequestUseCase:
-    return TakeBackRequestUseCase(RequestFiles(cwd))
+    requests = RequestFiles(cwd)
+    return TakeBackRequestUseCase(requests, requests, request_events(), FileTransactions(), stamp_utc)
 
 
 def retry_request(cwd: str) -> RetryRequestUseCase:
-    return RetryRequestUseCase(RequestFiles(cwd))
+    requests = RequestFiles(cwd)
+    return RetryRequestUseCase(requests, requests, request_events(), FileTransactions(), stamp_utc)
 
 
 def list_requests(cwd: str) -> ListRequestsUseCase:
@@ -158,7 +174,7 @@ def book_request_cost(cwd: str, runs: str) -> BookRequestCostUseCase:
 
 
 def status_facts(cwd: str, epics: str, runs: str) -> StatusFactFiles:
-    return StatusFactFiles(cwd, epics, runs, lambda: schedule_data(cwd, epics, runs))
+    return StatusFactFiles(cwd, epics, runs, lambda: schedule_data(cwd, epics, runs), Checkouts())
 
 
 def show_status(cwd: str, epics: str, runs: str) -> ShowStatusUseCase:
@@ -254,6 +270,22 @@ def list_findings(cwd: str, epics: str, runs: str) -> ListFindingsUseCase:
     return ListFindingsUseCase(status_facts(cwd, epics, runs))
 
 
+def show_lessons(cwd: str, epics: str) -> ShowLessonsUseCase:
+    return ShowLessonsUseCase(LessonSignalFiles(cwd, epics))
+
+
+def write_lessons(cwd: str) -> WriteLessonsUseCase:
+    return WriteLessonsUseCase(LessonSignalFiles(cwd), LessonRecordFiles(cwd))
+
+
+def write_issue(cwd: str) -> WriteIssueUseCase:
+    return WriteIssueUseCase(LessonIssueFiles(cwd))
+
+
+def lesson_proposals(cwd: str) -> LessonProposals:
+    return LessonProposals(LessonSignalFiles(cwd), LessonRecordFiles(cwd))
+
+
 def open_work_window(cwd: str, runs: str) -> OpenWorkWindowUseCase:
     return OpenWorkWindowUseCase(SessionMarkFiles(cwd, runs))
 
@@ -280,17 +312,17 @@ def append_journal(cwd: str, runs: str) -> AppendJournalUseCase:
 
 
 def take_checkout(cwd: str, runs: str) -> TakeCheckoutUseCase:
-    return TakeCheckoutUseCase(CheckoutFiles(cwd, runs))
+    return TakeCheckoutUseCase(CheckoutFiles(cwd, runs, Checkouts()))
 
 
 
 def give_checkout_back(cwd: str, runs: str) -> GiveCheckoutBackUseCase:
-    return GiveCheckoutBackUseCase(CheckoutFiles(cwd, runs))
+    return GiveCheckoutBackUseCase(CheckoutFiles(cwd, runs, Checkouts()))
 
 
 
 def mark_listening(cwd: str, runs: str) -> MarkListeningUseCase:
-    return MarkListeningUseCase(CheckoutFiles(cwd, runs))
+    return MarkListeningUseCase(CheckoutFiles(cwd, runs, Checkouts()))
 
 
 def show_brief(cwd: str) -> ShowBriefUseCase:

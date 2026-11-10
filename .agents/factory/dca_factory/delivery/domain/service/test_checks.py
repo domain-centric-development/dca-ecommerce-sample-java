@@ -9,8 +9,10 @@ from ....building_blocks import DomainService
 from ..gateway.stage_evidence import StageEvidence
 from ..model.stage import StoryKind
 from ..model.story import Story
-from ..model.stage_story import (
-    CommandKey, ContractNumber, HandOverName, MappedTest, TestTable, TitleFound)
+from ..model.plan_facts import HandOverName
+from ..model.profile_facts import ContractNumber
+from ..model.suite_run import CommandKey
+from ..model.test_facts import MappedTest, TestTable
 from ..model.verdict import CheckName, Findings, Said
 
 TESTS_MAPPED = CheckName("tests-mapped")
@@ -97,7 +99,7 @@ class TestChecks(DomainService):
             return ()
         wrong = [f"{t.selector.value} ({t.key.value}) — \"{t.title.title.value}\""
                  for t in sorted(tests, key=lambda t: t.key.value)
-                 if t.title is not None and t.title.found is TitleFound.UNTITLED]
+                 if t.title is not None and not t.title.reported]
         if wrong:
             return (TEST_TITLES.fail(Said(
                 "end-user tests without their scenario's title as display name — write it verbatim (the scenario's "

@@ -7,14 +7,17 @@ import typing
 
 from ....building_blocks import DomainException
 from ...domain.model.stage import Role, Stage, StageName, StoryKind, TESTED_KINDS, Trait
-from ...domain.model.stage_story import ContractNumber, Count, HandOverName, MappedTest, Place, ScenarioKey, Selector, TestTable
+from ...domain.model.plan_facts import HandOverName
+from ...domain.model.profile_facts import ContractNumber
+from ...domain.model.story_words import Count, Place, ScenarioKey, Selector
+from ...domain.model.test_facts import MappedTest, TestTable
 from ...domain.model.story import StoryId
 from ...domain.model.verdict import CheckName, Said
 from ...domain.service.adopt_checks import AdoptChecks
+from ...domain.service.guard_checks import GuardChecks
 from ...domain.service.kept_checks import KeptChecks
 from ...domain.service.decision_checks import Applying, DecisionChecks
 from ...domain.service.integration_checks import IntegrationChecks
-from ...domain.model.stage_story import Presence
 from ..description.check_description import CheckDescriptionCommand
 from ...domain.service.backlog_checks import BacklogChecks
 from ...domain.service.delivery_checks import DeliveryChecks
@@ -106,6 +109,12 @@ def _rounds(run: Run) -> None:
 @check("pipeline", stages=after_plan, rule="GATE-PIPELINE")
 def _pipeline(run: Run) -> None:
     run.result.take(DeliveryChecks.pipeline_untouched(run.story, run.evidence))
+    run.result.take(GuardChecks.untouched(run.story, run.evidence))
+
+
+@check("guarded", stages=("plan",), rule="GATE-GUARDED")
+def _guarded(run: Run) -> None:
+    run.result.take(GuardChecks.announced(run.story, run.evidence))
 
 
 @check("owned", rule="GATE-OWNED")
@@ -278,7 +287,7 @@ def _plan(run: Run) -> None:
 def _document(run: Run) -> None:
     passed = DeliveryChecks.story_pass(run.story, run.evidence, workflow().hand_over(workflow().role(Role.JUDGES)))
     run.result.take(passed.findings)
-    if passed.judge_passed is Presence.PRESENT:
+    if passed.judge_passed:
         run.marks.judge_passed(run.story_id)
     run.result.take(DeliveryChecks.outcome_raised(run.story, run.contract, run.evidence))
     run.result.take(DeliveryChecks.documented(run.story, run.evidence))

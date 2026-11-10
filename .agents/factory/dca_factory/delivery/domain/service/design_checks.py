@@ -11,8 +11,11 @@ from ....building_blocks import DomainService
 from ..gateway.stage_evidence import StageEvidence
 from ..model.stage import StoryKind
 from ..model.story import Story
-from ..model.stage_story import (
-    AssertionAt, Clause, CommandKey, ContractNumber, Count, FileChange, MappedTest, Place, Presence, ScenarioKey)
+from ..model.plan_facts import FileChange
+from ..model.profile_facts import ContractNumber
+from ..model.story_words import Clause, Count, Place, ScenarioKey
+from ..model.suite_run import CommandKey
+from ..model.test_facts import AssertionAt, MappedTest
 from ..model.story_state import Detail
 from ..model.verdict import CheckName, Findings, Said
 
@@ -194,7 +197,7 @@ class DesignChecks(DomainService):
                                     f"line")
                     continue
                 assert found is not None
-                if own and fact.among is Presence.ABSENT \
+                if own and not fact.among \
                         and not re.search(r"(^|/)tests?[^/]*/", found.group(1)):
                     problems.append(f"{key} {n}: `{location}` is in no test of {key} and no test source")
                     continue
@@ -263,9 +266,9 @@ class DesignChecks(DomainService):
             return (PLAN_FILES.skip(Said("plan.md has no `## Files` section — nothing to hold the build to")),)
         wrong, held = [], 0
         for file in planned:
-            if file.change is FileChange.REMOVED and file.presence is Presence.PRESENT:
+            if file.change is FileChange.REMOVED and file.exists:
                 wrong.append(f"{file.place.value} (planned removed, still there)")
-            elif file.change is FileChange.NEW and file.presence is Presence.ABSENT:
+            elif file.change is FileChange.NEW and not file.exists:
                 wrong.append(f"{file.place.value} (planned new, not there)")
             else:
                 held += 1
