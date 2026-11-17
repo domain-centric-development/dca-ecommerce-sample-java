@@ -90,7 +90,7 @@ Thumbs.db
 .codex/skills/review-clean-code
 .codex/skills/review-ddd
 .codex/skills/review-hexagonal
-.codex/skills/tdd
+.codex/skills/testing
 .codex/skills/ubiquitous-language
 .opencode/skills/factory-backlog
 .opencode/skills/factory-decisions
@@ -116,8 +116,9 @@ Thumbs.db
 .opencode/skills/review-clean-code
 .opencode/skills/review-ddd
 .opencode/skills/review-hexagonal
-.opencode/skills/tdd
+.opencode/skills/testing
 .opencode/skills/ubiquitous-language
 .opencode/skills/factory-discover
 .codex/skills/frontend
 .opencode/skills/frontend
+.claude/skills/testing
