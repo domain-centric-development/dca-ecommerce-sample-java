@@ -13,8 +13,8 @@ context-map
 dca-discipline
 dca-knowledge
 dca-modelling
-e2e-testing
 review-clean-code
 review-ddd
 review-hexagonal
+testing
 ubiquitous-language

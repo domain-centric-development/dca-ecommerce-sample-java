@@ -36,7 +36,8 @@ from ....domain.model.delivery_facts import (
 from ....domain.model.design_facts import (
     ContextMapFacts, ElementName, ElementRules, InvariantFacts, InvariantRow, PortName, Rule)
 from ....domain.model.plan_facts import (
-    AdoptRow, FileChange, HandOverName, HandOverSize, PlanAdoption, PlanLevels, PlannedDigest, PlannedFile)
+    AdoptRow, FileChange, HandOverName, HandOverSize, PlanAdoption, PlanLevels, PlannedDigest, PlannedFile,
+    PlannedTest, PlanOrigin)
 from ....domain.model.profile_facts import (
     ByteSize, ContractNumber, GateRelease, InstructionFile, ModelKey, ProfileKey, ProfileText, UnknownKey)
 from ....domain.model.story_words import (
@@ -63,6 +64,7 @@ from .delivery_files import (
     proposal_words, REVIEW_RANKS)
 from .decision_record_files import NOTHING
 from .kept_files import bare_path, row_cells
+from .plan_stamp import plan_origin
 from .run_marks import current_stage_files, STORY_DIGEST, judged_of, verdict_in
 from .snapshots import NOT_OBSERVED
 from .story_layout import depends_on, journeys_hold, story_digest
@@ -77,7 +79,7 @@ from ....domain.model.verdict import FindingState
 from ..git.repository import git, git_blob, head_blobs
 from .decision_record_files import answered_decisions, records_of
 from .kept_files import (
-    assertions_kept, glossary_names, renames_in, changed_tests_in_plan, committed_by_a_stage, human_line, meaningful_lines, read_red_digests,
+    assertions_kept, marker_form, glossary_names, renames_in, changed_tests_in_plan, committed_by_a_stage, human_line, meaningful_lines, read_red_digests,
     red_tree, switched_off, TESTS_BASELINE, tidy_moves, unproven_tests)
 from .run_marks import last_ended, stage_open, window_open
 from .snapshots import git_tree, listed_files, snapshot_reason, tree_changes
@@ -86,7 +88,7 @@ from .story_layout import file_digest
 from .guarded_files import announced_changes, guarded_set, story_changed
 from ....domain.model.guarded import GuardedFacts
 from .design_files import (
-    adapter_shapes, asserts_at, locate_selector, MOCK_MARKERS, mocked_ports, PLAN_FILE_LINE, plan_domain_elements,
+    adapter_shapes, adapter_tests, asserts_at, locate_selector, MOCK_MARKERS, mocked_ports, PLAN_FILE_LINE, plan_domain_elements,
     plan_invariants, read_clause_rows, read_invariant_rows, scenario_actions, scenario_clauses)
 from .run_marks import OWNED_CHANGED
 from .story_layout import EPIC_FILE, epic_folder, find_story
@@ -374,7 +376,12 @@ class StageEvidenceFiles(StageEvidence):
         return PlanLevels(tuple(ScenarioKey(k) for k in unfinished_levels(self._runs, story.value)),
                           frozenset(ScenarioKey(k) for k in plan_levels(self._runs, story.value)),
                           frozenset(ScenarioKey(k) for k in alone),
-                          frozenset(ScenarioKey(k) for k in both))
+                          frozenset(ScenarioKey(k) for k in both),
+                          tuple(PlannedTest(ScenarioKey(k), Selector(t) if t else None)
+                                for k, t in adapter_tests(self._runs, story.value)))
+
+    def plan_origin(self, story: StoryId) -> PlanOrigin:
+        return plan_origin(self._runs, story.value)
 
     def hand_over_sizes(self, story: StoryId,
                         names: typing.Tuple[HandOverName, ...]) -> typing.Tuple[HandOverSize, ...]:
@@ -523,6 +530,7 @@ class StageEvidenceFiles(StageEvidence):
         lost: typing.List[Place] = []
         arranged: typing.List[Place] = []
         renamed: typing.List[RenamedTest] = []
+        relocated: typing.List[Place] = []
         base_file = os.path.join(evidence_dir(runs, story_id), "base-tree")
         recorded = read_text(base_file).strip() if os.path.isfile(base_file) else ""
         base = recorded if recorded and recorded != "none" else None
@@ -555,6 +563,12 @@ class StageEvidenceFiles(StageEvidence):
             kept = not off and all(any(old == new for new in remaining) for old in was)
             held = not off and not kept and assertions_kept("\n".join(was), "\n".join(now))
             renames: typing.Dict[str, str] = {}
+            moved = False
+            if not off and not kept and not held:
+                # A locator that finds the same stable markers on another path: every assertion, expected value and
+                # matcher as before (the person's decision B, WP-218).
+                moved = assertions_kept(marker_form("\n".join(was)), marker_form("\n".join(now)))
+                held = moved
             if not off and not kept and not held:
                 # A name the story renamed, read from the tree: the test holds its assertions under the new name.
                 renames = renames_in(cwd, base, "\n".join(was), "\n".join(now), os.path.splitext(rel)[1])
@@ -567,11 +581,13 @@ class StageEvidenceFiles(StageEvidence):
                     Rename(SymbolName(old), SymbolName(new),
                            glossary_names(cwd, new))
                     for old, new in sorted(renames.items()))))
+            elif edit is TestEdit.ARRANGED and moved:
+                relocated.append(Place(rel))
             elif edit is TestEdit.ARRANGED:
                 arranged.append(Place(rel))
             elif edit is TestEdit.CHANGED:
                 changed.append(ChangedTest(Place(rel), TestChange.CHANGED))
-        return KeptTests(tuple(changed), tuple(lost), tuple(arranged), tuple(renamed))
+        return KeptTests(tuple(changed), tuple(lost), tuple(arranged), tuple(renamed), tuple(relocated))
 
     def decided_tests(self, story: StoryId) -> typing.Tuple[DecidedRecord, ...]:
         ids = answered_decisions(self._cwd, story.value, "test")

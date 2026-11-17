@@ -34,6 +34,10 @@ from .pipeline_workflow import workflow
 #: The contract that holds a build to the plan's files, and the one that holds a criterion's test to the real use case.
 PLAN_FILES_CONTRACT = ContractNumber(22)
 TESTS_REAL_CONTRACT = ContractNumber(21)
+#: The contract that holds a criterion's adapter test to the name the plan gave it.
+TESTS_PLANNED_CONTRACT = ContractNumber(34)
+#: The contract that gives a criterion the adapter shape only where its `Then` names what the adapter produces.
+ADAPTER_SHAPE_CONTRACT = ContractNumber(35)
 TESTS_MAPPED = CheckName("tests-mapped")
 
 
@@ -213,6 +217,24 @@ def _test_design(run: Run) -> None:
 def _tests_real(run: Run) -> None:
     if run.contract.value >= TESTS_REAL_CONTRACT.value:
         run.result.take(DesignChecks.tests_real(run.story, mapped(run), run.evidence))
+
+
+def plan_held_to(run: Run) -> ContractNumber:
+    """The contract a check of the plan's form holds this story's plan to: the profile's, never a later one than the
+    plan came about under (`PlanOrigin`) — a check introduced after a plan was written does not reach back to it."""
+    return run.evidence.plan_origin(run.story.id).held_to(run.contract)
+
+
+@check("tests-planned", stages=("test",), kinds=frozenset((StoryKind.STORY,)), rule="GATE-TESTS-PLANNED")
+def _tests_planned(run: Run) -> None:
+    if plan_held_to(run).value >= TESTS_PLANNED_CONTRACT.value:
+        run.result.take(DesignChecks.tests_planned(run.story, mapped(run), run.evidence))
+
+
+@check("adapter-shape", stages=("plan",), kinds=frozenset((StoryKind.STORY,)), rule="GATE-ADAPTER-SHAPE")
+def _adapter_shape(run: Run) -> None:
+    if plan_held_to(run).value >= ADAPTER_SHAPE_CONTRACT.value:
+        run.result.take(ThenChecks.adapter_shape(run.story, run.evidence))
 
 
 @check("tests-assert-then", stages=("test",), kinds=frozenset((StoryKind.STORY,)), rule="GATE-TESTS-ASSERT-THEN")
