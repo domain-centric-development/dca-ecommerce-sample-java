@@ -7,6 +7,7 @@ import typing
 
 from ....building_blocks import Value
 from .decision_record import RecordId
+from .judge_rows import JudgeRow
 from .plan_facts import HandOverName, PlannedDigest
 from .story_state import Detail, Judged
 from .story_words import Count, Place
@@ -61,6 +62,8 @@ class StoryPass(Value):
     gaps: typing.Tuple[PassGap, ...]
     verdict: Judged
     planned: PlannedDigest
+    #: the judge's confirmed defects with their origin against the story's diff
+    rows: typing.Tuple[JudgeRow, ...] = ()
 
 
 class DocumentFacts(Value):
@@ -89,6 +92,15 @@ class ReviewFacts(Value):
     missing: typing.Tuple[Detail, ...]
     malformed: typing.Tuple[Detail, ...]
     unknown: typing.Tuple[Detail, ...] = ()
+
+
+class ClassedFinding(Value):
+    """A confirmed finding's place and its three class cells as the judge wrote them — any word, the check reads it."""
+
+    where: Detail
+    target: Detail
+    type: Detail
+    qualifier: Detail
 
 
 class PipelineFacts(Value):

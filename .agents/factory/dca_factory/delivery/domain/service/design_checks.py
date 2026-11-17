@@ -11,7 +11,7 @@ from ....building_blocks import DomainService
 from ..gateway.stage_evidence import StageEvidence
 from ..model.stage import StoryKind
 from ..model.story import Story
-from ..model.plan_facts import FileChange
+from ..model.plan_facts import FileChange, PlanStamp
 from ..model.profile_facts import ContractNumber
 from ..model.story_words import Clause, Count, Place, ScenarioKey
 from ..model.suite_run import CommandKey
@@ -23,6 +23,8 @@ INVARIANTS = CheckName("invariants")
 CLAUSES = CheckName("clauses")
 TESTS_REAL = CheckName("tests-real")
 TESTS_PLANNED = CheckName("tests-planned")
+PLAN_KEPT = CheckName("plan-kept")
+INVARIANTS_COVER = CheckName("invariants-cover")
 PLAN_FILES = CheckName("plan-files")
 
 INVARIANTS_MARKER = "<!-- gate:invariants -->"
@@ -48,6 +50,10 @@ FIELD_HOLDS = re.compile(
     r"enthält|enthalten|zeigt|zeigen|behält|behalten|hält|halten|steht|stehen)\b([^.;]*)", re.IGNORECASE)
 #: A word that says what the field holds is what was entered — "the 201 characters entered", "den eingegebenen Text".
 ENTERED = re.compile(r"\b(?:entered|typed|eingegeben\w*|eingetippt\w*|getippt\w*)\b", re.IGNORECASE)
+#: A word of a step, and the words that carry no content of their own.
+WORD = re.compile(r"[^\W\d_]{2,}")
+FILLER = {"the", "a", "an", "its", "his", "her", "their", "der", "die", "das", "den", "dem", "des", "ein", "eine",
+          "einen", "noch", "immer", "weiterhin", "still"}
 #: What a step names exactly: a quoted text or a number.
 NAMED = re.compile(r'„([^“”"\n]+)[“”]|“([^”\n]+)”|"([^"\n]+)"|‚([^‘’\n]+)[‘’]|«([^»\n]+)»|\b(\d+)\b')
 
@@ -74,7 +80,13 @@ def states_stored(clause: Clause, actions: typing.Tuple[Detail, ...]) -> bool:
         return False
     named = {next(g for g in m.groups() if g) for m in NAMED.finditer(held.group(1))}
     entered = {next(g for g in m.groups() if g) for action in actions for m in NAMED.finditer(action.value)}
-    return not (named and named <= entered)
+    if named:
+        return not named <= entered
+    # Nothing quoted or counted: what the field holds in words — "the three spaces" after "(three spaces)" in the
+    # `When` — is the input when every word of it stands in a `When` step.
+    words = {w.lower() for w in WORD.findall(held.group(1))} - FILLER
+    said = {w.lower() for action in actions for w in WORD.findall(action.value)}
+    return not (words and words <= said)
 
 
 class DesignChecks(DomainService):
@@ -267,22 +279,68 @@ class DesignChecks(DomainService):
         if plan is None or not plan.named:
             return ()
         unnamed = sorted({p.key.value for p in plan.named if p.test is None})
+        held = plan.held_names()
         if unnamed:
             return (TESTS_PLANNED.fail(Said(
                 "the plan gives these criteria the adapter shape without naming its test — write "
                 "`integration (adapter: <Adapter>, test: <Class>#<method>)`, the method named after the state the "
                 "adapter shows: " + ", ".join(unnamed))),)
         missing = []
-        for planned in plan.named:
+        for planned in held:
             rows = [t.selector for t in tests if t.key == planned.key]
             if not planned.found_in(rows):
                 missing.append(f"{planned.key.value} ({planned.test.value if planned.test else ''})")
         if missing:
             return (TESTS_PLANNED.fail(Said(
                 "the adapter test the plan names is not among the criterion's tests in `gate:tests` — write it under "
-                "that name and map it, or plan again: " + "; ".join(missing))),)
+                "that name and map it; where a round renames, splits or drops it, write `- `<old>` → `<new>` — <why>` "
+                "under `## Plan changes` in tests.md — never change plan.md after its gate: " + "; ".join(missing))),)
+        renamed = [f"{r.old.value} → {', '.join(n.value for n in r.new) or 'none'} ({r.why.value})" for r in plan.renames]
+        if renamed:
+            return (TESTS_PLANNED.note(Said("every adapter test is mapped under the name the plan or a later stage gave "
+                                            "it — renamed in tests.md's `## Plan changes`, which the judge weighs: "
+                                            + "; ".join(renamed))),)
         return (TESTS_PLANNED.ok(Said(f"every adapter test the plan names is mapped to its criterion "
                                       f"({len(plan.named)})")),)
+
+    @staticmethod
+    def invariants_cover(story: Story, evidence: StageEvidence) -> Findings:
+        """Every domain type the story's change touched has its line under the plan's `## Invariants` — its rules, or
+        `none — <why>`. A type the plan never weighed gets a guard nobody named and a rule nobody tested: a value
+        from a request reaching it through a new factory is the plan's to see, not the build's to slip in."""
+        changed = evidence.changed_domain_types(story)
+        if not changed:
+            return ()
+        facts = evidence.invariants(story)
+        def plain(name: str) -> str:
+            return name.replace("_", "").replace("-", "").lower()
+        named = {plain(rules.element.value) for rules in facts.named} if facts else set()
+        named |= {plain(rules.element.value) for rules in evidence.build_invariants(story)}
+        missing = sorted({f"{t.name.value} ({t.place.value})" for t in changed if plain(t.name.value) not in named})
+        if missing:
+            return (INVARIANTS_COVER.fail(Said(
+                "the story changes domain types the plan's `## Invariants` has no line for — add one per type under "
+                "`## Invariants` in build.md, its rules or `none — <why>`, and a unit test per rule; the plan stays as "
+                "it was planned: " + "; ".join(missing[:8])
+                + (" …" if len(missing) > 8 else ""))),)
+        return (INVARIANTS_COVER.ok(Said(f"every domain type the story changes has its `## Invariants` line "
+                                         f"({len({t.name.value for t in changed})})")),)
+
+    @staticmethod
+    def plan_kept(story: Story, evidence: StageEvidence) -> Findings:
+        """The plan stays as its gate passed it. A stage after the plan that changes plan.md makes every later hand-over
+        one of an earlier pass, and the delivery sends the story a round back; what the build adds or takes back stands
+        in build.md (`## Invariants`, `## Plan changes`), which the gates read beside the plan."""
+        origin = evidence.plan_origin(story.id)
+        if origin.stamp is PlanStamp.CHANGED:
+            return (PLAN_KEPT.fail(Said(
+                "plan.md changed after its gate passed it — put it back as the plan gate passed it, and write what "
+                "the build adds or takes back in build.md: a domain type's line under `## Invariants`, a planned file "
+                "taken back under `## Plan changes` (`- `<path>` — <why>`). A plan that is wrong goes back to the plan "
+                "stage, never into plan.md from a later one")),)
+        if origin.stamp is PlanStamp.STAMPED:
+            return (PLAN_KEPT.ok(Said("plan.md is as its gate passed it")),)
+        return ()
 
     @staticmethod
     def plan_files(story: Story, evidence: StageEvidence) -> Findings:
@@ -291,9 +349,12 @@ class DesignChecks(DomainService):
         planned = evidence.plan_files(story.id)
         if planned is None:
             return (PLAN_FILES.skip(Said("plan.md has no `## Files` section — nothing to hold the build to")),)
-        wrong, held = [], 0
+        wrong, held, taken_back = [], 0, []
         for file in planned:
-            if file.change is FileChange.REMOVED and file.exists:
+            missed = (file.change is FileChange.REMOVED and file.exists) or (file.change is FileChange.NEW and not file.exists)
+            if missed and file.withdrawn is not None:
+                taken_back.append(f"{file.place.value} ({file.withdrawn.value})")
+            elif file.change is FileChange.REMOVED and file.exists:
                 wrong.append(f"{file.place.value} (planned removed, still there)")
             elif file.change is FileChange.NEW and not file.exists:
                 wrong.append(f"{file.place.value} (planned new, not there)")
@@ -301,8 +362,12 @@ class DesignChecks(DomainService):
                 held += 1
         if wrong:
             return (PLAN_FILES.fail(Said(
-                "the build did not do what the plan's `## Files` says — remove the file (`git rm`) or write it, or "
-                "plan again; an explanation in build.md does not change the plan: " + "; ".join(wrong))),)
+                "the build did not do what the plan's `## Files` says — write the file or remove it (`git rm`); where "
+                "the plan was wrong, name the file and why under `## Plan changes` in build.md — never change plan.md "
+                "after the tests: " + "; ".join(wrong))),)
+        if taken_back:
+            return (PLAN_FILES.note(Said("planned files the build took back, with its reason in build.md's `## Plan "
+                                         "changes` — the judge weighs them: " + "; ".join(taken_back))),)
         if held:
             return (PLAN_FILES.ok(Said(f"every file the plan says new or removed is so ({held})")),)
         return (PLAN_FILES.ok(Said("the plan's `## Files` names no file new or removed")),)

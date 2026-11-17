@@ -29,6 +29,7 @@ from ..git.integration import integration_target
 from ..git.repository import git, git_identity
 from ..spec.story_spec_files import moved_tests, story_spec
 from .decision_record_files import ACCEPTANCE_KIND, acceptance_mode, acceptance_records, decisions_store
+from .judge_record import record_outcomes
 from .findings_files import (
     PLAIN_COLUMN, append_finding_rows, confirmed_defects, findings_cells, findings_path, open_findings,
     project_findings_head, project_findings_path, record_findings)
@@ -56,7 +57,7 @@ def close_findings(result: typing.Any, front: Front) -> None:
         for index, line in enumerate(lines):
             cells = findings_cells(line)
             if cells and cells[0] == row[0]:
-                cells[-1] = DONE_ROW.value
+                cells[9 if len(cells) == 13 else -1] = DONE_ROW.value
                 lines[index] = "| " + " | ".join(cells) + " |"
         with open(path, "w", encoding="utf-8") as handle:
             handle.write("\n".join(lines) + "\n")
@@ -341,6 +342,10 @@ def keep_beside_delivery(result: typing.Any, story_path: str, story_id: str, fro
     if added or open_now:
         result.ok("findings", f"{added} confirmed finding(s) kept in {shown(findings_path(story_path))} — "
                               f"{open_now} open there")
+    resolved = record_outcomes(story_path, story_id, front, runs)
+    if resolved:
+        result.ok("findings", f"{resolved} blocking finding(s) of an earlier round kept in "
+                              f"{shown(findings_path(story_path))} with what became of them")
     record_flaky_findings(result, story_path, story_id, front, runs)
     judge = os.path.join(runs, story_id, "judge.md")
     unworded = [r[1] for r in confirmed_defects(read_text(judge)) if not r[5]] if os.path.isfile(judge) else []

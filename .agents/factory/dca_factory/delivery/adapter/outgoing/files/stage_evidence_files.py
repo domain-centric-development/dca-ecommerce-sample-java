@@ -31,13 +31,13 @@ from ....domain.model.backlog_facts import (
     ProposalFacts, RowState)
 from ....domain.model.brief_facts import BriefFacts, OwnedFacts, OwnedPart, RoundsRecord
 from ....domain.model.delivery_facts import (
-    DocumentFacts, Integration, MainTestLines, MainTests, PassGap, PipelineFacts, ReviewFacts, StageChanges,
-    StoryCommit, StoryPass, Unobserved)
+    ClassedFinding, DocumentFacts, Integration, MainTestLines, MainTests, PassGap, PipelineFacts, ReviewFacts,
+    StageChanges, StoryCommit, StoryPass, Unobserved)
 from ....domain.model.design_facts import (
-    ContextMapFacts, ElementName, ElementRules, InvariantFacts, InvariantRow, PortName, Rule)
+    ChangedDomainType, ContextMapFacts, ElementName, ElementRules, InvariantFacts, InvariantRow, PortName, Rule)
 from ....domain.model.plan_facts import (
     AdoptRow, FileChange, HandOverName, HandOverSize, PlanAdoption, PlanLevels, PlannedDigest, PlannedFile,
-    PlannedTest, PlanOrigin)
+    PlannedTest, PlanOrigin, TestRename)
 from ....domain.model.profile_facts import (
     ByteSize, ContractNumber, GateRelease, InstructionFile, ModelKey, ProfileKey, ProfileText, UnknownKey)
 from ....domain.model.story_words import (
@@ -51,12 +51,12 @@ from ....domain.model.story import StoryContent, StoryId, StorySource
 from ....domain.model.story_state import Detail, HandOverText, Rounds, StatusWord
 from ....domain.service.backlog_checks import EPIC_FIELDS, normal_name
 from .brief_files import given_digest, named_digest
-from ....domain.model.decision_record import DecisionRecord
+from ....domain.model.decision_record import DecisionRecord, JudgedDefect, RoundQuestion
 from .decision_record_files import (
     record_of,
     decisions_store, needs_human_ids, read_decisions, record_path)
 from .epic_files import epic_dependency_problem
-from .findings_files import confirmed_defects, findings_path, findings_rows, project_findings_path
+from .findings_files import confirmed_classes, confirmed_defects, findings_path, findings_rows, project_findings_path
 from .owned_files import owned_changes, regard_gate_line
 import glob
 from .delivery_files import (
@@ -65,6 +65,9 @@ from .delivery_files import (
 from .decision_record_files import NOTHING
 from .kept_files import bare_path, row_cells
 from .plan_stamp import plan_origin
+from .judge_rows_files import judge_rows
+from .round_questions import cited_places, judge_sent_back, judged_defects
+from .domain_types import changed_domain_types
 from .run_marks import current_stage_files, STORY_DIGEST, judged_of, verdict_in
 from .snapshots import NOT_OBSERVED
 from .story_layout import depends_on, journeys_hold, story_digest
@@ -88,7 +91,7 @@ from .story_layout import file_digest
 from .guarded_files import announced_changes, guarded_set, story_changed
 from ....domain.model.guarded import GuardedFacts
 from .design_files import (
-    adapter_shapes, adapter_tests, asserts_at, locate_selector, MOCK_MARKERS, mocked_ports, PLAN_FILE_LINE, plan_domain_elements,
+    adapter_shapes, adapter_tests, asserts_at, test_renames, locate_selector, MOCK_MARKERS, mocked_ports, PLAN_CHANGE_LINE, PLAN_FILE_LINE, plan_domain_elements,
     plan_invariants, read_clause_rows, read_invariant_rows, scenario_actions, scenario_clauses)
 from .run_marks import OWNED_CHANGED
 from .story_layout import EPIC_FILE, epic_folder, find_story
@@ -352,6 +355,22 @@ class StageEvidenceFiles(StageEvidence):
                                               tuple(RecordId(i) for i in ids) if ids is not None else None))
         return DecisionsFacts(Place(shown(store)), tuple(hand_overs))
 
+    def round_questions(self, story: Story) -> typing.Tuple[RoundQuestion, ...]:
+        if not judge_sent_back(self._runs, story.id.value):
+            return ()
+        try:
+            store = decisions_store(self.place_of(story.id).value or find_story(place("epics"), story.id.value))
+            read = read_decisions(store, story.id.value)
+        except GateError:
+            return ()
+        return tuple(RoundQuestion(RecordId(os.path.basename(path)[:-3]), tuple(Detail(c) for c in cited_places(body)))
+                     for path, front, body, state, _answer in read
+                     if state == "open" and str(front.get("stage", "")).strip())
+
+    def judged_defects(self, story: Story) -> typing.Tuple[JudgedDefect, ...]:
+        return tuple(JudgedDefect(Detail(where), Detail(severity))
+                     for where, severity in judged_defects(self._runs, story.id.value))
+
     def decision_records(self, story: Story) -> typing.Sequence[DecisionRecord]:
         try:
             store = decisions_store(self.place_of(story.id).value or find_story(place("epics"), story.id.value))
@@ -378,7 +397,9 @@ class StageEvidenceFiles(StageEvidence):
                           frozenset(ScenarioKey(k) for k in alone),
                           frozenset(ScenarioKey(k) for k in both),
                           tuple(PlannedTest(ScenarioKey(k), Selector(t) if t else None)
-                                for k, t in adapter_tests(self._runs, story.value)))
+                                for k, t in adapter_tests(self._runs, story.value)),
+                          tuple(TestRename(Selector(old), tuple(Selector(n) for n in new), Detail(why))
+                                for old, new, why in test_renames(self._runs, story.value)))
 
     def plan_origin(self, story: StoryId) -> PlanOrigin:
         return plan_origin(self._runs, story.value)
@@ -395,6 +416,18 @@ class StageEvidenceFiles(StageEvidence):
     def _run_file(self, story: StoryId, name: str) -> typing.Optional[str]:
         path = os.path.join(self._runs, story.value, name)
         return read_text(path) if os.path.isfile(path) else None
+
+    def build_invariants(self, story: Story) -> typing.Tuple[ElementRules, ...]:
+        build = self._run_file(story.id, "build.md")
+        named = plan_invariants(build) if build is not None else None
+        return tuple(ElementRules(ElementName(e), tuple(Rule(r) for r in rules)) for e, rules in (named or {}).items())
+
+    def changed_domain_types(self, story: Story) -> typing.Optional[typing.Tuple[ChangedDomainType, ...]]:
+        changed = story_changed(self._cwd, self._runs, story.id.value, self._checkouts)
+        if changed is None:
+            return None
+        return tuple(ChangedDomainType(ElementName(name), Place(path))
+                     for name, path in changed_domain_types(self._cwd, changed, self._profile))
 
     def invariants(self, story: Story) -> typing.Optional[InvariantFacts]:
         plan = self._run_file(story.id, "plan.md")
@@ -453,6 +486,10 @@ class StageEvidenceFiles(StageEvidence):
         lines = section_of(plan, "files") if plan is not None else None
         if lines is None:
             return None
+        build = self._run_file(story, "build.md")
+        withdrawn = {m.group(1).strip(): m.group(2).strip() for m in
+                     (PLAN_CHANGE_LINE.match(l) for l in (section_of(build, "plan changes") or [] if build else []))
+                     if m}
         planned = []
         for line in lines:
             match = PLAN_FILE_LINE.match(line)
@@ -461,7 +498,8 @@ class StageEvidenceFiles(StageEvidence):
             rel = match.group(1).strip()
             planned.append(PlannedFile(
                 Place(rel), FileChange(match.group(2).lower()),
-                os.path.lexists(os.path.join(self._cwd, rel))))
+                os.path.lexists(os.path.join(self._cwd, rel)),
+                Detail(withdrawn[rel]) if rel in withdrawn else None))
         return tuple(planned)
 
     def stage_changes(self, story: StoryId, stage: StageName,
@@ -723,7 +761,8 @@ class StageEvidenceFiles(StageEvidence):
         planned = os.path.join(evidence_dir(runs, story_id), STORY_DIGEST)
         digest = PlannedDigest.MISSING if not os.path.isfile(planned) else \
             PlannedDigest.SAME if read_text(planned).strip() == story_digest(self.place_of(story.id).value) else PlannedDigest.CHANGED
-        return StoryPass(gaps, judged_of(verdict_in(texts[stage_of(Role.JUDGES)]) if stage_of(Role.JUDGES) in texts else ""), digest)
+        return StoryPass(gaps, judged_of(verdict_in(texts[stage_of(Role.JUDGES)]) if stage_of(Role.JUDGES) in texts else ""), digest,
+                         judge_rows(runs, story_id))
 
     def outcome(self, story: Story) -> OutcomeFacts:
         cwd = self._cwd
@@ -847,6 +886,14 @@ class StageEvidenceFiles(StageEvidence):
         unknown = sorted({n or "—" for n in named if n not in known})
         return ReviewFacts(tuple(Detail(r) for r in read), tuple(Detail(m) for m in missing),
                            tuple(Detail(m) for m in malformed), tuple(Detail(u) for u in unknown))
+
+    def finding_classes(self, story: StoryId) -> typing.Tuple[ClassedFinding, ...]:
+        judge = os.path.join(self._runs, story.value, "judge.md")
+        if not os.path.isfile(judge):
+            return ()
+        text = read_text(judge)
+        return tuple(ClassedFinding(Detail(row[1]), Detail(target), Detail(kind), Detail(qualifier))
+                     for row, (target, kind, qualifier) in zip(confirmed_defects(text), confirmed_classes(text)))
 
     def pipeline(self, story: StoryId) -> PipelineFacts:
         records = sorted(glob.glob(os.path.join(evidence_dir(self._runs, story.value), "changed-*.txt")))

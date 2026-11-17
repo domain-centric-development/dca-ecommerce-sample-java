@@ -12,9 +12,9 @@ import re
 import typing
 
 from ..pipeline.stage_rows import all_stages, stage_course, stage_windows, stage_order
-from .findings_files import finding_records, FINDINGS_FILE
+from .findings_files import classed_rows, finding_records, findings_path, FINDINGS_FILE
 from .story_layout import delivered_on, find_story, story_kind
-from .....sharedkernel.adapter.outgoing.profile.profile_files import evidence_dir, read_profile, resolve_profile, shown
+from .....sharedkernel.adapter.outgoing.profile.profile_files import evidence_dir, place, read_profile, resolve_profile, shown
 from .decision_record_files import decision_files, records_of
 from ....application.profile.profile_rules import perspectives_of
 from ..tools.agents import TOOLS
@@ -32,6 +32,7 @@ from ..process.factory_process import ended, worker
 from .epic_files import epic_files
 from .story_files import names_story
 from ....domain.model.correction import REASON_CODES
+from ....domain.model.story import Assumption
 from .....sharedkernel.adapter.outgoing.markdown.sections import section_of
 from .signals import latest_signal
 from .journal_files import journal_events
@@ -453,6 +454,18 @@ def story_signals(runs: str, story_id: str, records: typing.Sequence[typing.Any]
         findings[perspective] = findings.get(perspective, 0) + 1
         if fields.get("code"):
             domain[fields["code"]] = domain.get(fields["code"], 0) + 1
+    # the classes as the story's findings.md keeps them — the judge's from delivery, a request's once (WP-223):
+    # the one place every reader takes them from
+    classes = story_classes(story_id)
+    verdicts = [e for e in events if e["kind"] == "signal" and e["name"] == "judge" and e["fields"].get("weighed")]
+    outcomes: typing.Dict[str, int] = {}
+    outcome_by: typing.Dict[str, typing.Dict[str, int]] = {}
+    for event in events:
+        if event["kind"] == "outcome" and event["fields"].get("outcome"):
+            outcome = event["fields"]["outcome"]
+            outcomes[outcome] = outcomes.get(outcome, 0) + 1
+            per = outcome_by.setdefault(event["name"], {})
+            per[outcome] = per.get(outcome, 0) + 1
     corrections: typing.Dict[str, int] = {}
     for _p, front, _b, state, answer in records:
         code = correction_code(answer.get("answer")) if is_acceptance(front) and DecisionState(state).answered else None
@@ -462,7 +475,8 @@ def story_signals(runs: str, story_id: str, records: typing.Sequence[typing.Any]
     tested = any(e["kind"] == "gate" and e["name"] in red for e in events)
     return dict(tested=tested, asked=len(questions), answered=sum(1 for _f, st in questions if DecisionState(st).answered),
                 assumptions_open=sum(1 for l in lines if l.startswith("open:")),
-                assumptions_answered=sum(1 for l in lines if l.startswith("answered:")),
+                assumptions_answered=sum(1 for l in lines if l.startswith("answered:")
+                                         and not Assumption(l).marks_process),
                 plan_open=int(plan[0].get("open", 0)) if plan else None,
                 rules=rules if rules_group else None,
                 findings=findings if judge else None, domain=domain if judge else None,
@@ -471,7 +485,27 @@ def story_signals(runs: str, story_id: str, records: typing.Sequence[typing.Any]
                 repeated=sum(1 for e in events if e["kind"] == "stop" and e["fields"].get("rule") == "RUN-ROUNDS-4"),
                 contradictions=sum(1 for e in events if e["kind"] == "contradiction"),
                 acceptance=acceptance_figures(records), production=changed_production(runs, story_id),
-                mutation=mutation_of(events))
+                mutation=mutation_of(events),
+                judged=len(verdicts) or None,
+                first_pass=(verdicts[0]["fields"]["weighed"] == "pass") if verdicts else None,
+                judge_rounds=sum(1 for e in verdicts if e["fields"]["weighed"] == "changes-requested") if verdicts else None,
+                outcomes=outcomes, outcome_by=outcome_by, classes=classes or None)
+
+
+def story_classes(story_id: str) -> typing.Dict[str, int]:
+    """{target/type: rows} of the story's findings.md rows with a class — none where the story has none."""
+    epics = place("epics")
+    try:
+        path = find_story(epics, story_id)
+    except (GateError, OSError):
+        return {}
+    if not path:
+        return {}
+    found: typing.Dict[str, int] = {}
+    for _row, kind in classed_rows(findings_path(path)):
+        name = f"{kind.target.value}/{kind.type.value}"
+        found[name] = found.get(name, 0) + 1
+    return found
 
 
 def mutation_of(events: typing.Sequence[typing.Any]) -> typing.Optional[str]:

@@ -500,6 +500,12 @@ function qualityCard(q, lessons) {
       {figure: `${l.waiting || 0}`, label: "lessons waiting", note: l.who ? `for ${l.who}` : "", alert: !!l.waiting,
         title: `what repeats across the stories — a question of the same tag, a finding of the same rule, a correction of the same code — answered in decide by the ${l.role || "loop keeper"}; ${l.answered || 0} answered`}]},
     {head: "judge", rows: [
+      {figure: q.judged_stories ? `${q.first_pass}/${q.judged_stories}` : "–", label: "passed first time",
+        note: q.judged_stories ? `${q.rounds_per_story} round${q.rounds_per_story === 1 ? "" : "s"} a story` : "",
+        title: "stories whose first verdict, weighed by its rows, was a pass — and the judge rounds a delivered story needed"},
+      {figure: q.false_alarm_share !== null && q.false_alarm_share !== undefined ? `${Math.round(100 * q.false_alarm_share)} %` : "–",
+        label: "blocking findings dropped", note: sum(q.outcomes) ? Object.entries(q.outcomes).map(([o, n]) => `${n} ${o}`).join(" · ") : "",
+        title: "blocking findings the next verdict dropped on an unchanged line, or a person overruled — the judge's false alarms on real stories"},
       {figure: `${domain}`, label: "domain findings", note: domain ? domainWords(q.domain) : "", title: "what the judge confirmed against the domain"},
       {figure: q.named ? `${q.killed}/${q.named}` : "–", label: "rules caught", note: q.survived ? `${q.survived} survived` : "", alert: !!q.survived,
         title: `rules a deliberately broken implementation was tried against — killed ${q.killed} · red ${q.red} · survived ${q.survived} · no-break ${q["no-break"]} — ${q.measured} of ${q.stories} stories measured`},
@@ -517,9 +523,16 @@ function qualityCard(q, lessons) {
         title: `${q.fresh || 0} fresh after a repeated refusal · ${q.repeated || 0} stopped by repetition`}]},
   ];
   const found = Object.entries(q.findings || {}).sort((a, b) => b[1] - a[1]), most = found.length ? found[0][1] : 1;
+  // what the findings needed changed, by target and type — the class the judge gives each (ODC's process measure)
+  const classed = Object.entries(q.classes || {}).sort((a, b) => b[1] - a[1]), top = classed.length ? classed[0][1] : 1;
   return ui.card("Quality", "what the stages asked, what the judge confirmed, what a person corrected — counted over every story, never rated",
     ui.stats(groups)
-    + (found.length ? ui.part("Findings the judge confirmed, by perspective", ui.bars(found.map(([name, n]) => [name, n, Math.round(100 * n / most)]))) : ""));
+    + (found.length ? ui.part("Findings the judge confirmed, by perspective", ui.bars(found.map(([name, n]) => [name, n, Math.round(100 * n / most)]))) : "")
+    + (classed.length ? ui.part("What the findings needed changed, by target and type",
+        ui.bars(classed.slice(0, 10).map(([kind, n]) => [kind.replace("/", " · "), n, Math.round(100 * n / top)]))) : "")
+    + (Object.keys(q.outcome_by || {}).length ? ui.part("What became of the blocking findings, by perspective",
+        ui.bars(Object.entries(q.outcome_by).map(([name, split]) => [name, Object.entries(split).map(([o, n]) => `${n} ${o}`).join(" · "),
+          Math.round(100 * ((split.fixed || 0) + (split.repeated || 0)) / Math.max(1, sum(split)))]))) : ""));
 }
 // the same figures in one line, for an epic
 function qualityLine(q) {

@@ -8,7 +8,6 @@ import typing
 
 from ....building_blocks import AggregateRoot, DomainEvent, DomainException, Id, Value
 from .moment import Moment
-from .lesson import LessonPlace, Owner
 from .person import Person
 from .question_tag import QuestionTag
 from .stage import StageName
@@ -166,6 +165,10 @@ class CorrectionAsked(DomainEvent):
     by: Person
     given: Given
     at: Moment
+
+
+#: A lesson's options that nobody writes — learning offers them last on every lesson; delivery files the answer alone.
+SETTLES_ALONE = ("not-now", "never")
 
 
 class LessonAnswered(DomainEvent):
@@ -422,8 +425,10 @@ class DecisionRecord(AggregateRoot[RecordId]):
         if self._asker is Asker.REQUEST and self._kind is RecordKind.QUESTION:
             return True
         line = self.option_line(option)
-        place = LessonPlace.named(line) if self._kind is RecordKind.LESSON and line is not None else None
-        return place is not None and place.owner is Owner.NOBODY
+        if self._kind is not RecordKind.LESSON or line is None:
+            return False
+        first = line.value.strip().strip("`*").split()
+        return bool(first) and first[0].strip("`*").lower() in SETTLES_ALONE
 
     def choose(self, option: OptionKey, by: Person, at: Moment) -> None:
         """A person's choice among the options of an open record — the option is the whole answer."""
@@ -438,3 +443,18 @@ class DecisionRecord(AggregateRoot[RecordId]):
         if self._kind is not RecordKind.ACCEPTANCE:
             raise NoAcceptance(self._id)
         self.answer(Answer(ACCEPTED, by, at))
+
+
+class RoundQuestion(Value):
+    """An open question a stage asked while the judge's verdict sent the story back: the record, and the places
+    (`<file>:<line>`) its text cites, by file name and line."""
+
+    record: RecordId
+    cited: typing.Tuple[Detail, ...]
+
+
+class JudgedDefect(Value):
+    """A defect the judge confirmed: where (`<file>:<line>`, by file name and line) and how severe, as written."""
+
+    where: Detail
+    severity: Detail

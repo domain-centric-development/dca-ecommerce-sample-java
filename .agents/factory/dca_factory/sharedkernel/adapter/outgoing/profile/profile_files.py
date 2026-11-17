@@ -255,8 +255,9 @@ PROFILE_KEYS = frozenset((
     "filterFlag", "filterFormat", "filterJoin", "testReport", "testEvidence",
     # what the project has, and what must hold
     "required", "checks.backlog", "browser", "screenshots", "integration", "http.stub", "adopt.breakProof", "acceptance", "run",
-    # who answers the lessons — the loop keeper (WP-185); unnamed, whoever answers the decisions
-    "lessons",
+    # who answers the lessons — the loop keeper (WP-185); unnamed, whoever answers the decisions — and, counted in
+    # stories, when a placed lesson comes back and how many stand open at a time (WP-221)
+    "lessons", "lessons.backAfter", "lessons.open",
     # whether only a released story is delivered — a draft, or a story without `status:`, never (WP-192)
     "release",
     # where things are (DEFAULTS), the generated map and the glossary; `backlog` is the older layout's, named by
@@ -274,12 +275,14 @@ PROFILE_KEYS = frozenset((
     "ablate",
     # how strong a story's tests are, measured after the judge — informational, never a gate
     "mutation",
+    # how many delivered stories after a rule was disabled `rules --check` names it ready to delete (WP-220)
+    "rules.deleteAfter",
 ))
 
 #: Key families: `<prefix><name>`, with an open list of names — a test command (`test.integration`), what a
 #: command covers (`covers.test`), a carrier (`carrier.build`), a perspective's reviewer (`review.ddd`), a model
 #: (`model.claude`, `model.claude.tidy`; the model check holds tool and stage).
-PROFILE_FAMILIES = ("test.", "covers.", "carrier.", "review.", "model.", "tool.", "effort.")
+PROFILE_FAMILIES = ("test.", "covers.", "carrier.", "review.", "model.", "tool.", "effort.", "layer.")
 
 
 def unknown_profile_keys(profile: typing.Mapping[str, typing.Any]) -> typing.List[typing.Tuple[str, typing.Optional[str]]]:

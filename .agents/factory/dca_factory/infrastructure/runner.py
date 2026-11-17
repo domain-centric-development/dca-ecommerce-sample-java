@@ -24,7 +24,8 @@ from ..delivery.application.delivery.resolve_conflicts import ResolveConflictsCo
 from ..delivery.application.delivery.run_story import RunStoryCommand, RunStoryUseCase
 from ..delivery.application.requests.request_queue import RequestQueue
 from ..delivery.application.requests.work_request import WorkRequestCommand, WorkRequestUseCase
-from ..delivery.application.delivery.show_brief import ShowBriefQuery, ShowEveryStageUseCase
+from ..delivery.application.delivery.show_brief import ShowBriefQuery, ShowEveryStageUseCase, ShowProcessBriefUseCase
+from ..delivery.domain.model.workflow_rule import ProcessName
 from ..delivery.domain.model.stage import StageName, StageText, Window
 from ..delivery.domain.model.story import StoryId
 from ..delivery.domain.service.stage_brief import Brief
@@ -38,7 +39,7 @@ from ..sharedkernel.adapter.outgoing.profile.profile_files import (
     resolve_profile,
     set_places,
 )
-from . import delivery
+from . import delivery, learning
 from . import requests
 from .workflow import load_workflow
 
@@ -69,7 +70,7 @@ class RunnerCases:
     def run_backlog(self, run: Run, tool: str, slots: int, watch: bool, interval: int, dry: bool) -> int:
         backlog = RunnerBacklog(run, tool)
         return RunBacklogUseCase(backlog, backlog, backlog, self.queue(run), ConsoleLines(),
-                                 delivery.lesson_proposals(run.home), stamp_utc).execute(
+                                 learning.propose_lessons(run.home), stamp_utc).execute(
             RunBacklogCommand(slots, watch, interval, dry, run.keep_going, run.stay, run.lane))
 
     def queue(self, run: Run) -> RequestQueue:
@@ -86,6 +87,9 @@ class RunnerCases:
 
     def every_stage(self, run: Run) -> StageText:
         return ShowEveryStageUseCase().execute()
+
+    def told_to(self, run: Run, process: str) -> StageText:
+        return ShowProcessBriefUseCase().execute(ProcessName(process))
 
     def cli_here(self, argv: typing.Sequence[str]) -> int:
         from . import cli

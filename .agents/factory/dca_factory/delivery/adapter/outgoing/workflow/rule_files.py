@@ -30,7 +30,7 @@ from ....domain.model.jump import RuleId, Target
 from ....domain.model.stage import StageName, StoryKind
 from ....domain.model.verdict import CheckName
 from ....domain.model.workflow_rule import (
-    Outcome, OutcomeState, Restart, RuleOrder, RulePart, RuleText, WorkflowRule, Written)
+    Outcome, OutcomeState, ProcessName, Restart, RuleOrder, RulePart, RuleText, WorkflowRule, Written)
 from .....sharedkernel.adapter.outgoing.markdown.front_matter import read_front_matter
 from ....application.shared.workflow_rule_repository import WorkflowRuleRepository
 
@@ -124,6 +124,7 @@ class RuleFiles(WorkflowRuleRepository):
         if unsaid:
             raise ValueError(f"{path}: {', '.join(unsaid)} for an outcome it says nothing about")
         retired = front.get("retired")
+        disabled = disabled_of(path, front)
         if str(front.get("part") or "") == RulePart.TOLD.value:
             section, see, order = front.get("section"), front.get("see"), str(front.get("order") or "")
             why = str(front.get("why") or "").strip()
@@ -132,13 +133,15 @@ class RuleFiles(WorkflowRuleRepository):
                 [StageName(s) for s in listed(front.get("stages"))], [StoryKind(k) for k in listed(front.get("kinds"))],
                 RuleText(str(retired)) if retired else None, self._written(path), RuleText(told_of(body, rule_id)),
                 RuleText(str(section)) if section else None, Written(str(see)) if see else None,
-                RuleOrder(int(order)) if order.isdigit() else None)
+                RuleOrder(int(order)) if order.isdigit() else None,
+                processes=[ProcessName(p) for p in listed(front.get("processes"))], disabled=disabled)
         return WorkflowRule.restore(
             rule_id, RulePart(str(front.get("part") or "decision")), RuleText(paragraph(body, WHEN)),
             RuleText(paragraph(body, WHY)), outcomes, [CheckName(n) for n in listed(front.get("reports"))],
             [StageName(s) for s in listed(front.get("stages"))], [StoryKind(k) for k in listed(front.get("kinds"))],
             RuleText(str(retired)) if retired else None, self._written(path),
-            title=RuleText(str(front["title"])) if front.get("title") else None, restart=restart_of(path, front))
+            title=RuleText(str(front["title"])) if front.get("title") else None, restart=restart_of(path, front),
+            disabled=disabled)
 
     def _written(self, path: str) -> Written:
         return Written(os.path.relpath(path, os.path.dirname(os.path.dirname(self._folder))).replace(os.sep, "/"))
@@ -166,8 +169,27 @@ class RuleFiles(WorkflowRuleRepository):
             lines += [f"restarts: {rule.restart.stage.value}", f"restarts.when: {written_value(rule.restart.when.value)}"]
         if rule.retired is not None:
             lines.append(f"retired: {written_value(rule.retired.value)}")
+        lines += disabled_lines(rule)
         lines += ["---", "", f"# {rule.id.value}", "", f"{WHEN}{rule.when.value}", "", f"{WHY}{rule.why.value}", ""]
         return "\n".join(lines)
+
+
+def disabled_of(path: str, front: typing.Mapping[str, typing.Any]) -> typing.Optional[RuleText]:
+    """`state: disabled` with `disabled: <YYYY-MM-DD> — <why>` — a rule switched off; `state:` absent or `active`: in
+    force. One without the other is a mistake, never a silent default."""
+    state, said = str(front.get("state") or "active"), front.get("disabled")
+    if state not in ("active", "disabled"):
+        raise ValueError(f"{path}: `state:` is active or disabled, not {state!r}")
+    if (state == "disabled") != bool(said):
+        raise ValueError(f"{path}: `state: disabled` and `disabled: <date> — <why>` go together")
+    return RuleText(str(said)) if said else None
+
+
+def disabled_lines(rule: WorkflowRule) -> typing.List[str]:
+    """The front-matter lines of a disabled rule — none for one in force."""
+    if rule.disabled is None:
+        return []
+    return ["state: disabled", f"disabled: {written_value(rule.disabled.value)}"]
 
 
 def restart_of(path: str, front: typing.Mapping[str, typing.Any]) -> typing.Optional[Restart]:
@@ -186,7 +208,8 @@ def told_text(rule: WorkflowRule) -> str:
     lines = ["---", f"id: {rule.id.value}", f"part: {rule.part.value}"]
     if rule.why.value:
         lines.append(f"why: {written_value(rule.why.value)}")
-    for key, values in (("stages", [s.value for s in rule.stages]), ("kinds", [k.value for k in rule.kinds])):
+    for key, values in (("stages", [s.value for s in rule.stages]), ("kinds", [k.value for k in rule.kinds]),
+                        ("processes", [p.value for p in rule.processes])):
         if values:
             lines += [f"{key}:"] + [f"- {v}" for v in values]
     if rule.section is not None:
@@ -197,6 +220,7 @@ def told_text(rule: WorkflowRule) -> str:
         lines.append(f"order: {rule.order.value}")
     if rule.retired is not None:
         lines.append(f"retired: {written_value(rule.retired.value)}")
+    lines += disabled_lines(rule)
     told = rule.told.value if rule.told is not None else ""
     return "\n".join(lines + ["---", "", f"# {rule.id.value}", "", told, ""])
 
